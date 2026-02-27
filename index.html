@@ -35,8 +35,14 @@
 
   <script src="./js/app.js"></script>
   <script>
-    // Protection de la page
-    Auth.requireAuth();
+    // Protection de la page - rediriger IMMÉDIATEMENT si pas connecté
+    (function() {
+      const session = localStorage.getItem('intranet_session_v1');
+      if (!session) {
+        window.location.href = './pages/login.html';
+        return; // Ne pas continuer
+      }
+    })();
 
     // Initialisation
     App.init();
