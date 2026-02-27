@@ -304,8 +304,28 @@ a:hover {
 }
 
 .smiley {
-  font-size: 24px;
+  font-size: 40px;
   margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.smiley .smiley-icon {
+  width: 42px;
+  height: 42px;
+}
+
+.kpi-box.vert .smiley {
+  color: var(--success);
+}
+
+.kpi-box.rouge .smiley {
+  color: var(--danger);
+}
+
+.kpi-box.neutral .smiley {
+  color: var(--secondary);
 }
 
 .comment-box {
@@ -575,6 +595,13 @@ tbody tr:last-child td {
   letter-spacing: 0.5px;
 }
 
+.badge .smiley-icon {
+  width: 14px;
+  height: 14px;
+  vertical-align: -2px;
+  margin-left: 4px;
+}
+
 .badge-primary {
   background: rgba(102, 126, 234, 0.2);
   color: var(--accent);
@@ -593,6 +620,27 @@ tbody tr:last-child td {
 .badge-warning {
   background: rgba(243, 156, 18, 0.2);
   color: var(--warning);
+}
+
+.badge-vert {
+  background: rgba(123, 173, 117, 0.2);
+  color: var(--success);
+}
+
+.badge-orange {
+  background: rgba(212, 165, 116, 0.2);
+  color: var(--warning);
+}
+
+.badge-rouge {
+  background: rgba(184, 92, 92, 0.2);
+  color: var(--danger);
+}
+
+.badge-neutral {
+  background: var(--light);
+  color: var(--secondary);
+  border: 1px solid var(--border);
 }
 
 /* ============ UTILITY CLASSES ============ */

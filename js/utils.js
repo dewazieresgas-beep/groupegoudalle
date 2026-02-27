@@ -9,20 +9,65 @@ function calculateRatio(hours, m3) {
   return hours / m3;
 }
 
+const KPI_RATIO_THRESHOLD_STORAGE_KEY = 'goudalle_thresholds';
+const DEFAULT_KPI_RATIO_THRESHOLD = 5;
+
+function getKpiRatioThreshold() {
+  const stored = localStorage.getItem(KPI_RATIO_THRESHOLD_STORAGE_KEY);
+  if (!stored) return DEFAULT_KPI_RATIO_THRESHOLD;
+
+  // Supporte plusieurs formats historiques :
+  // - nombre brut ("5")
+  // - objet { ratioThreshold: 5 }
+  // - ancien objet { greenMax: 4.5, orangeMax: 5.5 } => ignoré (nouvelle règle à seuil unique)
+  const trimmed = stored.trim();
+  if (/^-?\d+(?:\.\d+)?$/.test(trimmed)) {
+    const asNumber = parseFloat(trimmed);
+    if (Number.isFinite(asNumber)) return asNumber;
+  }
+
+  try {
+    const parsed = JSON.parse(stored);
+    if (typeof parsed === 'number' && Number.isFinite(parsed)) return parsed;
+    if (parsed && typeof parsed.ratioThreshold === 'number' && Number.isFinite(parsed.ratioThreshold)) {
+      return parsed.ratioThreshold;
+    }
+    if (parsed && typeof parsed.threshold === 'number' && Number.isFinite(parsed.threshold)) {
+      return parsed.threshold;
+    }
+  } catch {
+    // ignore
+  }
+
+  return DEFAULT_KPI_RATIO_THRESHOLD;
+}
+
 function getSmiley(ratio) {
   if (ratio === null) return 'neutral';
-  if (ratio < 4.5) return 'vert';
-  if (ratio <= 5.5) return 'orange';
-  return 'rouge';
+
+  const threshold = getKpiRatioThreshold();
+  return ratio <= threshold ? 'vert' : 'rouge';
 }
 
 function getSmileyEmoji(smiley) {
-  return {
-    vert: '🟢',
-    orange: '🟠',
-    rouge: '🔴',
-    neutral: '◯'
-  }[smiley] || '◯';
+  // Compat: les pages appellent getSmileyEmoji() mais on renvoie un SVG
+  // afin de pouvoir appliquer une couleur via CSS (currentColor).
+  const svgBase = (path) => `
+    <svg viewBox="0 0 24 24" width="1em" height="1em" class="smiley-icon" aria-hidden="true" focusable="false">
+      <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2" />
+      <circle cx="9" cy="10" r="1" fill="currentColor" />
+      <circle cx="15" cy="10" r="1" fill="currentColor" />
+      ${path}
+    </svg>
+  `.trim();
+
+  const paths = {
+    vert: '<path d="M8 14c1.2 1.6 2.6 2.4 4 2.4s2.8-.8 4-2.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />',
+    rouge: '<path d="M8 16c1.2-1.6 2.6-2.4 4-2.4s2.8.8 4 2.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />',
+    neutral: '<path d="M8 15h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />'
+  };
+
+  return svgBase(paths[smiley] || paths.neutral);
 }
 
 // ============ WEEK UTILS ============
@@ -138,7 +183,7 @@ function getSidebar() {
   }
 
   if (canEdit) {
-    items += `<a href="${base}pages/gm-saisie.html" class="sidebar-item">Saisie KPI</a>`;
+    items += `<a href="${base}pages/gm-saisie.html" class="sidebar-item">Saisies indicateurs</a>`;
   }
 
   if (isDirection) {

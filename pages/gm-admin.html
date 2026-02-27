@@ -25,35 +25,25 @@
 
       <div class="card">
         <div class="card-title">
-          <h2>Seuils de performance (h/m3)</h2>
+          <h2>Seuil de performance (h/m³)</h2>
         </div>
         <div class="card-body">
           <div id="message" class="alert" style="display:none;"></div>
 
           <form onsubmit="handleSaveThresholds(event)">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-              <div class="form-group">
-                <label for="greenMax">
-                  🟢 Limite VERT (max)
-                  <small style="color: #7f8c8d; display: block;"> h/m³ ≤ ce seuil = Vert</small>
-                </label>
-                <input type="number" id="greenMax" step="0.1" value="4.5" required>
-              </div>
-              <div class="form-group">
-                <label for="orangeMax">
-                  🟠 Limite ORANGE (max)
-                  <small style="color: #7f8c8d; display: block;">ce seuil < h/m³ ≤ ce seuil = Orange</small>
-                </label>
-                <input type="number" id="orangeMax" step="0.1" value="5.5" required>
-              </div>
+            <div class="form-group">
+              <label for="ratioThreshold">
+                Seuil (h/m³)
+                <small style="color: #7f8c8d; display: block;">h/m³ ≤ seuil = 🟢 Vert / au-dessus = 🔴 Rouge</small>
+              </label>
+              <input type="number" id="ratioThreshold" step="0.1" value="5" required>
             </div>
 
             <div class="alert alert-info">
               <strong>ℹ️ Règles :</strong>
               <ul style="margin: 10px 0 0 20px;">
-                <li>h/m³ &lt; Vert = 🟢 Vert</li>
-                <li>Vert ≤ h/m³ ≤ Orange = 🟠 Orange</li>
-                <li>h/m³ &gt; Orange = 🔴 Rouge</li>
+                <li>h/m³ ≤ seuil = 🟢 Vert</li>
+                <li>h/m³ &gt; seuil = 🔴 Rouge</li>
               </ul>
             </div>
 
@@ -90,18 +80,28 @@
   </div>
 
   <script>
+    const THRESHOLDS_KEY = 'goudalle_thresholds';
     let thresholds = {
-      greenMax: 4.5,
-      orangeMax: 5.5
+      ratioThreshold: 5
     };
 
     function loadThresholds() {
-      const stored = localStorage.getItem('goudalle_thresholds');
+      const stored = localStorage.getItem(THRESHOLDS_KEY);
       if (stored) {
-        thresholds = JSON.parse(stored);
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed && typeof parsed.ratioThreshold === 'number') {
+            thresholds.ratioThreshold = parsed.ratioThreshold;
+          } else if (parsed && typeof parsed.orangeMax === 'number') {
+            // Ancien format (vert/orange/rouge) : on ignore pour repartir sur la règle à seuil unique.
+            thresholds.ratioThreshold = 5;
+          }
+        } catch {
+          const asNum = parseFloat(stored);
+          if (Number.isFinite(asNum)) thresholds.ratioThreshold = asNum;
+        }
       }
-      document.getElementById('greenMax').value = thresholds.greenMax;
-      document.getElementById('orangeMax').value = thresholds.orangeMax;
+      document.getElementById('ratioThreshold').value = thresholds.ratioThreshold;
     }
 
     function showMessage(message, type) {
@@ -114,19 +114,18 @@
     function handleSaveThresholds(event) {
       event.preventDefault();
 
-      const greenMax = parseFloat(document.getElementById('greenMax').value);
-      const orangeMax = parseFloat(document.getElementById('orangeMax').value);
-
-      if (greenMax >= orangeMax) {
-        showMessage('❌ Le seuil VERT doit être inférieur à ORANGE', 'error');
+      const ratioThreshold = parseFloat(document.getElementById('ratioThreshold').value);
+      if (!Number.isFinite(ratioThreshold) || ratioThreshold <= 0) {
+        showMessage('❌ Seuil invalide', 'error');
         return;
       }
 
-      thresholds = { greenMax, orangeMax };
-      localStorage.setItem('goudalle_thresholds', JSON.stringify(thresholds));
-      Auth.audit('THRESHOLDS_UPDATED', `Seuils mis à jour: Vert=${greenMax}, Orange=${orangeMax}`);
+      thresholds = { ratioThreshold };
+      localStorage.setItem(THRESHOLDS_KEY, JSON.stringify(thresholds));
+      Auth.audit('THRESHOLDS_UPDATED', `Seuil mis à jour: ${ratioThreshold} h/m³`);
 
       showMessage('✅ Seuils enregistrés avec succès', 'success');
+      loadAllKPIs();
     }
 
     function loadAllKPIs() {
@@ -157,7 +156,7 @@
             <td><small>${date.toLocaleDateString('fr-FR')}</small></td>
             <td>
               <button class="btn btn-small btn-secondary" onclick="editKPI(${k.id})">✏️ Éditer</button>
-              ${k.status !== 'published' ? `<button class="btn btn-small btn-success" onclick="publishKPI(${k.year}, ${k.week})">📤 Publier</button>` : ''}
+              ${k.status !== 'published' ? `<button class="btn btn-small btn-success" onclick="handlePublishKPI(${k.year}, ${k.week})">📤 Publier</button>` : ''}
             </td>
           </tr>
         `;
@@ -172,9 +171,9 @@
       alert('Fonctionnalité à développer : éditer KPI #' + id);
     }
 
-    function publishKPI(year, week) {
+    function handlePublishKPI(year, week) {
       if (confirm(`Publier le KPI S${String(week).padStart(2, '0')}/${year} ?`)) {
-        const result = publishKPI(year, week);
+        const result = window.publishKPI(year, week);
         showMessage(result.message, result.success ? 'success' : 'error');
         loadAllKPIs();
       }
