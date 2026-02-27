@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accès Refusé - Intranet Goudalle</title>
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .error-container {
+      background: white;
+      padding: 40px;
+      border-radius: 10px;
+      text-align: center;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      max-width: 500px;
+    }
+    .error-icon {
+      font-size: 80px;
+      margin-bottom: 20px;
+    }
+    .error-title {
+      font-size: 24px;
+      color: #e74c3c;
+      margin-bottom: 10px;
+    }
+    .error-message {
+      color: #7f8c8d;
+      margin-bottom: 30px;
+    }
+    .btn-group {
+      display: flex;
+      gap: 10px;
+    }
+    .btn-group button {
+      flex: 1;
+    }
+  </style>
+</head>
+<body>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+
+  <div class="error-container">
+    <div class="error-icon">🔒</div>
+    <h1 class="error-title">Accès Refusé</h1>
+    <p class="error-message">
+      Vous n'avez pas les permissions nécessaires pour accéder à cette page.<br>
+      Contactez un administrateur si vous pensez qu'il s'agit d'une erreur.
+    </p>
+
+    <div class="btn-group">
+      <button onclick="goHome()" class="btn btn-primary">🏠 Accueil</button>
+      <button onclick="goBack()" class="btn btn-secondary">← Retour</button>
+    </div>
+  </div>
+
+  <script>
+    function goHome() {
+      window.location.href = '../index.html';
+    }
+
+    function goBack() {
+      window.history.back();
+    }
+
+    // Si not logged in, redirect to login
+    if (!Auth.isConnected()) {
+      window.location.href = '../login.html';
+    }
+  </script>
+</body>
+</html>

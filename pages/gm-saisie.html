@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Saisie KPI - Intranet Goudalle</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+
+  <script>
+    Auth.requirePermission('gm_saisie');
+  </script>
+
+  <div class="app-container">
+    <div id="sidebar"></div>
+    
+    <main class="main-content">
+      <h1>✏️ Saisie de KPI - Goudalle Maçonnerie</h1>
+
+      <div class="card">
+        <div class="card-title">
+          <h2>📝 Nouveau KPI</h2>
+        </div>
+        <div class="card-body">
+          <div id="message" class="alert" style="display:none;"></div>
+
+          <form onsubmit="handleSaveKPI(event)">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+              <div class="form-group">
+                <label for="year">Année *</label>
+                <input type="number" id="year" value="2026" required>
+              </div>
+              <div class="form-group">
+                <label for="week">Semaine (1-52) *</label>
+                <input type="number" id="week" min="1" max="52" value="" required>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+              <div class="form-group">
+                <label for="m3">m³ coulés *</label>
+                <input type="number" id="m3" step="0.01" placeholder="0.00" required>
+              </div>
+              <div class="form-group">
+                <label for="hours">Heures travaillées *</label>
+                <input type="number" id="hours" step="0.01" placeholder="0.00" required>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="comment">Commentaire obligatoire *</label>
+              <textarea id="comment" placeholder="Décrivez les conditions de travail, les notes importantes, etc." required></textarea>
+            </div>
+
+            <div class="form-group">
+              <label>
+                <input type="checkbox" id="publish"> ✅ Publier immédiatement
+              </label>
+              <small style="color: #7f8c8d; display: block; margin-top: 5px;">
+                Si coché, le KPI sera directement publié. Sinon, il restera en brouillon.
+              </small>
+            </div>
+
+            <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <h2>📋 Mes KPI - Goudalle</h2>
+        </div>
+        <div class="card-body">
+          <table id="kpiTable">
+            <thead>
+              <tr>
+                <th>Semaine</th>
+                <th>m³</th>
+                <th>Heures</th>
+                <th>h/m³</th>
+                <th>Statut</th>
+                <th>Commentaire</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="7" style="text-align:center; padding: 20px;">Chargement...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    function showMessage(message, type) {
+      const msgDiv = document.getElementById('message');
+      msgDiv.textContent = message;
+      msgDiv.className = `alert alert-${type}`;
+      msgDiv.style.display = 'block';
+    }
+
+    function handleSaveKPI(event) {
+      event.preventDefault();
+
+      const year = parseInt(document.getElementById('year').value);
+      const week = parseInt(document.getElementById('week').value);
+      const m3 = parseFloat(document.getElementById('m3').value);
+      const hours = parseFloat(document.getElementById('hours').value);
+      const comment = document.getElementById('comment').value.trim();
+      const publish = document.getElementById('publish').checked;
+
+      if (!comment) {
+        showMessage('❌ Le commentaire est obligatoire', 'error');
+        return;
+      }
+
+      if (m3 <= 0 || hours <= 0) {
+        showMessage('❌ Les valeurs doivent être supérieures à 0', 'error');
+        return;
+      }
+
+      const status = publish ? 'published' : 'draft';
+      const kpi = saveKPI(year, week, m3, hours, comment, status);
+
+      showMessage(`✅ KPI S${String(week).padStart(2, '0')}/${year} ${status === 'published' ? 'publié' : 'enregistré en brouillon'}`, 'success');
+
+      // Reset form
+      document.getElementById('year').value = getCurrentYear();
+      document.getElementById('week').value = '';
+      document.getElementById('m3').value = '';
+      document.getElementById('hours').value = '';
+      document.getElementById('comment').value = '';
+      document.getElementById('publish').checked = false;
+
+      // Refresh list
+      loadKPIs();
+    }
+
+    function loadKPIs() {
+      const kpis = getKPIs().sort((a, b) => b.id - a.id);
+      const tbody = document.querySelector('#kpiTable tbody');
+
+      tbody.innerHTML = kpis.map(k => {
+        const ratio = calculateRatio(k.hours, k.m3);
+        const smiley = getSmiley(ratio);
+        return `
+          <tr>
+            <td><strong>S${String(k.week).padStart(2, '0')}/${k.year}</strong></td>
+            <td>${k.m3.toFixed(2)}</td>
+            <td>${k.hours.toFixed(2)}</td>
+            <td>
+              <span class="badge badge-${smiley}">
+                ${ratio !== null ? ratio.toFixed(2) : '—'} ${getSmileyEmoji(smiley)}
+              </span>
+            </td>
+            <td>
+              <span class="badge ${k.status === 'published' ? 'badge-success' : 'badge-warning'}">
+                ${k.status === 'published' ? '✅ Publié' : '📝 Brouillon'}
+              </span>
+            </td>
+            <td><small>${k.comment}</small></td>
+            <td>
+              <button class="btn btn-small btn-secondary" onclick="editKPI(${k.id})">✏️ Éditer</button>
+              ${k.status !== 'published' ? `<button class="btn btn-small btn-success" onclick="publishKPI(${k.year}, ${k.week})">📤 Publier</button>` : ''}
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      if (kpis.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 20px;">Aucun KPI créé</td></tr>`;
+      }
+    }
+
+    function editKPI(id) {
+      const kpi = getKPIs().find(k => k.id === id);
+      if (kpi) {
+        document.getElementById('year').value = kpi.year;
+        document.getElementById('week').value = kpi.week;
+        document.getElementById('m3').value = kpi.m3;
+        document.getElementById('hours').value = kpi.hours;
+        document.getElementById('comment').value = kpi.comment;
+        document.getElementById('publish').checked = kpi.status === 'published';
+        window.scrollTo(0, 0);
+      }
+    }
+
+    function publishKPI(year, week) {
+      if (confirm(`Publier le KPI S${String(week).padStart(2, '0')}/${year} ?`)) {
+        publishKPI(year, week);
+        showMessage('✅ KPI publié', 'success');
+        loadKPIs();
+      }
+    }
+
+    function init() {
+      document.getElementById('sidebar').innerHTML = getSidebar();
+      document.getElementById('year').value = getCurrentYear();
+      document.getElementById('week').value = getCurrentWeek();
+      loadKPIs();
+    }
+
+    window.addEventListener('load', init);
+  </script>
+</body>
+</html>

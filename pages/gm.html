@@ -3,229 +3,207 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Goudalle Maçonnerie - Intranet Goudalle</title>
+  <title>Goudalle - Dashboard - Intranet</title>
   <link rel="stylesheet" href="../style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+
+  <script>
+    Auth.requirePermission('gm');
+  </script>
+
   <div class="app-container">
-    <!-- Sidebar injectée dynamiquement -->
-    <div id="sidebar-container"></div>
-
+    <div id="sidebar"></div>
+    
     <main class="main-content">
-      <h1>🏗️ Goudalle Maçonnerie</h1>
-      
-      <!-- KPI Semaine passée -->
+      <h1>📊 Goudalle Maçonnerie - Dashboard</h1>
+
       <div class="card">
-        <div class="card-header">
-          <h2>Semaine passée</h2>
+        <div class="card-title">
+          <h2>📈 Dernière semaine publiée</h2>
         </div>
-        <div class="card-body" id="last-week-data">
-          <!-- Contenu injecté dynamiquement -->
+        <div class="card-body">
+          <div id="lastWeekKpis"></div>
         </div>
       </div>
 
-      <!-- Graphique tendance -->
       <div class="card">
-        <div class="card-header">
-          <h2>Tendance - 8 dernières semaines</h2>
+        <div class="card-title">
+          <h2>📉 Tendance 8 semaines</h2>
         </div>
         <div class="card-body">
-          <div class="chart-container">
-            <canvas id="chart-gm-trend"></canvas>
-          </div>
+          <canvas id="kpiChart"></canvas>
         </div>
       </div>
 
-      <!-- Tableau 4 semaines précédentes -->
       <div class="card">
-        <div class="card-header">
-          <h2>Historique - 4 semaines précédentes</h2>
-          <div id="monthly-average"></div>
+        <div class="card-title">
+          <h2>📋 Historique 4 semaines</h2>
         </div>
         <div class="card-body">
-          <div class="table-container">
-            <table id="history-table">
-              <thead>
-                <tr>
-                  <th>Semaine</th>
-                  <th class="text-right">m³</th>
-                  <th class="text-right">Heures</th>
-                  <th class="text-right">h/m³</th>
-                  <th>Commentaire</th>
-                </tr>
-              </thead>
-              <tbody id="history-tbody">
-                <!-- Contenu injecté dynamiquement -->
-              </tbody>
-            </table>
-          </div>
+          <table id="historyTable">
+            <thead>
+              <tr>
+                <th>Semaine</th>
+                <th>m³</th>
+                <th>Heures</th>
+                <th>h/m³</th>
+                <th>Statut</th>
+                <th>Commentaire</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="6" style="text-align:center; padding: 20px;">Chargement...</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </main>
   </div>
 
-  <script src="../js/app.js"></script>
   <script>
-    // Protection de la page
-    Auth.requireAuth();
-    if (!Auth.hasGMAccess()) {
-      alert('Accès refusé');
-      window.location.href = BASE_PATH + '/index.html';
-    }
+    let chart;
 
-    // Initialisation
-    App.init();
+    function initGM() {
+      document.getElementById('sidebar').innerHTML = getSidebar();
 
-    // Injecter la sidebar
-    document.getElementById('sidebar-container').innerHTML = UI.generateSidebar();
-    App.highlightCurrentPage();
+      const kpis = getKPIs();
+      const published = kpis.filter(k => k.status === 'published').sort((a, b) => b.week - a.week);
 
-    // Charger les données
-    const kpiData = StorageManager.getKPIWeekly();
-    const thresholds = StorageManager.getThresholds();
+      // Dernière semaine
+      if (published.length > 0) {
+        const last = published[0];
+        const ratio = calculateRatio(last.hours, last.m3);
+        const smiley = getSmiley(ratio);
 
-    // Afficher la semaine passée
-    function renderLastWeek() {
-      const lastPublished = kpiData
-        .filter(k => k.status === 'published')
-        .sort((a, b) => {
-          if (a.year !== b.year) return b.year - a.year;
-          return b.week - a.week;
-        })[0];
-
-      const container = document.getElementById('last-week-data');
-
-      if (!lastPublished) {
-        container.innerHTML = '<div class="no-data">Données non publiées</div>';
-        return;
+        document.getElementById('lastWeekKpis').innerHTML = `
+          <div class="kpi-grid">
+            <div class="kpi-box">
+              <div class="kpi-label">Semaine</div>
+              <div class="kpi-value">S${String(last.week).padStart(2, '0')}</div>
+            </div>
+            <div class="kpi-box">
+              <div class="kpi-label">m³ coulés</div>
+              <div class="kpi-value">${last.m3.toFixed(2)}</div>
+            </div>
+            <div class="kpi-box">
+              <div class="kpi-label">Heures</div>
+              <div class="kpi-value">${last.hours.toFixed(2)}</div>
+            </div>
+            <div class="kpi-box ${smiley}">
+              <div class="kpi-label">h/m³</div>
+              <div class="kpi-value">${ratio !== null ? ratio.toFixed(2) : '—'}</div>
+              <div class="smiley">${getSmileyEmoji(smiley)}</div>
+            </div>
+          </div>
+          <div class="comment-box">
+            <strong>Commentaire :</strong> ${last.comment}
+          </div>
+        `;
+      } else {
+        document.getElementById('lastWeekKpis').innerHTML = '<p>❌ Aucune donnée publiée</p>';
       }
 
-      const ratio = KPICalculator.calculateRatio(lastPublished.hours, lastPublished.m3);
-      const smiley = KPICalculator.getSmiley(ratio, thresholds);
+      // Chart 8 semaines
+      const last8 = published.slice(0, 8).reverse();
+      if (last8.length > 0) {
+        const labels = last8.map(k => `S${String(k.week).padStart(2, '0')}`);
+        const m3Data = last8.map(k => k.m3);
+        const hoursData = last8.map(k => k.hours);
+        const ratioData = last8.map(k => calculateRatio(k.hours, k.m3));
 
-      container.innerHTML = `
-        <div class="kpi-grid">
-          <div class="kpi-box">
-            <div class="kpi-label">Semaine</div>
-            <div class="kpi-value">${WeekUtils.formatWeekNumber(lastPublished.week)}</div>
-            <div class="kpi-unit">Année ${lastPublished.year}</div>
-          </div>
-          <div class="kpi-box">
-            <div class="kpi-label">m³ coulés</div>
-            <div class="kpi-value">${UI.formatNumber(lastPublished.m3)}</div>
-            <div class="kpi-unit">m³</div>
-          </div>
-          <div class="kpi-box">
-            <div class="kpi-label">Heures travaillées</div>
-            <div class="kpi-value">${UI.formatNumber(lastPublished.hours)}</div>
-            <div class="kpi-unit">heures</div>
-          </div>
-          <div class="kpi-box ${smiley}">
-            <div class="kpi-label">h/m³</div>
-            <div class="kpi-value">${UI.formatRatio(ratio)}</div>
-            <div class="kpi-smiley">${UI.getSmileyEmoji(smiley)}</div>
-          </div>
-        </div>
-        <div style="margin-top: 1rem; padding: 1rem; background-color: var(--light); border-radius: 4px;">
-          <strong>Commentaire :</strong> ${lastPublished.comment}
-        </div>
-      `;
-    }
-
-    // Afficher le graphique
-    function renderChart() {
-      const lastWeeks = WeekUtils.getLastNPublishedWeeks(8, kpiData);
-      const labels = lastWeeks.map(k => `S${WeekUtils.formatWeekNumber(k.week)}`);
-      const ratios = lastWeeks.map(k => KPICalculator.calculateRatio(k.hours, k.m3));
-
-      const ctx = document.getElementById('chart-gm-trend').getContext('2d');
-      new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [{
-            label: 'h/m³',
-            data: ratios,
-            borderColor: '#3498db',
-            backgroundColor: 'rgba(52, 152, 219, 0.1)',
-            tension: 0.3,
-            fill: true
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: true },
-            title: {
-              display: true,
-              text: 'Évolution h/m³ - 8 dernières semaines'
-            }
+        const ctx = document.getElementById('kpiChart').getContext('2d');
+        chart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [
+              {
+                label: 'm³ coulés',
+                data: m3Data,
+                borderColor: '#3498db',
+                backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                yAxisID: 'y',
+                tension: 0.4
+              },
+              {
+                label: 'Heures',
+                data: hoursData,
+                borderColor: '#e74c3c',
+                backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                yAxisID: 'y',
+                tension: 0.4
+              },
+              {
+                label: 'h/m³',
+                data: ratioData,
+                borderColor: '#f39c12',
+                backgroundColor: 'rgba(243, 156, 18, 0.1)',
+                yAxisID: 'y1',
+                tension: 0.4
+              }
+            ]
           },
-          scales: {
-            y: {
-              beginAtZero: true,
-              title: {
+          options: {
+            responsive: true,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+              legend: { display: true, position: 'top' }
+            },
+            scales: {
+              y: {
+                type: 'linear',
                 display: true,
-                text: 'h/m³'
+                position: 'left',
+                title: { display: true, text: 'm³ / Heures' }
+              },
+              y1: {
+                type: 'linear',
+                display: true,
+                position: 'right',
+                title: { display: true, text: 'h/m³' },
+                grid: { drawOnChartArea: false }
               }
             }
           }
-        }
-      });
-    }
-
-    // Afficher l'historique des 4 semaines précédentes
-    function renderHistory() {
-      const published = kpiData
-        .filter(k => k.status === 'published')
-        .sort((a, b) => {
-          if (a.year !== b.year) return b.year - a.year;
-          return b.week - a.week;
         });
-
-      // Prendre les 4 semaines après la plus récente (donc W-1 à W-4)
-      const historyWeeks = published.slice(1, 5);
-
-      const tbody = document.getElementById('history-tbody');
-
-      if (historyWeeks.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Aucune donnée historique</td></tr>';
-        return;
       }
 
-      tbody.innerHTML = historyWeeks.map(k => {
-        const ratio = KPICalculator.calculateRatio(k.hours, k.m3);
-        const smiley = KPICalculator.getSmiley(ratio, thresholds);
+      // Historique 4 semaines
+      const last4 = published.slice(0, 4).reverse();
+      const tbody = document.querySelector('#historyTable tbody');
+      tbody.innerHTML = last4.map(k => {
+        const ratio = calculateRatio(k.hours, k.m3);
+        const smiley = getSmiley(ratio);
         return `
           <tr>
-            <td>S${WeekUtils.formatWeekNumber(k.week)} - ${k.year}</td>
-            <td class="text-right">${UI.formatNumber(k.m3)}</td>
-            <td class="text-right">${UI.formatNumber(k.hours)}</td>
-            <td class="text-right">${UI.formatRatio(ratio)} ${UI.getSmileyEmoji(smiley)}</td>
-            <td>${k.comment}</td>
+            <td><strong>S${String(k.week).padStart(2, '0')}/${k.year}</strong></td>
+            <td>${k.m3.toFixed(2)}</td>
+            <td>${k.hours.toFixed(2)}</td>
+            <td>
+              <span class="badge badge-${smiley}">
+                ${ratio !== null ? ratio.toFixed(2) : '—'} ${getSmileyEmoji(smiley)}
+              </span>
+            </td>
+            <td>
+              <span class="badge ${k.status === 'published' ? 'badge-success' : 'badge-warning'}">
+                ${k.status === 'published' ? '✅ Publié' : '📝 Brouillon'}
+              </span>
+            </td>
+            <td><small>${k.comment}</small></td>
           </tr>
         `;
       }).join('');
 
-      // Calculer la moyenne du mois
-      const avgRatio = KPICalculator.calculateAverageRatio(historyWeeks);
-      const avgSmiley = KPICalculator.getSmiley(avgRatio, thresholds);
-      
-      document.getElementById('monthly-average').innerHTML = `
-        <div style="display: flex; align-items: center; gap: 0.5rem;">
-          <span style="font-size: 0.9rem; color: var(--text-light);">Moyenne mois :</span>
-          <strong>${UI.formatRatio(avgRatio)}</strong>
-          <span style="font-size: 1.5rem;">${UI.getSmileyEmoji(avgSmiley)}</span>
-        </div>
-      `;
+      if (last4.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 20px;">Aucune donnée</td></tr>`;
+      }
     }
 
-    // Charger tout
-    renderLastWeek();
-    renderChart();
-    renderHistory();
+    window.addEventListener('load', initGM);
   </script>
 </body>
 </html>

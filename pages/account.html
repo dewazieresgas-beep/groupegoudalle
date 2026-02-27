@@ -3,152 +3,261 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mon compte - Intranet Goudalle</title>
+  <title>Profil - Intranet Goudalle</title>
   <link rel="stylesheet" href="../style.css">
+  <style>
+    .profile-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .profile-card {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      border-left: 4px solid var(--accent);
+    }
+    .profile-label {
+      font-size: 12px;
+      color: #7f8c8d;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .profile-value {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--primary);
+    }
+    .role-badge {
+      display: inline-block;
+      padding: 8px 12px;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+      color: white;
+      border-radius: 5px;
+      font-weight: 600;
+      font-size: 12px;
+    }
+    .permissions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+      margin-top: 15px;
+    }
+    .permission {
+      background: #f0f4ff;
+      padding: 10px 12px;
+      border-radius: 5px;
+      font-size: 13px;
+      border-left: 3px solid var(--accent);
+    }
+  </style>
 </head>
 <body>
-  <div class="app-container">
-    <!-- Sidebar injectée dynamiquement -->
-    <div id="sidebar-container"></div>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
 
+  <script>
+    Auth.requireAuth();
+  </script>
+
+  <div class="app-container">
+    <div id="sidebar"></div>
+    
     <main class="main-content">
-      <h1>👤 Mon compte</h1>
-      
-      <!-- Informations du compte -->
+      <h1>👤 Mon Profil</h1>
+
       <div class="card">
-        <div class="card-header">
+        <div class="card-title">
           <h2>Informations personnelles</h2>
         </div>
         <div class="card-body">
-          <div id="account-info">
-            <!-- Contenu injecté dynamiquement -->
+          <div class="profile-grid">
+            <div class="profile-card">
+              <div class="profile-label">Nom d'utilisateur</div>
+              <div class="profile-value" id="username">—</div>
+            </div>
+            <div class="profile-card">
+              <div class="profile-label">Nom complet</div>
+              <div class="profile-value" id="displayName">—</div>
+            </div>
+            <div class="profile-card">
+              <div class="profile-label">Email</div>
+              <div class="profile-value" id="email">—</div>
+            </div>
+            <div class="profile-card">
+              <div class="profile-label">Rôle</div>
+              <div class="profile-value" id="roleDisplay">—</div>
+            </div>
+            <div class="profile-card">
+              <div class="profile-label">Connecté depuis</div>
+              <div class="profile-value" id="loginAt">—</div>
+            </div>
+            <div class="profile-card">
+              <div class="profile-label">Statut</div>
+              <div class="profile-value"><span style="color: #27ae60;">✅ Actif</span></div>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Permissions et accès -->
       <div class="card">
-        <div class="card-header">
+        <div class="card-title">
           <h2>Permissions et accès</h2>
         </div>
         <div class="card-body">
-          <div id="permissions-info">
-            <!-- Contenu injecté dynamiquement -->
-          </div>
+          <div id="permissionsDisplay"></div>
         </div>
       </div>
 
-      <!-- Actions -->
       <div class="card">
-        <div class="card-header">
-          <h2>Actions</h2>
+        <div class="card-title">
+          <h2>Paramètres de sécurité</h2>
         </div>
         <div class="card-body">
-          <div class="alert alert-info" style="display: block; margin-bottom: 1rem;">
-            ⚠️ <strong>Prototype</strong> : La modification de mot de passe n'est pas disponible dans cette version de démonstration.
+          <div id="message" class="alert" style="display:none;"></div>
+
+          <div style="margin-bottom: 20px;">
+            <h4>Changer le mot de passe</h4>
+            <form onsubmit="handleChangePassword(event)">
+              <div class="form-group">
+                <label for="oldPassword">Mot de passe actuel *</label>
+                <input type="password" id="oldPassword" required>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="form-group">
+                  <label for="newPassword">Nouveau mot de passe *</label>
+                  <input type="password" id="newPassword" minlength="3" required>
+                </div>
+                <div class="form-group">
+                  <label for="confirmNewPassword">Confirmer *</label>
+                  <input type="password" id="confirmNewPassword" minlength="3" required>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary">Changer le mot de passe</button>
+            </form>
           </div>
-          
-          <button class="btn btn-danger" onclick="resetLocalStorage()">
-            Réinitialiser toutes les données (localStorage)
-          </button>
+
+          <hr style="margin: 20px 0; opacity: 0.3;">
+
+          <div>
+            <h4 style="color: #e74c3c;">Zone de danger</h4>
+            <button onclick="resetSession()" class="btn btn-danger">🔄 Forcer la déconnexion</button>
+            <small style="display: block; margin-top: 10px; color: #7f8c8d;">
+              Cela vous déconnectera immédiatement et supprimera votre session.
+            </small>
+          </div>
         </div>
       </div>
     </main>
   </div>
 
-  <script src="../js/app.js"></script>
   <script>
-    // Protection de la page
-    Auth.requireAuth();
+    function loadProfile() {
+      document.getElementById('sidebar').innerHTML = getSidebar();
 
-    // Initialisation
-    App.init();
+      const session = Auth.getSession();
+      if (!session) {
+        window.location.href = '../login.html';
+        return;
+      }
 
-    // Injecter la sidebar
-    document.getElementById('sidebar-container').innerHTML = UI.generateSidebar();
-    App.highlightCurrentPage();
+      const user = Auth.getCurrentUser();
+      if (!user) {
+        window.location.href = '../login.html';
+        return;
+      }
 
-    const session = Auth.getSession();
+      // Remplir les champs
+      document.getElementById('username').textContent = session.username;
+      document.getElementById('displayName').textContent = session.displayName || '—';
+      document.getElementById('email').textContent = session.email || '—';
 
-    // Afficher les informations du compte
-    function renderAccountInfo() {
-      const container = document.getElementById('account-info');
-      
+      // Role badge
+      const roleNames = {
+        'direction': '🗝️ Direction',
+        'referent': '📊 Référent',
+        'lecture': '👁️ Consultation'
+      };
+      document.getElementById('roleDisplay').innerHTML = `<span class="role-badge">${roleNames[session.role] || session.role}</span>`;
+
+      // Login time
       const loginDate = new Date(session.loginAt);
-      const formattedDate = loginDate.toLocaleDateString('fr-FR', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
+      document.getElementById('loginAt').textContent = loginDate.toLocaleString('fr-FR');
 
-      container.innerHTML = `
-        <div style="display: grid; grid-template-columns: 200px 1fr; gap: 1rem; max-width: 600px;">
-          <div style="font-weight: 600;">Nom d'utilisateur :</div>
-          <div>${session.username}</div>
-          
-          <div style="font-weight: 600;">Nom complet :</div>
-          <div>${session.displayName}</div>
-          
-          <div style="font-weight: 600;">Rôle :</div>
-          <div>${UI.getRoleLabel(session.role)}</div>
-          
-          <div style="font-weight: 600;">Connecté(e) depuis :</div>
-          <div>${formattedDate}</div>
-        </div>
-      `;
-    }
+      // Permissions
+      const permissions = Auth.PERMISSIONS[session.role] || [];
+      const permissionNames = {
+        'gm': '📊 Consulter les données Goudalle',
+        'gm_saisie': '✏️ Saisir les KPI',
+        'gm_admin': '⚙️ Gérer les paramètres Goudalle',
+        'users_admin': '👥 Gérer les utilisateurs',
+        'thresholds': '🎚️ Modifier les seuils',
+        'audit': '📋 Consulter l\'audit'
+      };
 
-    // Afficher les permissions
-    function renderPermissions() {
-      const container = document.getElementById('permissions-info');
-      
-      const hasGM = Auth.hasGMAccess();
-      const canEdit = Auth.canEditGM();
-      const readOnly = Auth.isReadOnly();
+      const permissionsHtml = permissions.map(p => 
+        `<div class="permission">${permissionNames[p] || p}</div>`
+      ).join('');
 
-      container.innerHTML = `
-        <div style="display: grid; grid-template-columns: 300px 100px; gap: 1rem; max-width: 600px;">
-          <div>Accès à Goudalle Maçonnerie</div>
-          <div>${hasGM ? '✅ Oui' : '❌ Non'}</div>
-          
-          <div>Modification des données GM</div>
-          <div>${canEdit ? '✅ Oui' : '❌ Non'}</div>
-          
-          <div>Mode lecture seule</div>
-          <div>${readOnly ? '⚠️ Oui' : '✅ Non'}</div>
-        </div>
-
-        <div style="margin-top: 1.5rem; padding: 1rem; background-color: var(--light); border-radius: 4px;">
-          <strong>Entreprises accessibles :</strong>
-          <ul style="margin-top: 0.5rem; margin-bottom: 0;">
-            ${session.access.includes('all') ? 
-              '<li>Toutes les entreprises du groupe</li>' : 
-              session.access.map(a => `<li>${a.toUpperCase()}</li>`).join('')
-            }
-          </ul>
-        </div>
-      `;
-    }
-
-    // Réinitialiser le localStorage
-    function resetLocalStorage() {
-      if (confirm('⚠️ ATTENTION : Cette action supprimera toutes les données locales et vous déconnectera. Continuer ?')) {
-        if (confirm('Êtes-vous vraiment sûr(e) ? Cette action est irréversible.')) {
-          localStorage.clear();
-          alert('Données réinitialisées. Vous allez être redirigé vers la page de connexion.');
-          window.location.href = BASE_PATH + '/pages/login.html';
-        }
+      if (permissions.length === 0) {
+        document.getElementById('permissionsDisplay').innerHTML = '<p>Aucune permission attribuée</p>';
+      } else {
+        document.getElementById('permissionsDisplay').innerHTML = `<div class="permissions-grid">${permissionsHtml}</div>`;
       }
     }
 
-    // Exposer globalement
-    window.resetLocalStorage = resetLocalStorage;
+    function showMessage(message, type) {
+      const msgDiv = document.getElementById('message');
+      msgDiv.textContent = message;
+      msgDiv.className = `alert alert-${type}`;
+      msgDiv.style.display = 'block';
+      window.scrollTo(0, 0);
+    }
 
-    // Rendu
-    renderAccountInfo();
-    renderPermissions();
+    function handleChangePassword(event) {
+      event.preventDefault();
+
+      const session = Auth.getSession();
+      const user = Auth.getCurrentUser();
+      const oldPassword = document.getElementById('oldPassword').value;
+      const newPassword = document.getElementById('newPassword').value;
+      const confirmNewPassword = document.getElementById('confirmNewPassword').value;
+
+      if (oldPassword !== user.password) {
+        showMessage('❌ Mot de passe actuel incorrect', 'error');
+        return;
+      }
+
+      if (newPassword !== confirmNewPassword) {
+        showMessage('❌ Les nouveaux mots de passe ne correspondent pas', 'error');
+        return;
+      }
+
+      if (newPassword.length < 3) {
+        showMessage('❌ Le mot de passe doit faire au moins 3 caractères', 'error');
+        return;
+      }
+
+      const result = Auth.changePassword(session.username, newPassword);
+      if (result.success) {
+        showMessage(result.message, 'success');
+        document.getElementById('oldPassword').value = '';
+        document.getElementById('newPassword').value = '';
+        document.getElementById('confirmNewPassword').value = '';
+      } else {
+        showMessage(result.message, 'error');
+      }
+    }
+
+    function resetSession() {
+      if (confirm('Êtes-vous sûr ? Vous serez immédiatement déconnecté.')) {
+        Auth.logout();
+        window.location.href = '../login.html';
+      }
+    }
+
+    window.addEventListener('load', loadProfile);
   </script>
 </body>
 </html>

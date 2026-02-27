@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Créer un compte - Intranet Goudalle</title>
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    .register-container {
+      width: 100%;
+      max-width: 500px;
+      background: white;
+      padding: 40px;
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    }
+
+    .register-header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .register-header h1 {
+      font-size: 28px;
+      margin: 0 0 10px 0;
+      color: #2c3e50;
+    }
+
+    .register-header p {
+      color: #7f8c8d;
+      margin: 0;
+      font-size: 14px;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 6px;
+      color: #2c3e50;
+      font-weight: 500;
+      font-size: 13px;
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 11px;
+      border: 2px solid #ecf0f1;
+      border-radius: 5px;
+      font-size: 13px;
+      transition: border-color 0.3s;
+      box-sizing: border-box;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: #667eea;
+      background: #f8faff;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    .message {
+      padding: 12px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+      font-size: 13px;
+      display: none;
+    }
+
+    .message.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .message.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    .message.info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 11px;
+      border: none;
+      border-radius: 5px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-secondary {
+      background: #ecf0f1;
+      color: #2c3e50;
+    }
+
+    .btn-secondary:hover {
+      background: #bdc3c7;
+    }
+
+    .info-box {
+      background: #f0f4ff;
+      padding: 15px;
+      border-radius: 5px;
+      margin-top: 20px;
+      border-left: 4px solid #667eea;
+      font-size: 12px;
+      line-height: 1.6;
+      color: #2c3e50;
+    }
+
+    .info-box strong {
+      color: #667eea;
+    }
+
+    .admin-code-section {
+      background: #fff3cd;
+      padding: 15px;
+      border-radius: 5px;
+      margin-top: 15px;
+      border: 1px solid #ffeea0;
+      display: none;
+    }
+
+    .admin-code-section.show {
+      display: block;
+    }
+
+    .role-select-info {
+      font-size: 12px;
+      color: #7f8c8d;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+
+  <div class="register-container">
+    <div class="register-header">
+      <h1>📝 Créer un compte</h1>
+      <p>Rejoignez l'intranet de Goudalle</p>
+    </div>
+
+    <div id="message" class="message"></div>
+
+    <form id="registerForm" onsubmit="handleRegister(event)">
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="firstName">Prénom *</label>
+          <input 
+            type="text" 
+            id="firstName" 
+            placeholder="Ex: Julie"
+            required
+          >
+        </div>
+        <div class="form-group">
+          <label for="lastName">Nom *</label>
+          <input 
+            type="text" 
+            id="lastName" 
+            placeholder="Ex: Dupont"
+            required
+          >
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email *</label>
+        <input 
+          type="email" 
+          id="email" 
+          placeholder="julie.dupont@goudalle.fr"
+          autocomplete="email"
+          required
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="username">Identifiant *</label>
+        <input 
+          type="text" 
+          id="username" 
+          placeholder="Ex: julie_dupont"
+          autocomplete="username"
+          minlength="3"
+          required
+        >
+        <div class="role-select-info">Au moins 3 caractères (lettres, chiffres, tiret bas)</div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="password">Mot de passe *</label>
+          <input 
+            type="password" 
+            id="password" 
+            placeholder="••••••••"
+            autocomplete="new-password"
+            minlength="3"
+            required
+          >
+        </div>
+        <div class="form-group">
+          <label for="confirmPassword">Confirmer *</label>
+          <input 
+            type="password" 
+            id="confirmPassword" 
+            placeholder="••••••••"
+            autocomplete="new-password"
+            minlength="3"
+            required
+          >
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="role">Rôle *</label>
+        <select id="role" onchange="roleChanged()" required>
+          <option value="">-- Sélectionner un rôle --</option>
+          <option value="lecture">👁️ Consultation (Lecture seule)</option>
+          <option value="referent">📊 Référent (Saisie KPI)</option>
+          <option value="direction">🗝️ Direction (Accès complet)</option>
+        </select>
+        <div class="role-select-info" id="roleInfo"></div>
+      </div>
+
+      <div class="admin-code-section" id="adminCodeSection">
+        <label for="adminCode">Code d'administration *</label>
+        <input 
+          type="password" 
+          id="adminCode" 
+          placeholder="Code fourni par la direction"
+        >
+        <div style="font-size: 11px; color: #8B6F00; margin-top: 6px;">
+          Ce rôle nécessite un code spécial. Contactez la direction si vous n'en avez pas.
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Créer le compte</button>
+        <button type="button" class="btn btn-secondary" onclick="goLogin()">Retour</button>
+      </div>
+    </form>
+
+    <div class="info-box">
+      <strong>ℹ️ Information importante :</strong><br>
+      Les rôles <strong>Référent</strong> et <strong>Direction</strong> requièrent un code d'administration fourni par votre gestionnaire. Si vous êtes un nouvel utilisateur, commencez avec le rôle <strong>Consultation</strong>.
+    </div>
+  </div>
+
+  <script>
+    function roleChanged() {
+      const role = document.getElementById('role').value;
+      const adminSection = document.getElementById('adminCodeSection');
+      const roleInfo = document.getElementById('roleInfo');
+
+      const roleDescriptions = {
+        'lecture': '✅ Accès en lecture seule aux données',
+        'referent': '✅ Saisie et modification des KPI (nécessite code admin)',
+        'direction': '✅ Accès complet au système (nécessite code admin)'
+      };
+
+      roleInfo.textContent = roleDescriptions[role] || '';
+
+      if (role === 'referent' || role === 'direction') {
+        adminSection.classList.add('show');
+        document.getElementById('adminCode').required = true;
+      } else {
+        adminSection.classList.remove('show');
+        document.getElementById('adminCode').required = false;
+        document.getElementById('adminCode').value = '';
+      }
+    }
+
+    function showMessage(message, type) {
+      const msgDiv = document.getElementById('message');
+      msgDiv.textContent = message;
+      msgDiv.className = `message ${type}`;
+      msgDiv.style.display = 'block';
+      window.scrollTo(0, 0);
+    }
+
+    function handleRegister(event) {
+      event.preventDefault();
+
+      const firstName = document.getElementById('firstName').value.trim();
+      const lastName = document.getElementById('lastName').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+      const role = document.getElementById('role').value;
+      const adminCode = document.getElementById('adminCode').value || null;
+
+      // Validations
+      if (!firstName || !lastName || !email || !username || !password || !role) {
+        showMessage('❌ Tous les champs marqués * sont obligatoires', 'error');
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        showMessage('❌ Les mots de passe ne correspondent pas', 'error');
+        return;
+      }
+
+      if (username.length < 3) {
+        showMessage('❌ L\'identifiant doit faire au moins 3 caractères', 'error');
+        return;
+      }
+
+      const displayName = `${firstName} ${lastName}`;
+
+      // Appeler Auth.registerUser
+      const result = Auth.registerUser(username, password, displayName, email, role, adminCode);
+
+      if (result.success) {
+        showMessage(result.message, 'success');
+        setTimeout(() => {
+          window.location.href = '../login.html';
+        }, 1500);
+      } else {
+        showMessage(result.message, 'error');
+      }
+    }
+
+    function goLogin() {
+      window.location.href = './login.html';
+    }
+
+    // Vérifier si déjà connecté
+    if (Auth.isConnected()) {
+      window.location.href = '../index.html';
+    }
+  </script>
+</body>
+</html>

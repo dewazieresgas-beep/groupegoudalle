@@ -3,319 +3,187 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Référent GM - Intranet Goudalle</title>
+  <title>Admin Goudalle - Intranet</title>
   <link rel="stylesheet" href="../style.css">
 </head>
 <body>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+
+  <script>
+    Auth.requirePermission('gm_admin');
+  </script>
+
   <div class="app-container">
-    <!-- Sidebar injectée dynamiquement -->
-    <div id="sidebar-container"></div>
-
+    <div id="sidebar"></div>
+    
     <main class="main-content">
-      <h1>⚙️ Référent GM - Gestion des KPI</h1>
-      
-      <!-- Formulaire de saisie hebdomadaire -->
+      <h1>⚙️ Administration - Goudalle Maçonnerie</h1>
+
       <div class="card">
-        <div class="card-header">
-          <h2>Saisie hebdomadaire</h2>
+        <div class="card-title">
+          <h2>🎚️ Seuils de performance (h/m³)</h2>
         </div>
         <div class="card-body">
-          <form id="kpi-form">
-            <input type="hidden" id="kpi-id" value="">
-            
-            <div class="form-row">
-              <div class="form-group">
-                <label for="year">Année</label>
-                <input type="number" id="year" required>
-              </div>
-              <div class="form-group">
-                <label for="week">Semaine (01-52)</label>
-                <input type="number" id="week" min="1" max="52" required>
-              </div>
-            </div>
+          <div id="message" class="alert" style="display:none;"></div>
 
-            <div class="form-row">
+          <form onsubmit="handleSaveThresholds(event)">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
               <div class="form-group">
-                <label for="m3">m³ coulés</label>
-                <input type="number" id="m3" step="0.01" min="0" required>
+                <label for="greenMax">
+                  🟢 Limite VERT (max)
+                  <small style="color: #7f8c8d; display: block;"> h/m³ ≤ ce seuil = Vert</small>
+                </label>
+                <input type="number" id="greenMax" step="0.1" value="4.5" required>
               </div>
               <div class="form-group">
-                <label for="hours">Heures travaillées</label>
-                <input type="number" id="hours" step="0.01" min="0" required>
+                <label for="orangeMax">
+                  🟠 Limite ORANGE (max)
+                  <small style="color: #7f8c8d; display: block;">ce seuil < h/m³ ≤ ce seuil = Orange</small>
+                </label>
+                <input type="number" id="orangeMax" step="0.1" value="5.5" required>
               </div>
             </div>
 
-            <div class="form-group">
-              <label for="comment">Commentaire (obligatoire)</label>
-              <textarea id="comment" required></textarea>
+            <div class="alert alert-info">
+              <strong>ℹ️ Règles :</strong>
+              <ul style="margin: 10px 0 0 20px;">
+                <li>h/m³ &lt; Vert = 🟢 Vert</li>
+                <li>Vert ≤ h/m³ ≤ Orange = 🟠 Orange</li>
+                <li>h/m³ &gt; Orange = 🔴 Rouge</li>
+              </ul>
             </div>
 
-            <div class="form-group">
-              <label for="status">Statut</label>
-              <select id="status" required>
-                <option value="draft">Brouillon</option>
-                <option value="published">Publié</option>
-              </select>
-            </div>
-
-            <div class="form-actions">
-              <button type="submit" class="btn btn-primary">Enregistrer</button>
-              <button type="button" class="btn btn-secondary" onclick="resetForm()">Annuler</button>
-            </div>
+            <button type="submit" class="btn btn-primary">💾 Enregistrer les seuils</button>
           </form>
         </div>
       </div>
 
-      <!-- Liste des semaines existantes -->
       <div class="card">
-        <div class="card-header">
-          <h2>Liste des semaines</h2>
+        <div class="card-title">
+          <h2>📋 Tous les KPI - Goudalle</h2>
         </div>
         <div class="card-body">
-          <div class="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Semaine</th>
-                  <th class="text-right">m³</th>
-                  <th class="text-right">Heures</th>
-                  <th class="text-right">h/m³</th>
-                  <th>Statut</th>
-                  <th>Commentaire</th>
-                  <th class="text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="kpi-list">
-                <!-- Contenu injecté dynamiquement -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Configuration des seuils -->
-      <div class="card">
-        <div class="card-header">
-          <h2>Configuration des seuils smiley</h2>
-        </div>
-        <div class="card-body">
-          <form id="threshold-form">
-            <div class="form-row">
-              <div class="form-group">
-                <label for="greenMax">Seuil max vert (h/m³)</label>
-                <input type="number" id="greenMax" step="0.1" min="0" required>
-              </div>
-              <div class="form-group">
-                <label for="orangeMax">Seuil max orange (h/m³)</label>
-                <input type="number" id="orangeMax" step="0.1" min="0" required>
-              </div>
-            </div>
-
-            <div class="alert alert-info" style="display: block; margin-bottom: 1rem;">
-              <strong>Info :</strong> Vert si h/m³ &lt; seuil vert | Orange si entre vert et orange | Rouge si &gt; orange
-            </div>
-
-            <button type="submit" class="btn btn-warning">Mettre à jour les seuils</button>
-          </form>
+          <table id="allKpiTable">
+            <thead>
+              <tr>
+                <th>Semaine</th>
+                <th>m³</th>
+                <th>Heures</th>
+                <th>h/m³</th>
+                <th>Statut</th>
+                <th>Créé par</th>
+                <th>Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="8" style="text-align:center; padding: 20px;">Chargement...</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </main>
   </div>
 
-  <script src="../js/app.js"></script>
   <script>
-    // Protection de la page
-    Auth.requireAuth();
-    if (!Auth.canEditGM()) {
-      alert('Accès refusé : vous n\'avez pas les droits de modification');
-      window.location.href = BASE_PATH + '/pages/gm.html';
-    }
+    let thresholds = {
+      greenMax: 4.5,
+      orangeMax: 5.5
+    };
 
-    // Initialisation
-    App.init();
-
-    // Injecter la sidebar
-    document.getElementById('sidebar-container').innerHTML = UI.generateSidebar();
-    App.highlightCurrentPage();
-
-    const session = Auth.getSession();
-
-    // Pré-remplir le formulaire avec la semaine passée
-    function initForm() {
-      const prev = WeekUtils.getPreviousWeek();
-      document.getElementById('year').value = prev.year;
-      document.getElementById('week').value = prev.week;
-      document.getElementById('status').value = 'draft';
-    }
-
-    // Reset du formulaire
-    function resetForm() {
-      document.getElementById('kpi-form').reset();
-      document.getElementById('kpi-id').value = '';
-      initForm();
-    }
-
-    // Charger les données pour édition
-    function loadKPI(id) {
-      const kpi = StorageManager.getKPIById(id);
-      if (!kpi) return;
-
-      document.getElementById('kpi-id').value = kpi.id;
-      document.getElementById('year').value = kpi.year;
-      document.getElementById('week').value = kpi.week;
-      document.getElementById('m3').value = kpi.m3;
-      document.getElementById('hours').value = kpi.hours;
-      document.getElementById('comment').value = kpi.comment;
-      document.getElementById('status').value = kpi.status;
-
-      // Scroll vers le formulaire
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    // Publier un KPI
-    function publishKPI(id) {
-      if (confirm('Voulez-vous publier cette semaine ? Elle sera visible sur les dashboards.')) {
-        StorageManager.publishKPI(id, session.username);
-        renderKPIList();
-        alert('Semaine publiée avec succès');
-      }
-    }
-
-    // Supprimer un KPI (optionnel, pas dans le spec mais utile)
-    function deleteKPI(id) {
-      if (confirm('Êtes-vous sûr de vouloir supprimer cette semaine ?')) {
-        const kpiData = StorageManager.getKPIWeekly();
-        const filtered = kpiData.filter(k => k.id !== id);
-        StorageManager.saveKPIWeekly(filtered);
-        renderKPIList();
-        alert('Semaine supprimée');
-      }
-    }
-
-    // Gestionnaire de soumission du formulaire KPI
-    document.getElementById('kpi-form').addEventListener('submit', function(e) {
-      e.preventDefault();
-
-      const id = document.getElementById('kpi-id').value || `gm_${document.getElementById('year').value}_w${String(document.getElementById('week').value).padStart(2, '0')}`;
-      const year = parseInt(document.getElementById('year').value);
-      const week = parseInt(document.getElementById('week').value);
-      const m3 = parseFloat(document.getElementById('m3').value);
-      const hours = parseFloat(document.getElementById('hours').value);
-      const comment = document.getElementById('comment').value.trim();
-      const status = document.getElementById('status').value;
-
-      if (!comment) {
-        alert('Le commentaire est obligatoire');
-        return;
-      }
-
-      const kpi = {
-        id,
-        year,
-        week,
-        m3,
-        hours,
-        comment,
-        status
-      };
-
-      StorageManager.saveKPI(kpi, session.username);
-      alert('KPI enregistré avec succès');
-      resetForm();
-      renderKPIList();
-    });
-
-    // Afficher la liste des KPI
-    function renderKPIList() {
-      const kpiData = StorageManager.getKPIWeekly();
-      const thresholds = StorageManager.getThresholds();
-      const sorted = kpiData.sort((a, b) => {
-        if (a.year !== b.year) return b.year - a.year;
-        return b.week - a.week;
-      });
-
-      const tbody = document.getElementById('kpi-list');
-
-      if (sorted.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Aucune semaine enregistrée</td></tr>';
-        return;
-      }
-
-      tbody.innerHTML = sorted.map(k => {
-        const ratio = KPICalculator.calculateRatio(k.hours, k.m3);
-        const smiley = KPICalculator.getSmiley(ratio, thresholds);
-        const statusBadge = k.status === 'published' ? 'badge-published' : 'badge-draft';
-        const canPublish = k.status === 'draft';
-
-        return `
-          <tr>
-            <td>S${WeekUtils.formatWeekNumber(k.week)} - ${k.year}</td>
-            <td class="text-right">${UI.formatNumber(k.m3)}</td>
-            <td class="text-right">${UI.formatNumber(k.hours)}</td>
-            <td class="text-right">${UI.formatRatio(ratio)} ${UI.getSmileyEmoji(smiley)}</td>
-            <td><span class="badge ${statusBadge}">${k.status}</span></td>
-            <td>${k.comment}</td>
-            <td class="text-center">
-              <button class="btn btn-secondary" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" onclick="loadKPI('${k.id}')">Modifier</button>
-              ${canPublish ? `<button class="btn btn-success" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" onclick="publishKPI('${k.id}')">Publier</button>` : ''}
-            </td>
-          </tr>
-        `;
-      }).join('');
-    }
-
-    // Charger les seuils
     function loadThresholds() {
-      const thresholds = StorageManager.getThresholds();
+      const stored = localStorage.getItem('goudalle_thresholds');
+      if (stored) {
+        thresholds = JSON.parse(stored);
+      }
       document.getElementById('greenMax').value = thresholds.greenMax;
       document.getElementById('orangeMax').value = thresholds.orangeMax;
     }
 
-    // Gestionnaire de soumission des seuils
-    document.getElementById('threshold-form').addEventListener('submit', function(e) {
-      e.preventDefault();
+    function showMessage(message, type) {
+      const msgDiv = document.getElementById('message');
+      msgDiv.textContent = message;
+      msgDiv.className = `alert alert-${type}`;
+      msgDiv.style.display = 'block';
+    }
+
+    function handleSaveThresholds(event) {
+      event.preventDefault();
 
       const greenMax = parseFloat(document.getElementById('greenMax').value);
       const orangeMax = parseFloat(document.getElementById('orangeMax').value);
 
       if (greenMax >= orangeMax) {
-        alert('Le seuil vert doit être inférieur au seuil orange');
+        showMessage('❌ Le seuil VERT doit être inférieur à ORANGE', 'error');
         return;
       }
 
-      const thresholds = {
-        greenMax,
-        orangeMax,
-        updatedAt: new Date().toISOString(),
-        updatedBy: session.username
-      };
+      thresholds = { greenMax, orangeMax };
+      localStorage.setItem('goudalle_thresholds', JSON.stringify(thresholds));
+      Auth.audit('THRESHOLDS_UPDATED', `Seuils mis à jour: Vert=${greenMax}, Orange=${orangeMax}`);
 
-      StorageManager.saveThresholds(thresholds);
-      
-      // Ajouter dans l'historique
-      StorageManager.addHistory({
-        id: `hist_${Date.now()}`,
-        kpiId: 'thresholds',
-        changedAt: new Date().toISOString(),
-        changedBy: session.username,
-        oldValue: { thresholdsSnapshot: StorageManager.getThresholds() },
-        newValue: { thresholdsSnapshot: thresholds }
-      });
+      showMessage('✅ Seuils enregistrés avec succès', 'success');
+    }
 
-      alert('Seuils mis à jour avec succès');
-      renderKPIList(); // Rafraîchir pour afficher les nouveaux smileys
-    });
+    function loadAllKPIs() {
+      const kpis = getKPIs().sort((a, b) => b.week - a.week);
+      const tbody = document.querySelector('#allKpiTable tbody');
 
-    // Exposer les fonctions globalement
-    window.resetForm = resetForm;
-    window.loadKPI = loadKPI;
-    window.publishKPI = publishKPI;
-    window.deleteKPI = deleteKPI;
+      tbody.innerHTML = kpis.map(k => {
+        const ratio = calculateRatio(k.hours, k.m3);
+        const smiley = getSmiley(ratio);
+        const date = new Date(k.updatedAt || k.createdAt);
 
-    // Initialisation
-    initForm();
-    renderKPIList();
-    loadThresholds();
+        return `
+          <tr>
+            <td><strong>S${String(k.week).padStart(2, '0')}/${k.year}</strong></td>
+            <td>${k.m3.toFixed(2)}</td>
+            <td>${k.hours.toFixed(2)}</td>
+            <td>
+              <span class="badge badge-${smiley}">
+                ${ratio !== null ? ratio.toFixed(2) : '—'} ${getSmileyEmoji(smiley)}
+              </span>
+            </td>
+            <td>
+              <span class="badge ${k.status === 'published' ? 'badge-success' : 'badge-warning'}">
+                ${k.status === 'published' ? '✅ Publié' : '📝 Brouillon'}
+              </span>
+            </td>
+            <td><small>${k.createdBy}</small></td>
+            <td><small>${date.toLocaleDateString('fr-FR')}</small></td>
+            <td>
+              <button class="btn btn-small btn-secondary" onclick="editKPI(${k.id})">✏️ Éditer</button>
+              ${k.status !== 'published' ? `<button class="btn btn-small btn-success" onclick="publishKPI(${k.year}, ${k.week})">📤 Publier</button>` : ''}
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      if (kpis.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 20px;">Aucun KPI</td></tr>`;
+      }
+    }
+
+    function editKPI(id) {
+      alert('Fonctionnalité à développer : éditer KPI #' + id);
+    }
+
+    function publishKPI(year, week) {
+      if (confirm(`Publier le KPI S${String(week).padStart(2, '0')}/${year} ?`)) {
+        const result = publishKPI(year, week);
+        showMessage(result.message, result.success ? 'success' : 'error');
+        loadAllKPIs();
+      }
+    }
+
+    function init() {
+      document.getElementById('sidebar').innerHTML = getSidebar();
+      loadThresholds();
+      loadAllKPIs();
+    }
+
+    window.addEventListener('load', init);
   </script>
 </body>
 </html>

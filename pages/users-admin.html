@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestion Utilisateurs - Intranet Goudalle</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+
+  <script>
+    Auth.requirePermission('users_admin');
+  </script>
+
+  <div class="app-container">
+    <div id="sidebar"></div>
+    
+    <main class="main-content">
+      <h1>👥 Gestion des Utilisateurs</h1>
+
+      <div class="card">
+        <div class="card-title">
+          <h2>➕ Créer un nouvel utilisateur</h2>
+        </div>
+        <div class="card-body">
+          <div id="message" class="alert" style="display:none;"></div>
+
+          <form onsubmit="handleCreateUser(event)">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+              <div class="form-group">
+                <label for="firstName">Prénom *</label>
+                <input type="text" id="firstName" required>
+              </div>
+              <div class="form-group">
+                <label for="lastName">Nom *</label>
+                <input type="text" id="lastName" required>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="email">Email *</label>
+              <input type="email" id="email" required>
+            </div>
+
+            <div class="form-group">
+              <label for="username">Identifiant *</label>
+              <input type="text" id="username" minlength="3" required>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+              <div class="form-group">
+                <label for="password">Mot de passe *</label>
+                <input type="password" id="password" minlength="3" required>
+              </div>
+              <div class="form-group">
+                <label for="role">Rôle *</label>
+                <select id="role" required>
+                  <option value="">-- Sélectionner --</option>
+                  <option value="lecture">👁️ Consultation</option>
+                  <option value="referent">📊 Référent</option>
+                  <option value="direction">🗝️ Direction</option>
+                </select>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">➕ Créer utilisateur</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <h2>📊 Liste des utilisateurs</h2>
+        </div>
+        <div class="card-body">
+          <table id="usersTable">
+            <thead>
+              <tr>
+                <th>Identifiant</th>
+                <th>Nom</th>
+                <th>Email</th>
+                <th>Rôle</th>
+                <th>Créé le</th>
+                <th>Statut</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="7" style="text-align:center; padding: 20px;">Chargement...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <h2>🔐 Code d'administration</h2>
+        </div>
+        <div class="card-body">
+          <div class="alert alert-warning">
+            <strong>⚠️ Important :</strong> Ce code est requis pour créer des comptes avec les rôles Référent et Direction.
+          </div>
+
+          <form onsubmit="handleChangeAdminCode(event)">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+              <div class="form-group">
+                <label for="newAdminCode">Nouveau code *</label>
+                <input type="password" id="newAdminCode" minlength="4" required>
+              </div>
+              <div class="form-group">
+                <label for="confirmAdminCode">Confirmation *</label>
+                <input type="password" id="confirmAdminCode" minlength="4" required>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary">🔐 Changer le code</button>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    function showMessage(message, type) {
+      const msgDiv = document.getElementById('message');
+      msgDiv.textContent = message;
+      msgDiv.className = `alert alert-${type}`;
+      msgDiv.style.display = 'block';
+      window.scrollTo(0, 0);
+    }
+
+    function handleCreateUser(event) {
+      event.preventDefault();
+
+      const firstName = document.getElementById('firstName').value.trim();
+      const lastName = document.getElementById('lastName').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      const role = document.getElementById('role').value;
+
+      const displayName = `${firstName} ${lastName}`;
+
+      // Si direction ou referent, demander le code admin
+      let adminCode = null;
+      if (role === 'direction' || role === 'referent') {
+        adminCode = prompt('Entre le code d\'administration pour créer un compte ' + role + ':');
+        if (!adminCode) return;
+      }
+
+      const result = Auth.registerUser(username, password, displayName, email, role, adminCode);
+
+      if (result.success) {
+        showMessage(result.message, 'success');
+        document.getElementById('firstName').value = '';
+        document.getElementById('lastName').value = '';
+        document.getElementById('email').value = '';
+        document.getElementById('username').value = '';
+        document.getElementById('password').value = '';
+        document.getElementById('role').value = '';
+        loadUsers();
+      } else {
+        showMessage(result.message, 'error');
+      }
+    }
+
+    function loadUsers() {
+      const users = Auth.getUserList();
+      const tbody = document.querySelector('#usersTable tbody');
+
+      const roleNames = {
+        'direction': '🗝️ Direction',
+        'referent': '📊 Référent',
+        'lecture': '👁️ Consultation'
+      };
+
+      tbody.innerHTML = users.map(u => {
+        const date = new Date(u.createdAt);
+        return `
+          <tr>
+            <td><strong>${u.username}</strong></td>
+            <td>${u.displayName || '—'}</td>
+            <td>${u.email || '—'}</td>
+            <td><span class="badge badge-primary">${roleNames[u.role] || u.role}</span></td>
+            <td><small>${date.toLocaleDateString('fr-FR')}</small></td>
+            <td>
+              <span class="badge ${u.isActive ? 'badge-success' : 'badge-danger'}">
+                ${u.isActive ? '✅ Actif' : '❌ Inactif'}
+              </span>
+            </td>
+            <td>
+              ${u.isActive ? `<button class="btn btn-small btn-danger" onclick="disableUser('${u.username}')">🔒 Désactiver</button>` : ''}
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      if (users.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 20px;">Aucun utilisateur</td></tr>`;
+      }
+    }
+
+    function disableUser(username) {
+      if (confirm(`Désactiver l'utilisateur ${username} ?`)) {
+        const result = Auth.disableUser(username);
+        if (result.success) {
+          loadUsers();
+        }
+      }
+    }
+
+    function handleChangeAdminCode(event) {
+      event.preventDefault();
+
+      const newCode = document.getElementById('newAdminCode').value;
+      const confirmCode = document.getElementById('confirmAdminCode').value;
+
+      if (newCode !== confirmCode) {
+        showMessage('❌ Les codes ne correspondent pas', 'error');
+        return;
+      }
+
+      const result = Auth.setAdminCode(newCode, Auth.getSession());
+      if (result.success) {
+        showMessage(result.message, 'success');
+        document.getElementById('newAdminCode').value = '';
+        document.getElementById('confirmAdminCode').value = '';
+      } else {
+        showMessage(result.message, 'error');
+      }
+    }
+
+    function init() {
+      document.getElementById('sidebar').innerHTML = getSidebar();
+      loadUsers();
+    }
+
+    window.addEventListener('load', init);
+  </script>
+</body>
+</html>

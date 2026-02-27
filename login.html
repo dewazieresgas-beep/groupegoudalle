@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connexion - Intranet Goudalle</title>
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    .login-container {
+      width: 100%;
+      max-width: 450px;
+      background: white;
+      padding: 40px;
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    }
+
+    .login-header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .login-header h1 {
+      font-size: 32px;
+      margin: 0 0 10px 0;
+      color: #2c3e50;
+    }
+
+    .login-header p {
+      color: #7f8c8d;
+      margin: 0;
+      font-size: 14px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #2c3e50;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #ecf0f1;
+      border-radius: 5px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+      box-sizing: border-box;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #667eea;
+      background: #f8faff;
+    }
+
+    .message {
+      padding: 12px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+      font-size: 14px;
+      display: none;
+    }
+
+    .message.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+      display: block;
+    }
+
+    .message.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+      display: block;
+    }
+
+    .message.info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+      display: block;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 5px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-secondary {
+      background: #ecf0f1;
+      color: #2c3e50;
+    }
+
+    .btn-secondary:hover {
+      background: #bdc3c7;
+    }
+
+    .demo-accounts {
+      background: #f0f4ff;
+      padding: 20px;
+      border-radius: 5px;
+      margin-top: 25px;
+      border-left: 4px solid #667eea;
+    }
+
+    .demo-accounts h3 {
+      margin: 0 0 15px 0;
+      color: #2c3e50;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .demo-account {
+      background: white;
+      padding: 12px;
+      margin-bottom: 10px;
+      border-radius: 4px;
+      border: 1px solid #ecf0f1;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .demo-account:last-child {
+      margin-bottom: 0;
+    }
+
+    .demo-account:hover {
+      background: #f9fbff;
+      border-color: #667eea;
+    }
+
+    .demo-account-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+    }
+
+    .demo-account-user {
+      font-weight: 600;
+      color: #2c3e50;
+      font-size: 13px;
+    }
+
+    .demo-account-role {
+      font-size: 11px;
+      padding: 2px 8px;
+      background: #667eea;
+      color: white;
+      border-radius: 3px;
+      text-transform: uppercase;
+    }
+
+    .demo-account-pwd {
+      font-size: 12px;
+      color: #7f8c8d;
+      font-family: monospace;
+    }
+
+    .demo-account-desc {
+      font-size: 12px;
+      color: #7f8c8d;
+      margin-top: 5px;
+    }
+
+    .loading {
+      display: none;
+      text-align: center;
+      color: #667eea;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+
+  <div class="login-container">
+    <div class="login-header">
+      <h1>🏗️ Goudalle</h1>
+      <p>Intranet - Connexion</p>
+    </div>
+
+    <div id="message" class="message"></div>
+
+    <form id="loginForm" onsubmit="handleLogin(event)">
+      <div class="form-group">
+        <label for="username">Identifiant</label>
+        <input 
+          type="text" 
+          id="username" 
+          name="username" 
+          placeholder="Ex: acgoudalle"
+          autocomplete="username"
+          required
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="password">Mot de passe</label>
+        <input 
+          type="password" 
+          id="password" 
+          name="password" 
+          placeholder="Votre mot de passe"
+          autocomplete="password"
+          required
+        >
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">
+          <span id="btnText">Connexion</span>
+          <span id="loading" class="loading"><div class="spinner"></div></span>
+        </button>
+        <button type="button" class="btn btn-secondary" onclick="goRegister()">Créer un compte</button>
+      </div>
+    </form>
+
+    <div class="demo-accounts">
+      <h3>📋 Comptes de démo</h3>
+      
+      <div class="demo-account" onclick="autofill('acgoudalle', '123')">
+        <div class="demo-account-header">
+          <span class="demo-account-user">acgoudalle</span>
+          <span class="demo-account-role">Direction</span>
+        </div>
+        <div class="demo-account-pwd">Mot de passe: 123</div>
+        <div class="demo-account-desc">Accès complet - Gestion complète du système</div>
+      </div>
+
+      <div class="demo-account" onclick="autofill('julie', '123')">
+        <div class="demo-account-header">
+          <span class="demo-account-user">julie</span>
+          <span class="demo-account-role">Référent</span>
+        </div>
+        <div class="demo-account-pwd">Mot de passe: 123</div>
+        <div class="demo-account-desc">Saisie des KPI - Gestion des données</div>
+      </div>
+
+      <div class="demo-account" onclick="autofill('gaspard', '123')">
+        <div class="demo-account-header">
+          <span class="demo-account-user">gaspard</span>
+          <span class="demo-account-role">Consultation</span>
+        </div>
+        <div class="demo-account-pwd">Mot de passe: 123</div>
+        <div class="demo-account-desc">Lecture seule - Consulter les données</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function autofill(username, password) {
+      document.getElementById('username').value = username;
+      document.getElementById('password').value = password;
+      document.getElementById('username').focus();
+    }
+
+    function showMessage(message, type) {
+      const msgDiv = document.getElementById('message');
+      msgDiv.textContent = message;
+      msgDiv.className = `message ${type}`;
+      msgDiv.style.display = 'block';
+    }
+
+    function handleLogin(event) {
+      event.preventDefault();
+      
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!username || !password) {
+        showMessage('❌ Veuillez remplir tous les champs', 'error');
+        return;
+      }
+
+      // Animation
+      document.getElementById('btnText').style.display = 'none';
+      document.getElementById('loading').style.display = 'block';
+
+      // Simuler un délai réseau
+      setTimeout(() => {
+        const result = Auth.login(username, password);
+
+        if (result.success) {
+          showMessage(result.message, 'success');
+          setTimeout(() => {
+            window.location.href = '../index.html';
+          }, 500);
+        } else {
+          showMessage(result.message, 'error');
+          document.getElementById('btnText').style.display = 'inline';
+          document.getElementById('loading').style.display = 'none';
+        }
+      }, 300);
+    }
+
+    function goRegister() {
+      window.location.href = './register.html';
+    }
+
+    // Vérifier si déjà connecté
+    if (Auth.isConnected()) {
+      window.location.href = '../index.html';
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Journal d'Audit - Intranet Goudalle</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+
+  <script>
+    Auth.requirePermission('audit');
+  </script>
+
+  <div class="app-container">
+    <div id="sidebar"></div>
+    
+    <main class="main-content">
+      <h1>📋 Journal d'Audit</h1>
+
+      <div class="card">
+        <div class="card-title">
+          <h2>📊 Historique des actions</h2>
+        </div>
+        <div class="card-body">
+          <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+            <input type="text" id="filterAction" placeholder="Filtrer par action..." class="form-group" style="flex:1; margin:0; padding:10px;">
+            <input type="text" id="filterUser" placeholder="Filtrer par utilisateur..." class="form-group" style="flex:1; margin:0; padding:10px;">
+            <button onclick="applyFilters()" class="btn btn-secondary">🔍 Filtrer</button>
+            <button onclick="clearFilters()" class="btn btn-secondary">✖️ Réinitialiser</button>
+          </div>
+
+          <table id="auditTable">
+            <thead>
+              <tr>
+                <th>Date/Heure</th>
+                <th>Action</th>
+                <th>Utilisateur</th>
+                <th>Détails</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="4" style="text-align:center; padding: 20px;">Chargement...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <h2>📈 Statistiques</h2>
+        </div>
+        <div class="card-body">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+            <div style="background: #f0f4ff; padding: 20px; border-radius: 8px; text-align: center;">
+              <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.5px;">Total entrées</div>
+              <div style="font-size: 28px; font-weight: 700; color: #667eea;" id="totalEntries">—</div>
+            </div>
+            <div style="background: #f0f4ff; padding: 20px; border-radius: 8px; text-align: center;">
+              <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.5px;">Connexions</div>
+              <div style="font-size: 28px; font-weight: 700; color: #27ae60;" id="loginCount">—</div>
+            </div>
+            <div style="background: #f0f4ff; padding: 20px; border-radius: 8px; text-align: center;">
+              <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.5px;">KPI créés</div>
+              <div style="font-size: 28px; font-weight: 700; color: #f39c12;" id="kpiCount">—</div>
+            </div>
+            <div style="background: #f0f4ff; padding: 20px; border-radius: 8px; text-align: center;">
+              <div style="font-size: 12px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.5px;">Utilisateurs actifs</div>
+              <div style="font-size: 28px; font-weight: 700; color: #3498db;" id="activeUsers">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    let allAuditData = [];
+
+    function loadAudit() {
+      document.getElementById('sidebar').innerHTML = getSidebar();
+
+      allAuditData = Auth.getAuditTrail().reverse();
+
+      displayAudit(allAuditData);
+      updateStats();
+    }
+
+    function displayAudit(data) {
+      const tbody = document.querySelector('#auditTable tbody');
+
+      tbody.innerHTML = data.map(entry => {
+        const date = new Date(entry.timestamp);
+        const dateStr = date.toLocaleString('fr-FR');
+
+        return `
+          <tr>
+            <td><small>${dateStr}</small></td>
+            <td>
+              <span class="badge badge-primary" style="background: rgba(102, 126, 234, 0.2); color: #667eea;">
+                ${entry.action}
+              </span>
+            </td>
+            <td><strong>${entry.user}</strong></td>
+            <td><small>${entry.details}</small></td>
+          </tr>
+        `;
+      }).join('');
+
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 20px;">Aucune entrée</td></tr>`;
+      }
+    }
+
+    function updateStats() {
+      const audit = Auth.getAuditTrail();
+
+      document.getElementById('totalEntries').textContent = audit.length;
+      
+      const logins = audit.filter(a => a.action === 'LOGIN').length;
+      document.getElementById('loginCount').textContent = logins;
+
+      const kpiCreated = audit.filter(a => a.action === 'KPI_SAVED').length;
+      document.getElementById('kpiCount').textContent = kpiCreated;
+
+      const users = new Set(audit.map(a => a.user));
+      document.getElementById('activeUsers').textContent = users.size;
+    }
+
+    function applyFilters() {
+      const action = document.getElementById('filterAction').value.toLowerCase();
+      const user = document.getElementById('filterUser').value.toLowerCase();
+
+      const filtered = allAuditData.filter(entry => {
+        const matchAction = !action || entry.action.toLowerCase().includes(action);
+        const matchUser = !user || entry.user.toLowerCase().includes(user);
+        return matchAction && matchUser;
+      });
+
+      displayAudit(filtered);
+    }
+
+    function clearFilters() {
+      document.getElementById('filterAction').value = '';
+      document.getElementById('filterUser').value = '';
+      displayAudit(allAuditData);
+    }
+
+    window.addEventListener('load', loadAudit);
+  </script>
+</body>
+</html>
