@@ -9,6 +9,9 @@
 <body>
   <script src="../js/auth.js"></script>
   <script src="../js/utils.js"></script>
+  <script>
+    window.APP_LOGO = 'groupe';
+  </script>
 
   <script>
     Auth.requirePermission('audit');
@@ -18,11 +21,11 @@
     <div id="sidebar"></div>
     
     <main class="main-content">
-      <h1>📋 Journal d'Audit</h1>
+      <h1>Journal d'Audit</h1>
 
       <div class="card">
         <div class="card-title">
-          <h2>📊 Historique des actions</h2>
+          <h2>Historique des actions</h2>
         </div>
         <div class="card-body">
           <div style="display: flex; gap: 10px; margin-bottom: 20px;">
@@ -50,7 +53,7 @@
 
       <div class="card">
         <div class="card-title">
-          <h2>📈 Statistiques</h2>
+          <h2>Statistiques</h2>
         </div>
         <div class="card-body">
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
@@ -150,5 +153,32 @@
 
     window.addEventListener('load', loadAudit);
   </script>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div>
+        <div class="footer-title">Goudalle Groupe</div>
+        <div>50 rue Principale</div>
+        <div>RD343 - 62550 Preures</div>
+        <div>Tel. 03 21 90 98 98</div>
+      </div>
+      <div>
+        <div class="footer-title">Contact</div>
+        <a class="footer-link" href="#">contact@goudalle.fr</a>
+        <div>Formulaire de contact</div>
+      </div>
+      <div>
+        <div class="footer-title">Realisations</div>
+        <div>Agricole / Elevage</div>
+        <div>Tertiaire / Habitat</div>
+        <div>Public / Sante</div>
+      </div>
+      <div>
+        <div class="footer-title">Goudalle recrute</div>
+        <div>Decouvrir nos metiers</div>
+        <div>Voir nos offres</div>
+      </div>
+    </div>
+  </footer>
 </body>
 </html>

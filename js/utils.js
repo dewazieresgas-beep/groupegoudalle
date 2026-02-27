@@ -104,50 +104,68 @@ function publishKPI(year, week) {
 }
 
 // ============ UI HELPERS ============
+function getBasePath() {
+  return window.location.pathname.includes('/pages/') ? '../' : './';
+}
+
+function getLogoPath() {
+  const base = getBasePath();
+  const logoFile = window.APP_LOGO === 'maconnerie' ? 'goudalle-maconnerie.png' : 'groupe.png';
+  return `${base}assets/${logoFile}`;
+}
+
 function getSidebar() {
   const session = Auth.getSession();
   if (!session) return '';
 
   const isDirection = Auth.isDirection();
-  const isReferent = Auth.isReferent();
   const canEdit = Auth.canEditGM();
+  const base = getBasePath();
 
   let items = `
-    <a href="./index.html" class="sidebar-item">🏠 Accueil</a>
+    <a href="${base}index.html" class="sidebar-item">Accueil</a>
   `;
 
   if (Auth.canViewGM()) {
-    items += `<a href="./pages/gm.html" class="sidebar-item">📊 Goudalle</a>`;
+    items += `<a href="${base}pages/gm.html" class="sidebar-item">Goudalle Maconnerie</a>`;
   }
 
   if (canEdit) {
-    items += `<a href="./pages/gm-saisie.html" class="sidebar-item">✏️ Saisie KPI</a>`;
+    items += `<a href="${base}pages/gm-saisie.html" class="sidebar-item">Saisie KPI</a>`;
   }
 
   if (isDirection) {
     items += `
-      <hr style="margin: 10px 0; opacity: 0.3;">
-      <a href="./pages/gm-admin.html" class="sidebar-item">⚙️ Admin GM</a>
-      <a href="./pages/users-admin.html" class="sidebar-item">👥 Gestion Utilisateurs</a>
-      <a href="./pages/audit.html" class="sidebar-item">📋 Audit</a>
+      <a href="${base}pages/gm-admin.html" class="sidebar-item">Admin GM</a>
+      <a href="${base}pages/users-admin.html" class="sidebar-item">Utilisateurs</a>
+      <a href="${base}pages/audit.html" class="sidebar-item">Audit</a>
     `;
   }
 
   items += `
-    <hr style="margin: 10px 0; opacity: 0.3;">
-    <a href="./pages/account.html" class="sidebar-item">👤 Profil</a>
-    <a href="#" onclick="logoutUser(); return false;" class="sidebar-item logout">🚪 Déconnexion</a>
+    <a href="${base}pages/account.html" class="sidebar-item">Profil</a>
+    <a href="#" onclick="logoutUser(); return false;" class="sidebar-item logout">Deconnexion</a>
   `;
 
   return `
     <aside class="sidebar">
-      <div class="sidebar-brand">
-        <h3>🏗️ Goudalle</h3>
-        <p class="sb-user">${session.displayName}</p>
+      <div class="topbar">
+        <div>Tel. +33 (0)3 21 90 98 98</div>
+        <div><a href="#">Contact</a></div>
       </div>
-      <nav class="sidebar-nav">
-        ${items}
-      </nav>
+      <div class="mainbar">
+        <div class="brand">
+          <img src="${getLogoPath()}" alt="Logo">
+          <div class="brand-text">
+            <div class="brand-title">GOUDALLE</div>
+            <div class="brand-subtitle">Intranet Groupe</div>
+          </div>
+        </div>
+        <nav class="sidebar-nav">
+          ${items}
+        </nav>
+        <div class="user-badge">${session.displayName}</div>
+      </div>
     </aside>
   `;
 }
@@ -155,7 +173,7 @@ function getSidebar() {
 function logoutUser() {
   if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
     Auth.logout();
-    window.location.href = './login.html';
+    window.location.href = `${getBasePath()}login.html`;
   }
 }
 

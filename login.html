@@ -4,24 +4,29 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Connexion - Intranet Goudalle</title>
-  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="./style.css">
   <style>
     body {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(180deg, #faf8f5 0%, #f0e9df 100%);
       min-height: 100vh;
+      display: block;
+    }
+
+    .auth-wrap {
       display: flex;
       align-items: center;
       justify-content: center;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 40px 20px 60px;
     }
     
     .login-container {
       width: 100%;
-      max-width: 450px;
+      max-width: 460px;
       background: white;
       padding: 40px;
-      border-radius: 10px;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      border-radius: 6px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+      border: 1px solid #f0ece6;
     }
 
     .login-header {
@@ -31,14 +36,19 @@
 
     .login-header h1 {
       font-size: 32px;
-      margin: 0 0 10px 0;
-      color: #2c3e50;
+      margin: 0 0 5px 0;
+      color: #5a4a3a;
+      font-weight: 700;
+      letter-spacing: 1px;
     }
 
     .login-header p {
-      color: #7f8c8d;
+      color: #8ba88a;
       margin: 0;
-      font-size: 14px;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
     }
 
     .form-group {
@@ -48,53 +58,57 @@
     .form-group label {
       display: block;
       margin-bottom: 8px;
-      color: #2c3e50;
-      font-weight: 500;
-      font-size: 14px;
+      color: #5a4a3a;
+      font-weight: 600;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
     }
 
     .form-group input {
       width: 100%;
       padding: 12px;
-      border: 2px solid #ecf0f1;
-      border-radius: 5px;
+      border: 2px solid #f0ece6;
+      border-radius: 4px;
       font-size: 14px;
-      transition: border-color 0.3s;
+      transition: border-color 0.3s, background-color 0.3s;
       box-sizing: border-box;
+      background: #faf8f5;
     }
 
     .form-group input:focus {
       outline: none;
-      border-color: #667eea;
-      background: #f8faff;
+      border-color: #8ba88a;
+      background: white;
     }
 
     .message {
       padding: 12px;
       margin-bottom: 20px;
-      border-radius: 5px;
-      font-size: 14px;
+      border-radius: 4px;
+      font-size: 13px;
       display: none;
+      border-left: 4px solid;
     }
 
     .message.success {
-      background: #d4edda;
-      color: #155724;
-      border: 1px solid #c3e6cb;
+      background: #f0f9f6;
+      color: #2d5f4f;
+      border-left-color: #7bad75;
       display: block;
     }
 
     .message.error {
-      background: #f8d7da;
-      color: #721c24;
-      border: 1px solid #f5c6cb;
+      background: #fdf5f5;
+      color: #5c3c3c;
+      border-left-color: #b85c5c;
       display: block;
     }
 
     .message.info {
-      background: #d1ecf1;
-      color: #0c5460;
-      border: 1px solid #bee5eb;
+      background: #f5f7f8;
+      color: #385a6b;
+      border-left-color: #6b8e9f;
       display: block;
     }
 
@@ -108,46 +122,52 @@
       flex: 1;
       padding: 12px;
       border: none;
-      border-radius: 5px;
-      font-size: 14px;
-      font-weight: 600;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 700;
       cursor: pointer;
       transition: all 0.3s;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #8ba88a 0%, #6b8e6f 100%);
       color: white;
+      border: 1px solid #6b8e6f;
     }
 
     .btn-primary:hover {
       transform: translateY(-2px);
-      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+      box-shadow: 0 6px 12px rgba(107, 142, 111, 0.3);
     }
 
     .btn-secondary {
-      background: #ecf0f1;
-      color: #2c3e50;
+      background: #f5f1ed;
+      color: #5a4a3a;
+      border: 1px solid #d4ccc3;
     }
 
     .btn-secondary:hover {
-      background: #bdc3c7;
+      background: #d4ccc3;
+      border-color: #b8a896;
     }
 
     .demo-accounts {
-      background: #f0f4ff;
+      background: #faf8f5;
       padding: 20px;
-      border-radius: 5px;
+      border-radius: 4px;
       margin-top: 25px;
-      border-left: 4px solid #667eea;
+      border-left: 4px solid #8ba88a;
     }
 
     .demo-accounts h3 {
       margin: 0 0 15px 0;
-      color: #2c3e50;
-      font-size: 14px;
+      color: #5a4a3a;
+      font-size: 13px;
       text-transform: uppercase;
       letter-spacing: 1px;
+      font-weight: 700;
     }
 
     .demo-account {
@@ -155,7 +175,7 @@
       padding: 12px;
       margin-bottom: 10px;
       border-radius: 4px;
-      border: 1px solid #ecf0f1;
+      border: 1px solid #f0ece6;
       cursor: pointer;
       transition: all 0.3s;
     }
@@ -165,8 +185,9 @@
     }
 
     .demo-account:hover {
-      background: #f9fbff;
-      border-color: #667eea;
+      background: #faf8f5;
+      border-color: #8ba88a;
+      box-shadow: 0 2px 6px rgba(139, 168, 138, 0.2);
     }
 
     .demo-account-header {
@@ -176,36 +197,38 @@
     }
 
     .demo-account-user {
-      font-weight: 600;
-      color: #2c3e50;
+      font-weight: 700;
+      color: #5a4a3a;
       font-size: 13px;
     }
 
     .demo-account-role {
-      font-size: 11px;
-      padding: 2px 8px;
-      background: #667eea;
+      font-size: 10px;
+      padding: 3px 8px;
+      background: #8ba88a;
       color: white;
       border-radius: 3px;
       text-transform: uppercase;
+      font-weight: 600;
     }
 
     .demo-account-pwd {
       font-size: 12px;
-      color: #7f8c8d;
-      font-family: monospace;
+      color: #7a6a5a;
+      font-family: 'Courier New', monospace;
+      font-weight: 500;
     }
 
     .demo-account-desc {
-      font-size: 12px;
-      color: #7f8c8d;
+      font-size: 11px;
+      color: #a89b90;
       margin-top: 5px;
     }
 
     .loading {
       display: none;
       text-align: center;
-      color: #667eea;
+      color: #8ba88a;
     }
 
     .spinner {
@@ -213,7 +236,7 @@
       width: 20px;
       height: 20px;
       border: 3px solid #f3f3f3;
-      border-top: 3px solid #667eea;
+      border-top: 3px solid #8ba88a;
       border-radius: 50%;
       animation: spin 1s linear infinite;
     }
@@ -225,14 +248,35 @@
   </style>
 </head>
 <body>
-  <script src="../js/auth.js"></script>
-  <script src="../js/utils.js"></script>
+  <script src="./js/auth.js"></script>
+  <script src="./js/utils.js"></script>
 
-  <div class="login-container">
-    <div class="login-header">
-      <h1>🏗️ Goudalle</h1>
-      <p>Intranet - Connexion</p>
+  <header class="sidebar">
+    <div class="topbar">
+      <div>Tel. +33 (0)3 21 90 98 98</div>
+      <div><a href="#">Contact</a></div>
     </div>
+    <div class="mainbar">
+      <div class="brand">
+        <img src="./assets/groupe.png" alt="Logo Groupe">
+        <div class="brand-text">
+          <div class="brand-title">GOUDALLE</div>
+          <div class="brand-subtitle">Groupe - Intranet</div>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="./login.html" class="sidebar-item">Connexion</a>
+        <a href="./register.html" class="sidebar-item">Creer un compte</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="auth-wrap">
+    <div class="login-container">
+      <div class="login-header">
+        <h1>Connexion</h1>
+        <p>Acces securise - Intranet Groupe</p>
+      </div>
 
     <div id="message" class="message"></div>
 
@@ -300,6 +344,7 @@
         <div class="demo-account-desc">Lecture seule - Consulter les données</div>
       </div>
     </div>
+    </div>
   </div>
 
   <script>
@@ -338,7 +383,7 @@
         if (result.success) {
           showMessage(result.message, 'success');
           setTimeout(() => {
-            window.location.href = '../index.html';
+            window.location.href = './index.html';
           }, 500);
         } else {
           showMessage(result.message, 'error');
@@ -354,8 +399,35 @@
 
     // Vérifier si déjà connecté
     if (Auth.isConnected()) {
-      window.location.href = '../index.html';
+      window.location.href = './index.html';
     }
   </script>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div>
+        <div class="footer-title">Goudalle Groupe</div>
+        <div>50 rue Principale</div>
+        <div>RD343 - 62550 Preures</div>
+        <div>Tel. 03 21 90 98 98</div>
+      </div>
+      <div>
+        <div class="footer-title">Contact</div>
+        <a class="footer-link" href="#">contact@goudalle.fr</a>
+        <div>Formulaire de contact</div>
+      </div>
+      <div>
+        <div class="footer-title">Realisations</div>
+        <div>Agricole / Elevage</div>
+        <div>Tertiaire / Habitat</div>
+        <div>Public / Sante</div>
+      </div>
+      <div>
+        <div class="footer-title">Goudalle recrute</div>
+        <div>Decouvrir nos metiers</div>
+        <div>Voir nos offres</div>
+      </div>
+    </div>
+  </footer>
 </body>
 </html>

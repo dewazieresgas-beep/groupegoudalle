@@ -3,23 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Accès Refusé - Intranet Goudalle</title>
+  <title>Acces Refuse - Intranet Goudalle</title>
   <link rel="stylesheet" href="../style.css">
   <style>
     body {
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: block;
       min-height: 100vh;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(180deg, #faf8f5 0%, #f0e9df 100%);
     }
     .error-container {
       background: white;
       padding: 40px;
-      border-radius: 10px;
+      border-radius: 6px;
       text-align: center;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
       max-width: 500px;
+      margin: 50px auto 60px;
+      border: 1px solid #f0ece6;
     }
     .error-icon {
       font-size: 80px;
@@ -27,7 +27,7 @@
     }
     .error-title {
       font-size: 24px;
-      color: #e74c3c;
+      color: #b85c5c;
       margin-bottom: 10px;
     }
     .error-message {
@@ -46,6 +46,29 @@
 <body>
   <script src="../js/auth.js"></script>
   <script src="../js/utils.js"></script>
+  <script>
+    window.APP_LOGO = 'groupe';
+  </script>
+
+  <header class="sidebar">
+    <div class="topbar">
+      <div>Tel. +33 (0)3 21 90 98 98</div>
+      <div><a href="#">Contact</a></div>
+    </div>
+    <div class="mainbar">
+      <div class="brand">
+        <img src="../assets/groupe.png" alt="Logo Groupe">
+        <div class="brand-text">
+          <div class="brand-title">GOUDALLE</div>
+          <div class="brand-subtitle">Groupe - Intranet</div>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="../index.html" class="sidebar-item">Accueil</a>
+        <a href="../login.html" class="sidebar-item">Connexion</a>
+      </nav>
+    </div>
+  </header>
 
   <div class="error-container">
     <div class="error-icon">🔒</div>
@@ -60,6 +83,33 @@
       <button onclick="goBack()" class="btn btn-secondary">← Retour</button>
     </div>
   </div>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div>
+        <div class="footer-title">Goudalle Groupe</div>
+        <div>50 rue Principale</div>
+        <div>RD343 - 62550 Preures</div>
+        <div>Tel. 03 21 90 98 98</div>
+      </div>
+      <div>
+        <div class="footer-title">Contact</div>
+        <a class="footer-link" href="#">contact@goudalle.fr</a>
+        <div>Formulaire de contact</div>
+      </div>
+      <div>
+        <div class="footer-title">Realisations</div>
+        <div>Agricole / Elevage</div>
+        <div>Tertiaire / Habitat</div>
+        <div>Public / Sante</div>
+      </div>
+      <div>
+        <div class="footer-title">Goudalle recrute</div>
+        <div>Decouvrir nos metiers</div>
+        <div>Voir nos offres</div>
+      </div>
+    </div>
+  </footer>
 
   <script>
     function goHome() {

@@ -10,6 +10,9 @@
 <body>
   <script src="../js/auth.js"></script>
   <script src="../js/utils.js"></script>
+  <script>
+    window.APP_LOGO = 'maconnerie';
+  </script>
 
   <script>
     Auth.requirePermission('gm');
@@ -19,11 +22,11 @@
     <div id="sidebar"></div>
     
     <main class="main-content">
-      <h1>📊 Goudalle Maçonnerie - Dashboard</h1>
+      <h1>Goudalle Maconnerie - Dashboard</h1>
 
       <div class="card">
         <div class="card-title">
-          <h2>📈 Dernière semaine publiée</h2>
+          <h2>Derniere semaine publiee</h2>
         </div>
         <div class="card-body">
           <div id="lastWeekKpis"></div>
@@ -32,7 +35,7 @@
 
       <div class="card">
         <div class="card-title">
-          <h2>📉 Tendance 8 semaines</h2>
+          <h2>Tendance 8 semaines</h2>
         </div>
         <div class="card-body">
           <canvas id="kpiChart"></canvas>
@@ -41,7 +44,7 @@
 
       <div class="card">
         <div class="card-title">
-          <h2>📋 Historique 4 semaines</h2>
+          <h2>Historique 4 semaines</h2>
         </div>
         <div class="card-body">
           <table id="historyTable">
@@ -205,5 +208,32 @@
 
     window.addEventListener('load', initGM);
   </script>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div>
+        <div class="footer-title">Goudalle Groupe</div>
+        <div>50 rue Principale</div>
+        <div>RD343 - 62550 Preures</div>
+        <div>Tel. 03 21 90 98 98</div>
+      </div>
+      <div>
+        <div class="footer-title">Contact</div>
+        <a class="footer-link" href="#">contact@goudalle.fr</a>
+        <div>Formulaire de contact</div>
+      </div>
+      <div>
+        <div class="footer-title">Realisations</div>
+        <div>Agricole / Elevage</div>
+        <div>Tertiaire / Habitat</div>
+        <div>Public / Sante</div>
+      </div>
+      <div>
+        <div class="footer-title">Goudalle recrute</div>
+        <div>Decouvrir nos metiers</div>
+        <div>Voir nos offres</div>
+      </div>
+    </div>
+  </footer>
 </body>
 </html>
