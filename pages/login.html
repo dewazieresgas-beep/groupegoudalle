@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connexion - Intranet Goudalle</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-box">
+      <h1>Intranet Goudalle</h1>
+      
+      <div id="login-error" class="alert alert-error"></div>
+      
+      <form id="login-form" class="login-form">
+        <div class="form-group">
+          <label for="username">Nom d'utilisateur</label>
+          <input type="text" id="username" name="username" required autofocus>
+        </div>
+        
+        <div class="form-group">
+          <label for="password">Mot de passe</label>
+          <input type="password" id="password" name="password" required>
+        </div>
+        
+        <button type="submit" class="btn btn-primary">Se connecter</button>
+      </form>
+
+      <div class="login-info">
+        <h3>⚠️ Prototype - Comptes de test :</h3>
+        <ul>
+          <li><strong>Direction</strong> : acgoudalle / 123</li>
+          <li><strong>Référent GM</strong> : julie / 123</li>
+          <li><strong>Lecture seule</strong> : gaspard / 123</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    // Initialiser l'app
+    App.init();
+
+    // Si déjà connecté, rediriger vers l'accueil
+    if (Auth.isAuthenticated()) {
+      window.location.href = '/index.html';
+    }
+
+    // Gérer la soumission du formulaire
+    document.getElementById('login-form').addEventListener('submit', App.handleLogin);
+  </script>
+</body>
+</html>

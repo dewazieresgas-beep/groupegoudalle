@@ -1,9 +1,193 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
-  <title>Groupe Goudalle</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accueil - Intranet Goudalle</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <h1>Bienvenue sur le site du Groupe Goudalle 🚀</h1>
+  <div class="app-container">
+    <!-- Sidebar injectée dynamiquement -->
+    <div id="sidebar-container"></div>
+
+    <main class="main-content">
+      <h1>Tableau de bord</h1>
+      
+      <div class="card">
+        <div class="card-header">
+          <h2>🏗️ Goudalle Maçonnerie</h2>
+          <button id="btn-open-gm" class="btn btn-primary">Ouvrir GM</button>
+        </div>
+        <div class="card-body">
+          <div id="gm-dashboard">
+            <!-- Contenu injecté dynamiquement -->
+          </div>
+          
+          <div class="chart-container">
+            <canvas id="chart-gm-trend"></canvas>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    // Protection de la page
+    Auth.requireAuth();
+
+    // Initialisation
+    App.init();
+
+    // Injecter la sidebar
+    document.getElementById('sidebar-container').innerHTML = UI.generateSidebar();
+    App.highlightCurrentPage();
+
+    // Charger les données GM
+    function loadGMDashboard() {
+      const kpiData = StorageManager.getKPIWeekly();
+      const thresholds = StorageManager.getThresholds();
+      const previousWeek = WeekUtils.getPreviousWeek();
+      
+      // Trouver la dernière semaine publiée
+      const lastPublished = kpiData
+        .filter(k => k.status === 'published')
+        .sort((a, b) => {
+          if (a.year !== b.year) return b.year - a.year;
+          return b.week - a.week;
+        })[0];
+
+      const dashboardDiv = document.getElementById('gm-dashboard');
+
+      if (!lastPublished) {
+        dashboardDiv.innerHTML = '<div class="no-data">Aucune donnée publiée pour le moment</div>';
+        return;
+      }
+
+      const ratio = KPICalculator.calculateRatio(lastPublished.hours, lastPublished.m3);
+      const smiley = KPICalculator.getSmiley(ratio, thresholds);
+
+      dashboardDiv.innerHTML = `
+        <div class="kpi-grid">
+          <div class="kpi-box">
+            <div class="kpi-label">Semaine</div>
+            <div class="kpi-value">${WeekUtils.formatWeekNumber(lastPublished.week)}</div>
+            <div class="kpi-unit">Année ${lastPublished.year}</div>
+          </div>
+          <div class="kpi-box">
+            <div class="kpi-label">m³ coulés</div>
+            <div class="kpi-value">${UI.formatNumber(lastPublished.m3)}</div>
+            <div class="kpi-unit">m³</div>
+          </div>
+          <div class="kpi-box">
+            <div class="kpi-label">Heures travaillées</div>
+            <div class="kpi-value">${UI.formatNumber(lastPublished.hours)}</div>
+            <div class="kpi-unit">heures</div>
+          </div>
+          <div class="kpi-box ${smiley}">
+            <div class="kpi-label">h/m³</div>
+            <div class="kpi-value">${UI.formatRatio(ratio)}</div>
+            <div class="kpi-smiley">${UI.getSmileyEmoji(smiley)}</div>
+          </div>
+        </div>
+        <div style="margin-top: 1rem; padding: 1rem; background-color: var(--light); border-radius: 4px;">
+          <strong>Commentaire :</strong> ${lastPublished.comment}
+        </div>
+      `;
+
+      // Générer le graphique
+      renderChart();
+    }
+
+    // Générer le graphique des 8 dernières semaines
+    function renderChart() {
+      const kpiData = StorageManager.getKPIWeekly();
+      const thresholds = StorageManager.getThresholds();
+      const lastWeeks = WeekUtils.getLastNPublishedWeeks(8, kpiData);
+
+      const labels = lastWeeks.map(k => `S${WeekUtils.formatWeekNumber(k.week)}`);
+      const ratios = lastWeeks.map(k => KPICalculator.calculateRatio(k.hours, k.m3));
+
+      const ctx = document.getElementById('chart-gm-trend').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'h/m³',
+            data: ratios,
+            borderColor: '#3498db',
+            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+            tension: 0.3,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: true
+            },
+            title: {
+              display: true,
+              text: 'Évolution h/m³ - 8 dernières semaines'
+            },
+            annotation: {
+              annotations: {
+                line1: {
+                  type: 'line',
+                  yMin: thresholds.greenMax,
+                  yMax: thresholds.greenMax,
+                  borderColor: '#27ae60',
+                  borderWidth: 2,
+                  borderDash: [5, 5],
+                  label: {
+                    content: 'Seuil vert',
+                    enabled: true
+                  }
+                },
+                line2: {
+                  type: 'line',
+                  yMin: thresholds.orangeMax,
+                  yMax: thresholds.orangeMax,
+                  borderColor: '#f39c12',
+                  borderWidth: 2,
+                  borderDash: [5, 5],
+                  label: {
+                    content: 'Seuil orange',
+                    enabled: true
+                  }
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'h/m³'
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Bouton Ouvrir GM
+    document.getElementById('btn-open-gm').addEventListener('click', function() {
+      if (Auth.hasGMAccess()) {
+        window.location.href = '/pages/gm.html';
+      } else {
+        alert('Accès refusé : vous n\'avez pas les droits pour accéder à Goudalle Maçonnerie.');
+      }
+    });
+
+    // Charger le dashboard
+    loadGMDashboard();
+  </script>
 </body>
 </html>

@@ -1,0 +1,15 @@
+# Fichiers temporaires
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# OS
+desktop.ini

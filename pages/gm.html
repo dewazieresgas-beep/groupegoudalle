@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Goudalle Maçonnerie - Intranet Goudalle</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar injectée dynamiquement -->
+    <div id="sidebar-container"></div>
+
+    <main class="main-content">
+      <h1>🏗️ Goudalle Maçonnerie</h1>
+      
+      <!-- KPI Semaine passée -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Semaine passée</h2>
+        </div>
+        <div class="card-body" id="last-week-data">
+          <!-- Contenu injecté dynamiquement -->
+        </div>
+      </div>
+
+      <!-- Graphique tendance -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Tendance - 8 dernières semaines</h2>
+        </div>
+        <div class="card-body">
+          <div class="chart-container">
+            <canvas id="chart-gm-trend"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tableau 4 semaines précédentes -->
+      <div class="card">
+        <div class="card-header">
+          <h2>Historique - 4 semaines précédentes</h2>
+          <div id="monthly-average"></div>
+        </div>
+        <div class="card-body">
+          <div class="table-container">
+            <table id="history-table">
+              <thead>
+                <tr>
+                  <th>Semaine</th>
+                  <th class="text-right">m³</th>
+                  <th class="text-right">Heures</th>
+                  <th class="text-right">h/m³</th>
+                  <th>Commentaire</th>
+                </tr>
+              </thead>
+              <tbody id="history-tbody">
+                <!-- Contenu injecté dynamiquement -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    // Protection de la page
+    Auth.requireAuth();
+    if (!Auth.hasGMAccess()) {
+      alert('Accès refusé');
+      window.location.href = '/index.html';
+    }
+
+    // Initialisation
+    App.init();
+
+    // Injecter la sidebar
+    document.getElementById('sidebar-container').innerHTML = UI.generateSidebar();
+    App.highlightCurrentPage();
+
+    // Charger les données
+    const kpiData = StorageManager.getKPIWeekly();
+    const thresholds = StorageManager.getThresholds();
+
+    // Afficher la semaine passée
+    function renderLastWeek() {
+      const lastPublished = kpiData
+        .filter(k => k.status === 'published')
+        .sort((a, b) => {
+          if (a.year !== b.year) return b.year - a.year;
+          return b.week - a.week;
+        })[0];
+
+      const container = document.getElementById('last-week-data');
+
+      if (!lastPublished) {
+        container.innerHTML = '<div class="no-data">Données non publiées</div>';
+        return;
+      }
+
+      const ratio = KPICalculator.calculateRatio(lastPublished.hours, lastPublished.m3);
+      const smiley = KPICalculator.getSmiley(ratio, thresholds);
+
+      container.innerHTML = `
+        <div class="kpi-grid">
+          <div class="kpi-box">
+            <div class="kpi-label">Semaine</div>
+            <div class="kpi-value">${WeekUtils.formatWeekNumber(lastPublished.week)}</div>
+            <div class="kpi-unit">Année ${lastPublished.year}</div>
+          </div>
+          <div class="kpi-box">
+            <div class="kpi-label">m³ coulés</div>
+            <div class="kpi-value">${UI.formatNumber(lastPublished.m3)}</div>
+            <div class="kpi-unit">m³</div>
+          </div>
+          <div class="kpi-box">
+            <div class="kpi-label">Heures travaillées</div>
+            <div class="kpi-value">${UI.formatNumber(lastPublished.hours)}</div>
+            <div class="kpi-unit">heures</div>
+          </div>
+          <div class="kpi-box ${smiley}">
+            <div class="kpi-label">h/m³</div>
+            <div class="kpi-value">${UI.formatRatio(ratio)}</div>
+            <div class="kpi-smiley">${UI.getSmileyEmoji(smiley)}</div>
+          </div>
+        </div>
+        <div style="margin-top: 1rem; padding: 1rem; background-color: var(--light); border-radius: 4px;">
+          <strong>Commentaire :</strong> ${lastPublished.comment}
+        </div>
+      `;
+    }
+
+    // Afficher le graphique
+    function renderChart() {
+      const lastWeeks = WeekUtils.getLastNPublishedWeeks(8, kpiData);
+      const labels = lastWeeks.map(k => `S${WeekUtils.formatWeekNumber(k.week)}`);
+      const ratios = lastWeeks.map(k => KPICalculator.calculateRatio(k.hours, k.m3));
+
+      const ctx = document.getElementById('chart-gm-trend').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'h/m³',
+            data: ratios,
+            borderColor: '#3498db',
+            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+            tension: 0.3,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: true },
+            title: {
+              display: true,
+              text: 'Évolution h/m³ - 8 dernières semaines'
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'h/m³'
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Afficher l'historique des 4 semaines précédentes
+    function renderHistory() {
+      const published = kpiData
+        .filter(k => k.status === 'published')
+        .sort((a, b) => {
+          if (a.year !== b.year) return b.year - a.year;
+          return b.week - a.week;
+        });
+
+      // Prendre les 4 semaines après la plus récente (donc W-1 à W-4)
+      const historyWeeks = published.slice(1, 5);
+
+      const tbody = document.getElementById('history-tbody');
+
+      if (historyWeeks.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Aucune donnée historique</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = historyWeeks.map(k => {
+        const ratio = KPICalculator.calculateRatio(k.hours, k.m3);
+        const smiley = KPICalculator.getSmiley(ratio, thresholds);
+        return `
+          <tr>
+            <td>S${WeekUtils.formatWeekNumber(k.week)} - ${k.year}</td>
+            <td class="text-right">${UI.formatNumber(k.m3)}</td>
+            <td class="text-right">${UI.formatNumber(k.hours)}</td>
+            <td class="text-right">${UI.formatRatio(ratio)} ${UI.getSmileyEmoji(smiley)}</td>
+            <td>${k.comment}</td>
+          </tr>
+        `;
+      }).join('');
+
+      // Calculer la moyenne du mois
+      const avgRatio = KPICalculator.calculateAverageRatio(historyWeeks);
+      const avgSmiley = KPICalculator.getSmiley(avgRatio, thresholds);
+      
+      document.getElementById('monthly-average').innerHTML = `
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span style="font-size: 0.9rem; color: var(--text-light);">Moyenne mois :</span>
+          <strong>${UI.formatRatio(avgRatio)}</strong>
+          <span style="font-size: 1.5rem;">${UI.getSmileyEmoji(avgSmiley)}</span>
+        </div>
+      `;
+    }
+
+    // Charger tout
+    renderLastWeek();
+    renderChart();
+    renderHistory();
+  </script>
+</body>
+</html>
