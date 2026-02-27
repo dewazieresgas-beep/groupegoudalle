@@ -138,7 +138,7 @@ const StorageManager = {
     }
 
     try {
-      const response = await fetch('/data/seed.json');
+      const response = await fetch('./data/seed.json');
       const seedData = await response.json();
 
       // Importer les utilisateurs
@@ -356,7 +356,7 @@ const Auth = {
    */
   requireAuth() {
     if (!this.isAuthenticated()) {
-      window.location.href = '/pages/login.html';
+      window.location.href = './pages/login.html';
     }
   },
 
@@ -518,7 +518,7 @@ const App = {
    */
   logout() {
     Auth.logout();
-    window.location.href = '/pages/login.html';
+    window.location.href = './pages/login.html';
   },
 
   /**
@@ -533,7 +533,7 @@ const App = {
     const errorDiv = document.getElementById('login-error');
 
     if (Auth.login(username, password)) {
-      window.location.href = '/index.html';
+      window.location.href = './index.html';
     } else {
       errorDiv.textContent = 'Nom d\'utilisateur ou mot de passe incorrect';
       errorDiv.style.display = 'block';

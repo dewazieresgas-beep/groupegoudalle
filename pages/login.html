@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Connexion - Intranet Goudalle</title>
-  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="../style.css">
 </head>
 <body>
   <div class="login-container">
@@ -38,14 +38,14 @@
     </div>
   </div>
 
-  <script src="/js/app.js"></script>
+  <script src="../js/app.js"></script>
   <script>
     // Initialiser l'app
     App.init();
 
     // Si déjà connecté, rediriger vers l'accueil
     if (Auth.isAuthenticated()) {
-      window.location.href = '/index.html';
+      window.location.href = '../index.html';
     }
 
     // Gérer la soumission du formulaire

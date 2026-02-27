@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Accueil - Intranet Goudalle</title>
-  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="./style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -33,7 +33,7 @@
     </main>
   </div>
 
-  <script src="/js/app.js"></script>
+  <script src="./js/app.js"></script>
   <script>
     // Protection de la page
     Auth.requireAuth();
@@ -180,7 +180,7 @@
     // Bouton Ouvrir GM
     document.getElementById('btn-open-gm').addEventListener('click', function() {
       if (Auth.hasGMAccess()) {
-        window.location.href = '/pages/gm.html';
+        window.location.href = './pages/gm.html';
       } else {
         alert('Accès refusé : vous n\'avez pas les droits pour accéder à Goudalle Maçonnerie.');
       }
