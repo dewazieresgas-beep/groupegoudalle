@@ -74,7 +74,7 @@
       document.getElementById('sidebar').innerHTML = getSidebar();
 
       const kpis = getKPIs();
-      const published = kpis.filter(k => k.status === 'published').sort((a, b) => b.week - a.week);
+      const published = kpis.filter(k => k.status === 'published').sort(compareByYearWeekDesc);
 
       // Dernière semaine
       if (published.length > 0) {

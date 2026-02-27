@@ -130,7 +130,7 @@
     }
 
     function loadAllKPIs() {
-      const kpis = getKPIs().sort((a, b) => b.week - a.week);
+      const kpis = getKPIs().sort(compareByYearWeekDesc);
       const tbody = document.querySelector('#allKpiTable tbody');
 
       tbody.innerHTML = kpis.map(k => {

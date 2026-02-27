@@ -121,8 +121,8 @@
         return;
       }
 
-      if (m3 <= 0 || hours <= 0) {
-        showMessage('❌ Les valeurs doivent être supérieures à 0', 'error');
+      if (m3 < 0 || hours < 0) {
+        showMessage('❌ Les valeurs doivent être positives (0 autorisé)', 'error');
         return;
       }
 
@@ -144,7 +144,7 @@
     }
 
     function loadKPIs() {
-      const kpis = getKPIs().sort((a, b) => b.id - a.id);
+      const kpis = getKPIs().sort(compareByYearWeekDesc);
       const tbody = document.querySelector('#kpiTable tbody');
 
       tbody.innerHTML = kpis.map(k => {

@@ -46,9 +46,16 @@ function getWeekString(week) {
   return `S${String(week).padStart(2, '0')}`;
 }
 
+function compareByYearWeekDesc(a, b) {
+  if (a.year !== b.year) {
+    return b.year - a.year;
+  }
+  return b.week - a.week;
+}
+
 function getLastPublishedWeek() {
   const kpis = getKPIs();
-  const published = kpis.filter(k => k.status === 'published').sort((a, b) => b.id - a.id);
+  const published = kpis.filter(k => k.status === 'published').sort(compareByYearWeekDesc);
   return published[0] || null;
 }
 
