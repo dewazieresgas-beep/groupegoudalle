@@ -138,7 +138,7 @@
         if (confirm('Êtes-vous vraiment sûr(e) ? Cette action est irréversible.')) {
           localStorage.clear();
           alert('Données réinitialisées. Vous allez être redirigé vers la page de connexion.');
-          window.location.href = './login.html';
+          window.location.href = BASE_PATH + '/pages/login.html';
         }
       }
     }

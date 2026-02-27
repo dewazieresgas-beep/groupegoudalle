@@ -39,7 +39,7 @@
     (function() {
       const session = localStorage.getItem('intranet_session_v1');
       if (!session) {
-        window.location.href = './pages/login.html';
+        window.location.href = BASE_PATH + '/pages/login.html';
         return; // Ne pas continuer
       }
     })();
@@ -186,7 +186,7 @@
     // Bouton Ouvrir GM
     document.getElementById('btn-open-gm').addEventListener('click', function() {
       if (Auth.hasGMAccess()) {
-        window.location.href = './pages/gm.html';
+        window.location.href = BASE_PATH + '/pages/gm.html';
       } else {
         alert('Accès refusé : vous n\'avez pas les droits pour accéder à Goudalle Maçonnerie.');
       }

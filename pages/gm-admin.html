@@ -128,7 +128,7 @@
     Auth.requireAuth();
     if (!Auth.canEditGM()) {
       alert('Accès refusé : vous n\'avez pas les droits de modification');
-      window.location.href = './gm.html';
+      window.location.href = BASE_PATH + '/pages/gm.html';
     }
 
     // Initialisation

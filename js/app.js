@@ -16,6 +16,15 @@ const STORAGE_KEYS = {
   INITIALIZED: 'intranet_initialized_v1'
 };
 
+// Détecter le chemin de base pour GitHub Pages
+const BASE_PATH = (() => {
+  const path = window.location.pathname;
+  if (path.includes('/groupegoudalle/')) {
+    return '/groupegoudalle';
+  }
+  return '';
+})();
+
 // ============================================
 // ISO WEEK UTILITIES
 // ============================================
@@ -138,7 +147,7 @@ const StorageManager = {
     }
 
     try {
-      const response = await fetch('./data/seed.json');
+      const response = await fetch(BASE_PATH + '/data/seed.json');
       const seedData = await response.json();
 
       // Importer les utilisateurs
@@ -356,7 +365,7 @@ const Auth = {
    */
   requireAuth() {
     if (!this.isAuthenticated()) {
-      window.location.href = './pages/login.html';
+      window.location.href = BASE_PATH + '/pages/login.html';
     }
   },
 
@@ -518,7 +527,7 @@ const App = {
    */
   logout() {
     Auth.logout();
-    window.location.href = './pages/login.html';
+    window.location.href = BASE_PATH + '/pages/login.html';
   },
 
   /**
@@ -533,7 +542,7 @@ const App = {
     const errorDiv = document.getElementById('login-error');
 
     if (Auth.login(username, password)) {
-      window.location.href = './index.html';
+      window.location.href = BASE_PATH + '/index.html';
     } else {
       errorDiv.textContent = 'Nom d\'utilisateur ou mot de passe incorrect';
       errorDiv.style.display = 'block';
