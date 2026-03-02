@@ -22,55 +22,75 @@
     <div id="sidebar"></div>
     
     <main class="main-content">
-      <h1>Goudalle Maconnerie - Dashboard</h1>
-
-      <div class="card">
-        <div class="card-title">
-          <h2>Derniere semaine publiee</h2>
+      <!-- SECTION PRINCIPALE - DERNIÈRE SEMAINE -->
+      <div class="gm-main-section">
+        <div class="gm-header">
+          <h1 id="gmMainTitle">Volume de béton coulé semaine <span id="weekNumber">—</span></h1>
+          <div style="display: none;" id="gmStatus" class="gm-status"></div>
         </div>
-        <div class="card-body">
-          <div id="lastWeekKpis"></div>
-        </div>
-      </div>
 
-      <div class="card">
-        <div class="card-title card-title-row">
-          <h2 id="trendTitle">Tendance</h2>
-          <div class="card-title-controls">
-            <label for="trendRange" class="card-title-label">Visibilité :</label>
-            <select id="trendRange" aria-label="Période de visibilité">
+        <!-- GRILLE KPI PRINCIPALE -->
+        <div class="gm-kpi-grid">
+          <div class="gm-kpi-card gm-kpi-m3">
+            <div class="gm-kpi-label">m³ coulés</div>
+            <div class="gm-kpi-value" id="mainM3">30.00</div>
+          </div>
+          <div class="gm-kpi-card gm-kpi-hours">
+            <div class="gm-kpi-label">Heures</div>
+            <div class="gm-kpi-value" id="mainHours">121</div>
+          </div>
+          <div class="gm-kpi-card gm-kpi-ratio">
+            <div class="gm-kpi-label">h/m³</div>
+            <div class="gm-kpi-value" id="mainRatio">5.27</div>
+            <div class="gm-kpi-indicator" id="mainIndicator">🙂</div>
+          </div>
+        </div>
+
+        <!-- GRAPHIQUE H/M³ -->
+        <div class="gm-chart-section">
+          <h2>Tendance h/m³</h2>
+          <div style="position: relative; height: 280px;">
+            <select id="trendRange" class="gm-range-select">
               <option value="4">1 mois</option>
               <option value="8">2 mois</option>
               <option value="52">1 an</option>
               <option value="104">2 ans</option>
             </select>
+            <canvas id="kpiChart"></canvas>
           </div>
         </div>
-        <div class="card-body">
-          <canvas id="kpiChart"></canvas>
+
+        <!-- COMMENTAIRE -->
+        <div class="gm-comment-section">
+          <h2>Commentaire de la semaine</h2>
+          <textarea id="weekComment" class="gm-comment-input" placeholder="Ajouter un commentaire..." rows="4"></textarea>
+          <button onclick="saveWeekComment()" class="btn btn-primary" style="margin-top: 10px;">💾 Sauvegarder</button>
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-title">
-          <h2>Historique 4 semaines</h2>
-        </div>
-        <div class="card-body">
-          <table id="historyTable">
-            <thead>
-              <tr>
-                <th>Semaine</th>
-                <th>m³</th>
-                <th>Heures</th>
-                <th>h/m³</th>
-                <th>Statut</th>
-                <th>Commentaire</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td colspan="6" style="text-align:center; padding: 20px;">Chargement...</td></tr>
-            </tbody>
-          </table>
+      <!-- SECTION SECONDAIRE - HISTORIQUE -->
+      <div class="gm-secondary-section">
+        <div class="card">
+          <div class="card-title">
+            <h2>Historique 4 semaines</h2>
+          </div>
+          <div class="card-body">
+            <table id="historyTable">
+              <thead>
+                <tr>
+                  <th>Semaine</th>
+                  <th>m³</th>
+                  <th>Heures</th>
+                  <th>h/m³</th>
+                  <th>Statut</th>
+                  <th>Commentaire</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="6" style="text-align:center; padding: 20px;">Chargement...</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </main>
@@ -230,6 +250,9 @@
       // Injecter la sidebar
       document.getElementById('sidebar').innerHTML = getSidebar();
 
+      // Injecter la barre de navigation secondaire (Goudalle Maçonnerie)
+      injectGMSecondaryBar();
+
       // Récupérer tous les KPI publiés, triés du plus récent au plus ancien
       const kpis = getKPIs();
       const published = kpis.filter(k => k.status === 'published').sort(compareByYearWeekDesc);
@@ -247,38 +270,32 @@
         });
       }
 
-      // ===== AFFICHAGE DU DERNIER KPI =====
+      // ===== AFFICHAGE DU DERNIER KPI - NOUVEAUX ÉLÉMENTS =====
       if (published.length > 0) {
         const last = published[0];  // Le plus récent
         const ratio = calculateRatio(last.hours, last.m3);
         const smiley = getSmiley(ratio);
+        const emoji = getSmileyEmoji(smiley);
 
-        document.getElementById('lastWeekKpis').innerHTML = `
-          <div class="kpi-grid">
-            <div class="kpi-box">
-              <div class="kpi-label">Semaine</div>
-              <div class="kpi-value">S${String(last.week).padStart(2, '0')}</div>
-            </div>
-            <div class="kpi-box">
-              <div class="kpi-label">m³ coulés</div>
-              <div class="kpi-value">${last.m3.toFixed(2)}</div>
-            </div>
-            <div class="kpi-box">
-              <div class="kpi-label">Heures</div>
-              <div class="kpi-value">${last.hours.toFixed(2)}</div>
-            </div>
-            <div class="kpi-box ${smiley}">
-              <div class="kpi-label">h/m³</div>
-              <div class="kpi-value">${ratio !== null ? ratio.toFixed(2) : '—'}</div>
-              <div class="smiley">${getSmileyEmoji(smiley)}</div>
-            </div>
-          </div>
-          <div class="comment-box">
-            <strong>Commentaire :</strong> ${last.comment}
-          </div>
-        `;
+        // Mettre à jour les éléments principaux
+        document.getElementById('weekNumber').textContent = `${String(last.week).padStart(2, '0')} (${last.year})`;
+        document.getElementById('mainM3').textContent = last.m3.toFixed(2);
+        document.getElementById('mainHours').textContent = Math.round(last.hours);
+        document.getElementById('mainRatio').textContent = ratio !== null ? ratio.toFixed(2) : '—';
+        document.getElementById('mainIndicator').textContent = emoji;
+
+        // Charger le commentaire de la semaine
+        const weekCommentArea = document.getElementById('weekComment');
+        if (weekCommentArea) {
+          weekCommentArea.value = last.comment || '';
+        }
       } else {
-        document.getElementById('lastWeekKpis').innerHTML = '<p>❌ Aucune donnée publiée</p>';
+        // Si pas de KPI, afficher des valeurs par défaut
+        document.getElementById('weekNumber').textContent = '—';
+        document.getElementById('mainM3').textContent = '0.00';
+        document.getElementById('mainHours').textContent = '0';
+        document.getElementById('mainRatio').textContent = '—';
+        document.getElementById('mainIndicator').textContent = '❓';
       }
 
       // ===== GÉNÉRATION DU GRAPHIQUE DE TENDANCE =====
@@ -313,6 +330,36 @@
       if (last4.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 20px;">Aucune donnée</td></tr>`;
       }
+    }
+
+    /**
+     * Sauvegarde le commentaire de la semaine actuelle
+     * Met à jour le KPI le plus récent avec le commentaire saisi
+     */
+    function saveWeekComment() {
+      const kpis = getKPIs();
+      const published = kpis.filter(k => k.status === 'published').sort(compareByYearWeekDesc);
+
+      if (published.length === 0) {
+        alert('❌ Aucun KPI publié pour cette semaine');
+        return;
+      }
+
+      const last = published[0];
+      const commentText = document.getElementById('weekComment').value;
+
+      // Mettre à jour le KPI avec le nouveau commentaire
+      last.comment = commentText;
+      last.updatedAt = new Date().toISOString();
+
+      // Sauvegarder les modifications
+      localStorage.setItem('kpis', JSON.stringify(kpis));
+
+      // Enregistrer l'action dans l'audit
+      audit('update_comment', `Commentaire mis à jour pour la semaine ${last.week}/${last.year}`);
+
+      // Feedback utilisateur
+      alert('✅ Commentaire sauvegardé avec succès !');
     }
 
     window.addEventListener('load', initGM);

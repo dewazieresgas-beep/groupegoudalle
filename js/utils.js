@@ -277,13 +277,8 @@ function getSidebar() {
 
   // ===== SECTION GOUDALLE MAÇONNERIE =====
   if (canView) {
-    // Si lecture seule : lien direct sans submenu
-    if (!canEdit && !isDirection) {
-      items += `<a href="${base}pages/gm.html" class="sidebar-item">🏭 Goudalle Maçonnerie</a>`;
-    } else {
-      // Sinon : bouton pour ouvrir la barre de navigation secondaire
-      items += `<a href="javascript:void(0);" class="sidebar-item" data-toggle-submenu="true" onclick="toggleGMSidebar(event);">🏭 Goudalle Maçonnerie</a>`;
-    }
+    // Tous les utilisateurs avec accès : lien direct vers gm.html
+    items += `<a href="${base}pages/gm.html" class="sidebar-item">🏭 Goudalle Maçonnerie</a>`;
   }
 
   // ===== SECTIONS ADMINISTRATIVES (direction uniquement) =====
@@ -299,23 +294,6 @@ function getSidebar() {
     <a href="${base}pages/account.html" class="sidebar-item">👤 Profil</a>
     <a href="#" onclick="logoutUser(); return false;" class="sidebar-item logout">🚪 Déconnexion</a>
   `;
-
-  // Construire les items de la barre secondaire (Goudalle Maçonnerie submenu)
-  let secondaryItems = '';
-  if (canView && (canEdit || isDirection)) {
-    // Consultation GM - accessible à tous
-    secondaryItems += `<a href="${base}pages/gm.html" class="sidebar-item">📊 Consultation</a>`;
-    
-    // Saisies - référents et direction
-    if (canEdit) {
-      secondaryItems += `<a href="${base}pages/gm-saisie.html" class="sidebar-item">✏️ Saisies indicateurs</a>`;
-    }
-    
-    // Admin GM - référents et direction
-    if (canEdit || isDirection) {
-      secondaryItems += `<a href="${base}pages/gm-admin.html" class="sidebar-item">⚙️ Administration</a>`;
-    }
-  }
 
   return `
     <aside class="sidebar">
@@ -337,17 +315,6 @@ function getSidebar() {
         <div class="user-badge">${session.displayName}</div>
       </div>
     </aside>
-    ${secondaryItems ? `
-    <aside class="sidebar-secondary" id="gmSidebar">
-      <div class="sidebar-secondary-content">
-        <div class="sidebar-secondary-title">🏭 Goudalle Maçonnerie</div>
-        <button class="sidebar-secondary-close" onclick="toggleGMSidebar();">✕</button>
-        <nav class="sidebar-secondary-nav">
-          ${secondaryItems}
-        </nav>
-      </div>
-    </aside>
-    ` : ''}
     <script>
       // Restaurer l'état des sous-menus après injection de la sidebar
       setTimeout(function() {
@@ -397,6 +364,62 @@ function toggleSubMenu(event, submenuId) {
   
   // Sauvegarder l'état dans localStorage
   localStorage.setItem(`submenu_${submenuId}`, isOpen ? 'open' : 'closed');
+}
+
+/**
+ * Génère et injecte la barre de navigation secondaire Goudalle Maçonnerie
+ * À appeler uniquement sur la page gm.html
+ */
+function injectGMSecondaryBar() {
+  const session = Auth.getSession();
+  if (!session) return;
+
+  const canEdit = Auth.canEditGM();
+  const isDirection = Auth.isDirection();
+  const base = getBasePath();
+
+  // Construire les items de la barre secondaire
+  let secondaryItems = '';
+  
+  // Consultation GM - accessible à tous
+  secondaryItems += `<a href="${base}pages/gm.html" class="sidebar-item">📊 Consultation</a>`;
+  
+  // Saisies - référents et direction
+  if (canEdit) {
+    secondaryItems += `<a href="${base}pages/gm-saisie.html" class="sidebar-item">✏️ Saisies indicateurs</a>`;
+  }
+  
+  // Admin GM - référents et direction
+  if (canEdit || isDirection) {
+    secondaryItems += `<a href="${base}pages/gm-admin.html" class="sidebar-item">⚙️ Administration</a>`;
+  }
+
+  // Créer et injecter la barre secondaire
+  if (secondaryItems) {
+    const barHTML = `
+      <aside class="sidebar-secondary" id="gmSidebar">
+        <div class="sidebar-secondary-content">
+          <div class="sidebar-secondary-title">🏭 Goudalle Maçonnerie</div>
+          <button class="sidebar-secondary-close" onclick="toggleGMSidebar();">✕</button>
+          <nav class="sidebar-secondary-nav">
+            ${secondaryItems}
+          </nav>
+        </div>
+      </aside>
+    `;
+
+    // Injecter après la sidebar principale
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) {
+      sidebar.insertAdjacentHTML('afterend', barHTML);
+    }
+
+    // Ouvrir la barre par défaut sur cette page
+    const gmSidebar = document.getElementById('gmSidebar');
+    if (gmSidebar) {
+      gmSidebar.classList.add('open');
+    }
+  }
 }
 
 /**
