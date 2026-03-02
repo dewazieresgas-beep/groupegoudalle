@@ -20,8 +20,8 @@ const Auth = {
 
   // Permissions par rôle - définit ce que chaque rôle peut faire
   PERMISSIONS: {
-    direction: ['gm', 'gm_admin', 'users_admin', 'thresholds', 'audit'], // Tout
-    referent: ['gm', 'gm_saisie', 'thresholds'],  // Gestion + saisie
+    direction: ['gm', 'users_admin', 'thresholds', 'audit', 'gm_saisie', 'gm_admin'], // Tout
+    referent: ['gm', 'gm_saisie', 'gm_admin', 'thresholds'],  // Gestion + saisie
     lecture: ['gm']                                // Consultation seule
   },
 
@@ -74,15 +74,6 @@ const Auth = {
         password: '123',
         role: this.ROLES.LECTURE,
         displayName: 'Gaspard de Wazières',
-        createdAt: new Date().toISOString(),
-        createdBy: 'acgoudalle',
-        isActive: true
-      },
-      'gilbert': {
-        username: 'gilbert',
-        password: '123',
-        role: this.ROLES.AUDIT,
-        displayName: 'Gilbert',
         createdAt: new Date().toISOString(),
         createdBy: 'acgoudalle',
         isActive: true
