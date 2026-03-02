@@ -737,11 +737,11 @@ a:hover {
 
 /* Couleur du smiley selon performance */
 .gm-indicator-card.vert {
-  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+  background: white;
 }
 
 .gm-indicator-card.rouge {
-  background: linear-gradient(135deg, #e74c3c 0%, #f39c12 100%);
+  background: white;
 }
 
 /* Comment Section */
