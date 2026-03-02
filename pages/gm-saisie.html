@@ -99,6 +99,11 @@
   </div>
 
   <script>
+    /**
+     * Affiche un message de feedback
+     * @param {string} message - Message à afficher
+     * @param {string} type - Type : 'success' ou 'error'
+     */
     function showMessage(message, type) {
       const msgDiv = document.getElementById('message');
       msgDiv.textContent = message;
@@ -106,16 +111,22 @@
       msgDiv.style.display = 'block';
     }
 
+    /**
+     * Gestion de la soumission du formulaire de saisie KPI
+     * @param {Event} event - Événement de soumission
+     */
     function handleSaveKPI(event) {
       event.preventDefault();
 
+      // ===== RÉCUPÉRATION DES DONNÉES =====
       const year = parseInt(document.getElementById('year').value);
       const week = parseInt(document.getElementById('week').value);
       const m3 = parseFloat(document.getElementById('m3').value);
       const hours = parseFloat(document.getElementById('hours').value);
       const comment = document.getElementById('comment').value.trim();
-      const publish = document.getElementById('publish').checked;
+      const publish = document.getElementById('publish').checked;  // Publier ou brouillon ?
 
+      // ===== VALIDATIONS =====
       if (!comment) {
         showMessage('❌ Le commentaire est obligatoire', 'error');
         return;
@@ -126,12 +137,13 @@
         return;
       }
 
+      // ===== ENREGISTREMENT =====
       const status = publish ? 'published' : 'draft';
       const kpi = saveKPI(year, week, m3, hours, comment, status);
 
       showMessage(`✅ KPI S${String(week).padStart(2, '0')}/${year} ${status === 'published' ? 'publié' : 'enregistré en brouillon'}`, 'success');
 
-      // Reset form
+      // ===== RÉINITIALISATION DU FORMULAIRE =====
       document.getElementById('year').value = getCurrentYear();
       document.getElementById('week').value = '';
       document.getElementById('m3').value = '';
@@ -139,14 +151,19 @@
       document.getElementById('comment').value = '';
       document.getElementById('publish').checked = false;
 
-      // Refresh list
+      // Rafraîchir la liste des KPI
       loadKPIs();
     }
 
+    /**
+     * Charge et affiche la liste de tous les KPI
+     * Triés du plus récent au plus ancien
+     */
     function loadKPIs() {
-      const kpis = getKPIs().sort(compareByYearWeekDesc);
+      const kpis = getKPIs().sort(compareByYearWeekDesc);  // Tri décroissant
       const tbody = document.querySelector('#kpiTable tbody');
 
+      // Générer les lignes du tableau
       tbody.innerHTML = kpis.map(k => {
         const ratio = calculateRatio(k.hours, k.m3);
         const smiley = getSmiley(ratio);
@@ -174,39 +191,58 @@
         `;
       }).join('');
 
+      // Message si aucun KPI
       if (kpis.length === 0) {
         tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 20px;">Aucun KPI créé</td></tr>`;
       }
     }
 
+    /**
+     * Charge un KPI dans le formulaire pour édition
+     * @param {number} id - ID du KPI à éditer
+     */
     function editKPI(id) {
       const kpi = getKPIs().find(k => k.id === id);
       if (kpi) {
+        // Préremplir le formulaire avec les données existantes
         document.getElementById('year').value = kpi.year;
         document.getElementById('week').value = kpi.week;
         document.getElementById('m3').value = kpi.m3;
         document.getElementById('hours').value = kpi.hours;
         document.getElementById('comment').value = kpi.comment;
         document.getElementById('publish').checked = kpi.status === 'published';
-        window.scrollTo(0, 0);
+        window.scrollTo(0, 0);  // Remonter en haut pour voir le formulaire
       }
     }
 
+    /**
+     * Publie un KPI en brouillon après confirmation
+     * @param {number} year - Année du KPI
+     * @param {number} week - Semaine du KPI
+     */
     function publishKPI(year, week) {
       if (confirm(`Publier le KPI S${String(week).padStart(2, '0')}/${year} ?`)) {
-        publishKPI(year, week);
+        publishKPI(year, week);  // Appel à la fonction utils.js
         showMessage('✅ KPI publié', 'success');
-        loadKPIs();
+        loadKPIs();  // Rafraîchir la liste
       }
     }
 
+    /**
+     * Initialise la page
+     * - Injecte la sidebar
+     * - Préremplit année et semaine courantes
+     * - Charge la liste des KPI
+     */
     function init() {
       document.getElementById('sidebar').innerHTML = getSidebar();
+      // Préremplir avec l'année et la semaine actuelles
       document.getElementById('year').value = getCurrentYear();
       document.getElementById('week').value = getCurrentWeek();
       loadKPIs();
     }
 
+    // ===== INITIALISATION =====
     window.addEventListener('load', init);
   </script>
 

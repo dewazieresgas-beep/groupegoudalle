@@ -112,15 +112,22 @@
   </footer>
 
   <script>
+    /**
+     * Redirige l'utilisateur vers la page d'accueil
+     */
     function goHome() {
       window.location.href = '../index.html';
     }
 
+    /**
+     * Retourne à la page précédente dans l'historique
+     */
     function goBack() {
       window.history.back();
     }
 
-    // Si not logged in, redirect to login
+    // ===== VÉRIFICATION DE CONNEXION =====
+    // Si l'utilisateur n'est pas connecté, le rediriger vers la page de connexion
     if (!Auth.isConnected()) {
       window.location.href = '../login.html';
     }

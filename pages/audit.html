@@ -80,20 +80,33 @@
   </div>
 
   <script>
+    // Stockage global des données d'audit pour le filtrage
     let allAuditData = [];
 
+    /**
+     * Charge les données d'audit et initialise la page
+     * - Charge la sidebar
+     * - Récupère le journal d'audit (ordre chronologique inverse)
+     * - Affiche les données et les statistiques
+     */
     function loadAudit() {
       document.getElementById('sidebar').innerHTML = getSidebar();
 
+      // Récupérer et inverser l'ordre (plus récent en premier)
       allAuditData = Auth.getAuditTrail().reverse();
 
       displayAudit(allAuditData);
       updateStats();
     }
 
+    /**
+     * Affiche les entrées d'audit dans le tableau
+     * @param {Array} data - Liste des entrées d'audit à afficher
+     */
     function displayAudit(data) {
       const tbody = document.querySelector('#auditTable tbody');
 
+      // Générer les lignes du tableau
       tbody.innerHTML = data.map(entry => {
         const date = new Date(entry.timestamp);
         const dateStr = date.toLocaleString('fr-FR');
@@ -112,30 +125,47 @@
         `;
       }).join('');
 
+      // Message si aucune entrée
       if (data.length === 0) {
         tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 20px;">Aucune entrée</td></tr>`;
       }
     }
 
+    /**
+     * Calcule et affiche les statistiques de l'audit
+     * - Nombre total d'entrées
+     * - Nombre de connexions
+     * - Nombre de KPI créés
+     * - Nombre d'utilisateurs actifs
+     */
     function updateStats() {
       const audit = Auth.getAuditTrail();
 
+      // Total d'entrées
       document.getElementById('totalEntries').textContent = audit.length;
       
+      // Nombre de connexions
       const logins = audit.filter(a => a.action === 'LOGIN').length;
       document.getElementById('loginCount').textContent = logins;
 
+      // Nombre de KPI créés/sauvegardés
       const kpiCreated = audit.filter(a => a.action === 'KPI_SAVED').length;
       document.getElementById('kpiCount').textContent = kpiCreated;
 
+      // Nombre d'utilisateurs uniques ayant effectué des actions
       const users = new Set(audit.map(a => a.user));
       document.getElementById('activeUsers').textContent = users.size;
     }
 
+    /**
+     * Applique les filtres sur les données d'audit
+     * Filtre par action et/ou utilisateur (recherche insensible à la casse)
+     */
     function applyFilters() {
       const action = document.getElementById('filterAction').value.toLowerCase();
       const user = document.getElementById('filterUser').value.toLowerCase();
 
+      // Filtrer les données selon les critères
       const filtered = allAuditData.filter(entry => {
         const matchAction = !action || entry.action.toLowerCase().includes(action);
         const matchUser = !user || entry.user.toLowerCase().includes(user);
@@ -145,12 +175,16 @@
       displayAudit(filtered);
     }
 
+    /**
+     * Réinitialise les filtres et affiche toutes les données
+     */
     function clearFilters() {
       document.getElementById('filterAction').value = '';
       document.getElementById('filterUser').value = '';
-      displayAudit(allAuditData);
+      displayAudit(allAuditData);  // Réafficher tout
     }
 
+    // ===== INITIALISATION =====
     window.addEventListener('load', loadAudit);
   </script>
 

@@ -34,8 +34,17 @@
       </div>
 
       <div class="card">
-        <div class="card-title">
-          <h2>Tendance 8 semaines</h2>
+        <div class="card-title card-title-row">
+          <h2 id="trendTitle">Tendance</h2>
+          <div class="card-title-controls">
+            <label for="trendRange" class="card-title-label">Visibilité :</label>
+            <select id="trendRange" aria-label="Période de visibilité">
+              <option value="4">1 mois</option>
+              <option value="8">2 mois</option>
+              <option value="52">1 an</option>
+              <option value="104">2 ans</option>
+            </select>
+          </div>
         </div>
         <div class="card-body">
           <canvas id="kpiChart"></canvas>
@@ -68,17 +77,168 @@
   </div>
 
   <script>
+    // Variable globale pour stocker l'instance du graphique Chart.js
     let chart;
+    // Clé de stockage pour la préférence de plage de temps du graphique
+    const GM_TREND_RANGE_STORAGE_KEY = 'goudalle_gm_trend_range_weeks';
 
+    /**
+     * Formate le titre du graphique selon le nombre de semaines
+     * @param {number} weeks - Nombre de semaines à afficher
+     * @returns {string} - Titre formaté
+     */
+    function formatTrendTitle(weeks) {
+      if (weeks === 4) return 'Tendance 1 mois';
+      if (weeks === 8) return 'Tendance 2 mois';
+      if (weeks === 52) return 'Tendance 1 an';
+      if (weeks === 104) return 'Tendance 2 ans';
+      return `Tendance ${weeks} semaines`;
+    }
+
+    /**
+     * Récupère le nombre de semaines sélectionné dans l'interface
+     * @returns {number} - Nombre de semaines (par défaut : 8)
+     */
+    function getTrendWeeksFromUI() {
+      const raw = document.getElementById('trendRange')?.value;
+      const weeks = parseInt(raw, 10);
+      return Number.isFinite(weeks) && weeks > 0 ? weeks : 8;
+    }
+
+    /**
+     * Charge la préférence de plage de temps depuis localStorage
+     * @returns {number} - Nombre de semaines sauvegardé (par défaut : 8)
+     */
+    function loadTrendWeeksPreference() {
+      const stored = localStorage.getItem(GM_TREND_RANGE_STORAGE_KEY);
+      const weeks = parseInt(stored || '', 10);
+      // Valider que c'est une des options proposées
+      if ([4, 8, 52, 104].includes(weeks)) return weeks;
+      return 8;  // Par défaut : 2 mois
+    }
+
+    /**
+     * Sauvegarde la préférence de plage de temps
+     * @param {number} weeks - Nombre de semaines à sauvegarder
+     */
+    function saveTrendWeeksPreference(weeks) {
+      localStorage.setItem(GM_TREND_RANGE_STORAGE_KEY, String(weeks));
+    }
+
+    /**
+     * Récupère une variable CSS (pour les couleurs du graphique)
+     * @param {string} name - Nom de la variable CSS (ex: '--accent-dark')
+     * @param {string} fallback - Valeur par défaut si non trouvée
+     * @returns {string} - Valeur de la variable CSS
+     */
+    function getCssVar(name, fallback) {
+      const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      return value || fallback;
+    }
+
+    /**
+     * Génère le graphique de tendance h/m³ avec Chart.js
+     * @param {Array} published - Liste des KPI publiés (triés du plus récent au plus ancien)
+     * @param {number} weeksBack - Nombre de semaines à afficher
+     */
+    function renderTrendChart(published, weeksBack) {
+      // Mettre à jour le titre du graphique
+      const trendTitle = document.getElementById('trendTitle');
+      if (trendTitle) trendTitle.textContent = formatTrendTitle(weeksBack);
+
+      // Prendre les N dernières semaines et inverser pour avoir chronologique
+      const slice = published.slice(0, weeksBack).reverse();
+      if (slice.length === 0) return;  // Pas de données, ne rien afficher
+
+      // Préparer les données pour Chart.js
+      const labels = slice.map(k => `S${String(k.week).padStart(2, '0')}/${k.year}`);
+      const ratioData = slice.map(k => calculateRatio(k.hours, k.m3));
+
+      // Récupérer le contexte du canvas
+      const ctx = document.getElementById('kpiChart').getContext('2d');
+      // Destroy le graphique précédent s'il existe
+      if (chart) chart.destroy();
+
+      // Récupérer les couleurs depuis le thème CSS
+      const lineColor = getCssVar('--accent-dark', '#6b8e6f');
+      const fillColor = 'rgba(107, 142, 111, 0.12)';
+
+      // Créer le graphique Chart.js
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'h/m³',
+              data: ratioData,
+              borderColor: lineColor,
+              backgroundColor: fillColor,
+              tension: 0.35,        // Courbe légèrement arrondie
+              spanGaps: false,     // Ne pas relier les points si données manquantes
+              pointRadius: 3,
+              pointHoverRadius: 5,
+              fill: true           // Remplir sous la courbe
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: true, position: 'top' },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const v = ctx.parsed?.y;
+                  return Number.isFinite(v) ? `h/m³ : ${v.toFixed(2)}` : 'h/m³ : —';
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              title: { display: true, text: 'h/m³' },
+              ticks: {
+                callback: (value) => value
+              }
+            }
+          }
+        }
+      });
+    }
+
+    /**
+     * Initialise la page Goudalle Maçonnerie
+     * - Charge la sidebar
+     * - Affiche le dernier KPI
+     * - Génère le graphique de tendance
+     * - Affiche l'historique des 4 dernières semaines
+     */
     function initGM() {
+      // Injecter la sidebar
       document.getElementById('sidebar').innerHTML = getSidebar();
 
+      // Récupérer tous les KPI publiés, triés du plus récent au plus ancien
       const kpis = getKPIs();
       const published = kpis.filter(k => k.status === 'published').sort(compareByYearWeekDesc);
 
-      // Dernière semaine
+      // ===== INITIALISATION DU SÉLECTEUR DE PÉRIODE =====
+      const trendSelect = document.getElementById('trendRange');
+      const initialWeeks = loadTrendWeeksPreference();
+      if (trendSelect) {
+        trendSelect.value = String(initialWeeks);
+        // Écouter les changements de période
+        trendSelect.addEventListener('change', () => {
+          const weeks = getTrendWeeksFromUI();
+          saveTrendWeeksPreference(weeks);  // Sauvegarder la préférence
+          renderTrendChart(published, weeks);  // Redessiner le graphique
+        });
+      }
+
+      // ===== AFFICHAGE DU DERNIER KPI =====
       if (published.length > 0) {
-        const last = published[0];
+        const last = published[0];  // Le plus récent
         const ratio = calculateRatio(last.hours, last.m3);
         const smiley = getSmiley(ratio);
 
@@ -110,73 +270,11 @@
         document.getElementById('lastWeekKpis').innerHTML = '<p>❌ Aucune donnée publiée</p>';
       }
 
-      // Chart 8 semaines
-      const last8 = published.slice(0, 8).reverse();
-      if (last8.length > 0) {
-        const labels = last8.map(k => `S${String(k.week).padStart(2, '0')}`);
-        const m3Data = last8.map(k => k.m3);
-        const hoursData = last8.map(k => k.hours);
-        const ratioData = last8.map(k => calculateRatio(k.hours, k.m3));
+      // ===== GÉNÉRATION DU GRAPHIQUE DE TENDANCE =====
+      renderTrendChart(published, initialWeeks);
 
-        const ctx = document.getElementById('kpiChart').getContext('2d');
-        chart = new Chart(ctx, {
-          type: 'line',
-          data: {
-            labels,
-            datasets: [
-              {
-                label: 'm³ coulés',
-                data: m3Data,
-                borderColor: '#3498db',
-                backgroundColor: 'rgba(52, 152, 219, 0.1)',
-                yAxisID: 'y',
-                tension: 0.4
-              },
-              {
-                label: 'Heures',
-                data: hoursData,
-                borderColor: '#e74c3c',
-                backgroundColor: 'rgba(231, 76, 60, 0.1)',
-                yAxisID: 'y',
-                tension: 0.4
-              },
-              {
-                label: 'h/m³',
-                data: ratioData,
-                borderColor: '#f39c12',
-                backgroundColor: 'rgba(243, 156, 18, 0.1)',
-                yAxisID: 'y1',
-                tension: 0.4
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            interaction: { mode: 'index', intersect: false },
-            plugins: {
-              legend: { display: true, position: 'top' }
-            },
-            scales: {
-              y: {
-                type: 'linear',
-                display: true,
-                position: 'left',
-                title: { display: true, text: 'm³ / Heures' }
-              },
-              y1: {
-                type: 'linear',
-                display: true,
-                position: 'right',
-                title: { display: true, text: 'h/m³' },
-                grid: { drawOnChartArea: false }
-              }
-            }
-          }
-        });
-      }
-
-      // Historique 4 semaines
-      const last4 = published.slice(0, 4).reverse();
+      // ===== HISTORIQUE DES 4 DERNIÈRES SEMAINES =====
+      const last4 = published.slice(0, 4).reverse();  // Prendre les 4 dernières, ordre chronologique
       const tbody = document.querySelector('#historyTable tbody');
       tbody.innerHTML = last4.map(k => {
         const ratio = calculateRatio(k.hours, k.m3);

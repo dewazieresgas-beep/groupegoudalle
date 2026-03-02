@@ -125,17 +125,27 @@
   </div>
 
   <script>
+    /**
+     * Affiche un message de feedback à l'utilisateur
+     * @param {string} message - Message à afficher
+     * @param {string} type - Type : 'success' ou 'error'
+     */
     function showMessage(message, type) {
       const msgDiv = document.getElementById('message');
       msgDiv.textContent = message;
       msgDiv.className = `alert alert-${type}`;
       msgDiv.style.display = 'block';
-      window.scrollTo(0, 0);
+      window.scrollTo(0, 0);  // Remonter en haut pour voir le message
     }
 
+    /**
+     * Gestion de la création d'un nouvel utilisateur
+     * @param {Event} event - Événement de soumission du formulaire
+     */
     function handleCreateUser(event) {
       event.preventDefault();
 
+      // Récupérer les données du formulaire
       const firstName = document.getElementById('firstName').value.trim();
       const lastName = document.getElementById('lastName').value.trim();
       const email = document.getElementById('email').value.trim();
@@ -145,39 +155,48 @@
 
       const displayName = `${firstName} ${lastName}`;
 
-      // Si direction ou referent, demander le code admin
+      // ===== SÉCURITÉ : CODE ADMIN POUR RÔLES PRIVILÉGIÉS =====
+      // Si le rôle est direction ou référent, demander le code admin
       let adminCode = null;
       if (role === 'direction' || role === 'referent') {
         adminCode = prompt('Entre le code d\'administration pour créer un compte ' + role + ':');
-        if (!adminCode) return;
+        if (!adminCode) return;  // Annulé par l'utilisateur
       }
 
+      // ===== CRÉATION DU COMPTE =====
       const result = Auth.registerUser(username, password, displayName, email, role, adminCode);
 
       if (result.success) {
         showMessage(result.message, 'success');
+        // Réinitialiser le formulaire
         document.getElementById('firstName').value = '';
         document.getElementById('lastName').value = '';
         document.getElementById('email').value = '';
         document.getElementById('username').value = '';
         document.getElementById('password').value = '';
         document.getElementById('role').value = '';
-        loadUsers();
+        loadUsers();  // Rafraîchir la liste
       } else {
         showMessage(result.message, 'error');
       }
     }
 
+    /**
+     * Charge et affiche la liste de tous les utilisateurs
+     * Affiche : username, nom, email, rôle, date de création, statut et actions
+     */
     function loadUsers() {
       const users = Auth.getUserList();
       const tbody = document.querySelector('#usersTable tbody');
 
+      // Mapping des rôles vers des libellés lisibles
       const roleNames = {
         'direction': '🗝️ Direction',
         'referent': '📊 Référent',
         'lecture': '👁️ Consultation'
       };
 
+      // Générer les lignes du tableau
       tbody.innerHTML = users.map(u => {
         const date = new Date(u.createdAt);
         return `
@@ -193,20 +212,40 @@
               </span>
             </td>
             <td>
-              ${u.isActive ? `<button class="btn btn-small btn-danger" onclick="disableUser('${u.username}')">🔒 Désactiver</button>` : ''}
+              ${u.isActive 
+                ? `<button class="btn btn-small btn-danger" onclick="disableUser('${u.username}')">🔒 Désactiver</button>` 
+                : `<button class="btn btn-small btn-success" onclick="enableUser('${u.username}')">✅ Réactiver</button>`}
             </td>
           </tr>
         `;
       }).join('');
 
+      // Message si aucun utilisateur
       if (users.length === 0) {
         tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 20px;">Aucun utilisateur</td></tr>`;
       }
     }
 
+    /**
+     * Désactive un utilisateur après confirmation
+     * @param {string} username - Nom d'utilisateur à désactiver
+     */
     function disableUser(username) {
       if (confirm(`Désactiver l'utilisateur ${username} ?`)) {
         const result = Auth.disableUser(username);
+        if (result.success) {
+          loadUsers();  // Rafraîchir la liste
+        }
+      }
+    }
+
+    /**
+     * Réactive un utilisateur désactivé après confirmation
+     * @param {string} username - Nom d'utilisateur à réactiver
+     */
+    function enableUser(username) {
+      if (confirm(`Réactiver l'utilisateur ${username} ?`)) {
+        const result = Auth.enableUser(username);
         if (result.success) {
           loadUsers();
         }

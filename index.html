@@ -10,10 +10,13 @@
   <script src="./js/auth.js"></script>
   <script src="./js/utils.js"></script>
   <script>
+    // Définir le logo à utiliser (groupe ou maconnerie)
     window.APP_LOGO = 'groupe';
   </script>
   <script>
-    // Vérifier immédiatement si connecté
+    // ===== PROTECTION DE LA PAGE =====
+    // Vérifier immédiatement si l'utilisateur est connecté
+    // Rediriger vers login si non authentifié
     if (!Auth.isConnected()) {
       window.location.href = './login.html';
     }
@@ -48,26 +51,35 @@
   </div>
 
   <script>
+    /**
+     * Initialise la page d'accueil
+     * - Charge la sidebar
+     * - Affiche les données du dernier KPI publié
+     * - Affiche le card admin si utilisateur = direction
+     */
     function initHome() {
-      // Injecter sidebar
+      // Injecter la sidebar dans le DOM
       document.getElementById('sidebar').innerHTML = getSidebar();
       
-      // Charger données GM
+      // Vérifier les permissions d'accès à Goudalle Maçonnerie
       const session = Auth.getSession();
       if (!Auth.hasAccess('gm')) {
         document.getElementById('gm-content').innerHTML = '❌ Acces refuse a Goudalle Maconnerie';
         return;
       }
 
+      // Récupérer le dernier KPI publié
       const lastWeek = getLastPublishedWeek();
       if (!lastWeek) {
         document.getElementById('gm-content').innerHTML = '<p>📊 Aucune donnée publiée encore</p>';
         return;
       }
 
+      // Calculer le ratio et déterminer la performance
       const ratio = calculateRatio(lastWeek.hours, lastWeek.m3);
       const smiley = getSmiley(ratio);
 
+      // Afficher les données dans des cartes KPI
       document.getElementById('gm-content').innerHTML = `
         <div class="kpi-grid">
           <div class="kpi-box">
@@ -89,25 +101,33 @@
           </div>
         </div>
         <div class="comment-box">
-          <strong>Commentaire :</strong> ${lastWeek.comment}
+          <strong>Commentaire : </strong> ${lastWeek.comment}
         </div>
       `;
 
-      // Afficher le card admin pour les directeurs
+      // Afficher le panneau d'administration pour les directeurs
       if (Auth.isDirection()) {
         document.getElementById('adminCard').style.display = 'block';
       }
     }
 
+    /**
+     * Redirige vers la page Goudalle Maçonnerie
+     */
     function goToGM() {
       window.location.href = './pages/gm.html';
     }
 
+    /**
+     * Redirige vers la page d'administration GM
+     */
     function goToAdmin() {
       window.location.href = './pages/gm-admin.html';
     }
 
-    // Initialiser
+    // ===== INITIALISATION =====
+    // Démarrer l'initialisation après un court délai
+    // pour garantir que le DOM est complètement chargé
     setTimeout(initHome, 100);
   </script>
 

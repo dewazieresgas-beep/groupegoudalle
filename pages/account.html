@@ -156,9 +156,17 @@
   </div>
 
   <script>
+    /**
+     * Charge et affiche les informations du profil utilisateur
+     * - Affiche les données personnelles
+     * - Affiche le rôle et les permissions
+     * - Affiche la date de connexion
+     */
     function loadProfile() {
+      // Injecter la sidebar
       document.getElementById('sidebar').innerHTML = getSidebar();
 
+      // Récupérer la session et les données utilisateur
       const session = Auth.getSession();
       if (!session) {
         window.location.href = '../login.html';
@@ -171,12 +179,12 @@
         return;
       }
 
-      // Remplir les champs
+      // ===== AFFICHAGE DES INFORMATIONS DE BASE =====
       document.getElementById('username').textContent = session.username;
       document.getElementById('displayName').textContent = session.displayName || '—';
       document.getElementById('email').textContent = session.email || '—';
 
-      // Role badge
+      // ===== AFFICHAGE DU RÔLE AVEC BADGE =====
       const roleNames = {
         'direction': '🗝️ Direction',
         'referent': '📊 Référent',
@@ -184,12 +192,13 @@
       };
       document.getElementById('roleDisplay').innerHTML = `<span class="role-badge">${roleNames[session.role] || session.role}</span>`;
 
-      // Login time
+      // ===== AFFICHAGE DE LA DATE DE CONNEXION =====
       const loginDate = new Date(session.loginAt);
       document.getElementById('loginAt').textContent = loginDate.toLocaleString('fr-FR');
 
-      // Permissions
+      // ===== AFFICHAGE DES PERMISSIONS =====
       const permissions = Auth.PERMISSIONS[session.role] || [];
+      // Mapping des noms techniques vers des libellés lisibles
       const permissionNames = {
         'gm': '📊 Consulter les données Goudalle',
         'gm_saisie': '✏️ Saisir les KPI',
@@ -199,10 +208,12 @@
         'audit': '📋 Consulter l\'audit'
       };
 
+      // Générer le HTML des permissions
       const permissionsHtml = permissions.map(p => 
         `<div class="permission">${permissionNames[p] || p}</div>`
       ).join('');
 
+      // Afficher les permissions ou message si aucune
       if (permissions.length === 0) {
         document.getElementById('permissionsDisplay').innerHTML = '<p>Aucune permission attribuée</p>';
       } else {
@@ -210,41 +221,57 @@
       }
     }
 
+    /**
+     * Affiche un message de feedback à l'utilisateur
+     * @param {string} message - Message à afficher
+     * @param {string} type - Type : 'success' ou 'error'
+     */
     function showMessage(message, type) {
       const msgDiv = document.getElementById('message');
       msgDiv.textContent = message;
       msgDiv.className = `alert alert-${type}`;
       msgDiv.style.display = 'block';
-      window.scrollTo(0, 0);
+      window.scrollTo(0, 0);  // Remonter en haut pour voir le message
     }
 
+    /**
+     * Gestion du changement de mot de passe
+     * @param {Event} event - Événement de soumission du formulaire
+     */
     function handleChangePassword(event) {
       event.preventDefault();
 
+      // Récupérer les données
       const session = Auth.getSession();
       const user = Auth.getCurrentUser();
       const oldPassword = document.getElementById('oldPassword').value;
       const newPassword = document.getElementById('newPassword').value;
       const confirmNewPassword = document.getElementById('confirmNewPassword').value;
 
+      // ===== VALIDATIONS =====
+      // Vérifier que l'ancien mot de passe est correct
       if (oldPassword !== user.password) {
         showMessage('❌ Mot de passe actuel incorrect', 'error');
         return;
       }
 
+      // Vérifier que les nouveaux mots de passe correspondent
       if (newPassword !== confirmNewPassword) {
         showMessage('❌ Les nouveaux mots de passe ne correspondent pas', 'error');
         return;
       }
 
+      // Vérifier la longueur du nouveau mot de passe
       if (newPassword.length < 3) {
         showMessage('❌ Le mot de passe doit faire au moins 3 caractères', 'error');
         return;
       }
 
+      // ===== CHANGEMENT DU MOT DE PASSE =====
       const result = Auth.changePassword(session.username, newPassword);
       if (result.success) {
         showMessage(result.message, 'success');
+        // Réinitialiser le formulaire
         document.getElementById('oldPassword').value = '';
         document.getElementById('newPassword').value = '';
         document.getElementById('confirmNewPassword').value = '';
@@ -253,6 +280,10 @@
       }
     }
 
+    /**
+     * Force la déconnexion de l'utilisateur
+     * Supprime la session et redirige vers login
+     */
     function resetSession() {
       if (confirm('Êtes-vous sûr ? Vous serez immédiatement déconnecté.')) {
         Auth.logout();
@@ -260,6 +291,7 @@
       }
     }
 
+    // ===== INITIALISATION =====
     window.addEventListener('load', loadProfile);
   </script>
 

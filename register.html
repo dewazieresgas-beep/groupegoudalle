@@ -354,17 +354,27 @@
       }
     }
 
+    /**
+     * Affiche un message de feedback à l'utilisateur
+     * @param {string} message - Texte du message
+     * @param {string} type - Type : 'success' ou 'error'
+     */
     function showMessage(message, type) {
       const msgDiv = document.getElementById('message');
       msgDiv.textContent = message;
       msgDiv.className = `message ${type}`;
       msgDiv.style.display = 'block';
-      window.scrollTo(0, 0);
+      window.scrollTo(0, 0);  // Remonter en haut pour voir le message
     }
 
+    /**
+     * Gestion de la soumission du formulaire d'inscription
+     * @param {Event} event - Événement de soumission
+     */
     function handleRegister(event) {
       event.preventDefault();
 
+      // ===== RÉCUPÉRATION DES DONNÉES =====
       const firstName = document.getElementById('firstName').value.trim();
       const lastName = document.getElementById('lastName').value.trim();
       const email = document.getElementById('email').value.trim();
@@ -374,42 +384,53 @@
       const role = document.getElementById('role').value;
       const adminCode = document.getElementById('adminCode').value || null;
 
-      // Validations
+      // ===== VALIDATIONS CÔTÉ CLIENT =====
+      // Vérifier que tous les champs obligatoires sont remplis
       if (!firstName || !lastName || !email || !username || !password || !role) {
         showMessage('❌ Tous les champs marqués * sont obligatoires', 'error');
         return;
       }
 
+      // Vérifier que les mots de passe correspondent
       if (password !== confirmPassword) {
         showMessage('❌ Les mots de passe ne correspondent pas', 'error');
         return;
       }
 
+      // Vérifier la longueur de l'identifiant
       if (username.length < 3) {
         showMessage('❌ L\'identifiant doit faire au moins 3 caractères', 'error');
         return;
       }
 
+      // Construire le nom complet
       const displayName = `${firstName} ${lastName}`;
 
-      // Appeler Auth.registerUser
+      // ===== APPEL DE L'API D'INSCRIPTION =====
+      // Tenter de créer le compte via le système Auth
       const result = Auth.registerUser(username, password, displayName, email, role, adminCode);
 
       if (result.success) {
+        // Inscription réussie : rediriger vers la page de connexion
         showMessage(result.message, 'success');
         setTimeout(() => {
           window.location.href = './login.html';
         }, 1500);
       } else {
+        // Erreur : afficher le message d'erreur
         showMessage(result.message, 'error');
       }
     }
 
+    /**
+     * Redirige vers la page de connexion
+     */
     function goLogin() {
       window.location.href = './login.html';
     }
 
-    // Vérifier si déjà connecté
+    // ===== VÉRIFICATION INITIALE =====
+    // Si l'utilisateur est déjà connecté, rediriger vers l'accueil
     if (Auth.isConnected()) {
       window.location.href = './index.html';
     }
