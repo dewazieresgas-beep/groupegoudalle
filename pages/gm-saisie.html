@@ -48,12 +48,22 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
               <div class="form-group">
                 <label for="m3">m³ coulés *</label>
-                <input type="number" id="m3" step="0.01" placeholder="0.00" required>
+                <input type="number" id="m3" step="0.01" placeholder="0.00" required oninput="updateRealtimePreview()">
               </div>
               <div class="form-group">
                 <label for="hours">Heures travaillées *</label>
-                <input type="number" id="hours" step="0.01" placeholder="0.00" required>
+                <input type="number" id="hours" step="0.01" placeholder="0.00" required oninput="updateRealtimePreview()">
               </div>
+            </div>
+
+            <!-- Aperçu temps réel du résultat -->
+            <div id="realtimePreview" style="display: none; margin: 20px 0; padding: 20px; background: var(--lighter); border-radius: 8px; text-align: center;">
+              <div style="font-size: 14px; color: var(--text-light); margin-bottom: 8px;">Aperçu du résultat :</div>
+              <div style="display: flex; align-items: center; justify-content: center; gap: 15px;">
+                <div style="font-size: 24px; font-weight: bold;" id="previewRatio">—</div>
+                <div id="previewSmiley" style="font-size: 48px;"></div>
+              </div>
+              <div id="previewMessage" style="margin-top: 10px; font-size: 14px; font-weight: 500;"></div>
             </div>
 
             <div class="form-group">
@@ -182,6 +192,9 @@
       document.getElementById('hours').value = '';
       document.getElementById('comment').value = '';
       document.getElementById('publish').checked = false;
+      
+      // Cacher l'aperçu temps réel
+      document.getElementById('realtimePreview').style.display = 'none';
 
       // Rafraîchir la liste des KPI
       loadKPIs();
@@ -244,6 +257,10 @@
         document.getElementById('hours').value = kpi.hours;
         document.getElementById('comment').value = kpi.comment;
         document.getElementById('publish').checked = kpi.status === 'published';
+        
+        // Mettre à jour l'aperçu temps réel avec les valeurs chargées
+        updateRealtimePreview();
+        
         window.scrollTo(0, 0);  // Remonter en haut pour voir le formulaire
       }
     }
@@ -353,6 +370,44 @@
     function downloadGMIndicators() {
       const base = getBasePath();
       window.open(`${base}pages/gm.html?download=1`, '_blank');
+    }
+
+    /**
+     * Met à jour l'aperçu temps réel du ratio h/m³ et du smiley
+     */
+    function updateRealtimePreview() {
+      const m3Input = document.getElementById('m3');
+      const hoursInput = document.getElementById('hours');
+      const previewDiv = document.getElementById('realtimePreview');
+      const previewRatio = document.getElementById('previewRatio');
+      const previewSmiley = document.getElementById('previewSmiley');
+      const previewMessage = document.getElementById('previewMessage');
+
+      const m3 = parseFloat(m3Input.value);
+      const hours = parseFloat(hoursInput.value);
+
+      // Afficher l'aperçu seulement si les deux champs sont remplis
+      if (!m3 || !hours || m3 <= 0 || hours <= 0) {
+        previewDiv.style.display = 'none';
+        return;
+      }
+
+      // Calculer le ratio
+      const ratio = calculateRatio(hours, m3);
+      const smiley = getSmiley(ratio);
+      const threshold = getKpiRatioThreshold();
+
+      // Afficher le résultat
+      previewDiv.style.display = 'block';
+      previewRatio.textContent = ratio !== null ? `${ratio.toFixed(2)} h/m³` : '—';
+      previewSmiley.innerHTML = getSmileyEmoji(smiley);
+
+      // Message de feedback
+      if (smiley === 'vert') {
+        previewMessage.innerHTML = `<span style="color: var(--success);">✅ Excellent ! Vous êtes en dessous du seuil de ${threshold} h/m³</span>`;
+      } else {
+        previewMessage.innerHTML = `<span style="color: var(--danger);">⚠️ Attention : vous dépassez le seuil de ${threshold} h/m³</span>`;
+      }
     }
 
     /**
