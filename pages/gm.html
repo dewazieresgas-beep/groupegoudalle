@@ -80,22 +80,30 @@
 
       <!-- SECTION SECONDAIRE - HISTORIQUE -->
       <div class="gm-secondary-section">
-        <h2>Historique 4 semaines</h2>
-        <table id="historyTable">
-          <thead>
-            <tr>
-              <th>Semaine</th>
-              <th>m³</th>
-              <th>Heures</th>
-              <th>h/m³</th>
-              <th>Statut</th>
-              <th>Commentaire</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td colspan="6" style="text-align:center; padding: 20px;">Chargement...</td></tr>
-          </tbody>
-        </table>
+        <h2>Historique du mois dernier (4 semaines)</h2>
+        <div class="gm-history-layout">
+          <div class="gm-history-table-wrap">
+            <table id="historyTable">
+              <thead>
+                <tr>
+                  <th>Semaine</th>
+                  <th>m³</th>
+                  <th>Heures</th>
+                  <th>h/m³</th>
+                  <th>Commentaire</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="5" style="text-align:center; padding: 20px;">Chargement...</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <aside class="gm-history-summary">
+            <div class="gm-history-summary-title" id="historyMonthLabel">Mois dernier</div>
+            <div class="gm-history-summary-value" id="historyMonthAvg">— h/m³</div>
+            <div class="gm-history-indicator" id="historyMonthIndicator"></div>
+          </aside>
+        </div>
       </div>
     </main>
   </div>
@@ -158,6 +166,21 @@
     function getCssVar(name, fallback) {
       const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
       return value || fallback;
+    }
+
+    /**
+     * Parse une date FR au format jj/mm/aaaa
+     * @param {string} frDate - Date formatée
+     * @returns {Date|null} - Date JS ou null si invalide
+     */
+    function parseFrDate(frDate) {
+      const parts = (frDate || '').split('/');
+      if (parts.length !== 3) return null;
+      const day = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10);
+      const year = parseInt(parts[2], 10);
+      if (!Number.isFinite(day) || !Number.isFinite(month) || !Number.isFinite(year)) return null;
+      return new Date(year, month - 1, day);
     }
 
     /**
@@ -313,12 +336,52 @@
       // ===== GÉNÉRATION DU GRAPHIQUE DE TENDANCE =====
       renderTrendChart(published, initialWeeks);
 
-      // ===== HISTORIQUE DES 4 DERNIÈRES SEMAINES =====
-      const last4 = published.slice(0, 4).reverse();  // Prendre les 4 dernières, ordre chronologique
+      // ===== HISTORIQUE DU MOIS DERNIER (4 SEMAINES) =====
+      const today = new Date();
+      const previousMonthRef = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      const targetMonth = previousMonthRef.getMonth();
+      const targetYear = previousMonthRef.getFullYear();
+
+      const previousMonthKpis = published
+        .filter(k => {
+          const fridayDateString = getWeekDateRange(k.week, k.year).friday;
+          const fridayDate = parseFrDate(fridayDateString);
+          return fridayDate && fridayDate.getMonth() === targetMonth && fridayDate.getFullYear() === targetYear;
+        })
+        .sort(compareByYearWeekDesc);
+
+      const last4 = previousMonthKpis.slice(0, 4).reverse(); // 4 semaines, ordre chronologique
       const tbody = document.querySelector('#historyTable tbody');
+
+      // Résumé du mois dernier (moyenne h/m³ + gros smiley)
+      const historyMonthLabel = document.getElementById('historyMonthLabel');
+      const historyMonthAvg = document.getElementById('historyMonthAvg');
+      const historyMonthIndicator = document.getElementById('historyMonthIndicator');
+      const monthLabel = previousMonthRef.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+      historyMonthLabel.textContent = `Mois dernier : ${monthLabel}`;
+
+      const ratios = previousMonthKpis
+        .map(k => calculateRatio(k.hours, k.m3))
+        .filter(v => Number.isFinite(v));
+
+      if (ratios.length > 0) {
+        const averageRatio = ratios.reduce((sum, value) => sum + value, 0) / ratios.length;
+        const averageSmiley = getSmiley(averageRatio) === 'rouge' ? 'rouge' : 'vert';
+        const base = getBasePath();
+        const imageSrc = averageSmiley === 'vert' ? `${base}assets/smiley%20vert.png` : `${base}assets/smiley%20rouge.png`;
+
+        historyMonthAvg.textContent = `${averageRatio.toFixed(2)} h/m³`;
+        historyMonthIndicator.className = `gm-history-indicator ${averageSmiley}`;
+        historyMonthIndicator.innerHTML = `<img src="${imageSrc}" alt="Smiley ${averageSmiley}">`;
+      } else {
+        historyMonthAvg.textContent = '— h/m³';
+        historyMonthIndicator.className = 'gm-history-indicator vert';
+        historyMonthIndicator.innerHTML = '';
+      }
+
       tbody.innerHTML = last4.map(k => {
         const ratio = calculateRatio(k.hours, k.m3);
-        const smiley = getSmiley(ratio);
+        const smiley = getSmiley(ratio) === 'rouge' ? 'rouge' : 'vert';
         return `
           <tr>
             <td><strong>S${String(k.week).padStart(2, '0')}/${k.year}</strong></td>
@@ -326,12 +389,7 @@
             <td>${k.hours.toFixed(2)}</td>
             <td>
               <span class="badge badge-${smiley}">
-                ${ratio !== null ? ratio.toFixed(2) : '—'} ${getSmileyEmoji(smiley)}
-              </span>
-            </td>
-            <td>
-              <span class="badge ${k.status === 'published' ? 'badge-success' : 'badge-warning'}">
-                ${k.status === 'published' ? '✅ Publié' : '📝 Brouillon'}
+                ${ratio !== null ? ratio.toFixed(2) : '—'}
               </span>
             </td>
             <td><small>${k.comment}</small></td>
@@ -340,7 +398,7 @@
       }).join('');
 
       if (last4.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 20px;">Aucune donnée</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 20px;">Aucune donnée sur le mois dernier</td></tr>`;
       }
     }
 
