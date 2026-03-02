@@ -141,6 +141,42 @@ function getCurrentWeek() {
 }
 
 /**
+ * Retourne les dates du lundi et vendredi d'une semaine donnée
+ * @param {number} week - Numéro de semaine (1-53)
+ * @param {number} year - Année (ex: 2026)
+ * @returns {object} - {monday: 'jj/mm/yyyy', friday: 'jj/mm/yyyy'}
+ */
+function getWeekDateRange(week, year) {
+  // Créer une date pour le 1er janvier de l'année
+  const jan1 = new Date(year, 0, 1);
+  // Trouver le premier lundi de l'année
+  const daysToMonday = (1 - jan1.getDay() + 7) % 7 || 7;
+  const firstMonday = new Date(jan1);
+  firstMonday.setDate(jan1.getDate() + daysToMonday);
+  
+  // Calculer le lundi de la semaine demandée
+  const monday = new Date(firstMonday);
+  monday.setDate(firstMonday.getDate() + (week - 1) * 7);
+  
+  // Calculer le vendredi (4 jours après lundi)
+  const friday = new Date(monday);
+  friday.setDate(monday.getDate() + 4);
+  
+  // Formater les dates
+  const formatDate = (date) => {
+    const d = String(date.getDate()).padStart(2, '0');
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const y = date.getFullYear();
+    return `${d}/${m}/${y}`;
+  };
+  
+  return {
+    monday: formatDate(monday),
+    friday: formatDate(friday)
+  };
+}
+
+/**
  * Formate un numéro de semaine en chaîne (ex: 5 → "S05")
  * @param {number} week - Numéro de semaine
  * @returns {string} - Format "SXX"

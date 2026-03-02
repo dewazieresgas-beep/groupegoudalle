@@ -276,8 +276,11 @@
         const ratio = calculateRatio(last.hours, last.m3);
         const smiley = getSmiley(ratio);
 
+        // Obtenir les dates de la semaine
+        const dateRange = getWeekDateRange(last.week, last.year);
+
         // Mettre à jour les éléments principaux
-        document.getElementById('weekNumber').textContent = `${String(last.week).padStart(2, '0')} (${last.year})`;
+        document.getElementById('weekNumber').textContent = `${String(last.week).padStart(2, '0')} (${last.year}) - du ${dateRange.monday} au ${dateRange.friday}`;
         document.getElementById('mainM3').textContent = last.m3.toFixed(2);
         document.getElementById('mainHours').textContent = Math.round(last.hours);
         document.getElementById('mainRatio').textContent = ratio !== null ? ratio.toFixed(2) : '—';

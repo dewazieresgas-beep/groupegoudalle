@@ -79,13 +79,19 @@
       const ratio = calculateRatio(lastWeek.hours, lastWeek.m3);
       const smiley = getSmiley(ratio);
 
+      // Obtenir les dates de la semaine
+      const dateRange = getWeekDateRange(lastWeek.week, lastWeek.year);
+
+      // Mettre à jour le titre du card
+      const card = document.querySelector('.card');
+      if (card) {
+        const title = card.querySelector('.card-title h2');
+        title.textContent = `Volume de béton coulé du ${dateRange.monday} au ${dateRange.friday}`;
+      }
+
       // Afficher les données dans des cartes KPI
       document.getElementById('gm-content').innerHTML = `
         <div class="kpi-grid">
-          <div class="kpi-box">
-            <div class="kpi-label">Semaine</div>
-            <div class="kpi-value">S${String(lastWeek.week).padStart(2, '0')}</div>
-          </div>
           <div class="kpi-box">
             <div class="kpi-label">m³ coulés</div>
             <div class="kpi-value">${lastWeek.m3.toFixed(2)}</div>
