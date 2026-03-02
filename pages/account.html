@@ -73,9 +73,11 @@
       <div class="card">
         <div class="card-title">
           <h2>Informations personnelles</h2>
+          <button id="editBtn" onclick="enableEditMode()" class="btn btn-small btn-accent" style="margin-left: auto;">✏️ Modifier</button>
         </div>
         <div class="card-body">
-          <div class="profile-grid">
+          <!-- Mode affichage -->
+          <div id="viewMode" class="profile-grid">
             <div class="profile-card">
               <div class="profile-label">Nom d'utilisateur</div>
               <div class="profile-value" id="username">—</div>
@@ -100,6 +102,27 @@
               <div class="profile-label">Statut</div>
               <div class="profile-value"><span style="color: #27ae60;">✅ Actif</span></div>
             </div>
+          </div>
+
+          <!-- Mode édition -->
+          <div id="editMode" style="display: none;">
+            <div id="editMessage" class="alert" style="display:none; margin-bottom: 20px;"></div>
+            <form onsubmit="handleEditProfile(event)">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="form-group">
+                  <label for="editDisplayName">Nom complet *</label>
+                  <input type="text" id="editDisplayName" required>
+                </div>
+                <div class="form-group">
+                  <label for="editEmail">Email *</label>
+                  <input type="email" id="editEmail" required>
+                </div>
+              </div>
+              <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button type="submit" class="btn btn-primary">💾 Sauvegarder</button>
+                <button type="button" onclick="cancelEditMode()" class="btn btn-secondary">❌ Annuler</button>
+              </div>
+            </form>
           </div>
         </div>
       </div>
@@ -288,6 +311,62 @@
       if (confirm('Êtes-vous sûr ? Vous serez immédiatement déconnecté.')) {
         Auth.logout();
         window.location.href = '../login.html';
+      }
+    }
+
+    /**
+     * Active le mode édition du profil
+     * Affiche le formulaire et cache l'affichage
+     */
+    function enableEditMode() {
+      const session = Auth.getSession();
+      const user = Auth.getCurrentUser();
+
+      // Pré-remplir les champs du formulaire
+      document.getElementById('editDisplayName').value = user.displayName || '';
+      document.getElementById('editEmail').value = user.email || '';
+
+      // Masquer l'affichage et montrer le formulaire
+      document.getElementById('viewMode').style.display = 'none';
+      document.getElementById('editMode').style.display = 'block';
+      document.getElementById('editBtn').style.display = 'none';
+    }
+
+    /**
+     * Annule le mode édition et revient à l'affichage
+     */
+    function cancelEditMode() {
+      document.getElementById('viewMode').style.display = 'grid';
+      document.getElementById('editMode').style.display = 'none';
+      document.getElementById('editBtn').style.display = 'block';
+      document.getElementById('editMessage').style.display = 'none';
+    }
+
+    /**
+     * Gère la sauvegarde des modifications du profil
+     * @param {Event} event - Événement de soumission du formulaire
+     */
+    function handleEditProfile(event) {
+      event.preventDefault();
+
+      const session = Auth.getSession();
+      const newDisplayName = document.getElementById('editDisplayName').value.trim();
+      const newEmail = document.getElementById('editEmail').value.trim();
+
+      // Appeler la fonction de mise à jour du profil
+      const result = Auth.updateUserProfile(session.username, newDisplayName, newEmail);
+
+      const editMessage = document.getElementById('editMessage');
+      editMessage.textContent = result.message;
+      editMessage.className = `alert alert-${result.success ? 'success' : 'error'}`;
+      editMessage.style.display = 'block';
+
+      if (result.success) {
+        // Recharger les informations affichées
+        setTimeout(() => {
+          loadProfile();
+          cancelEditMode();
+        }, 1500);
       }
     }
 

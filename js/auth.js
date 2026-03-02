@@ -385,6 +385,51 @@ const Auth = {
     return { success: true, message: '✅ Mot de passe changé' };
   },
 
+  /**
+   * Met à jour les informations personnelles d'un utilisateur
+   * L'utilisateur peut modifier son propre profil (email, displayName)
+   * @param {string} username - Identifiant de l'utilisateur
+   * @param {string} newDisplayName - Nouveau nom complet
+   * @param {string} newEmail - Nouvelle adresse email
+   * @returns {Object} - { success: boolean, message: string }
+   */
+  updateUserProfile(username, newDisplayName, newEmail) {
+    if (!this.isConnected()) {
+      return { success: false, message: '❌ Non connecté' };
+    }
+
+    // Validation des données
+    if (!newDisplayName || newDisplayName.length < 3) {
+      return { success: false, message: '❌ Nom complet : 3 caractères minimum' };
+    }
+
+    if (!newEmail || !newEmail.includes('@')) {
+      return { success: false, message: '❌ Email invalide' };
+    }
+
+    const users = this.getAllUsers();
+    if (!users[username]) {
+      return { success: false, message: '❌ Utilisateur non trouvé' };
+    }
+
+    // Mettre à jour les informations
+    users[username].displayName = newDisplayName;
+    users[username].email = newEmail;
+    localStorage.setItem(this.STORAGE_KEY_USERS, JSON.stringify(users));
+
+    // Mettre à jour la session si c'est l'utilisateur connecté
+    const session = this.getSession();
+    if (session && session.username === username) {
+      session.displayName = newDisplayName;
+      session.email = newEmail;
+      localStorage.setItem(this.STORAGE_KEY_SESSION, JSON.stringify(session));
+    }
+
+    this.audit('PROFILE_UPDATED', `Mise à jour profil : ${username}`);
+
+    return { success: true, message: '✅ Profil mis à jour' };
+  },
+
   // ============ ADMIN CODE ============
   /**
    * Modifie le code d'administration

@@ -281,34 +281,8 @@ function getSidebar() {
     if (!canEdit && !isDirection) {
       items += `<a href="${base}pages/gm.html" class="sidebar-item">🏭 Goudalle Maçonnerie</a>`;
     } else {
-      // Sinon : menu hiérarchique avec sous-menu
-      let gmSubItems = '';
-      
-      // Consultation GM - accessible à tous
-      gmSubItems += `<a href="${base}pages/gm.html" class="sidebar-subitem">📊 Consultation</a>`;
-      
-      // Saisies - référents et direction
-      if (canEdit) {
-        gmSubItems += `<a href="${base}pages/gm-saisie.html" class="sidebar-subitem">✏️ Saisies indicateurs</a>`;
-      }
-      
-      // Admin GM - référents et direction
-      if (canEdit || isDirection) {
-        gmSubItems += `<a href="${base}pages/gm-admin.html" class="sidebar-subitem">⚙️ Administration</a>`;
-      }
-
-      // Menu principal avec sous-menu (non cliquable, juste toggle)
-      items += `
-      <div class="sidebar-menu-group">
-        <a href="javascript:void(0);" class="sidebar-item sidebar-toggle" onclick="toggleSubMenu(event, 'gm-submenu'); return false;">
-          🏭 Goudalle Maçonnerie
-          <span class="submenu-arrow">▼</span>
-        </a>
-        <div class="sidebar-submenu" id="gm-submenu">
-          ${gmSubItems}
-        </div>
-      </div>
-    `;
+      // Sinon : bouton pour ouvrir la barre de navigation secondaire
+      items += `<a href="javascript:void(0);" class="sidebar-item" data-toggle-submenu="true" onclick="toggleGMSidebar(event);">🏭 Goudalle Maçonnerie</a>`;
     }
   }
 
@@ -325,6 +299,23 @@ function getSidebar() {
     <a href="${base}pages/account.html" class="sidebar-item">👤 Profil</a>
     <a href="#" onclick="logoutUser(); return false;" class="sidebar-item logout">🚪 Déconnexion</a>
   `;
+
+  // Construire les items de la barre secondaire (Goudalle Maçonnerie submenu)
+  let secondaryItems = '';
+  if (canView && (canEdit || isDirection)) {
+    // Consultation GM - accessible à tous
+    secondaryItems += `<a href="${base}pages/gm.html" class="sidebar-item">📊 Consultation</a>`;
+    
+    // Saisies - référents et direction
+    if (canEdit) {
+      secondaryItems += `<a href="${base}pages/gm-saisie.html" class="sidebar-item">✏️ Saisies indicateurs</a>`;
+    }
+    
+    // Admin GM - référents et direction
+    if (canEdit || isDirection) {
+      secondaryItems += `<a href="${base}pages/gm-admin.html" class="sidebar-item">⚙️ Administration</a>`;
+    }
+  }
 
   return `
     <aside class="sidebar">
@@ -346,6 +337,17 @@ function getSidebar() {
         <div class="user-badge">${session.displayName}</div>
       </div>
     </aside>
+    ${secondaryItems ? `
+    <aside class="sidebar-secondary" id="gmSidebar">
+      <div class="sidebar-secondary-content">
+        <div class="sidebar-secondary-title">🏭 Goudalle Maçonnerie</div>
+        <button class="sidebar-secondary-close" onclick="toggleGMSidebar();">✕</button>
+        <nav class="sidebar-secondary-nav">
+          ${secondaryItems}
+        </nav>
+      </div>
+    </aside>
+    ` : ''}
     <script>
       // Restaurer l'état des sous-menus après injection de la sidebar
       setTimeout(function() {
@@ -398,21 +400,36 @@ function toggleSubMenu(event, submenuId) {
 }
 
 /**
- * Restaure l'état des sous-menus depuis localStorage
+ * Toggle (ouvrir/fermer) la barre de navigation secondaire Goudalle Maçonnerie
+ * @param {Event} event - Événement optionnel du clic
+ */
+function toggleGMSidebar(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  
+  const gmSidebar = document.getElementById('gmSidebar');
+  if (!gmSidebar) return;
+  
+  // Toggle la classe 'open'
+  const isOpen = gmSidebar.classList.toggle('open');
+  
+  // Sauvegarder l'état dans localStorage
+  localStorage.setItem('gm_sidebar_state', isOpen ? 'open' : 'closed');
+}
+
+/**
+ * Restaure l'état de la barre de navigation secondaire depuis localStorage
  * Appelé automatiquement au chargement de la page
  */
 function restoreSubMenuStates() {
-  // Restaurer l'état du sous-menu GM
-  const gmState = localStorage.getItem('submenu_gm-submenu');
+  // Restaurer l'état du sidebar secondaire GM
+  const gmState = localStorage.getItem('gm_sidebar_state');
   if (gmState === 'open') {
-    const submenu = document.getElementById('gm-submenu');
-    const toggle = document.querySelector('[onclick*="gm-submenu"]');
-    const arrow = toggle?.querySelector('.submenu-arrow');
-    
-    if (submenu) {
-      submenu.classList.add('open');
-      toggle?.classList.add('active');
-      if (arrow) arrow.style.transform = 'rotate(180deg)';
+    const gmSidebar = document.getElementById('gmSidebar');
+    if (gmSidebar) {
+      gmSidebar.classList.add('open');
     }
   }
 }

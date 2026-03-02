@@ -255,6 +255,88 @@ a:hover {
   padding-left: 20px;
 }
 
+/* ============ SIDEBAR SECONDAIRE ============ */
+.sidebar-secondary {
+  position: fixed;
+  left: -300px;
+  top: 0;
+  width: 300px;
+  height: 100vh;
+  background: #fff;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+  border-top: 3px solid var(--accent);
+  z-index: 99;
+  transition: left 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-secondary.open {
+  left: 0;
+}
+
+.sidebar-secondary-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.sidebar-secondary-title {
+  padding: 20px;
+  font-weight: 600;
+  color: var(--primary);
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebar-secondary-close {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--secondary);
+  transition: color 0.2s;
+}
+
+.sidebar-secondary-close:hover {
+  color: var(--primary);
+}
+
+.sidebar-secondary-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 10px 0;
+}
+
+.sidebar-secondary-nav .sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  color: var(--primary);
+  border-bottom: 1px solid transparent;
+  font-size: 13px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  transition: all 0.2s;
+  border-left: 3px solid transparent;
+}
+
+.sidebar-secondary-nav .sidebar-item:hover {
+  color: var(--accent-dark);
+  background: rgba(139, 168, 138, 0.12);
+  border-left-color: var(--accent-dark);
+  padding-left: 23px;
+}
+
 .user-badge {
   background: var(--light);
   border: 1px solid var(--border);
