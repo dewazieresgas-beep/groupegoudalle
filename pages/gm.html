@@ -213,9 +213,9 @@
       // Destroy le graphique précédent s'il existe
       if (chart) chart.destroy();
 
-      // Récupérer les couleurs depuis le thème CSS
-      const lineColor = printMode ? '#000000' : getCssVar('--accent-dark', '#6b8e6f');
-      const fillColor = printMode ? 'rgba(0, 0, 0, 0.06)' : 'rgba(107, 142, 111, 0.12)';
+      // Récupérer les couleurs depuis le thème CSS (conservées même en impression)
+      const lineColor = getCssVar('--accent-dark', '#6b8e6f');
+      const fillColor = 'rgba(107, 142, 111, 0.12)';
       const threshold = getKpiRatioThreshold(); // Seuil de performance (par défaut 5)
 
       // Créer le graphique Chart.js
@@ -238,7 +238,7 @@
             {
               label: `Seuil (${threshold} h/m³)`,
               data: new Array(labels.length).fill(threshold),
-              borderColor: printMode ? '#000000' : '#e74c3c',
+              borderColor: '#e74c3c',
               borderWidth: 2,
               borderDash: [5, 5],  // Ligne pointillée
               pointRadius: 0,      // Pas de points
