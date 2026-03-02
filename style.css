@@ -1373,3 +1373,25 @@ tbody tr:last-child td {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--secondary);
 }
+
+@media print {
+  .print-mode #sidebar,
+  .print-mode .sidebar-secondary,
+  .print-mode .site-footer {
+    display: none !important;
+  }
+
+  .print-mode .main-content {
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .print-mode .gm-main-section,
+  .print-mode .gm-secondary-section,
+  .print-mode .gm-chart-section,
+  .print-mode .gm-comment-section,
+  .print-mode .gm-kpi-card {
+    box-shadow: none !important;
+  }
+}

@@ -109,6 +109,15 @@
   </div>
 
   <script>
+    /**
+     * Indique si la page est ouverte en mode impression
+     * @returns {boolean}
+     */
+    function isPrintMode() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('print') === '1';
+    }
+
     // Variable globale pour stocker l'instance du graphique Chart.js
     let chart;
     // Clé de stockage pour la préférence de plage de temps du graphique
@@ -218,7 +227,7 @@
               data: ratioData,
               borderColor: lineColor,
               backgroundColor: fillColor,
-              tension: 0.35,        // Courbe légèrement arrondie
+              tension: 0,           // Segments droits (pas d'arrondi)
               spanGaps: false,     // Ne pas relier les points si données manquantes
               pointRadius: 3,
               pointHoverRadius: 5,
@@ -270,11 +279,15 @@
      * - Affiche l'historique des 4 dernières semaines
      */
     function initGM() {
-      // Injecter la sidebar
-      document.getElementById('sidebar').innerHTML = getSidebar();
+      const printMode = isPrintMode();
 
-      // Injecter la barre de navigation secondaire (Goudalle Maçonnerie)
-      injectGMSecondaryBar();
+      // Injecter la navigation uniquement hors impression
+      if (!printMode) {
+        document.getElementById('sidebar').innerHTML = getSidebar();
+        injectGMSecondaryBar();
+      } else {
+        document.body.classList.add('print-mode');
+      }
 
       // Récupérer tous les KPI publiés, triés du plus récent au plus ancien
       const kpis = getKPIs();
@@ -399,6 +412,17 @@
 
       if (last4.length === 0) {
         tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 20px;">Aucune donnée sur le mois dernier</td></tr>`;
+      }
+
+      // Déclencher automatiquement la fenêtre d'impression PDF
+      if (printMode) {
+        setTimeout(() => {
+          window.print();
+        }, 700);
+
+        window.addEventListener('afterprint', () => {
+          window.close();
+        });
       }
     }
 
