@@ -1385,6 +1385,19 @@ tbody tr:last-child td {
 }
 
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 7mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
   .print-mode #sidebar,
   .print-mode .sidebar-secondary,
   .print-mode .site-footer {
@@ -1395,6 +1408,15 @@ tbody tr:last-child td {
     max-width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .print-mode h1 {
+    font-size: 22px !important;
+  }
+
+  .print-mode h2 {
+    font-size: 14px !important;
   }
 
   .print-mode .gm-main-section,
@@ -1403,5 +1425,120 @@ tbody tr:last-child td {
   .print-mode .gm-comment-section,
   .print-mode .gm-kpi-card {
     box-shadow: none !important;
+  }
+
+  .print-mode .gm-main-container {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .print-mode .gm-kpi-column {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px !important;
+    height: auto !important;
+  }
+
+  .print-mode .gm-kpi-card {
+    height: auto !important;
+    min-height: 86px !important;
+    padding: 10px !important;
+  }
+
+  .print-mode .gm-kpi-value {
+    font-size: 26px !important;
+  }
+
+  .print-mode .gm-kpi-column,
+  .print-mode .gm-chart-section,
+  .print-mode .gm-indicator-column {
+    height: auto !important;
+  }
+
+  .print-mode .gm-chart-container {
+    height: 220px !important;
+  }
+
+  .print-mode .gm-indicator-card {
+    width: 170px !important;
+    height: 170px !important;
+    margin-top: 4px !important;
+    margin-bottom: 4px !important;
+  }
+
+  .print-mode .gm-history-layout {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  .print-mode .gm-history-summary {
+    min-height: 150px !important;
+    padding: 8px !important;
+  }
+
+  .print-mode .gm-history-indicator {
+    width: 110px !important;
+    height: 110px !important;
+  }
+
+  .print-mode table,
+  .print-mode th,
+  .print-mode td {
+    font-size: 11px !important;
+  }
+
+  .print-mode th,
+  .print-mode td {
+    padding: 6px 7px !important;
+  }
+
+  .print-mode .gm-main-section,
+  .print-mode .gm-secondary-section,
+  .print-mode .gm-kpi-card,
+  .print-mode .gm-chart-section,
+  .print-mode .gm-comment-section,
+  .print-mode .gm-history-summary,
+  .print-mode .comment-box,
+  .print-mode table,
+  .print-mode th,
+  .print-mode td,
+  .print-mode textarea,
+  .print-mode .badge {
+    border-color: #000 !important;
+    color: #000 !important;
+  }
+
+  .print-mode h1,
+  .print-mode h2 {
+    border-bottom-color: #000 !important;
+    color: #000 !important;
+  }
+
+  .print-mode thead {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  .print-mode .badge {
+    background: #fff !important;
+    border: 1px solid #000 !important;
+  }
+
+  .print-mode .gm-kpi-m3,
+  .print-mode .gm-kpi-hours,
+  .print-mode .gm-kpi-ratio {
+    border-top-color: #000 !important;
+  }
+
+  .print-mode .gm-history-indicator {
+    border: 1px solid #000 !important;
+  }
+
+  .print-mode .gm-main-section,
+  .print-mode .gm-secondary-section,
+  .print-mode .gm-comment-section,
+  .print-mode .gm-history-summary {
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
 }

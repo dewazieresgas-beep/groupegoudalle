@@ -202,6 +202,8 @@
       const slice = published.slice(0, weeksBack).reverse();
       if (slice.length === 0) return;  // Pas de données, ne rien afficher
 
+      const printMode = isPrintMode();
+
       // Préparer les données pour Chart.js
       const labels = slice.map(k => `S${String(k.week).padStart(2, '0')}/${k.year}`);
       const ratioData = slice.map(k => calculateRatio(k.hours, k.m3));
@@ -212,8 +214,8 @@
       if (chart) chart.destroy();
 
       // Récupérer les couleurs depuis le thème CSS
-      const lineColor = getCssVar('--accent-dark', '#6b8e6f');
-      const fillColor = 'rgba(107, 142, 111, 0.12)';
+      const lineColor = printMode ? '#000000' : getCssVar('--accent-dark', '#6b8e6f');
+      const fillColor = printMode ? 'rgba(0, 0, 0, 0.06)' : 'rgba(107, 142, 111, 0.12)';
       const threshold = getKpiRatioThreshold(); // Seuil de performance (par défaut 5)
 
       // Créer le graphique Chart.js
@@ -236,7 +238,7 @@
             {
               label: `Seuil (${threshold} h/m³)`,
               data: new Array(labels.length).fill(threshold),
-              borderColor: '#e74c3c',
+              borderColor: printMode ? '#000000' : '#e74c3c',
               borderWidth: 2,
               borderDash: [5, 5],  // Ligne pointillée
               pointRadius: 0,      // Pas de points
@@ -248,7 +250,13 @@
           responsive: true,
           interaction: { mode: 'index', intersect: false },
           plugins: {
-            legend: { display: true, position: 'top' },
+            legend: {
+              display: true,
+              position: 'top',
+              labels: {
+                color: printMode ? '#000000' : undefined
+              }
+            },
             tooltip: {
               callbacks: {
                 label: (ctx) => {
@@ -262,8 +270,22 @@
             y: {
               beginAtZero: true,   // Commencer l'axe Y à 0
               title: { display: true, text: 'h/m³' },
+              grid: {
+                color: printMode ? '#9a9a9a' : undefined,
+                lineWidth: printMode ? 1.1 : 1
+              },
               ticks: {
+                color: printMode ? '#000000' : undefined,
                 callback: (value) => value
+              }
+            },
+            x: {
+              grid: {
+                color: printMode ? '#b3b3b3' : undefined,
+                lineWidth: printMode ? 1 : 1
+              },
+              ticks: {
+                color: printMode ? '#000000' : undefined
               }
             }
           }
