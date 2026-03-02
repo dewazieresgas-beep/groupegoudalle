@@ -48,14 +48,16 @@
 
         <!-- GRAPHIQUE H/M³ -->
         <div class="gm-chart-section">
-          <h2>Tendance h/m³</h2>
-          <div style="position: relative; height: 280px;">
+          <div class="gm-chart-header">
+            <h2>Tendance h/m³</h2>
             <select id="trendRange" class="gm-range-select">
               <option value="4">1 mois</option>
               <option value="8">2 mois</option>
               <option value="52">1 an</option>
               <option value="104">2 ans</option>
             </select>
+          </div>
+          <div class="gm-chart-container">
             <canvas id="kpiChart"></canvas>
           </div>
         </div>
@@ -70,28 +72,22 @@
 
       <!-- SECTION SECONDAIRE - HISTORIQUE -->
       <div class="gm-secondary-section">
-        <div class="card">
-          <div class="card-title">
-            <h2>Historique 4 semaines</h2>
-          </div>
-          <div class="card-body">
-            <table id="historyTable">
-              <thead>
-                <tr>
-                  <th>Semaine</th>
-                  <th>m³</th>
-                  <th>Heures</th>
-                  <th>h/m³</th>
-                  <th>Statut</th>
-                  <th>Commentaire</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr><td colspan="6" style="text-align:center; padding: 20px;">Chargement...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <h2>Historique 4 semaines</h2>
+        <table id="historyTable">
+          <thead>
+            <tr>
+              <th>Semaine</th>
+              <th>m³</th>
+              <th>Heures</th>
+              <th>h/m³</th>
+              <th>Statut</th>
+              <th>Commentaire</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="6" style="text-align:center; padding: 20px;">Chargement...</td></tr>
+          </tbody>
+        </table>
       </div>
     </main>
   </div>
@@ -162,10 +158,6 @@
      * @param {number} weeksBack - Nombre de semaines à afficher
      */
     function renderTrendChart(published, weeksBack) {
-      // Mettre à jour le titre du graphique
-      const trendTitle = document.getElementById('trendTitle');
-      if (trendTitle) trendTitle.textContent = formatTrendTitle(weeksBack);
-
       // Prendre les N dernières semaines et inverser pour avoir chronologique
       const slice = published.slice(0, weeksBack).reverse();
       if (slice.length === 0) return;  // Pas de données, ne rien afficher
@@ -275,7 +267,9 @@
         const last = published[0];  // Le plus récent
         const ratio = calculateRatio(last.hours, last.m3);
         const smiley = getSmiley(ratio);
-        const emoji = getSmileyEmoji(smiley);
+
+        // Emoji simple au lieu de SVG
+        const emoji = smiley === 'vert' ? '🙂' : (smiley === 'rouge' ? '😟' : '😐');
 
         // Mettre à jour les éléments principaux
         document.getElementById('weekNumber').textContent = `${String(last.week).padStart(2, '0')} (${last.year})`;

@@ -563,39 +563,6 @@ a:hover {
   font-size: 28px;
 }
 
-.gm-range-select {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.gm-range-select label {
-  margin-bottom: 0;
-  color: var(--secondary);
-  font-weight: 500;
-}
-
-.gm-range-select select {
-  min-width: 150px;
-  padding: 8px 12px;
-  border: 2px solid var(--border-light);
-  border-radius: 4px;
-  background: white;
-  color: var(--primary);
-  font-weight: 500;
-  cursor: pointer;
-}
-
-.gm-range-select select:hover {
-  border-color: var(--accent);
-}
-
-.gm-range-select select:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(107, 142, 111, 0.1);
-}
-
 /* KPI Grid - 3 columns for main metrics */
 .gm-kpi-grid {
   display: grid;
@@ -673,22 +640,47 @@ a:hover {
   margin-bottom: 30px;
 }
 
-.gm-chart-section h3 {
-  margin: 0 0 15px 0;
-  color: var(--primary);
-  font-size: 16px;
+.gm-chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
   border-bottom: 2px solid var(--border-light);
   padding-bottom: 10px;
+}
+
+.gm-chart-header h2 {
+  margin: 0;
+  color: var(--primary);
+  font-size: 16px;
+}
+
+.gm-chart-header .gm-range-select {
+  min-width: 150px;
+  padding: 8px 12px;
+  border: 2px solid var(--border-light);
+  border-radius: 4px;
+  background: white;
+  color: var(--primary);
+  font-weight: 500;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.gm-chart-header .gm-range-select:hover {
+  border-color: var(--accent);
+}
+
+.gm-chart-header .gm-range-select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(107, 142, 111, 0.1);
 }
 
 .gm-chart-container {
   position: relative;
   height: 300px;
-  margin-bottom: 15px;
-}
-
-.gm-chart-container canvas {
-  max-height: 300px;
+  margin-bottom: 0;
 }
 
 /* Comment Section */
@@ -700,7 +692,7 @@ a:hover {
   margin-bottom: 30px;
 }
 
-.gm-comment-section h3 {
+.gm-comment-section h2 {
   margin: 0 0 15px 0;
   color: var(--primary);
   font-size: 16px;
@@ -727,13 +719,6 @@ a:hover {
   box-shadow: 0 0 0 3px rgba(107, 142, 111, 0.1);
 }
 
-.gm-comment-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 12px;
-  justify-content: flex-end;
-}
-
 /* Secondary Section - History Table */
 .gm-secondary-section {
   background: white;
@@ -742,7 +727,7 @@ a:hover {
   box-shadow: var(--shadow);
 }
 
-.gm-secondary-section h3 {
+.gm-secondary-section h2 {
   margin: 0 0 15px 0;
   color: var(--primary);
   font-size: 16px;
@@ -1174,24 +1159,16 @@ tbody tr:last-child td {
     font-size: 20px;
   }
 
-  .gm-range-select {
-    width: 100%;
-  }
-
-  .gm-range-select select {
-    width: 100%;
-  }
-
   .gm-chart-container {
     height: 250px;
   }
 
-  .gm-comment-actions {
+  .gm-comment-container {
     flex-direction: column;
   }
 
-  .gm-comment-actions .btn {
-    width: 100%;
+  .gm-chart-container {
+    height: 250px;
   }
 }
 
