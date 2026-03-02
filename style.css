@@ -116,9 +116,9 @@ a:hover {
   text-transform: uppercase;
 }
 
-/* Masquer le contenu demandé (bandeau haut) */
-.topbar {
-  display: none;
+/* Masquer le texte du bandeau haut tout en gardant la couleur */
+.topbar > * {
+  visibility: hidden;
 }
 
 .topbar a {
@@ -894,9 +894,9 @@ a:hover {
   margin-top: auto;
 }
 
-/* Masquer le contenu demandé (footer) */
-.site-footer {
-  display: none;
+/* Masquer le texte du footer tout en gardant le bandeau de couleur */
+.site-footer .footer-inner {
+  visibility: hidden;
 }
 
 .footer-inner {
