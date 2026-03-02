@@ -116,6 +116,11 @@ a:hover {
   text-transform: uppercase;
 }
 
+/* Masquer le contenu demandé (bandeau haut) */
+.topbar {
+  display: none;
+}
+
 .topbar a {
   color: #f5f1ed;
 }
@@ -887,6 +892,11 @@ a:hover {
   color: #f5f1ed;
   padding: 26px 20px;
   margin-top: auto;
+}
+
+/* Masquer le contenu demandé (footer) */
+.site-footer {
+  display: none;
 }
 
 .footer-inner {
