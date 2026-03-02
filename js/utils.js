@@ -97,6 +97,27 @@ function getSmileyEmoji(smiley) {
   return svgBase(paths[smiley] || paths.neutral);
 }
 
+// ============ PAGE DETECTION ============
+/**
+ * Retourne le nom de la page actuelle (ex: "gm.html", "index.html")
+ * Permet de détecter quelle page est active pour le style de navigation
+ * @returns {string} - Nom du fichier actuel
+ */
+function getCurrentPage() {
+  const path = window.location.pathname;
+  const filename = path.substring(path.lastIndexOf('/') + 1);
+  return filename || 'index.html';
+}
+
+/**
+ * Vérifie si l'utilisateur est sur une sous-page de Goudalle Maçonnerie
+ * @returns {boolean} - true si on est sur gm.html, gm-saisie.html ou gm-admin.html
+ */
+function isGMPage() {
+  const page = getCurrentPage();
+  return page === 'gm.html' || page === 'gm-saisie.html' || page === 'gm-admin.html';
+}
+
 // ============ WEEK UTILS ============
 /**
  * Calcule le numéro de semaine ISO 8601 d'une date
@@ -270,28 +291,37 @@ function getSidebar() {
   const canView = Auth.canViewGM();
   const base = getBasePath();
 
+  // Détecter la page active pour le style
+  const currentPage = getCurrentPage();
+  const onGMPage = isGMPage();
+
   // ===== CONSTRUCTION DU MENU HIÉRARCHIQUE SELON LES DROITS =====
+  const accueilActive = currentPage === 'index.html' ? ' active' : '';
   let items = `
-    <a href="${base}index.html" class="sidebar-item">🏠 Accueil</a>
+    <a href="${base}index.html" class="sidebar-item${accueilActive}">🏠 Accueil</a>
   `;
 
   // ===== SECTION GOUDALLE MAÇONNERIE =====
   if (canView) {
     // Tous les utilisateurs avec accès : lien direct vers gm.html
-    items += `<a href="${base}pages/gm.html" class="sidebar-item">🏭 Goudalle Maçonnerie</a>`;
+    const gmActive = onGMPage ? ' active' : '';
+    items += `<a href="${base}pages/gm.html" class="sidebar-item${gmActive}">🏭 Goudalle Maçonnerie</a>`;
   }
 
   // ===== SECTIONS ADMINISTRATIVES (direction uniquement) =====
   if (isDirection) {
+    const usersActive = currentPage === 'users-admin.html' ? ' active' : '';
+    const auditActive = currentPage === 'audit.html' ? ' active' : '';
     items += `
-      <a href="${base}pages/users-admin.html" class="sidebar-item">👥 Utilisateurs</a>
-      <a href="${base}pages/audit.html" class="sidebar-item">📋 Audit</a>
+      <a href="${base}pages/users-admin.html" class="sidebar-item${usersActive}">👥 Utilisateurs</a>
+      <a href="${base}pages/audit.html" class="sidebar-item${auditActive}">📋 Audit</a>
     `;
   }
 
   // ===== LIENS COMMUNS À TOUS LES UTILISATEURS =====
+  const accountActive = currentPage === 'account.html' ? ' active' : '';
   items += `
-    <a href="${base}pages/account.html" class="sidebar-item">👤 Profil</a>
+    <a href="${base}pages/account.html" class="sidebar-item${accountActive}">👤 Profil</a>
     <a href="#" onclick="logoutUser(); return false;" class="sidebar-item logout">🚪 Déconnexion</a>
   `;
 
@@ -368,7 +398,7 @@ function toggleSubMenu(event, submenuId) {
 
 /**
  * Génère et injecte la barre de navigation secondaire Goudalle Maçonnerie
- * À appeler uniquement sur la page gm.html
+ * À appeler sur toutes les pages GM (gm.html, gm-saisie.html, etc.)
  */
 function injectGMSecondaryBar() {
   const session = Auth.getSession();
@@ -378,20 +408,20 @@ function injectGMSecondaryBar() {
   const isDirection = Auth.isDirection();
   const base = getBasePath();
 
+  // Détecter quelle sous-page GM est active
+  const currentPage = getCurrentPage();
+
   // Construire les items de la barre secondaire
   let secondaryItems = '';
   
   // Consultation GM - accessible à tous
-  secondaryItems += `<a href="${base}pages/gm.html" class="sidebar-item">📊 Consultation</a>`;
+  const consultationActive = currentPage === 'gm.html' ? ' active' : '';
+  secondaryItems += `<a href="${base}pages/gm.html" class="sidebar-item${consultationActive}">📊 Consultation</a>`;
   
   // Saisies - référents et direction
   if (canEdit) {
-    secondaryItems += `<a href="${base}pages/gm-saisie.html" class="sidebar-item">✏️ Saisies indicateurs</a>`;
-  }
-  
-  // Admin GM - référents et direction
-  if (canEdit || isDirection) {
-    secondaryItems += `<a href="${base}pages/gm-admin.html" class="sidebar-item">⚙️ Administration</a>`;
+    const saisieActive = currentPage === 'gm-saisie.html' ? ' active' : '';
+    secondaryItems += `<a href="${base}pages/gm-saisie.html" class="sidebar-item${saisieActive}">✏️ Saisies indicateurs</a>`;
   }
 
   // Créer et injecter la barre secondaire

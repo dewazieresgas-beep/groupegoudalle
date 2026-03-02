@@ -183,6 +183,12 @@ a:hover {
   border-bottom-color: var(--accent);
 }
 
+.sidebar-item.active {
+  color: var(--accent-dark);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+
 .sidebar-item.logout {
   color: var(--danger);
 }
@@ -352,6 +358,13 @@ a:hover {
   background: rgba(139, 168, 138, 0.15);
   border-bottom-color: var(--accent-dark);
   border-left: none;
+}
+
+.sidebar-secondary-nav .sidebar-item.active {
+  color: var(--accent-dark);
+  background: rgba(139, 168, 138, 0.2);
+  border-bottom-color: var(--accent-dark);
+  font-weight: 600;
 }
 
 .user-badge {
@@ -699,25 +712,31 @@ a:hover {
   display: flex;
   justify-content: center;
   align-items: center;
+  height: 380px;
 }
 
 .gm-indicator-card {
   font-size: 140px;
   line-height: 1;
   text-align: center;
-  height: 380px;
+  height: 280px;
+  width: 280px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 50%;
+  margin: 0 auto;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
 /* Couleur du smiley selon performance */
 .gm-indicator-card.vert {
-  color: #27ae60;  /* Vert - bonne performance */
+  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
 }
 
 .gm-indicator-card.rouge {
-  color: #e74c3c;  /* Rouge - mauvaise performance */
+  background: linear-gradient(135deg, #e74c3c 0%, #f39c12 100%);
 }
 
 /* Comment Section */
@@ -1213,9 +1232,14 @@ tbody tr:last-child td {
     height: 250px;
   }
 
+  .gm-indicator-column {
+    height: auto;
+  }
+
   .gm-indicator-card {
     font-size: 80px;
     height: 120px;
+    width: 120px;
   }
 
   .gm-header {
