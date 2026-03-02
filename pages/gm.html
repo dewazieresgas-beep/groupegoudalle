@@ -29,36 +29,45 @@
           <div style="display: none;" id="gmStatus" class="gm-status"></div>
         </div>
 
-        <!-- GRILLE KPI PRINCIPALE -->
-        <div class="gm-kpi-grid">
-          <div class="gm-kpi-card gm-kpi-m3">
-            <div class="gm-kpi-label">m³ coulés</div>
-            <div class="gm-kpi-value" id="mainM3">30.00</div>
+        <!-- CONTAINER PRINCIPAL 3 COLONNES -->
+        <div class="gm-main-container">
+          <!-- COLONNE 1 : KPI VERTICAUX -->
+          <div class="gm-kpi-column">
+            <div class="gm-kpi-card gm-kpi-m3">
+              <div class="gm-kpi-label">m³ coulés</div>
+              <div class="gm-kpi-value" id="mainM3">30.00</div>
+            </div>
+            <div class="gm-kpi-card gm-kpi-hours">
+              <div class="gm-kpi-label">Heures</div>
+              <div class="gm-kpi-value" id="mainHours">121</div>
+            </div>
+            <div class="gm-kpi-card gm-kpi-ratio">
+              <div class="gm-kpi-label">h/m³</div>
+              <div class="gm-kpi-value" id="mainRatio">5.27</div>
+            </div>
           </div>
-          <div class="gm-kpi-card gm-kpi-hours">
-            <div class="gm-kpi-label">Heures</div>
-            <div class="gm-kpi-value" id="mainHours">121</div>
-          </div>
-          <div class="gm-kpi-card gm-kpi-ratio">
-            <div class="gm-kpi-label">h/m³</div>
-            <div class="gm-kpi-value" id="mainRatio">5.27</div>
-            <div class="gm-kpi-indicator" id="mainIndicator">🙂</div>
-          </div>
-        </div>
 
-        <!-- GRAPHIQUE H/M³ -->
-        <div class="gm-chart-section">
-          <div class="gm-chart-header">
-            <h2>Tendance h/m³</h2>
-            <select id="trendRange" class="gm-range-select">
-              <option value="4">1 mois</option>
-              <option value="8">2 mois</option>
-              <option value="52">1 an</option>
-              <option value="104">2 ans</option>
-            </select>
+          <!-- COLONNE 2 : GRAPHIQUE -->
+          <div class="gm-chart-column">
+            <div class="gm-chart-section">
+              <div class="gm-chart-header">
+                <h2>Tendance h/m³</h2>
+                <select id="trendRange" class="gm-range-select">
+                  <option value="4">1 mois</option>
+                  <option value="8">2 mois</option>
+                  <option value="52">1 an</option>
+                  <option value="104">2 ans</option>
+                </select>
+              </div>
+              <div class="gm-chart-container">
+                <canvas id="kpiChart"></canvas>
+              </div>
+            </div>
           </div>
-          <div class="gm-chart-container">
-            <canvas id="kpiChart"></canvas>
+
+          <!-- COLONNE 3 : INDICATEUR EMOJI -->
+          <div class="gm-indicator-column">
+            <div class="gm-indicator-card" id="mainIndicator">🙂</div>
           </div>
         </div>
 
