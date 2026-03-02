@@ -276,18 +276,17 @@
         const ratio = calculateRatio(last.hours, last.m3);
         const smiley = getSmiley(ratio);
 
-        // Emoji simple au lieu de SVG
-        const emoji = smiley === 'vert' ? '🙂' : (smiley === 'rouge' ? '😟' : '😐');
-
         // Mettre à jour les éléments principaux
         document.getElementById('weekNumber').textContent = `${String(last.week).padStart(2, '0')} (${last.year})`;
         document.getElementById('mainM3').textContent = last.m3.toFixed(2);
         document.getElementById('mainHours').textContent = Math.round(last.hours);
         document.getElementById('mainRatio').textContent = ratio !== null ? ratio.toFixed(2) : '—';
         
-        // Mettre à jour le smiley avec couleur
+        // Mettre à jour le smiley avec couleur (image + fond dégradé)
         const indicatorEl = document.getElementById('mainIndicator');
-        indicatorEl.textContent = emoji;
+        const base = getBasePath();
+        const imageSrc = smiley === 'vert' ? `${base}assets/smiley%20vert.png` : `${base}assets/smiley%20rouge.png`;
+        indicatorEl.innerHTML = `<img src="${imageSrc}" alt="Smiley ${smiley}" style="width:200px; height:200px;">`;
         indicatorEl.className = `gm-indicator-card ${smiley}`;
 
         // Charger le commentaire de la semaine (désactivé = readonly)
@@ -303,7 +302,8 @@
         document.getElementById('mainRatio').textContent = '—';
         
         const indicatorEl = document.getElementById('mainIndicator');
-        indicatorEl.textContent = '🙂';  // Par défaut : content
+        const base = getBasePath();
+        indicatorEl.innerHTML = `<img src="${base}assets/smiley%20vert.png" alt="Smiley vert" style="width:200px; height:200px;">`;
         indicatorEl.className = 'gm-indicator-card vert';
       }
 

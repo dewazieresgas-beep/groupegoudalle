@@ -71,30 +71,21 @@ function getSmiley(ratio) {
 }
 
 /**
- * Génère le SVG du smiley selon le type (vert/rouge/neutral)
- * Utilise des SVG au lieu d'emojis pour permettre la personnalisation CSS
+ * Génère une balise img du smiley selon le type (vert/rouge/neutral)
+ * Utilise les images PNG du dossier assets
  * @param {string} smiley - Type : 'vert', 'rouge' ou 'neutral'
- * @returns {string} - Code HTML SVG du smiley
+ * @returns {string} - Code HTML img du smiley
  */
 function getSmileyEmoji(smiley) {
-  // Note de compatibilité : retourne un SVG au lieu d'emoji Unicode
-  // pour permettre d'appliquer des couleurs via CSS (currentColor)
-  const svgBase = (path) => `
-    <svg viewBox="0 0 24 24" width="1em" height="1em" class="smiley-icon" aria-hidden="true" focusable="false">
-      <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2" />
-      <circle cx="9" cy="10" r="1" fill="currentColor" />
-      <circle cx="15" cy="10" r="1" fill="currentColor" />
-      ${path}
-    </svg>
-  `.trim();
-
-  const paths = {
-    vert: '<path d="M8 14c1.2 1.6 2.6 2.4 4 2.4s2.8-.8 4-2.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />',
-    rouge: '<path d="M8 16c1.2-1.6 2.6-2.4 4-2.4s2.8.8 4 2.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />',
-    neutral: '<path d="M8 15h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />'
+  const base = getBasePath();
+  const images = {
+    vert: `${base}assets/smiley%20vert.png`,
+    rouge: `${base}assets/smiley%20rouge.png`,
+    neutral: `${base}assets/smiley%20vert.png`  // Par défaut : vert
   };
 
-  return svgBase(paths[smiley] || paths.neutral);
+  const imagePath = images[smiley] || images.vert;
+  return `<img src="${imagePath}" alt="Smiley ${smiley}" class="smiley-emoji" loading="lazy">`;
 }
 
 // ============ PAGE DETECTION ============

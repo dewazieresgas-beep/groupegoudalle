@@ -526,6 +526,11 @@ a:hover {
   justify-content: center;
 }
 
+.smiley .smiley-emoji {
+  width: 24px;
+  height: 24px;
+}
+
 .smiley .smiley-icon {
   width: 42px;
   height: 42px;
@@ -1059,6 +1064,13 @@ tbody tr:last-child td {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.badge .smiley-emoji {
+  width: 16px;
+  height: 16px;
+  vertical-align: -2px;
+  margin-left: 4px;
 }
 
 .badge .smiley-icon {
