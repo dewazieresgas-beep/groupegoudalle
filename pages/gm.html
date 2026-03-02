@@ -6,6 +6,8 @@
   <title>Goudalle - Dashboard - Intranet</title>
   <link rel="stylesheet" href="../style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
   <script src="../js/auth.js"></script>
@@ -113,9 +115,9 @@
      * Indique si la page est ouverte en mode impression
      * @returns {boolean}
      */
-    function isPrintMode() {
+    function isDownloadMode() {
       const params = new URLSearchParams(window.location.search);
-      return params.get('print') === '1';
+      return params.get('download') === '1';
     }
 
     // Variable globale pour stocker l'instance du graphique Chart.js
@@ -202,7 +204,7 @@
       const slice = published.slice(0, weeksBack).reverse();
       if (slice.length === 0) return;  // Pas de données, ne rien afficher
 
-      const printMode = isPrintMode();
+      const downloadMode = isDownloadMode();
 
       // Préparer les données pour Chart.js
       const labels = slice.map(k => `S${String(k.week).padStart(2, '0')}/${k.year}`);
@@ -254,7 +256,7 @@
               display: true,
               position: 'top',
               labels: {
-                color: printMode ? '#000000' : undefined
+                color: downloadMode ? '#000000' : undefined
               }
             },
             tooltip: {
@@ -271,21 +273,21 @@
               beginAtZero: true,   // Commencer l'axe Y à 0
               title: { display: true, text: 'h/m³' },
               grid: {
-                color: printMode ? '#9a9a9a' : undefined,
-                lineWidth: printMode ? 1.1 : 1
+                color: downloadMode ? '#9a9a9a' : undefined,
+                lineWidth: downloadMode ? 1.1 : 1
               },
               ticks: {
-                color: printMode ? '#000000' : undefined,
+                color: downloadMode ? '#000000' : undefined,
                 callback: (value) => value
               }
             },
             x: {
               grid: {
-                color: printMode ? '#b3b3b3' : undefined,
-                lineWidth: printMode ? 1 : 1
+                color: downloadMode ? '#b3b3b3' : undefined,
+                lineWidth: downloadMode ? 1 : 1
               },
               ticks: {
-                color: printMode ? '#000000' : undefined
+                color: downloadMode ? '#000000' : undefined
               }
             }
           }
@@ -301,14 +303,14 @@
      * - Affiche l'historique des 4 dernières semaines
      */
     function initGM() {
-      const printMode = isPrintMode();
+      const downloadMode = isDownloadMode();
 
-      // Injecter la navigation uniquement hors impression
-      if (!printMode) {
+      // Injecter la navigation uniquement hors téléchargement
+      if (!downloadMode) {
         document.getElementById('sidebar').innerHTML = getSidebar();
         injectGMSecondaryBar();
       } else {
-        document.body.classList.add('print-mode');
+        document.body.classList.add('download-mode');
       }
 
       // Récupérer tous les KPI publiés, triés du plus récent au plus ancien
@@ -436,16 +438,54 @@
         tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 20px;">Aucune donnée sur le mois dernier</td></tr>`;
       }
 
-      // Déclencher automatiquement la fenêtre d'impression PDF
-      if (printMode) {
+      // Déclencher automatiquement le téléchargement de l'image JPEG
+      if (downloadMode) {
         setTimeout(() => {
-          window.print();
-        }, 700);
-
-        window.addEventListener('afterprint', () => {
-          window.close();
-        });
+          downloadAsImage();
+        }, 1000); // Attendre que tout soit chargé (graphique, etc.)
       }
+    }
+
+    /**
+     * Capture la page et la télécharge en tant qu'image JPEG
+     */
+    function downloadAsImage() {
+      const element = document.querySelector('.main-content');
+      
+      html2canvas(element, {
+        scale: 2, // Qualité de l'image (2x pour meilleure résolution)
+        backgroundColor: '#ffffff',
+        logging: false,
+        useCORS: true
+      }).then(canvas => {
+        // Convertir le canvas en blob JPEG
+        canvas.toBlob((blob) => {
+          // Créer un lien de téléchargement
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          
+          // Générer un nom de fichier avec la date
+          const now = new Date();
+          const year = now.getFullYear();
+          const week = getWeekNumber(now);
+          const filename = `Goudalle_GM_S${String(week).padStart(2, '0')}_${year}.jpg`;
+          
+          link.href = url;
+          link.download = filename;
+          link.click();
+          
+          // Nettoyer
+          URL.revokeObjectURL(url);
+          
+          // Fermer la fenêtre après un court délai
+          setTimeout(() => {
+            window.close();
+          }, 500);
+        }, 'image/jpeg', 0.95); // Qualité JPEG à 95%
+      }).catch(error => {
+        console.error('Erreur lors de la capture de l\'image:', error);
+        alert('❌ Erreur lors de la génération de l\'image');
+      });
     }
 
     /**

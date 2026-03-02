@@ -1384,72 +1384,36 @@ tbody tr:last-child td {
   background: var(--secondary);
 }
 
-@media print {
-  @page {
-    size: A4 portrait;
-    margin: 8mm;
-  }
-
-  html,
-  body {
-    background: #fff !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-    width: 100%;
-    height: 100%;
-  }
-
-  .print-mode #sidebar,
-  .print-mode .sidebar-secondary,
-  .print-mode .site-footer {
-    display: none !important;
-  }
-
-  .print-mode .app-container {
-    display: block !important;
-    width: 100%;
-    height: 100%;
-  }
-
-  /* Adapter la page pour remplir A4 portrait sans déformation */
-  .print-mode .main-content {
-    width: 190mm !important;
-    max-width: 190mm !important;
-    height: auto !important;
-    margin: 0 auto !important;
-    padding: 0 !important;
-    transform: none !important;
-    overflow: visible !important;
-  }
-
-  /* Éviter les coupures de page */
-  .print-mode .gm-layout,
-  .print-mode .gm-main-section,
-  .print-mode .gm-secondary-section,
-  .print-mode .gm-chart-section,
-  .print-mode .gm-history-layout {
-    page-break-inside: avoid;
-  }
-
-  /* Textes et lignes en noir pour meilleure lisibilité */
-  .print-mode table,
-  .print-mode th,
-  .print-mode td {
-    border-color: #000 !important;
-    color: #000 !important;
-  }
-
-  .print-mode thead {
-    background: #fff !important;
-    color: #000 !important;
-  }
-
-  .print-mode h1,
-  .print-mode h2,
-  .print-mode p,
-  .print-mode small,
-  .print-mode .kpi-value,
-  .print-mode .kpi-label {
-    color: #000 !important;
-  }
+/* Mode téléchargement pour capture d'image */
+.download-mode #sidebar,
+.download-mode .sidebar-secondary,
+.download-mode .site-footer {
+  display: none !important;
 }
+
+.download-mode .app-container {
+  display: block !important;
+}
+
+/* Textes et lignes en noir pour meilleure visibilité dans l'image */
+.download-mode table,
+.download-mode th,
+.download-mode td {
+  border-color: #000 !important;
+  color: #000 !important;
+}
+
+.download-mode thead {
+  background: #fff !important;
+  color: #000 !important;
+}
+
+.download-mode h1,
+.download-mode h2,
+.download-mode p,
+.download-mode small,
+.download-mode .kpi-value,
+.download-mode .kpi-label {
+  color: #000 !important;
+}
+

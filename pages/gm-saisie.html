@@ -23,7 +23,7 @@
     <main class="main-content">
       <div class="d-flex justify-between items-center mb-3" style="gap: 12px; flex-wrap: wrap;">
         <h1 class="mb-0">Saisies indicateurs - Goudalle Maconnerie</h1>
-        <button type="button" class="btn btn-secondary" onclick="printGMIndicators()">🖨️ Impression indicateurs</button>
+        <button type="button" class="btn btn-secondary" onclick="downloadGMIndicators()">📥 Télécharger indicateurs de la semaine</button>
       </div>
 
       <div class="card">
@@ -350,9 +350,9 @@
     /**
      * Ouvre la page d'accueil Goudalle Maçonnerie en mode impression PDF
      */
-    function printGMIndicators() {
+    function downloadGMIndicators() {
       const base = getBasePath();
-      window.open(`${base}pages/gm.html?print=1`, '_blank');
+      window.open(`${base}pages/gm.html?download=1`, '_blank');
     }
 
     /**
