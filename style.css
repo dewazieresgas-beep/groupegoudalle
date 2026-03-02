@@ -1387,13 +1387,12 @@ tbody tr:last-child td {
 @media print {
   @page {
     size: A4 portrait;
-    margin: 7mm;
+    margin: 5mm;
   }
 
   html,
   body {
     background: #fff !important;
-    color: #000 !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -1408,18 +1407,23 @@ tbody tr:last-child td {
     display: block !important;
   }
 
-  /* Conserver la page telle quelle et réduire l'ensemble pour A4 portrait */
+  /* Réduire proportionnellement pour tenir sur 1 page A4 portrait */
   .print-mode .main-content {
-    width: 1200px !important;
-    max-width: none !important;
+    max-width: 100% !important;
     margin: 0 !important;
-    padding: 0 !important;
-    overflow: visible !important;
-    transform: scale(0.62);
-    transform-origin: top left;
+    padding: 10px !important;
+    zoom: 0.65;
   }
 
-  /* Textes et lignes de tableaux en noir pour meilleure lisibilité */
+  /* Éviter les coupures de page */
+  .print-mode .gm-layout,
+  .print-mode .gm-main-section,
+  .print-mode .gm-secondary-section,
+  .print-mode .gm-history-layout {
+    page-break-inside: avoid;
+  }
+
+  /* Textes et lignes en noir pour meilleure lisibilité */
   .print-mode table,
   .print-mode th,
   .print-mode td {
