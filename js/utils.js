@@ -275,28 +275,32 @@ function getSidebar() {
     <a href="${base}index.html" class="sidebar-item">🏠 Accueil</a>
   `;
 
-  // ===== SECTION GOUDALLE MAÇONNERIE (avec sous-menu) =====
+  // ===== SECTION GOUDALLE MAÇONNERIE =====
   if (canView) {
-    // Construire le sous-menu selon les permissions
-    let gmSubItems = '';
-    
-    // Consultation GM - accessible à tous ceux qui ont accès à GM
-    gmSubItems += `<a href="${base}pages/gm.html" class="sidebar-subitem">📊 Consultation</a>`;
-    
-    // Saisies - référents et direction
-    if (canEdit) {
-      gmSubItems += `<a href="${base}pages/gm-saisie.html" class="sidebar-subitem">✏️ Saisies indicateurs</a>`;
-    }
-    
-    // Admin GM - direction uniquement
-    if (isDirection) {
-      gmSubItems += `<a href="${base}pages/gm-admin.html" class="sidebar-subitem">⚙️ Administration</a>`;
-    }
+    // Si lecture seule : lien direct sans submenu
+    if (!canEdit && !isDirection) {
+      items += `<a href="${base}pages/gm.html" class="sidebar-item">🏭 Goudalle Maçonnerie</a>`;
+    } else {
+      // Sinon : menu hiérarchique avec sous-menu
+      let gmSubItems = '';
+      
+      // Consultation GM - accessible à tous
+      gmSubItems += `<a href="${base}pages/gm.html" class="sidebar-subitem">📊 Consultation</a>`;
+      
+      // Saisies - référents et direction
+      if (canEdit) {
+        gmSubItems += `<a href="${base}pages/gm-saisie.html" class="sidebar-subitem">✏️ Saisies indicateurs</a>`;
+      }
+      
+      // Admin GM - référents et direction
+      if (canEdit || isDirection) {
+        gmSubItems += `<a href="${base}pages/gm-admin.html" class="sidebar-subitem">⚙️ Administration</a>`;
+      }
 
-    // Menu principal avec sous-menu
-    items += `
+      // Menu principal avec sous-menu (non cliquable, juste toggle)
+      items += `
       <div class="sidebar-menu-group">
-        <a href="#" class="sidebar-item sidebar-toggle" onclick="toggleSubMenu(event, 'gm-submenu'); return false;">
+        <a href="javascript:void(0);" class="sidebar-item sidebar-toggle" onclick="toggleSubMenu(event, 'gm-submenu'); return false;">
           🏭 Goudalle Maçonnerie
           <span class="submenu-arrow">▼</span>
         </a>
@@ -305,6 +309,7 @@ function getSidebar() {
         </div>
       </div>
     `;
+    }
   }
 
   // ===== SECTIONS ADMINISTRATIVES (direction uniquement) =====
