@@ -531,7 +531,22 @@ a:hover {
 }
 
 .kpi-box-smiley .smiley {
-  margin-top: 14px;
+  margin-top: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.kpi-box-smiley {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+}
+
+.kpi-box-smiley .smiley-emoji {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .smiley .smiley-emoji {
