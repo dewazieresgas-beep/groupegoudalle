@@ -147,29 +147,30 @@ function getCurrentWeek() {
  * @returns {object} - {monday: 'jj/mm/yyyy', friday: 'jj/mm/yyyy'}
  */
 function getWeekDateRange(week, year) {
-  // Créer une date pour le 1er janvier de l'année
-  const jan1 = new Date(year, 0, 1);
-  // Trouver le premier lundi de l'année
-  const daysToMonday = (1 - jan1.getDay() + 7) % 7 || 7;
-  const firstMonday = new Date(jan1);
-  firstMonday.setDate(jan1.getDate() + daysToMonday);
-  
-  // Calculer le lundi de la semaine demandée
-  const monday = new Date(firstMonday);
-  monday.setDate(firstMonday.getDate() + (week - 1) * 7);
-  
-  // Calculer le vendredi (4 jours après lundi)
+  // ISO 8601 : la semaine 1 est celle qui contient le 4 janvier
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const jan4Day = jan4.getUTCDay() || 7; // Lundi=1 ... Dimanche=7
+
+  // Lundi de la semaine 1 ISO
+  const mondayWeek1 = new Date(jan4);
+  mondayWeek1.setUTCDate(jan4.getUTCDate() - jan4Day + 1);
+
+  // Lundi de la semaine demandée
+  const monday = new Date(mondayWeek1);
+  monday.setUTCDate(mondayWeek1.getUTCDate() + (week - 1) * 7);
+
+  // Vendredi de la semaine demandée
   const friday = new Date(monday);
-  friday.setDate(monday.getDate() + 4);
-  
-  // Formater les dates
+  friday.setUTCDate(monday.getUTCDate() + 4);
+
+  // Format jj/mm/aaaa (en UTC pour éviter les décalages de fuseau)
   const formatDate = (date) => {
-    const d = String(date.getDate()).padStart(2, '0');
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const y = date.getFullYear();
+    const d = String(date.getUTCDate()).padStart(2, '0');
+    const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const y = date.getUTCFullYear();
     return `${d}/${m}/${y}`;
   };
-  
+
   return {
     monday: formatDate(monday),
     friday: formatDate(friday)
@@ -280,6 +281,25 @@ function publishKPI(year, week) {
   Auth.audit('KPI_PUBLISHED', `KPI S${String(week).padStart(2, '0')}/${year} publié`);
   
   return { success: true, message: '✅ KPI publié' };
+}
+
+/**
+ * Supprime un KPI pour une semaine donnée
+ * @param {number} year - Année du KPI
+ * @param {number} week - Semaine du KPI
+ * @returns {Object} - { success: boolean, message: string }
+ */
+function deleteKPI(year, week) {
+  const kpis = getKPIs();
+  const index = kpis.findIndex(k => k.year === year && k.week === week);
+
+  if (index === -1) return { success: false, message: '❌ KPI non trouvé' };
+
+  kpis.splice(index, 1);
+  localStorage.setItem('goudalle_kpis', JSON.stringify(kpis));
+  Auth.audit('KPI_DELETED', `KPI S${String(week).padStart(2, '0')}/${year} supprimé`);
+
+  return { success: true, message: '🗑️ KPI supprimé' };
 }
 
 // ============ UI HELPERS ============

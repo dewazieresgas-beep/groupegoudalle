@@ -471,6 +471,10 @@ a:hover {
   margin-bottom: 20px;
 }
 
+.kpi-grid-home {
+  grid-template-columns: repeat(4, 1fr);
+}
+
 .kpi-box {
   background: white;
   border: 2px solid var(--border-light);
@@ -524,6 +528,10 @@ a:hover {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.kpi-box-smiley .smiley {
+  margin-top: 14px;
 }
 
 .smiley .smiley-emoji {
@@ -1174,6 +1182,10 @@ tbody tr:last-child td {
   .kpi-grid {
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     gap: 10px;
+  }
+
+  .kpi-grid-home {
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .card-body {

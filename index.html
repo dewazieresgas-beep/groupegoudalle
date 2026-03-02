@@ -91,7 +91,7 @@
 
       // Afficher les données dans des cartes KPI
       document.getElementById('gm-content').innerHTML = `
-        <div class="kpi-grid">
+        <div class="kpi-grid kpi-grid-home">
           <div class="kpi-box">
             <div class="kpi-label">m³ coulés</div>
             <div class="kpi-value">${lastWeek.m3.toFixed(2)}</div>
@@ -103,6 +103,9 @@
           <div class="kpi-box ${smiley}">
             <div class="kpi-label">h/m³</div>
             <div class="kpi-value">${ratio !== null ? ratio.toFixed(2) : '—'}</div>
+          </div>
+          <div class="kpi-box ${smiley} kpi-box-smiley">
+            <div class="kpi-label">Smiley</div>
             <div class="smiley">${getSmileyEmoji(smiley)}</div>
           </div>
         </div>
