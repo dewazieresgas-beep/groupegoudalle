@@ -577,6 +577,8 @@ a:hover {
   display: flex;
   flex-direction: column;
   gap: 15px;
+  height: 380px;
+  justify-content: space-between;
 }
 
 /* KPI Grid - vertical stacking */
@@ -595,8 +597,8 @@ a:hover {
   transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  min-height: 100px;
+  justify-content: center;
+  height: 110px;
 }
 
 .gm-kpi-card:hover {
@@ -644,6 +646,9 @@ a:hover {
   border-radius: 8px;
   padding: 20px;
   box-shadow: var(--shadow);
+  height: 380px;
+  display: flex;
+  flex-direction: column;
 }
 
 .gm-chart-header {
@@ -685,7 +690,8 @@ a:hover {
 
 .gm-chart-container {
   position: relative;
-  height: 280px;
+  flex: 1;
+  min-height: 0;
 }
 
 /* COLONNE 3 : INDICATEUR EMOJI */
@@ -696,13 +702,22 @@ a:hover {
 }
 
 .gm-indicator-card {
-  font-size: 120px;
+  font-size: 140px;
   line-height: 1;
   text-align: center;
-  min-height: 180px;
+  height: 380px;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Couleur du smiley selon performance */
+.gm-indicator-card.vert {
+  color: #27ae60;  /* Vert - bonne performance */
+}
+
+.gm-indicator-card.rouge {
+  color: #e74c3c;  /* Rouge - mauvaise performance */
 }
 
 /* Comment Section */
@@ -739,6 +754,13 @@ a:hover {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(107, 142, 111, 0.1);
+}
+
+.gm-comment-input:read-only {
+  background-color: var(--lighter);
+  color: var(--secondary);
+  cursor: not-allowed;
+  border-color: var(--border-light);
 }
 
 /* Secondary Section - History Table */
@@ -930,6 +952,11 @@ input[type="radio"] {
 .btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.btn:disabled:hover {
+  transform: none;
+  box-shadow: var(--shadow);
 }
 
 /* ============ TABLES ============ */
@@ -1166,20 +1193,29 @@ tbody tr:last-child td {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    height: auto;
   }
 
   .gm-kpi-card {
     padding: 15px;
-    min-height: 80px;
+    height: 90px;
   }
 
   .gm-kpi-value {
     font-size: 28px;
   }
 
+  .gm-chart-section {
+    height: auto;
+  }
+
+  .gm-chart-container {
+    height: 250px;
+  }
+
   .gm-indicator-card {
     font-size: 80px;
-    min-height: 100px;
+    height: 120px;
   }
 
   .gm-header {
@@ -1190,10 +1226,6 @@ tbody tr:last-child td {
 
   .gm-header h1 {
     font-size: 20px;
-  }
-
-  .gm-chart-container {
-    height: 250px;
   }
 }
 

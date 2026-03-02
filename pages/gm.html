@@ -74,8 +74,8 @@
         <!-- COMMENTAIRE -->
         <div class="gm-comment-section">
           <h2>Commentaire de la semaine</h2>
-          <textarea id="weekComment" class="gm-comment-input" placeholder="Ajouter un commentaire..." rows="4"></textarea>
-          <button onclick="saveWeekComment()" class="btn btn-primary" style="margin-top: 10px;">💾 Sauvegarder</button>
+          <textarea id="weekComment" class="gm-comment-input" placeholder="Ajouter un commentaire..." rows="4" readonly></textarea>
+          <button id="saveCommentBtn" onclick="saveWeekComment()" class="btn btn-primary" style="margin-top: 10px;" disabled>💾 Sauvegarder</button>
         </div>
       </div>
 
@@ -285,9 +285,13 @@
         document.getElementById('mainM3').textContent = last.m3.toFixed(2);
         document.getElementById('mainHours').textContent = Math.round(last.hours);
         document.getElementById('mainRatio').textContent = ratio !== null ? ratio.toFixed(2) : '—';
-        document.getElementById('mainIndicator').textContent = emoji;
+        
+        // Mettre à jour le smiley avec couleur
+        const indicatorEl = document.getElementById('mainIndicator');
+        indicatorEl.textContent = emoji;
+        indicatorEl.className = `gm-indicator-card ${smiley}`;
 
-        // Charger le commentaire de la semaine
+        // Charger le commentaire de la semaine (désactivé = readonly)
         const weekCommentArea = document.getElementById('weekComment');
         if (weekCommentArea) {
           weekCommentArea.value = last.comment || '';
@@ -298,7 +302,10 @@
         document.getElementById('mainM3').textContent = '0.00';
         document.getElementById('mainHours').textContent = '0';
         document.getElementById('mainRatio').textContent = '—';
-        document.getElementById('mainIndicator').textContent = '❓';
+        
+        const indicatorEl = document.getElementById('mainIndicator');
+        indicatorEl.textContent = '🙂';  // Par défaut : content
+        indicatorEl.className = 'gm-indicator-card vert';
       }
 
       // ===== GÉNÉRATION DU GRAPHIQUE DE TENDANCE =====
