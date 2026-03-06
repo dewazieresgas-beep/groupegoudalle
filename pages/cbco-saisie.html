@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Saisies CBCO - Intranet</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+  <script>
+    window.APP_LOGO = 'cbco';
+  </script>
+
+  <script>
+    Auth.requirePermission('cbco_saisie');
+  </script>
+
+  <div class="app-container">
+    <div id="sidebar"></div>
+    
+    <main class="main-content">
+      <div class="d-flex justify-between items-center mb-3" style="gap: 12px; flex-wrap: wrap;">
+        <h1 class="mb-0">Saisies données commerciales - CBCO</h1>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <h2>Nouvelle entrée</h2>
+        </div>
+        <div class="card-body">
+          <div id="message" class="alert" style="display:none;"></div>
+
+          <form onsubmit="handleSaveCBCOEntry(event)">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+              <div class="form-group">
+                <label for="year">Année *</label>
+                <input type="number" id="year" mins="2020" max="2100" required>
+              </div>
+              <div class="form-group">
+                <label for="month">Mois (1-12) *</label>
+                <select id="month" required>
+                  <option value="">-- Sélectionner --</option>
+                  <option value="1">Janvier</option>
+                  <option value="2">Février</option>
+                  <option value="3">Mars</option>
+                  <option value="4">Avril</option>
+                  <option value="5">Mai</option>
+                  <option value="6">Juin</option>
+                  <option value="7">Juillet</option>
+                  <option value="8">Août</option>
+                  <option value="9">Septembre</option>
+                  <option value="10">Octobre</option>
+                  <option value="11">Novembre</option>
+                  <option value="12">Décembre</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+              <div class="form-group">
+                <label for="montantCours">
+                  Montant estimé chantiers en cours (€) *
+                  <small style="color: #7f8c8d; display: block; margin-top: 5px;">Projets actuellement en exécution</small>
+                </label>
+                <input type="number" id="montantCours" step="0.01" min="0" placeholder="0.00" required oninput="updateCBCOPreview()">
+              </div>
+              <div class="form-group">
+                <label for="montantTermines">
+                  Montant estimé chantiers terminés (€) *
+                  <small style="color: #7f8c8d; display: block; margin-top: 5px;">Projets récemment finalisés ce mois</small>
+                </label>
+                <input type="number" id="montantTermines" step="0.01" min="0" placeholder="0.00" required oninput="updateCBCOPreview()">
+              </div>
+            </div>
+
+            <!-- Aperçu temps réel -->
+            <div id="cbcoPreview" style="display: none; margin: 20px 0; padding: 20px; background: var(--lighter); border-radius: 8px;">
+              <div style="font-size: 14px; color: var(--text-light); margin-bottom: 8px;">Aperçu du résultat :</div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+                <div>
+                  <div style="font-size: 12px; color: var(--text-light);">Total mensuel</div>
+                  <div style="font-size: 20px; font-weight: bold;" id="previewTotal">0 €</div>
+                </div>
+                <div>
+                  <div style="font-size: 12px; color: var(--text-light);">Cumul année</div>
+                  <div style="font-size: 20px; font-weight: bold; color: var(--accent);" id="previewCumul">0 €</div>
+                </div>
+                <div>
+                  <div style="font-size: 12px; color: var(--text-light);">En cours %</div>
+                  <div style="font-size: 20px; font-weight: bold;" id="previewPercent">—</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="alert alert-info">
+              <strong>ℹ️ Informations :</strong>
+              <ul style="margin: 10px 0 0 20px;">
+                <li><strong>Montant CE</strong> : Chantiers que vous estimez terminés dans le futur (en cours actuellement)</li>
+                <li><strong>Montant CT</strong> : Chantiers terminés et facturés ce mois</li>
+                <li>Le système calcule automatiquement le total mensuel et le cumul annuel</li>
+              </ul>
+            </div>
+
+            <div class="form-group">
+              <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
+              <button type="button" class="btn btn-secondary" onclick="goToCBCO()">❌ Annuler</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <h2>Mes entrées CBCO</h2>
+        </div>
+        <div class="card-body">
+          <table id="cbcoEntriesTable">
+            <thead>
+              <tr>
+                <th>Année</th>
+                <th>Mois</th>
+                <th>Montant CE (€)</th>
+                <th>Montant CT (€)</th>
+                <th>Total mensuel (€)</th>
+                <th>Cumul annuel (€)</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="7" style="text-align:center; padding: 20px;">Chargement...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const MONTH_NAMES = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                          'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+
+    /**
+     * Affiche un message
+     * @param {string} message - Message à afficher
+     * @param {string} type - 'success' ou 'error'
+     */
+    function showMessage(message, type) {
+      const msgDiv = document.getElementById('message');
+      msgDiv.textContent = message;
+      msgDiv.className = `alert alert-${type}`;
+      msgDiv.style.display = 'block';
+    }
+
+    /**
+     * Formate un nombre en devise
+     * @param {number} value - Valeur à formater
+     * @returns {string} - "1 234,56 €"
+     */
+    function formatCBCOCurrency(value) {
+      return new Intl.NumberFormat('fr-FR', { 
+        minimumFractionDigits: 2, 
+        maximumFractionDigits: 2 
+      }).format(value) + ' €';
+    }
+
+    /**
+     * Met à jour l'aperçu temps réel
+     */
+    function updateCBCOPreview() {
+      const cours = parseFloat(document.getElementById('montantCours').value) || 0;
+      const termines = parseFloat(document.getElementById('montantTermines').value) || 0;
+      const year = parseInt(document.getElementById('year').value) || new Date().getFullYear();
+      const month = parseInt(document.getElementById('month').value) || 0;
+
+      if (cours <= 0 && termines <= 0) {
+        document.getElementById('cbcoPreview').style.display = 'none';
+        return;
+      }
+
+      // Calculer le total du mois
+      const total = cours + termines;
+      
+      // Calculer le cumul annuel jusqu'à ce mois
+      const data = getCBCOData().filter(e => e.year === year && e.month < month)
+                                 .sort((a, b) => a.month - b.month);
+      let cumul = total;
+      data.forEach(e => cumul += e.montantTotal);
+
+      // Calculer le pourcentage CE
+      const percent = total > 0 ? Math.round((cours / total) * 100) : 0;
+
+      document.getElementById('cbcoPreview').style.display = 'block';
+      document.getElementById('previewTotal').textContent = formatCBCOCurrency(total);
+      document.getElementById('previewCumul').textContent = formatCBCOCurrency(cumul);
+      document.getElementById('previewPercent').textContent = percent + ' %';
+    }
+
+    /**
+     * Gère la sauvegarde d'une entrée CBCO
+     * @param {Event} event - Événement de soumission du formulaire
+     */
+    function handleSaveCBCOEntry(event) {
+      event.preventDefault();
+
+      const year = parseInt(document.getElementById('year').value);
+      const month = parseInt(document.getElementById('month').value);
+      const montantCours = parseFloat(document.getElementById('montantCours').value);
+      const montantTermines = parseFloat(document.getElementById('montantTermines').value);
+
+      // Validations
+      if (montantCours < 0 || montantTermines < 0) {
+        showMessage('❌ Les montants doivent être positifs', 'error');
+        return;
+      }
+
+      try {
+        // Sauvegarder
+        saveCBCOEntry(year, month, montantCours, montantTermines);
+        
+        showMessage(`✅ Données ${MONTH_NAMES[month]} ${year} enregistrées avec succès`, 'success');
+        
+        // Réinitialiser le formulaire
+        document.getElementById('year').value = new Date().getFullYear();
+        document.getElementById('month').value = '';
+        document.getElementById('montantCours').value = '';
+        document.getElementById('montantTermines').value = '';
+        document.getElementById('cbcoPreview').style.display = 'none';
+
+        // Rafraîchir la liste
+        loadCBCOEntries();
+      } catch (error) {
+        console.error('Erreur lors de la sauvegarde:', error);
+        showMessage('❌ Erreur lors de l\'enregistrement', 'error');
+      }
+    }
+
+    /**
+     * Charge et affiche la liste des entrées CBCO
+     */
+    function loadCBCOEntries() {
+      const data = getCBCOData().sort(compareByYearMonthDesc);
+      const tbody = document.querySelector('#cbcoEntriesTable tbody');
+
+      if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 20px;">Aucune entrée créée</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = data.map(e => `
+        <tr>
+          <td><strong>${e.year}</strong></td>
+          <td>${MONTH_NAMES[e.month]}</td>
+          <td>${formatCBCOCurrency(e.montantChantiersCours)}</td>
+          <td>${formatCBCOCurrency(e.montantChantiersTermines)}</td>
+          <td><strong>${formatCBCOCurrency(e.montantTotal)}</strong></td>
+          <td><strong style="color: var(--accent-dark);">${formatCBCOCurrency(e.cumulAnnuel)}</strong></td>
+          <td>
+            <button class="btn btn-small btn-secondary" onclick="editEntry(${e.year}, ${e.month})">✏️ Éditer</button>
+            <button class="btn btn-small btn-danger" onclick="handleDeleteEntry(${e.year}, ${e.month})">🗑️ Supprimer</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    /**
+     * Charge une entrée pour édition
+     * @param {number} year - Année
+     * @param {number} month - Mois
+     */
+    function editEntry(year, month) {
+      const entry = getCBCOData().find(e => e.year === year && e.month === month);
+      if (entry) {
+        document.getElementById('year').value = entry.year;
+        document.getElementById('month').value = entry.month;
+        document.getElementById('montantCours').value = entry.montantChantiersCours;
+        document.getElementById('montantTermines').value = entry.montantChantiersTermines;
+        updateCBCOPreview();
+        window.scrollTo(0, 0);
+      }
+    }
+
+    /**
+     * Supprime une entrée après confirmation
+     * @param {number} year - Année
+     * @param {number} month - Mois
+     */
+    function handleDeleteEntry(year, month) {
+      if (confirm(`Supprimer l'entrée ${MONTH_NAMES[month]} ${year} ? Cette action est irréversible.`)) {
+        const result = deleteCBCOEntry(year, month);
+        showMessage(result.message, result.success ? 'success' : 'error');
+        loadCBCOEntries();
+      }
+    }
+
+    /**
+     * Redirige vers la page CBCO
+     */
+    function goToCBCO() {
+      const base = getBasePath();
+      window.location.href = `${base}pages/cbco.html`;
+    }
+
+    /**
+     * Initialise la page de saisie CBCO
+     */
+    function initCBCOSaisie() {
+      document.getElementById('sidebar').innerHTML = getSidebar();
+      injectCBCOSecondaryBar();
+      
+      // Pré-remplir l'année et le mois courants
+      const now = new Date();
+      document.getElementById('year').value = now.getFullYear();
+      document.getElementById('month').value = now.getMonth() + 1;
+
+      // Charger la liste des entrées
+      loadCBCOEntries();
+
+      // Vérifier les paramètres d'URL pour édition
+      const params = new URLSearchParams(window.location.search);
+      if (params.has('year') && params.has('month')) {
+        const year = parseInt(params.get('year'));
+        const month = parseInt(params.get('month'));
+        editEntry(year, month);
+      }
+    }
+
+    window.addEventListener('load', initCBCOSaisie);
+  </script>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div>
+        <div class="footer-title">Goudalle Groupe</div>
+        <div>50 rue Principale</div>
+        <div>RD343 - 62550 Preures</div>
+        <div>Tel. 03 21 90 98 98</div>
+      </div>
+      <div>
+        <div class="footer-title">Contact</div>
+        <a class="footer-link" href="#">contact@goudalle.fr</a>
+        <div>Formulaire de contact</div>
+      </div>
+      <div>
+        <div class="footer-title">Realisations</div>
+        <div>Agricole / Elevage</div>
+        <div>Tertiaire / Habitat</div>
+        <div>Public / Sante</div>
+      </div>
+      <div>
+        <div class="footer-title">Goudalle recrute</div>
+        <div>Decouvrir nos metiers</div>
+        <div>Voir nos offres</div>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

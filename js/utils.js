@@ -318,7 +318,12 @@ function getBasePath() {
  */
 function getLogoPath() {
   const base = getBasePath();
-  const logoFile = window.APP_LOGO === 'maconnerie' ? 'goudalle-maconnerie.png' : 'groupe.png';
+  let logoFile = 'groupe.png';  // Logo par défaut
+  if (window.APP_LOGO === 'maconnerie') {
+    logoFile = 'goudalle-maconnerie.png';
+  } else if (window.APP_LOGO === 'cbco') {
+    logoFile = 'cbco.png';
+  }
   return `${base}assets/${logoFile}`;
 }
 
@@ -353,6 +358,12 @@ function getSidebar() {
     // Tous les utilisateurs avec accès : lien direct vers gm.html
     const gmActive = onGMPage ? ' active' : '';
     items += `<a href="${base}pages/gm.html" class="sidebar-item${gmActive}">🏭 Goudalle Maçonnerie</a>`;
+  }
+
+  // ===== SECTION CBCO =====
+  if (Auth.canViewCBCO()) {
+    const cbcoActive = isCBCOPage() ? ' active' : '';
+    items += `<a href="${base}pages/cbco.html" class="sidebar-item${cbcoActive}">💼 CBCO</a>`;
   }
 
   // ===== SECTIONS ADMINISTRATIVES (direction uniquement) =====
@@ -499,6 +510,263 @@ function injectGMSecondaryBar() {
   }
 }
 
+// ============ CBCO COMMERCIAL DATA ============
+/**
+ * Récupère tous les enregistrements commerciaux CBCO du localStorage
+ * @returns {Array} - Liste des enregistrements CBCO
+ */
+function getCBCOData() {
+  const data = localStorage.getItem('goudalle_cbco_data');
+  return data ? JSON.parse(data) : [];
+}
+
+/**
+ * Compare deux enregistrements CBCO par année et mois (décroissant)
+ * Trie du plus récent au plus ancien
+ * @param {Object} a - Premier enregistrement
+ * @param {Object} b - Deuxième enregistrement
+ * @returns {number} - Résultat pour Array.sort()
+ */
+function compareByYearMonthDesc(a, b) {
+  if (a.year !== b.year) {
+    return b.year - a.year;  // Année la plus récente en premier
+  }
+  return b.month - a.month;  // Puis mois le plus récent
+}
+
+/**
+ * Sauvegarde ou met à jour une entrée commerciale CBCO
+ * @param {number} year - Année
+ * @param {number} month - Mois (1-12)
+ * @param {number} montantChantiersCours - Montant chantiers en cours
+ * @param {number} montantChantiersTermines - Montant chantiers terminés
+ * @returns {Object} - Entrée CBCO créée/mise à jour
+ */
+function saveCBCOEntry(year, month, montantChantiersCours, montantChantiersTermines) {
+  const data = getCBCOData();
+  
+  // Vérifier si une entrée existe déjà pour ce mois/année
+  const existing = data.find(e => e.year === year && e.month === month);
+  
+  // Calculer les totaux
+  const montantTotal = parseFloat(montantChantiersCours) + parseFloat(montantChantiersTermines);
+  
+  // Créer ou mettre à jour l'entrée
+  const entry = {
+    id: existing?.id || Date.now(),
+    year,
+    month,
+    montantChantiersCours: parseFloat(montantChantiersCours),
+    montantChantiersTermines: parseFloat(montantChantiersTermines),
+    montantTotal,
+    cumulAnnuel: 0,  // Sera calculé après tri
+    createdAt: existing?.createdAt || new Date().toISOString(),
+    createdBy: existing?.createdBy || Auth.getSession().username,
+    updatedAt: new Date().toISOString(),
+    updatedBy: Auth.getSession().username
+  };
+
+  // Remplacer l'ancien ou ajouter le nouveau
+  const filtered = data.filter(e => !(e.year === year && e.month === month));
+  filtered.push(entry);
+  
+  // Trier et calculer les cumuls annuels
+  const sorted = filtered.sort(compareByYearMonthDesc);
+  calculateCBCOCumuls(sorted);
+  
+  localStorage.setItem('goudalle_cbco_data', JSON.stringify(sorted));
+  Auth.audit('CBCO_SAVED', `Entrée CBCO ${month}/${year} enregistrée`);
+  
+  return entry;
+}
+
+/**
+ * Calcule les cumuls annuels pour chaque année dans les données CBCO
+ * Met à jour le champ cumulAnnuel pour chaque entrée
+ * @param {Array} data - Données triées CBCO
+ */
+function calculateCBCOCumuls(data) {
+  // Grouper par année
+  const byYear = {};
+  
+  data.forEach(entry => {
+    if (!byYear[entry.year]) {
+      byYear[entry.year] = [];
+    }
+    byYear[entry.year].push(entry);
+  });
+
+  // Pour chaque année, calculer les cumuls
+  Object.keys(byYear).forEach(year => {
+    let cumul = 0;
+    // Trier les mois de l'année en ordre croissant pour cumul correct
+    const yearEntries = byYear[year].sort((a, b) => a.month - b.month);
+    
+    yearEntries.forEach(entry => {
+      cumul += entry.montantTotal;
+      entry.cumulAnnuel = cumul;
+    });
+  });
+}
+
+/**
+ * Supprime une entrée commerciale CBCO
+ * @param {number} year - Année
+ * @param {number} month - Mois
+ * @returns {Object} - { success, message }
+ */
+function deleteCBCOEntry(year, month) {
+  const data = getCBCOData();
+  const index = data.findIndex(e => e.year === year && e.month === month);
+
+  if (index === -1) return { success: false, message: '❌ Entrée non trouvée' };
+
+  data.splice(index, 1);
+  // Recalculer les cumuls
+  calculateCBCOCumuls(data);
+  localStorage.setItem('goudalle_cbco_data', JSON.stringify(data));
+  Auth.audit('CBCO_DELETED', `Entrée CBCO ${month}/${year} supprimée`);
+
+  return { success: true, message: '✅ Entrée supprimée' };
+}
+
+/**
+ * Récupère les données CBCO agrégées par année
+ * Utile pour les graphiques annuels
+ * @returns {Object} - { year: [{ month, montantTotal, cumulAnnuel }, ...], ... }
+ */
+function getCBCOByYear() {
+  const data = getCBCOData();
+  const byYear = {};
+  
+  data.forEach(entry => {
+    if (!byYear[entry.year]) {
+      byYear[entry.year] = [];
+    }
+    byYear[entry.year].push(entry);
+  });
+  
+  // Trier les mois dans chaque année
+  Object.keys(byYear).forEach(year => {
+    byYear[year].sort((a, b) => a.month - b.month);
+  });
+  
+  return byYear;
+}
+
+/**
+ * Récupère les cumuls annuels CBCO (cumul total par année)
+ * @returns {Array} - [{ year, totalAnnuel }, ...]
+ */
+function getCBCOYearlySummary() {
+  const byYear = getCBCOByYear();
+  
+  return Object.keys(byYear)
+    .map(year => {
+      const entries = byYear[year];
+      if (entries.length === 0) return null;
+      
+      // Le dernier mois de l'année aura le cumul annuel final
+      const lastEntry = entries[entries.length - 1];
+      return {
+        year: parseInt(year),
+        totalAnnuel: lastEntry.cumulAnnuel
+      };
+    })
+    .filter(e => e !== null)
+    .sort((a, b) => b.year - a.year);  // Trier par année décroissante
+}
+
+/**
+ * Génère et injecte la barre de navigation secondaire CBCO
+ * À appeler sur toutes les pages CBCO (cbco.html, cbco-saisie.html, etc.)
+ */
+function injectCBCOSecondaryBar() {
+  const session = Auth.getSession();
+  if (!session) return;
+
+  const canEdit = Auth.canEditCBCO();
+  const base = getBasePath();
+
+  // Détecter quelle sous-page CBCO est active
+  const currentPage = getCurrentPage();
+
+  // Construire les items de la barre secondaire
+  let secondaryItems = '';
+  
+  // Consultation CBCO - accessible à tous
+  const consultationActive = currentPage === 'cbco.html' ? ' active' : '';
+  secondaryItems += `<a href="${base}pages/cbco.html" class="sidebar-item${consultationActive}">📊 Dashboard Indicateur</a>`;
+  
+  // Saisies - référents CBCO et direction
+  if (canEdit) {
+    const saisieActive = currentPage === 'cbco-saisie.html' ? ' active' : '';
+    secondaryItems += `<a href="${base}pages/cbco-saisie.html" class="sidebar-item${saisieActive}">✏️ Saisies données</a>`;
+  }
+
+  // Créer et injecter la barre secondaire
+  if (secondaryItems) {
+    const barHTML = `
+      <aside class="sidebar-secondary" id="cbcoSidebar">
+        <div class="sidebar-secondary-content">
+          <div class="sidebar-secondary-title">💼 CBCO</div>
+          <button class="sidebar-secondary-close" onclick="toggleCBCOSidebar();">✕</button>
+          <nav class="sidebar-secondary-nav">
+            ${secondaryItems}
+          </nav>
+        </div>
+      </aside>
+    `;
+
+    // Injecter après la sidebar principale
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) {
+      sidebar.insertAdjacentHTML('afterend', barHTML);
+    }
+
+    // Ouvrir la barre par défaut sur cette page
+    const cbcoSidebar = document.getElementById('cbcoSidebar');
+    if (cbcoSidebar) {
+      cbcoSidebar.classList.add('open');
+    }
+  }
+}
+
+/**
+ * Verifies if current page is a CBCO page
+ * @returns {boolean}
+ */
+function isCBCOPage() {
+  const page = getCurrentPage();
+  return page === 'cbco.html' || page === 'cbco-saisie.html' || page === 'cbco-admin.html';
+}
+
+/**
+ * Fonction utilitaire pour formater les nombres en devise EUR
+ * @param {number} value - La valeur à formater
+ * @returns {string} - Valeur formatée (ex: "1 234,56 EUR")
+ */
+function formatCurrency(value) {
+  return new Intl.NumberFormat('fr-FR', { 
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value);
+}
+
+/**
+ * Fonction utilitaire pour formater les nombres avec séparateurs
+ * @param {number} value - La valeur à formater
+ * @returns {string} - Valeur formatée (ex: "1 234,56")
+ */
+function formatNumber(value) {
+  return new Intl.NumberFormat('fr-FR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value);
+}
+
 /**
  * Toggle (ouvrir/fermer) la barre de navigation secondaire Goudalle Maçonnerie
  * @param {Event} event - Événement optionnel du clic
@@ -520,6 +788,26 @@ function toggleGMSidebar(event) {
 }
 
 /**
+ * Toggle la barre de navigation secondaire CBCO
+ * @param {Event} event - Événement du clic (optionnel)
+ */
+function toggleCBCOSidebar(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  
+  const cbcoSidebar = document.getElementById('cbcoSidebar');
+  if (!cbcoSidebar) return;
+  
+  // Toggle la classe 'open'
+  const isOpen = cbcoSidebar.classList.toggle('open');
+  
+  // Sauvegarder l'état dans localStorage
+  localStorage.setItem('cbco_sidebar_state', isOpen ? 'open' : 'closed');
+}
+
+/**
  * Restaure l'état de la barre de navigation secondaire depuis localStorage
  * Appelé automatiquement au chargement de la page
  */
@@ -530,6 +818,15 @@ function restoreSubMenuStates() {
     const gmSidebar = document.getElementById('gmSidebar');
     if (gmSidebar) {
       gmSidebar.classList.add('open');
+    }
+  }
+
+  // Restaurer l'état du sidebar secondaire CBCO
+  const cbcoState = localStorage.getItem('cbco_sidebar_state');
+  if (cbcoState === 'open') {
+    const cbcoSidebar = document.getElementById('cbcoSidebar');
+    if (cbcoSidebar) {
+      cbcoSidebar.classList.add('open');
     }
   }
 }

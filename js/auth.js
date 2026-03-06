@@ -15,13 +15,15 @@ const Auth = {
   ROLES: {
     DIRECTION: 'direction',  // Accès complet : gestion + administration + audit
     REFERENT: 'referent',    // Accès intermédiaire : gestion + saisie
+    REFERENT_CBCO: 'referent_cbco',  // Référent CBCO : gestion commerciale
     LECTURE: 'lecture'       // Accès minimal : consultation uniquement
   },
 
   // Permissions par rôle - définit ce que chaque rôle peut faire
   PERMISSIONS: {
-    direction: ['gm', 'users_admin', 'thresholds', 'audit', 'gm_saisie', 'gm_admin'], // Tout
+    direction: ['gm', 'users_admin', 'thresholds', 'audit', 'gm_saisie', 'gm_admin', 'cbco', 'cbco_saisie', 'cbco_admin'], // Tout
     referent: ['gm', 'gm_saisie', 'gm_admin', 'thresholds'],  // Gestion + saisie
+    referent_cbco: ['cbco', 'cbco_saisie', 'cbco_admin'],  // CBCO uniquement
     lecture: ['gm']                                // Consultation seule
   },
 
@@ -64,6 +66,16 @@ const Auth = {
         password: '123',
         role: this.ROLES.REFERENT,
         displayName: 'Julie Referent',
+        createdAt: new Date().toISOString(),
+        createdBy: 'acgoudalle',
+        isActive: true
+      },
+      // Compte référent CBCO - Gestion commerciale CBCO
+      'cbco_ref': {
+        username: 'cbco_ref',
+        password: '123',
+        role: this.ROLES.REFERENT_CBCO,
+        displayName: 'Mathieu',
         createdAt: new Date().toISOString(),
         createdBy: 'acgoudalle',
         isActive: true
@@ -221,6 +233,19 @@ const Auth = {
   isReferent() {
     const session = this.getSession();
     return session && session.role === this.ROLES.REFERENT;
+  },
+
+  isReferentCBCO() {
+    const session = this.getSession();
+    return session && session.role === this.ROLES.REFERENT_CBCO;
+  },
+
+  canViewCBCO() {
+    return this.hasAccess('cbco');
+  },
+
+  canEditCBCO() {
+    return this.hasAccess('cbco_saisie') || this.hasAccess('cbco_admin');
   },
 
   // ============ USER MANAGEMENT ============

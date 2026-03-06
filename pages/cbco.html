@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CBCO - Indicateur Commercial - Intranet</title>
+  <link rel="stylesheet" href="../style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+  <script>
+    window.APP_LOGO = 'cbco';
+  </script>
+
+  <script>
+    Auth.requirePermission('cbco');
+  </script>
+
+  <div class="app-container">
+    <div id="sidebar"></div>
+    
+    <main class="main-content">
+      <!-- SECTION EN-TÊTE -->
+      <div class="cbco-header">
+        <h1>💼 Indicateur Commercial CBCO</h1>
+        <p class="subtitle">Total Montant Estimé - Cumul annuel par année</p>
+        <div style="margin-top: 15px;">
+          <button onclick="downloadCBCOReport()" class="btn btn-secondary">📥 Télécharger le rapport</button>
+        </div>
+      </div>
+
+      <!-- SECTION INDICATURE PRINCIPALE - DERNIÈRE ENTRÉE -->
+      <div class="cbco-current-section card">
+        <div class="card-title">
+          <h2>Dernière saisie</h2>
+        </div>
+        <div class="card-body">
+          <div class="cbco-current-grid">
+            <div class="cbco-stat-box">
+              <div class="cbco-stat-label">Mois / Année</div>
+              <div class="cbco-stat-value" id="currentMonthYear">—</div>
+            </div>
+            <div class="cbco-stat-box">
+              <div class="cbco-stat-label">Montant estimé CE</div>
+              <div class="cbco-stat-value" id="currentMontantCours">0 €</div>
+            </div>
+            <div class="cbco-stat-box">
+              <div class="cbco-stat-label">Montant estimé CT</div>
+              <div class="cbco-stat-value" id="currentMontantTermines">0 €</div>
+            </div>
+            <div class="cbco-stat-box">
+              <div class="cbco-stat-label">Montant total mensuel</div>
+              <div class="cbco-stat-value" id="currentMontantTotal">0 €</div>
+            </div>
+            <div class="cbco-stat-box highlight">
+              <div class="cbco-stat-label">Cumul annuel</div>
+              <div class="cbco-stat-value" id="currentCumulAnnuel">0 €</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION GRAPHIQUE - COURBES ANNUELLES -->
+      <div class="cbco-chart-section card">
+        <div class="card-title">
+          <h2>Évolution du cumul annuel par année</h2>
+        </div>
+        <div class="card-body">
+          <div class="cbco-chart-container">
+            <canvas id="cbcoChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION TABLEAU RÉCAPITULATIF -->
+      <div class="cbco-table-section card">
+        <div class="card-title">
+          <h2>Tableau détaillé par mois</h2>
+          <div style="text-align: right;">
+            <select id="yearFilter" class="year-filter" onchange="filterTableByYear()">
+              <option value="">Toutes les années</option>
+            </select>
+          </div>
+        </div>
+        <div class="card-body">
+          <table id="cbcoDataTable">
+            <thead>
+              <tr>
+                <th>Année</th>
+                <th>Mois</th>
+                <th>Montant CE (€)</th>
+                <th>Montant CT (€)</th>
+                <th>Total mensuel (€)</th>
+                <th>Cumul annuel (€)</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="7" style="text-align:center; padding: 20px;">Aucune donnée</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SECTION RÉSUMÉ ANNUEL -->
+      <div class="cbco-summary-section card">
+        <div class="card-title">
+          <h2>Résumé annuel</h2>
+        </div>
+        <div class="card-body">
+          <table id="cbcoSummaryTable" class="summary-table">
+            <thead>
+              <tr>
+                <th>Année</th>
+                <th>Cumul annuel (€)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="2" style="text-align:center; padding: 20px;">Aucune donnée</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Variables globales
+    let cbcoChart;
+    const MONTH_NAMES = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                          'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+
+    /**
+     * Formate un mois et une année
+     * @param {number} month - Mois (1-12)
+     * @param {number} year - Année
+     * @returns {string} - "Janvier 2026"
+     */
+    function formatMonthYear(month, year) {
+      return `${MONTH_NAMES[month]} ${year}`;
+    }
+
+    /**
+     * Formate un nombre en devise
+     * @param {number} value - Valeur à formater
+     * @returns {string} - "1 234,56 €"
+     */
+    function formatCBCOCurrency(value) {
+      return new Intl.NumberFormat('fr-FR', { 
+        minimumFractionDigits: 2, 
+        maximumFractionDigits: 2 
+      }).format(value) + ' €';
+    }
+
+    /**
+     * Initialise le filtre des années
+     */
+    function initYearFilter() {
+      const data = getCBCOData();
+      const years = [...new Set(data.map(e => e.year))].sort((a, b) => b - a);
+      
+      const filterSelect = document.getElementById('yearFilter');
+      years.forEach(year => {
+        const option = document.createElement('option');
+        option.value = year;
+        option.textContent = year;
+        filterSelect.appendChild(option);
+      });
+    }
+
+    /**
+     * Filtre le tableau par année sélectionnée
+     */
+    function filterTableByYear() {
+      const year = document.getElementById('yearFilter').value;
+      const data = getCBCOData().sort(compareByYearMonthDesc);
+      
+      let filtered = data;
+      if (year) {
+        filtered = data.filter(e => e.year === parseInt(year));
+      }
+      
+      renderDataTable(filtered);
+    }
+
+    /**
+     * Affiche les données en dernier enregistrement
+     */
+    function displayCurrentData() {
+      const data = getCBCOData().sort(compareByYearMonthDesc);
+      
+      if (data.length === 0) {
+        document.getElementById('currentMonthYear').textContent = '—';
+        document.getElementById('currentMontantCours').textContent = '0 €';
+        document.getElementById('currentMontantTermines').textContent = '0 €';
+        document.getElementById('currentMontantTotal').textContent = '0 €';
+        document.getElementById('currentCumulAnnuel').textContent = '0 €';
+        return;
+      }
+
+      const current = data[0];
+      document.getElementById('currentMonthYear').textContent = formatMonthYear(current.month, current.year);
+      document.getElementById('currentMontantCours').textContent = formatCBCOCurrency(current.montantChantiersCours);
+      document.getElementById('currentMontantTermines').textContent = formatCBCOCurrency(current.montantChantiersTermines);
+      document.getElementById('currentMontantTotal').textContent = formatCBCOCurrency(current.montantTotal);
+      document.getElementById('currentCumulAnnuel').textContent = formatCBCOCurrency(current.cumulAnnuel);
+    }
+
+    /**
+     * Génère le graphique en courbes des cumuls annuels
+     */
+    function renderCBCOChart() {
+      const byYear = getCBCOByYear();
+      const years = Object.keys(byYear).sort((a, b) => a - b);
+      
+      if (years.length === 0) return;
+
+      // Préparer les datasets pour chaque année
+      const datasets = [];
+      const colors = [
+        { border: '#3498db', bg: 'rgba(52, 152, 219, 0.1)' },
+        { border: '#2ecc71', bg: 'rgba(46, 204, 113, 0.1)' },
+        { border: '#e74c3c', bg: 'rgba(231, 76, 60, 0.1)' },
+        { border: '#f39c12', bg: 'rgba(243, 156, 18, 0.1)' },
+        { border: '#9b59b6', bg: 'rgba(155, 89, 182, 0.1)' },
+      ];
+
+      years.forEach((year, idx) => {
+        const entries = byYear[year].sort((a, b) => a.month - b.month);
+        const monthLabels = entries.map(e => MONTH_NAMES[e.month]);
+        const cumulValues = entries.map(e => e.cumulAnnuel);
+
+        const color = colors[idx % colors.length];
+        datasets.push({
+          label: `Année ${year}`,
+          data: cumulValues,
+          borderColor: color.border,
+          backgroundColor: color.bg,
+          tension: 0.3,
+          fill: true,
+          pointRadius: 3,
+          pointHoverRadius: 5
+        });
+      });
+
+      // Créer le graphique
+      const ctx = document.getElementById('cbcoChart').getContext('2d');
+      if (cbcoChart) cbcoChart.destroy();
+
+      // Récupérer les labels de mois (tous les mois de toutes les années)
+      const maxMonths = Math.max(...years.map(y => byYear[y].length));
+      const labels = Array.from({length: maxMonths}, (_, i) => MONTH_NAMES[i + 1]);
+
+      cbcoChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets
+        },
+        options: {
+          responsive: true,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top'
+            },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const v = ctx.parsed?.y;
+                  return `Cumul annuel : ${formatCBCOCurrency(v)}`;
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: (value) => formatCBCOCurrency(value)
+              }
+            }
+          }
+        }
+      });
+    }
+
+    /**
+     * Rend le tableau de données détaillées
+     * @param {Array} data - Données à afficher
+     */
+    function renderDataTable(data) {
+      const tbody = document.querySelector('#cbcoDataTable tbody');
+      
+      if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 20px;">Aucune donnée pour cette sélection</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = data.map(e => `
+        <tr>
+          <td><strong>${e.year}</strong></td>
+          <td>${MONTH_NAMES[e.month]}</td>
+          <td>${formatCBCOCurrency(e.montantChantiersCours)}</td>
+          <td>${formatCBCOCurrency(e.montantChantiersTermines)}</td>
+          <td><strong>${formatCBCOCurrency(e.montantTotal)}</strong></td>
+          <td><strong style="color: var(--accent-dark);">${formatCBCOCurrency(e.cumulAnnuel)}</strong></td>
+          <td>
+            <button class="btn btn-small btn-secondary" onclick="editCBCOEntry(${e.year}, ${e.month})">✏️ Éditer</button>
+            <button class="btn btn-small btn-danger" onclick="handleDeleteCBCOEntry(${e.year}, ${e.month})">🗑️ Supprimer</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    /**
+     * Rend le tableau récapitulatif annuel
+     */
+    function renderSummaryTable() {
+      const summary = getCBCOYearlySummary();
+      const tbody = document.querySelector('#cbcoSummaryTable tbody');
+
+      if (summary.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding: 20px;">Aucune donnée</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = summary.map(s => `
+        <tr>
+          <td><strong>${s.year}</strong></td>
+          <td><strong style="color: var(--accent-dark);">${formatCBCOCurrency(s.totalAnnuel)}</strong></td>
+        </tr>
+      `).join('');
+    }
+
+    /**
+     * Charge une entrée pour édition
+     * @param {number} year - Année
+     * @param {number} month - Mois
+     */
+    function editCBCOEntry(year, month) {
+      const entry = getCBCOData().find(e => e.year === year && e.month === month);
+      if (entry) {
+        // Rediriger vers la page de saisie avec les paramètres
+        const base = getBasePath();
+        window.location.href = `${base}pages/cbco-saisie.html?year=${year}&month=${month}`;
+      }
+    }
+
+    /**
+     * Supprime une entrée après confirmation
+     * @param {number} year - Année
+     * @param {number} month - Mois
+     */
+    function handleDeleteCBCOEntry(year, month) {
+      if (confirm(`Supprimer l'entrée ${MONTH_NAMES[month]} ${year} ? Cette action est irréversible.`)) {
+        const result = deleteCBCOEntry(year, month);
+        alert(result.message);
+        location.reload();
+      }
+    }
+
+    /**
+     * Télécharge le rapport en image
+     */
+    function downloadCBCOReport() {
+      alert('📥 Fonctionnalité de téléchargement en cours de développement');
+      // À implémenter avec html2canvas si nécessaire
+    }
+
+    /**
+     * Initialise la page CBCO
+     */
+    function initCBCO() {
+      document.getElementById('sidebar').innerHTML = getSidebar();
+      injectCBCOSecondaryBar();
+      
+      initYearFilter();
+      const data = getCBCOData().sort(compareByYearMonthDesc);
+      displayCurrentData();
+      renderCBCOChart();
+      renderDataTable(data);
+      renderSummaryTable();
+    }
+
+    window.addEventListener('load', initCBCO);
+  </script>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div>
+        <div class="footer-title">Goudalle Groupe</div>
+        <div>50 rue Principale</div>
+        <div>RD343 - 62550 Preures</div>
+        <div>Tel. 03 21 90 98 98</div>
+      </div>
+      <div>
+        <div class="footer-title">Contact</div>
+        <a class="footer-link" href="#">contact@goudalle.fr</a>
+        <div>Formulaire de contact</div>
+      </div>
+      <div>
+        <div class="footer-title">Realisations</div>
+        <div>Agricole / Elevage</div>
+        <div>Tertiaire / Habitat</div>
+        <div>Public / Sante</div>
+      </div>
+      <div>
+        <div class="footer-title">Goudalle recrute</div>
+        <div>Decouvrir nos metiers</div>
+        <div>Voir nos offres</div>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

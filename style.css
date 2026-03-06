@@ -1216,6 +1216,171 @@ tbody tr:last-child td {
   border: 1px solid var(--border);
 }
 
+/* ============ CBCO STYLES ============ */
+
+.cbco-header {
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid var(--border);
+}
+
+.cbco-header h1 {
+  font-size: 28px;
+  margin-bottom: 5px;
+  color: var(--primary);
+}
+
+.cbco-header .subtitle {
+  color: var(--text-light);
+  font-size: 14px;
+}
+
+.cbco-current-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.cbco-stat-box {
+  background: linear-gradient(135deg, var(--lighter), var(--light));
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.cbco-stat-box:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.cbco-stat-box.highlight {
+  background: linear-gradient(135deg, var(--accent-light), var(--accent));
+  border-color: var(--accent);
+}
+
+.cbco-stat-label {
+  font-size: 12px;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.cbco-stat-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.cbco-stat-box.highlight .cbco-stat-value {
+  color: white;
+}
+
+.cbco-chart-section {
+  margin: 30px 0;
+}
+
+.cbco-chart-container {
+  position: relative;
+  min-height: 300px;
+  max-height: 400px;
+  padding: 20px;
+}
+
+canvas {
+  max-height: 350px;
+}
+
+.cbco-table-section {
+  margin: 30px 0;
+}
+
+.cbco-table-section .card-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.year-filter {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: white;
+  color: var(--primary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.year-filter:hover {
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.cbco-table-section table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.cbco-table-section table thead {
+  background: var(--lighter);
+  border-bottom: 2px solid var(--border);
+}
+
+.cbco-table-section table th {
+  padding: 15px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.cbco-table-section table td {
+  padding: 12px 15px;
+  border-bottom: 1px solid var(--border);
+}
+
+.cbco-table-section table tbody tr:hover {
+  background: var(--lighter);
+}
+
+.cbco-summary-section {
+  margin: 30px 0;
+}
+
+.summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.summary-table thead {
+  background: var(--lighter);
+  border-bottom: 2px solid var(--border);
+}
+
+.summary-table th {
+  padding: 15px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.summary-table td {
+  padding: 15px;
+  border-bottom: 1px solid var(--border);
+}
+
+.summary-table tbody tr:hover {
+  background: var(--lighter);
+}
+
 /* ============ UTILITY CLASSES ============ */
 .text-center { text-align: center; }
 .text-right { text-align: right; }

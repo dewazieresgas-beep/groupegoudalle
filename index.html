@@ -38,6 +38,16 @@
         </div>
       </div>
 
+      <div class="card" id="cbcoCard" style="display:none;">
+        <div class="card-title">
+          <h2>💼 CBCO - Indicateur Commercial</h2>
+        </div>
+        <div class="card-body">
+          <div id="cbco-content">Chargement...</div>
+          <button onclick="goToCBCO()" class="btn btn-primary mt-3">Accéder au détail</button>
+        </div>
+      </div>
+
       <div class="card" id="adminCard" style="display:none;">
         <div class="card-title">
           <h2>Administration</h2>
@@ -117,6 +127,41 @@
       if (Auth.isDirection()) {
         document.getElementById('adminCard').style.display = 'block';
       }
+
+      // ===== SECTION CBCO =====
+      if (Auth.canViewCBCO()) {
+        document.getElementById('cbcoCard').style.display = 'block';
+        
+        const cbcoData = getCBCOData().sort(compareByYearMonthDesc);
+        if (cbcoData.length === 0) {
+          document.getElementById('cbco-content').innerHTML = '<p>Aucune donnée saisie encore</p>';
+        } else {
+          const lastEntry = cbcoData[0];
+          const monthNames = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                              'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+          
+          document.getElementById('cbco-content').innerHTML = `
+            <div class="kpi-grid kpi-grid-home">
+              <div class="kpi-box">
+                <div class="kpi-label">Période</div>
+                <div class="kpi-value">${monthNames[lastEntry.month]} ${lastEntry.year}</div>
+              </div>
+              <div class="kpi-box">
+                <div class="kpi-label">CE (EUR)</div>
+                <div class="kpi-value">${new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 0}).format(lastEntry.montantChantiersCours)}</div>
+              </div>
+              <div class="kpi-box">
+                <div class="kpi-label">CT (EUR)</div>
+                <div class="kpi-value">${new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 0}).format(lastEntry.montantChantiersTermines)}</div>
+              </div>
+              <div class="kpi-box" style="background: linear-gradient(135deg, var(--accent-light), var(--accent));">
+                <div class="kpi-label">Cumul annuel (EUR)</div>
+                <div class="kpi-value">${new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 0}).format(lastEntry.cumulAnnuel)}</div>
+              </div>
+            </div>
+          `;
+        }
+      }
     }
 
     /**
@@ -124,6 +169,13 @@
      */
     function goToGM() {
       window.location.href = './pages/gm.html';
+    }
+
+    /**
+     * Redirige vers la page CBCO
+     */
+    function goToCBCO() {
+      window.location.href = './pages/cbco.html';
     }
 
     /**
