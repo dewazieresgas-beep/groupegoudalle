@@ -31,38 +31,6 @@
         </div>
       </div>
 
-      <!-- SECTION TABLEAU RÉCAPITULATIF -->
-      <div class="cbco-table-section card">
-        <div class="card-title">
-          <h2>Tableau détaillé par mois</h2>
-        </div>
-        <div class="card-body">
-          <div style="margin-bottom: 15px;">
-            <label style="display: block; margin-bottom: 10px; font-weight: 600;">Filtrer par années :</label>
-            <div id="yearFilterContainer" style="display: flex; flex-wrap: wrap; gap: 10px;">
-              <!-- Les checkboxes seront générées par JavaScript -->
-            </div>
-            <button onclick="selectAllYears()" class="btn btn-small btn-secondary" style="margin-top: 8px; margin-right: 5px;">Sélectionner tout</button>
-            <button onclick="clearAllYears()" class="btn btn-small btn-secondary" style="margin-top: 8px;">Désélectionner tout</button>
-          </div>
-          <table id="cbcoDataTable">
-            <thead>
-              <tr>
-                <th>Année</th>
-                <th>Mois</th>
-                <th>Montant CE (K€)</th>
-                <th>Montant CT (K€)</th>
-                <th>Total mensuel (K€)</th>
-                <th>Cumul annuel (K€)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td colspan="6" style="text-align:center; padding: 20px;">Aucune donnée</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
       <!-- SECTION GRAPHIQUE - COURBES ANNUELLES -->
       <div class="cbco-chart-section card">
         <div class="card-title">
@@ -129,6 +97,38 @@
             </thead>
             <tbody>
               <tr><td colspan="2" style="text-align:center; padding: 20px;">Aucune donnée</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SECTION TABLEAU RÉCAPITULATIF -->
+      <div class="cbco-table-section card">
+        <div class="card-title">
+          <h2>Tableau détaillé par mois</h2>
+        </div>
+        <div class="card-body">
+          <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 10px; font-weight: 600;">Filtrer par années :</label>
+            <div id="yearFilterContainer" style="display: flex; flex-wrap: wrap; gap: 10px;">
+              <!-- Les checkboxes seront générées par JavaScript -->
+            </div>
+            <button onclick="selectAllYears()" class="btn btn-small btn-secondary" style="margin-top: 8px; margin-right: 5px;">Sélectionner tout</button>
+            <button onclick="clearAllYears()" class="btn btn-small btn-secondary" style="margin-top: 8px;">Désélectionner tout</button>
+          </div>
+          <table id="cbcoDataTable">
+            <thead>
+              <tr>
+                <th>Année</th>
+                <th>Mois</th>
+                <th>Montant CE (K€)</th>
+                <th>Montant CT (K€)</th>
+                <th>Total mensuel (K€)</th>
+                <th>Cumul annuel (K€)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="6" style="text-align:center; padding: 20px;">Aucune donnée</td></tr>
             </tbody>
           </table>
         </div>
