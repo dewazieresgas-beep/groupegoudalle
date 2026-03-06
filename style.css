@@ -559,16 +559,23 @@ a:hover {
   object-fit: contain;
 }
 
+.kpi-box > div {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+}
+
 .smiley .smiley-emoji {
   width: 24px;
   height: 24px;
 }
 
 .smiley-emoji {
-  max-width: 50px;
-  max-height: 50px;
+  height: 70%;
   width: auto;
-  height: auto;
+  max-height: 100px;
+  max-width: 100px;
 }
 
 /* Aperçu temps réel sur la page saisie */
