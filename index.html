@@ -125,34 +125,50 @@
       if (cbcoData.length === 0) {
         document.getElementById('cbco-content').innerHTML = '<p>Aucune donnée saisie encore</p>';
       } else {
-        const lastEntry = cbcoData[0];
         const monthNames = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
                             'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-        
-        // Formater les valeurs en K€ (déjà en K€, pas de conversion)
-        const ceK = new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 0, maximumFractionDigits: 0}).format(lastEntry.montantChantiersCours);
-        const ctK = new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 0, maximumFractionDigits: 0}).format(lastEntry.montantChantiersTermines);
-        const cumulK = new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 0, maximumFractionDigits: 0}).format(lastEntry.cumulAnnuel);
-        
+        const latestYear = cbcoData[0].year;
+        const yearRows = cbcoData
+          .filter(entry => entry.year === latestYear)
+          .sort((a, b) => a.month - b.month);
+
+        const tableRows = yearRows.map(entry => {
+          const ceK = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(entry.montantChantiersCours);
+          const ctK = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(entry.montantChantiersTermines);
+          const totalK = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(entry.montantTotal);
+          const cumulK = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(entry.cumulAnnuel);
+
+          return `
+            <tr>
+              <td style="padding: 10px; border-bottom: 1px solid var(--border-light);">${entry.year}</td>
+              <td style="padding: 10px; border-bottom: 1px solid var(--border-light);">${monthNames[entry.month]}</td>
+              <td style="padding: 10px; text-align: right; border-bottom: 1px solid var(--border-light);">${ceK}</td>
+              <td style="padding: 10px; text-align: right; border-bottom: 1px solid var(--border-light);">${ctK}</td>
+              <td style="padding: 10px; text-align: right; border-bottom: 1px solid var(--border-light);">${totalK}</td>
+              <td style="padding: 10px; text-align: right; border-bottom: 1px solid var(--border-light);">${cumulK}</td>
+            </tr>
+          `;
+        }).join('');
+
         document.getElementById('cbco-content').innerHTML = `
-          <table style="width: 100%; border-collapse: collapse;">
-            <thead>
-              <tr style="background: #f5f5f5;">
-                <th style="padding: 10px; text-align: left; border-bottom: 2px solid var(--accent);">Période</th>
-                <th style="padding: 10px; text-align: right; border-bottom: 2px solid var(--accent);">CE (K€)</th>
-                <th style="padding: 10px; text-align: right; border-bottom: 2px solid var(--accent);">CT (K€)</th>
-                <th style="padding: 10px; text-align: right; border-bottom: 2px solid var(--accent);">Cumul annuel (K€)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td style="padding: 10px; border-bottom: 1px solid var(--border-light);">${monthNames[lastEntry.month]} ${lastEntry.year}</td>
-                <td style="padding: 10px; text-align: right; border-bottom: 1px solid var(--border-light);">${ceK}</td>
-                <td style="padding: 10px; text-align: right; border-bottom: 1px solid var(--border-light);">${ctK}</td>
-                <td style="padding: 10px; text-align: right; border-bottom: 1px solid var(--border-light);">${cumulK}</td>
-              </tr>
-            </tbody>
-          </table>
+          <p style="margin-bottom: 10px;"><strong>Tableau CBCO ${latestYear}</strong></p>
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; min-width: 700px;">
+              <thead>
+                <tr style="background: #f5f5f5;">
+                  <th style="padding: 10px; text-align: left; border-bottom: 2px solid var(--accent);">Année</th>
+                  <th style="padding: 10px; text-align: left; border-bottom: 2px solid var(--accent);">Mois</th>
+                  <th style="padding: 10px; text-align: right; border-bottom: 2px solid var(--accent);">CE (K€)</th>
+                  <th style="padding: 10px; text-align: right; border-bottom: 2px solid var(--accent);">CT (K€)</th>
+                  <th style="padding: 10px; text-align: right; border-bottom: 2px solid var(--accent);">Total mensuel (K€)</th>
+                  <th style="padding: 10px; text-align: right; border-bottom: 2px solid var(--accent);">Cumul annuel (K€)</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${tableRows}
+              </tbody>
+            </table>
+          </div>
         `;
       }
 

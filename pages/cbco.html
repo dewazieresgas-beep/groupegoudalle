@@ -31,57 +31,6 @@
         </div>
       </div>
 
-      <!-- SECTION INDICATURE PRINCIPALE - DERNIÈRE ENTRÉE -->
-      <div class="cbco-current-section card">
-        <div class="card-title">
-          <h2>Dernière saisie</h2>
-        </div>
-        <div class="card-body">
-          <div class="cbco-current-grid">
-            <div class="cbco-stat-box">
-              <div class="cbco-stat-label">Mois / Année</div>
-              <div class="cbco-stat-value" id="currentMonthYear">—</div>
-            </div>
-            <div class="cbco-stat-box">
-              <div class="cbco-stat-label">Montant estimé CE</div>
-              <div class="cbco-stat-value" id="currentMontantCours">0 K€</div>
-            </div>
-            <div class="cbco-stat-box">
-              <div class="cbco-stat-label">Montant estimé CT</div>
-              <div class="cbco-stat-value" id="currentMontantTermines">0 K€</div>
-            </div>
-            <div class="cbco-stat-box">
-              <div class="cbco-stat-label">Montant total mensuel</div>
-              <div class="cbco-stat-value" id="currentMontantTotal">0 K€</div>
-            </div>
-            <div class="cbco-stat-box highlight">
-              <div class="cbco-stat-label">Cumul annuel</div>
-              <div class="cbco-stat-value" id="currentCumulAnnuel">0 K€</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- SECTION GRAPHIQUE - COURBES ANNUELLES -->
-      <div class="cbco-chart-section card">
-        <div class="card-title">
-          <h2>Évolution du cumul annuel par année</h2>
-        </div>
-        <div class="card-body">
-          <div style="margin-bottom: 15px;">
-            <label style="display: block; margin-bottom: 10px; font-weight: 600;">Afficher les années :</label>
-            <div id="chartYearFilterContainer" style="display: flex; flex-wrap: wrap; gap: 10px;">
-              <!-- Les checkboxes seront générées par JavaScript -->
-            </div>
-            <button onclick="selectAllChartYears()" class="btn btn-small btn-secondary" style="margin-top: 8px; margin-right: 5px;">Sélectionner tout</button>
-            <button onclick="clearAllChartYears()" class="btn btn-small btn-secondary" style="margin-top: 8px;">Désélectionner tout</button>
-          </div>
-          <div class="cbco-chart-container">
-            <canvas id="cbcoChart"></canvas>
-          </div>
-        </div>
-      </div>
-
       <!-- SECTION TABLEAU RÉCAPITULATIF -->
       <div class="cbco-table-section card">
         <div class="card-title">
@@ -111,6 +60,57 @@
               <tr><td colspan="6" style="text-align:center; padding: 20px;">Aucune donnée</td></tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- SECTION GRAPHIQUE - COURBES ANNUELLES -->
+      <div class="cbco-chart-section card">
+        <div class="card-title">
+          <h2>Évolution du cumul annuel par année</h2>
+        </div>
+        <div class="card-body">
+          <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 10px; font-weight: 600;">Afficher les années :</label>
+            <div id="chartYearFilterContainer" style="display: flex; flex-wrap: wrap; gap: 10px;">
+              <!-- Les checkboxes seront générées par JavaScript -->
+            </div>
+            <button onclick="selectAllChartYears()" class="btn btn-small btn-secondary" style="margin-top: 8px; margin-right: 5px;">Sélectionner tout</button>
+            <button onclick="clearAllChartYears()" class="btn btn-small btn-secondary" style="margin-top: 8px;">Désélectionner tout</button>
+          </div>
+          <div class="cbco-chart-container">
+            <canvas id="cbcoChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION INDICATEUR PRINCIPAL - DERNIÈRE ENTRÉE -->
+      <div class="cbco-current-section card">
+        <div class="card-title">
+          <h2>Dernière saisie</h2>
+        </div>
+        <div class="card-body">
+          <div class="cbco-current-grid">
+            <div class="cbco-stat-box">
+              <div class="cbco-stat-label">Mois / Année</div>
+              <div class="cbco-stat-value" id="currentMonthYear">—</div>
+            </div>
+            <div class="cbco-stat-box">
+              <div class="cbco-stat-label">Montant estimé CE</div>
+              <div class="cbco-stat-value" id="currentMontantCours">0 K€</div>
+            </div>
+            <div class="cbco-stat-box">
+              <div class="cbco-stat-label">Montant estimé CT</div>
+              <div class="cbco-stat-value" id="currentMontantTermines">0 K€</div>
+            </div>
+            <div class="cbco-stat-box">
+              <div class="cbco-stat-label">Montant total mensuel</div>
+              <div class="cbco-stat-value" id="currentMontantTotal">0 K€</div>
+            </div>
+            <div class="cbco-stat-box highlight">
+              <div class="cbco-stat-label">Cumul annuel</div>
+              <div class="cbco-stat-value" id="currentCumulAnnuel">0 K€</div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -345,11 +345,11 @@
       // Préparer les datasets pour chaque année
       const datasets = [];
       const colors = [
-        { border: '#3498db', bg: 'rgba(52, 152, 219, 0.1)' },
-        { border: '#2ecc71', bg: 'rgba(46, 204, 113, 0.1)' },
-        { border: '#e74c3c', bg: 'rgba(231, 76, 60, 0.1)' },
-        { border: '#f39c12', bg: 'rgba(243, 156, 18, 0.1)' },
-        { border: '#9b59b6', bg: 'rgba(155, 89, 182, 0.1)' },
+        { border: '#3498db' },
+        { border: '#2ecc71' },
+        { border: '#e74c3c' },
+        { border: '#f39c12' },
+        { border: '#9b59b6' },
       ];
 
       years.forEach((year, idx) => {
@@ -362,9 +362,9 @@
           label: `Année ${year}`,
           data: cumulValues,
           borderColor: color.border,
-          backgroundColor: color.bg,
-          tension: 0.3,
-          fill: true,
+          backgroundColor: color.border,
+          tension: 0,
+          fill: false,
           pointRadius: 3,
           pointHoverRadius: 5
         });
