@@ -38,9 +38,71 @@ const Auth = {
     if (!localStorage.getItem(this.STORAGE_KEY_USERS)) {
       this.createDefaultDatabase();
     }
+    // Migration douce : si la base existe déjà, ajouter les comptes démo manquants
+    this.ensureDefaultUsers();
+
     // Initialiser le code d'admin par défaut si absent
     if (!localStorage.getItem(this.STORAGE_KEY_ADMIN_CODE)) {
       localStorage.setItem(this.STORAGE_KEY_ADMIN_CODE, '0000');
+    }
+  },
+
+  /**
+   * Ajoute les comptes de démonstration manquants sans écraser les comptes existants
+   * Utile quand de nouveaux comptes par défaut sont ajoutés après une première exécution
+   */
+  ensureDefaultUsers() {
+    const users = this.getAllUsers();
+    let updated = false;
+
+    const defaultUsers = {
+      'acgoudalle': {
+        username: 'acgoudalle',
+        password: '123',
+        role: this.ROLES.DIRECTION,
+        displayName: 'Anne-Cécile Goudalle',
+        createdAt: new Date().toISOString(),
+        createdBy: 'SYSTEM',
+        isActive: true
+      },
+      'julie': {
+        username: 'julie',
+        password: '123',
+        role: this.ROLES.REFERENT,
+        displayName: 'Julie Referent',
+        createdAt: new Date().toISOString(),
+        createdBy: 'acgoudalle',
+        isActive: true
+      },
+      'mathieu': {
+        username: 'mathieu',
+        password: '123',
+        role: this.ROLES.REFERENT_CBCO,
+        displayName: 'Mathieu',
+        createdAt: new Date().toISOString(),
+        createdBy: 'acgoudalle',
+        isActive: true
+      },
+      'gaspard': {
+        username: 'gaspard',
+        password: '123',
+        role: this.ROLES.LECTURE,
+        displayName: 'Gaspard de Wazières',
+        createdAt: new Date().toISOString(),
+        createdBy: 'acgoudalle',
+        isActive: true
+      }
+    };
+
+    Object.keys(defaultUsers).forEach((username) => {
+      if (!users[username]) {
+        users[username] = defaultUsers[username];
+        updated = true;
+      }
+    });
+
+    if (updated) {
+      localStorage.setItem(this.STORAGE_KEY_USERS, JSON.stringify(users));
     }
   },
 

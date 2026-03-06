@@ -413,6 +413,33 @@
             window.location.href = './index.html';
           }, 500);
         } else {
+          // Connexion échouée : afficher erreur
+          showMessage('❌ ' + result.message, 'error');
+          // Réinitialiser l'animation de chargement
+          document.getElementById('btnText').style.display = 'block';
+          document.getElementById('loading').style.display = 'none';
+        }
+      }, 300);
+    }
+
+    /**
+     * Navigue vers la page d'enregistrement
+     */
+    function goRegister() {
+      window.location.href = './register.html';
+    }
+  </script>
+
+  <footer class="site-footer">
+    <div class="footer-content">
+      <!-- Footer content goes here if needed -->
+    </div>
+  </footer>
+</body>
+</html>
+</body>
+</html>
+        } else {
           // Erreur : afficher le message et réactiver le bouton
           showMessage(result.message, 'error');
           document.getElementById('btnText').style.display = 'inline';
