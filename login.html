@@ -385,67 +385,33 @@
      * @param {Event} event - Événement de soumission du formulaire
      */
     function handleLogin(event) {
-      event.preventDefault();  // Empêcher le rechargement de la page
-      
-      // Récupérer les valeurs saisies
+      event.preventDefault();
+
       const username = document.getElementById('username').value.trim();
       const password = document.getElementById('password').value;
 
-      // Validation basique
       if (!username || !password) {
         showMessage('❌ Veuillez remplir tous les champs', 'error');
         return;
       }
 
-      // Afficher l'animation de chargement
       document.getElementById('btnText').style.display = 'none';
       document.getElementById('loading').style.display = 'block';
 
-      // Simuler un délai réseau pour meilleure UX
       setTimeout(() => {
-        // Tenter la connexion via le système Auth
         const result = Auth.login(username, password);
 
         if (result.success) {
-          // Connexion réussie : afficher message et rediriger
           showMessage(result.message, 'success');
           setTimeout(() => {
             window.location.href = './index.html';
           }, 500);
         } else {
-          // Connexion échouée : afficher erreur
-          showMessage('❌ ' + result.message, 'error');
-          // Réinitialiser l'animation de chargement
+          showMessage(result.message, 'error');
           document.getElementById('btnText').style.display = 'block';
           document.getElementById('loading').style.display = 'none';
         }
       }, 300);
-    }
-
-    /**
-     * Navigue vers la page d'enregistrement
-     */
-    function goRegister() {
-      window.location.href = './register.html';
-    }
-  </script>
-
-  <footer class="site-footer">
-    <div class="footer-content">
-      <!-- Footer content goes here if needed -->
-    </div>
-  </footer>
-</body>
-</html>
-</body>
-</html>
-        } else {
-          // Erreur : afficher le message et réactiver le bouton
-          showMessage(result.message, 'error');
-          document.getElementById('btnText').style.display = 'inline';
-          document.getElementById('loading').style.display = 'none';
-        }
-      }, 300);  // Délai de 300ms pour l'effet visuel
     }
 
     /**
@@ -455,8 +421,7 @@
       window.location.href = './register.html';
     }
 
-    // ===== VÉRIFICATION INITIALE =====
-    // Si l'utilisateur est déjà connecté, rediriger automatiquement vers l'accueil
+    // Si l'utilisateur est déjà connecté, rediriger vers l'accueil
     if (Auth.isConnected()) {
       window.location.href = './index.html';
     }

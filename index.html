@@ -34,17 +34,17 @@
         </div>
         <div class="card-body">
           <div id="gm-content">Chargement...</div>
-          <button onclick="goToGM()" class="btn btn-primary mt-3">Accéder au détail</button>
+          <button id="gmDetailBtn" onclick="goToGM()" class="btn btn-primary mt-3">Accéder au détail</button>
         </div>
       </div>
 
-      <div class="card" id="cbcoCard" style="display:none;">
+      <div class="card" id="cbcoCard">
         <div class="card-title">
           <h2>💼 CBCO - Indicateur Commercial</h2>
         </div>
         <div class="card-body">
           <div id="cbco-content">Chargement...</div>
-          <button onclick="goToCBCO()" class="btn btn-primary mt-3">Accéder au détail</button>
+          <button id="cbcoDetailBtn" onclick="goToCBCO()" class="btn btn-primary mt-3">Accéder au détail</button>
         </div>
       </div>
 
@@ -70,58 +70,50 @@
     function initHome() {
       // Injecter la sidebar dans le DOM
       document.getElementById('sidebar').innerHTML = getSidebar();
-      
-      // Vérifier les permissions d'accès à Goudalle Maçonnerie
-      const session = Auth.getSession();
-      if (!Auth.hasAccess('gm')) {
-        document.getElementById('gm-content').innerHTML = '❌ Acces refuse a Goudalle Maconnerie';
-        return;
-      }
 
       // Récupérer le dernier KPI publié
       const lastWeek = getLastPublishedWeek();
       if (!lastWeek) {
         document.getElementById('gm-content').innerHTML = '<p>📊 Aucune donnée publiée encore</p>';
-        return;
+      } else {
+        // Calculer le ratio et déterminer la performance
+        const ratio = calculateRatio(lastWeek.hours, lastWeek.m3);
+        const smiley = getSmiley(ratio);
+
+        // Obtenir les dates de la semaine
+        const dateRange = getWeekDateRange(lastWeek.week, lastWeek.year);
+
+        // Mettre à jour le titre du card
+        const card = document.querySelector('.card');
+        if (card) {
+          const title = card.querySelector('.card-title h2');
+          title.textContent = `Volume de béton coulé du ${dateRange.monday} au ${dateRange.friday}`;
+        }
+
+        // Afficher les données dans des cartes KPI
+        document.getElementById('gm-content').innerHTML = `
+          <div class="kpi-grid kpi-grid-home">
+            <div class="kpi-box">
+              <div class="kpi-label">m³ coulés</div>
+              <div class="kpi-value">${lastWeek.m3.toFixed(2)}</div>
+            </div>
+            <div class="kpi-box">
+              <div class="kpi-label">Heures</div>
+              <div class="kpi-value">${lastWeek.hours.toFixed(2)}</div>
+            </div>
+            <div class="kpi-box ${smiley}">
+              <div class="kpi-label">h/m³</div>
+              <div class="kpi-value">${ratio !== null ? ratio.toFixed(2) : '—'}</div>
+            </div>
+            <div class="kpi-box ${smiley} kpi-box-smiley">
+              <div class="smiley">${getSmileyEmoji(smiley)}</div>
+            </div>
+          </div>
+          <div class="comment-box">
+            <strong>Commentaire : </strong> ${lastWeek.comment}
+          </div>
+        `;
       }
-
-      // Calculer le ratio et déterminer la performance
-      const ratio = calculateRatio(lastWeek.hours, lastWeek.m3);
-      const smiley = getSmiley(ratio);
-
-      // Obtenir les dates de la semaine
-      const dateRange = getWeekDateRange(lastWeek.week, lastWeek.year);
-
-      // Mettre à jour le titre du card
-      const card = document.querySelector('.card');
-      if (card) {
-        const title = card.querySelector('.card-title h2');
-        title.textContent = `Volume de béton coulé du ${dateRange.monday} au ${dateRange.friday}`;
-      }
-
-      // Afficher les données dans des cartes KPI
-      document.getElementById('gm-content').innerHTML = `
-        <div class="kpi-grid kpi-grid-home">
-          <div class="kpi-box">
-            <div class="kpi-label">m³ coulés</div>
-            <div class="kpi-value">${lastWeek.m3.toFixed(2)}</div>
-          </div>
-          <div class="kpi-box">
-            <div class="kpi-label">Heures</div>
-            <div class="kpi-value">${lastWeek.hours.toFixed(2)}</div>
-          </div>
-          <div class="kpi-box ${smiley}">
-            <div class="kpi-label">h/m³</div>
-            <div class="kpi-value">${ratio !== null ? ratio.toFixed(2) : '—'}</div>
-          </div>
-          <div class="kpi-box ${smiley} kpi-box-smiley">
-            <div class="smiley">${getSmileyEmoji(smiley)}</div>
-          </div>
-        </div>
-        <div class="comment-box">
-          <strong>Commentaire : </strong> ${lastWeek.comment}
-        </div>
-      `;
 
       // Afficher le panneau d'administration pour les directeurs
       if (Auth.isDirection()) {
@@ -129,38 +121,50 @@
       }
 
       // ===== SECTION CBCO =====
-      if (Auth.canViewCBCO()) {
-        document.getElementById('cbcoCard').style.display = 'block';
+      const cbcoData = getCBCOData().sort(compareByYearMonthDesc);
+      if (cbcoData.length === 0) {
+        document.getElementById('cbco-content').innerHTML = '<p>Aucune donnée saisie encore</p>';
+      } else {
+        const lastEntry = cbcoData[0];
+        const monthNames = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                            'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
         
-        const cbcoData = getCBCOData().sort(compareByYearMonthDesc);
-        if (cbcoData.length === 0) {
-          document.getElementById('cbco-content').innerHTML = '<p>Aucune donnée saisie encore</p>';
-        } else {
-          const lastEntry = cbcoData[0];
-          const monthNames = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-                              'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-          
-          document.getElementById('cbco-content').innerHTML = `
-            <div class="kpi-grid kpi-grid-home">
-              <div class="kpi-box">
-                <div class="kpi-label">Période</div>
-                <div class="kpi-value">${monthNames[lastEntry.month]} ${lastEntry.year}</div>
-              </div>
-              <div class="kpi-box">
-                <div class="kpi-label">CE (EUR)</div>
-                <div class="kpi-value">${new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 0}).format(lastEntry.montantChantiersCours)}</div>
-              </div>
-              <div class="kpi-box">
-                <div class="kpi-label">CT (EUR)</div>
-                <div class="kpi-value">${new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 0}).format(lastEntry.montantChantiersTermines)}</div>
-              </div>
-              <div class="kpi-box" style="background: linear-gradient(135deg, var(--accent-light), var(--accent));">
-                <div class="kpi-label">Cumul annuel (EUR)</div>
-                <div class="kpi-value">${new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 0}).format(lastEntry.cumulAnnuel)}</div>
-              </div>
+        document.getElementById('cbco-content').innerHTML = `
+          <div class="kpi-grid kpi-grid-home">
+            <div class="kpi-box">
+              <div class="kpi-label">Période</div>
+              <div class="kpi-value">${monthNames[lastEntry.month]} ${lastEntry.year}</div>
             </div>
-          `;
-        }
+            <div class="kpi-box">
+              <div class="kpi-label">CE (EUR)</div>
+              <div class="kpi-value">${new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 0}).format(lastEntry.montantChantiersCours)}</div>
+            </div>
+            <div class="kpi-box">
+              <div class="kpi-label">CT (EUR)</div>
+              <div class="kpi-value">${new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 0}).format(lastEntry.montantChantiersTermines)}</div>
+            </div>
+            <div class="kpi-box" style="background: linear-gradient(135deg, var(--accent-light), var(--accent));">
+              <div class="kpi-label">Cumul annuel (EUR)</div>
+              <div class="kpi-value">${new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 0}).format(lastEntry.cumulAnnuel)}</div>
+            </div>
+          </div>
+        `;
+      }
+
+      // Les indicateurs sont visibles par tous sur l'accueil,
+      // mais le détail reste protégé par permissions sur les pages dédiées.
+      const gmDetailBtn = document.getElementById('gmDetailBtn');
+      if (gmDetailBtn && !Auth.canViewGM()) {
+        gmDetailBtn.disabled = true;
+        gmDetailBtn.textContent = 'Détail non autorisé';
+        gmDetailBtn.title = 'Votre rôle ne permet pas l\'accès au détail Goudalle Maçonnerie';
+      }
+
+      const cbcoDetailBtn = document.getElementById('cbcoDetailBtn');
+      if (cbcoDetailBtn && !Auth.canViewCBCO()) {
+        cbcoDetailBtn.disabled = true;
+        cbcoDetailBtn.textContent = 'Détail non autorisé';
+        cbcoDetailBtn.title = 'Votre rôle ne permet pas l\'accès au détail CBCO';
       }
     }
 
