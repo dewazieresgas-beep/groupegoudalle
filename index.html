@@ -68,15 +68,6 @@
         </div>
       </div>
 
-      <div class="card" id="adminCard" style="display:none;">
-        <div class="card-title">
-          <h2>Administration</h2>
-        </div>
-        <div class="card-body">
-          <p>Bienvenue, directeur ! Gérez les utilisateurs, les données et les paramètres du système.</p>
-          <button onclick="goToAdmin()" class="btn btn-primary">Accéder à l'administration</button>
-        </div>
-      </div>
     </main>
   </div>
 
@@ -132,11 +123,6 @@
             <strong>Commentaire : </strong> ${lastWeek.comment}
           </div>
         `;
-      }
-
-      // Afficher le panneau d'administration pour les directeurs
-      if (Auth.isDirection()) {
-        document.getElementById('adminCard').style.display = 'block';
       }
 
       // ===== SECTION CBCO =====

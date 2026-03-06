@@ -306,7 +306,7 @@
       
       const data = getCBCOData().sort(compareByYearMonthDesc);
       
-      let filtered = data;
+      let filtered = [];
       if (selectedYears.length > 0) {
         filtered = data.filter(e => selectedYears.includes(e.year));
       }
@@ -735,11 +735,10 @@
       
       initYearFilter();
       initChartYearFilter();
-      const data = getCBCOData().sort(compareByYearMonthDesc);
       displayCurrentData();
       renderCBCOChart();
       renderCurrentYearChart();
-      renderDataTable(data);
+      filterTableByYear();
       renderSummaryTable();
     }
 
