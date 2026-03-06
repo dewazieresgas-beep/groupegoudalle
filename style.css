@@ -1277,26 +1277,27 @@ tbody tr:last-child td {
 }
 
 .cbco-stat-box.highlight {
-  background: linear-gradient(135deg, var(--accent-light), var(--accent));
   border-color: var(--accent);
+  border-width: 2px;
 }
 
 .cbco-stat-label {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-light);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  font-weight: 600;
 }
 
 .cbco-stat-value {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--primary);
+  line-height: 1.2;
 }
 
 .cbco-stat-box.highlight .cbco-stat-value {
-  color: var(--primary);
   font-weight: 800;
 }
 
