@@ -564,6 +564,13 @@ a:hover {
   height: 24px;
 }
 
+.smiley-emoji {
+  max-width: 50px;
+  max-height: 50px;
+  width: auto;
+  height: auto;
+}
+
 /* Aperçu temps réel sur la page saisie */
 #previewSmiley .smiley-emoji {
   width: 60px;
