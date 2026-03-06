@@ -78,13 +78,16 @@
       <div class="cbco-table-section card">
         <div class="card-title">
           <h2>Tableau détaillé par mois</h2>
-          <div style="text-align: right;">
-            <select id="yearFilter" class="year-filter" onchange="filterTableByYear()">
-              <option value="">Toutes les années</option>
-            </select>
-          </div>
         </div>
         <div class="card-body">
+          <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 10px; font-weight: 600;">Filtrer par années :</label>
+            <div id="yearFilterContainer" style="display: flex; flex-wrap: wrap; gap: 10px;">
+              <!-- Les checkboxes seront générées par JavaScript -->
+            </div>
+            <button onclick="selectAllYears()" class="btn btn-small btn-secondary" style="margin-top: 8px; margin-right: 5px;">Sélectionner tout</button>
+            <button onclick="clearAllYears()" class="btn btn-small btn-secondary" style="margin-top: 8px;">Désélectionner tout</button>
+          </div>
           <table id="cbcoDataTable">
             <thead>
               <tr>
@@ -94,11 +97,10 @@
                 <th>Montant CT (K€)</th>
                 <th>Total mensuel (K€)</th>
                 <th>Cumul annuel (K€)</th>
-                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              <tr><td colspan="7" style="text-align:center; padding: 20px;">Aucune donnée</td></tr>
+              <tr><td colspan="6" style="text-align:center; padding: 20px;">Aucune donnée</td></tr>
             </tbody>
           </table>
         </div>
@@ -158,29 +160,75 @@
     /**
      * Initialise le filtre des années
      */
+    /**
+     * Initialise les checkboxes de filtrage par année
+     */
     function initYearFilter() {
       const data = getCBCOData();
       const years = [...new Set(data.map(e => e.year))].sort((a, b) => b - a);
       
-      const filterSelect = document.getElementById('yearFilter');
+      const container = document.getElementById('yearFilterContainer');
+      container.innerHTML = '';
+      
       years.forEach(year => {
-        const option = document.createElement('option');
-        option.value = year;
-        option.textContent = year;
-        filterSelect.appendChild(option);
+        const label = document.createElement('label');
+        label.style.display = 'flex';
+        label.style.alignItems = 'center';
+        label.style.gap = '6px';
+        label.style.cursor = 'pointer';
+        label.style.padding = '5px 10px';
+        label.style.backgroundColor = '#f5f5f5';
+        label.style.borderRadius = '4px';
+        label.style.userSelect = 'none';
+        
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.value = year;
+        checkbox.className = 'year-checkbox';
+        checkbox.checked = true;
+        checkbox.onchange = filterTableByYear;
+        
+        const span = document.createElement('span');
+        span.textContent = year;
+        
+        label.appendChild(checkbox);
+        label.appendChild(span);
+        container.appendChild(label);
       });
     }
 
     /**
-     * Filtre le tableau par année sélectionnée
+     * Sélectionne toutes les années
+     */
+    function selectAllYears() {
+      document.querySelectorAll('.year-checkbox').forEach(cb => {
+        cb.checked = true;
+      });
+      filterTableByYear();
+    }
+
+    /**
+     * Désélectionne toutes les années
+     */
+    function clearAllYears() {
+      document.querySelectorAll('.year-checkbox').forEach(cb => {
+        cb.checked = false;
+      });
+      filterTableByYear();
+    }
+
+    /**
+     * Filtre le tableau par années sélectionnées
      */
     function filterTableByYear() {
-      const year = document.getElementById('yearFilter').value;
+      const selectedYears = [...document.querySelectorAll('.year-checkbox:checked')]
+        .map(cb => parseInt(cb.value));
+      
       const data = getCBCOData().sort(compareByYearMonthDesc);
       
       let filtered = data;
-      if (year) {
-        filtered = data.filter(e => e.year === parseInt(year));
+      if (selectedYears.length > 0) {
+        filtered = data.filter(e => selectedYears.includes(e.year));
       }
       
       renderDataTable(filtered);
@@ -290,14 +338,14 @@
     }
 
     /**
-     * Rend le tableau de données détaillées
+     * Rend le tableau de données détaillées (lecture seule)
      * @param {Array} data - Données à afficher
      */
     function renderDataTable(data) {
       const tbody = document.querySelector('#cbcoDataTable tbody');
       
       if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 20px;">Aucune donnée pour cette sélection</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 20px;">Aucune donnée pour cette sélection</td></tr>';
         return;
       }
 
@@ -309,10 +357,6 @@
           <td>${formatCBCOCurrency(e.montantChantiersTermines)}</td>
           <td><strong>${formatCBCOCurrency(e.montantTotal)}</strong></td>
           <td><strong style="color: var(--accent-dark);">${formatCBCOCurrency(e.cumulAnnuel)}</strong></td>
-          <td>
-            <button class="btn btn-small btn-secondary" onclick="editCBCOEntry(${e.year}, ${e.month})">✏️ Éditer</button>
-            <button class="btn btn-small btn-danger" onclick="handleDeleteCBCOEntry(${e.year}, ${e.month})">🗑️ Supprimer</button>
-          </td>
         </tr>
       `).join('');
     }
@@ -338,31 +382,10 @@
     }
 
     /**
-     * Charge une entrée pour édition
-     * @param {number} year - Année
-     * @param {number} month - Mois
+     * NOTE: Les modifications et suppressions de données se font uniquement
+     * dans la page cbco-saisie.html. Cette page (cbco.html) affiche uniquement
+     * les données en lecture seule avec possibilité de filtrer par années.
      */
-    function editCBCOEntry(year, month) {
-      const entry = getCBCOData().find(e => e.year === year && e.month === month);
-      if (entry) {
-        // Rediriger vers la page de saisie avec les paramètres
-        const base = getBasePath();
-        window.location.href = `${base}pages/cbco-saisie.html?year=${year}&month=${month}`;
-      }
-    }
-
-    /**
-     * Supprime une entrée après confirmation
-     * @param {number} year - Année
-     * @param {number} month - Mois
-     */
-    function handleDeleteCBCOEntry(year, month) {
-      if (confirm(`Supprimer l'entrée ${MONTH_NAMES[month]} ${year} ? Cette action est irréversible.`)) {
-        const result = deleteCBCOEntry(year, month);
-        alert(result.message);
-        location.reload();
-      }
-    }
 
     /**
      * Télécharge le rapport en image
