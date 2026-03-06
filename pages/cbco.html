@@ -68,6 +68,14 @@
           <h2>Évolution du cumul annuel par année</h2>
         </div>
         <div class="card-body">
+          <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 10px; font-weight: 600;">Afficher les années :</label>
+            <div id="chartYearFilterContainer" style="display: flex; flex-wrap: wrap; gap: 10px;">
+              <!-- Les checkboxes seront générées par JavaScript -->
+            </div>
+            <button onclick="selectAllChartYears()" class="btn btn-small btn-secondary" style="margin-top: 8px; margin-right: 5px;">Sélectionner tout</button>
+            <button onclick="clearAllChartYears()" class="btn btn-small btn-secondary" style="margin-top: 8px;">Désélectionner tout</button>
+          </div>
           <div class="cbco-chart-container">
             <canvas id="cbcoChart"></canvas>
           </div>
@@ -218,6 +226,63 @@
     }
 
     /**
+     * Initialise les checkboxes de filtrage par année pour le graphique
+     */
+    function initChartYearFilter() {
+      const data = getCBCOData();
+      const years = [...new Set(data.map(e => e.year))].sort((a, b) => b - a);
+      
+      const container = document.getElementById('chartYearFilterContainer');
+      container.innerHTML = '';
+      
+      years.forEach(year => {
+        const label = document.createElement('label');
+        label.style.display = 'flex';
+        label.style.alignItems = 'center';
+        label.style.gap = '6px';
+        label.style.cursor = 'pointer';
+        label.style.padding = '5px 10px';
+        label.style.backgroundColor = '#f5f5f5';
+        label.style.borderRadius = '4px';
+        label.style.userSelect = 'none';
+        
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.value = year;
+        checkbox.className = 'chart-year-checkbox';
+        checkbox.checked = true;
+        checkbox.onchange = renderCBCOChart;
+        
+        const span = document.createElement('span');
+        span.textContent = year;
+        
+        label.appendChild(checkbox);
+        label.appendChild(span);
+        container.appendChild(label);
+      });
+    }
+
+    /**
+     * Sélectionne toutes les années du graphique
+     */
+    function selectAllChartYears() {
+      document.querySelectorAll('.chart-year-checkbox').forEach(cb => {
+        cb.checked = true;
+      });
+      renderCBCOChart();
+    }
+
+    /**
+     * Désélectionne toutes les années du graphique
+     */
+    function clearAllChartYears() {
+      document.querySelectorAll('.chart-year-checkbox').forEach(cb => {
+        cb.checked = false;
+      });
+      renderCBCOChart();
+    }
+
+    /**
      * Filtre le tableau par années sélectionnées
      */
     function filterTableByYear() {
@@ -262,9 +327,21 @@
      */
     function renderCBCOChart() {
       const byYear = getCBCOByYear();
-      const years = Object.keys(byYear).sort((a, b) => a - b);
+      const allYears = Object.keys(byYear).sort((a, b) => a - b);
       
-      if (years.length === 0) return;
+      // Filtrer selon les années sélectionnées
+      const selectedYears = [...document.querySelectorAll('.chart-year-checkbox:checked')]
+        .map(cb => cb.value);
+      
+      const years = selectedYears.length > 0 
+        ? allYears.filter(y => selectedYears.includes(y))
+        : allYears;
+      
+      if (years.length === 0) {
+        const ctx = document.getElementById('cbcoChart').getContext('2d');
+        if (cbcoChart) cbcoChart.destroy();
+        return;
+      }
 
       // Préparer les datasets pour chaque année
       const datasets = [];
@@ -403,6 +480,7 @@
       injectCBCOSecondaryBar();
       
       initYearFilter();
+      initChartYearFilter();
       const data = getCBCOData().sort(compareByYearMonthDesc);
       displayCurrentData();
       renderCBCOChart();
