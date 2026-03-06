@@ -590,26 +590,28 @@ function saveCBCOEntry(year, month, montantChantiersCours, montantChantiersTermi
 /**
  * Calcule les cumuls annuels pour chaque année dans les données CBCO
  * Met à jour le champ cumulAnnuel pour chaque entrée
- * @param {Array} data - Données triées CBCO
+ * @param {Array} data - Données CBCO (ordre n'importe pas, sera trié par année/mois)
  */
 function calculateCBCOCumuls(data) {
+  // Trier d'abord par année, puis par mois
+  const sorted = data.sort((a, b) => {
+    if (a.year !== b.year) return a.year - b.year;
+    return a.month - b.month;
+  });
+
   // Grouper par année
   const byYear = {};
-  
-  data.forEach(entry => {
+  sorted.forEach(entry => {
     if (!byYear[entry.year]) {
       byYear[entry.year] = [];
     }
     byYear[entry.year].push(entry);
   });
 
-  // Pour chaque année, calculer les cumuls
-  Object.keys(byYear).forEach(year => {
+  // Pour chaque année, calculer les cumuls cumulatifs
+  Object.keys(byYear).sort((a, b) => a - b).forEach(year => {
     let cumul = 0;
-    // Trier les mois de l'année en ordre croissant pour cumul correct
-    const yearEntries = byYear[year].sort((a, b) => a.month - b.month);
-    
-    yearEntries.forEach(entry => {
+    byYear[year].forEach(entry => {
       cumul += entry.montantTotal;
       entry.cumulAnnuel = cumul;
     });

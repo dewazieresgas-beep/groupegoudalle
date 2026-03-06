@@ -488,6 +488,11 @@ a:hover {
   text-align: center;
   transition: all 0.3s;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 130px;
 }
 
 .kpi-box:hover {
