@@ -363,6 +363,21 @@
         { border: '#e74c3c' },
         { border: '#f39c12' },
         { border: '#9b59b6' },
+        { border: '#1abc9c' },
+        { border: '#e67e22' },
+        { border: '#34495e' },
+        { border: '#c0392b' },
+        { border: '#16a085' },
+        { border: '#d35400' },
+        { border: '#2980b9' },
+        { border: '#27ae60' },
+        { border: '#8e44ad' },
+        { border: '#d35400' },
+        { border: '#f1c40f' },
+        { border: '#95a5a6' },
+        { border: '#7f8c8d' },
+        { border: '#c0392b' },
+        { border: '#ecf0f1' },
       ];
 
       years.forEach((year, idx) => {
@@ -512,30 +527,42 @@
       const labels = Array.from({ length: 12 }, (_, i) => MONTH_NAMES[i + 1]);
       
       currentYearChart = new Chart(ctx, {
-        type: 'bar',
+        type: 'line',
         data: {
           labels,
           datasets: [
             {
               label: 'Chantier en cours (K€)',
               data: montantCours,
+              borderColor: '#3498db',
               backgroundColor: '#3498db',
-              borderColor: '#2980b9',
-              borderWidth: 1
+              tension: 0,
+              fill: false,
+              pointRadius: 3,
+              pointHoverRadius: 5,
+              spanGaps: false
             },
             {
               label: 'Chantier terminé (K€)',
               data: montantTermines,
+              borderColor: '#2ecc71',
               backgroundColor: '#2ecc71',
-              borderColor: '#27ae60',
-              borderWidth: 1
+              tension: 0,
+              fill: false,
+              pointRadius: 3,
+              pointHoverRadius: 5,
+              spanGaps: false
             },
             {
               label: 'Total mensuel (K€)',
               data: montantTotal,
+              borderColor: '#e74c3c',
               backgroundColor: '#e74c3c',
-              borderColor: '#c0392b',
-              borderWidth: 1
+              tension: 0,
+              fill: false,
+              pointRadius: 3,
+              pointHoverRadius: 5,
+              spanGaps: false
             }
           ]
         },
