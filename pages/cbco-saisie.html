@@ -207,10 +207,10 @@
               <thead>
                 <tr>
                   <th>Mois</th>
-                  <th>Montant CE (EUR)</th>
-                  <th>Montant CT (EUR)</th>
-                  <th>Total mensuel (EUR)</th>
-                  <th>Cumul annuel (EUR)</th>
+                  <th>Montant CE (K€)</th>
+                  <th>Montant CT (K€)</th>
+                  <th>Total mensuel (K€)</th>
+                  <th>Cumul annuel (K€)</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -225,7 +225,7 @@
               <button class="btn btn-secondary" type="button" onclick="exportYearCsv()">Exporter CSV</button>
               <button class="btn btn-secondary" type="button" onclick="goToCBCO()">Retour dashboard</button>
             </div>
-            <div id="yearTotal" class="sheet-total-year">Total annuel: 0,00 EUR</div>
+            <div id="yearTotal" class="sheet-total-year">Total annuel: 0,00 K€</div>
           </div>
 
           <div class="sheet-hint">
@@ -264,11 +264,20 @@
       msgDiv.style.display = 'none';
     }
 
+    function toKiloeuro(eurValue) {
+      return normalizeNumber(eurValue) / 1000;
+    }
+
+    function fromKiloeuro(kValue) {
+      return normalizeNumber(kValue) * 1000;
+    }
+
     function formatCurrency(value) {
+      const kValue = toKiloeuro(value);
       return new Intl.NumberFormat('fr-FR', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
-      }).format(value) + ' EUR';
+      }).format(kValue) + ' K€';
     }
 
     function normalizeNumber(value) {
@@ -297,8 +306,9 @@
       entries.forEach(entry => {
         const row = rows[entry.month - 1];
         if (!row) return;
-        row.montantChantiersCours = normalizeNumber(entry.montantChantiersCours);
-        row.montantChantiersTermines = normalizeNumber(entry.montantChantiersTermines);
+        // Convertir euros stockés en K€ pour l'affichage
+        row.montantChantiersCours = toKiloeuro(normalizeNumber(entry.montantChantiersCours));
+        row.montantChantiersTermines = toKiloeuro(normalizeNumber(entry.montantChantiersTermines));
       });
 
       return rows;
@@ -629,8 +639,9 @@
         const existingMonths = new Set(existingForYear.map(entry => entry.month));
 
         sheetState.rows.forEach(row => {
-          const cours = normalizeNumber(row.montantChantiersCours);
-          const termines = normalizeNumber(row.montantChantiersTermines);
+          // Convertir K€ en euros pour le stockage
+          const cours = fromKiloeuro(row.montantChantiersCours);
+          const termines = fromKiloeuro(row.montantChantiersTermines);
           const total = cours + termines;
 
           if (total > 0) {
@@ -658,7 +669,7 @@
 
     function exportYearCsv() {
       const totals = computeRowTotals(sheetState.rows);
-      const headers = ['Annee', 'Mois', 'Montant CE', 'Montant CT', 'Total mensuel', 'Cumul annuel'];
+      const headers = ['Annee', 'Mois', 'Montant CE (K€)', 'Montant CT (K€)', 'Total mensuel (K€)', 'Cumul annuel (K€)'];
       const lines = [headers.join(';')];
 
       sheetState.rows.forEach(row => {
