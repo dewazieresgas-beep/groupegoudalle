@@ -593,6 +593,8 @@ function saveCBCOEntry(year, month, montantChantiersCours, montantChantiersTermi
  * @param {Array} data - Données CBCO (ordre n'importe pas, sera trié par année/mois)
  */
 function calculateCBCOCumuls(data) {
+  console.log('calculateCBCOCumuls called with', data.length, 'entries');
+  
   // Trier d'abord par année, puis par mois
   const sorted = data.sort((a, b) => {
     if (a.year !== b.year) return a.year - b.year;
@@ -614,6 +616,7 @@ function calculateCBCOCumuls(data) {
     byYear[year].forEach(entry => {
       cumul += entry.montantTotal;
       entry.cumulAnnuel = cumul;
+      console.log(`Year ${year}, Month ${entry.month}: montantTotal=${entry.montantTotal}, cumulAnnuel=${entry.cumulAnnuel}`);
     });
   });
 }

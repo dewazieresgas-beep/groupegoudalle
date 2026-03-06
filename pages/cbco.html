@@ -330,13 +330,18 @@
       }
 
       const current = data[0];
+      console.log('Current data:', current);
+      console.log('Cumul annuel:', current.cumulAnnuel);
+      
       document.getElementById('currentMonthYear').textContent = formatMonthYear(current.month, current.year);
       document.getElementById('currentMontantCours').textContent = formatCBCOCurrency(current.montantChantiersCours);
       document.getElementById('currentMontantTermines').textContent = formatCBCOCurrency(current.montantChantiersTermines);
       document.getElementById('currentMontantTotal').textContent = formatCBCOCurrency(current.montantTotal);
       
       // Afficher le cumul annuel (devrait toujours exister grâce à calculateCBCOCumuls)
-      document.getElementById('currentCumulAnnuel').textContent = formatCBCOCurrency(current.cumulAnnuel || 0);
+      const cumulValue = current.cumulAnnuel !== undefined && current.cumulAnnuel !== null ? current.cumulAnnuel : 0;
+      console.log('Cumul value to display:', cumulValue);
+      document.getElementById('currentCumulAnnuel').textContent = formatCBCOCurrency(cumulValue);
     }
 
     /**

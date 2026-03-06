@@ -49,9 +49,8 @@
             <img src="./assets/goudalle-maconnerie.png" alt="Goudalle Maçonnerie" style="height: 60px; width: auto;">
           </div>
           <div id="gm-week-range" style="font-size: 12px; color: #666; text-align: center; padding: 0 15px; margin-bottom: 15px;"></div>
-          <div class="card-body" style="display: flex; flex-direction: column; min-height: 400px;">
+          <div class="card-body">
             <div id="gm-content">Chargement...</div>
-            <button id="gmDetailBtn" onclick="goToGM()" class="btn btn-primary mt-auto">Accéder au détail</button>
           </div>
         </div>
 
@@ -60,12 +59,11 @@
           <div class="card-title" style="display: flex; justify-content: center; align-items: center; height: 70px;">
             <img src="./assets/cbco.png" alt="CBCO" style="height: 60px; width: auto;">
           </div>
-          <div class="card-body" style="display: flex; flex-direction: column; min-height: 400px;">
+          <div class="card-body">
             <p style="margin: 0 0 10px 0; font-size: 14px; text-align: center;"><strong>Évolution du cumul annuel par année</strong></p>
-            <div style="position: relative; height: 280px; flex: 1;">
+            <div style="position: relative; height: 280px;">
               <canvas id="cbcoHomeChart"></canvas>
             </div>
-            <button id="cbcoDetailBtn" onclick="goToCBCO()" class="btn btn-primary mt-3">Accéder au détail</button>
           </div>
         </div>
       </div>
@@ -143,22 +141,6 @@
 
       // ===== SECTION CBCO =====
       renderCBCOHomeChart();
-
-      // Les indicateurs sont visibles par tous sur l'accueil,
-      // mais le détail reste protégé par permissions sur les pages dédiées.
-      const gmDetailBtn = document.getElementById('gmDetailBtn');
-      if (gmDetailBtn && !Auth.canViewGM()) {
-        gmDetailBtn.disabled = true;
-        gmDetailBtn.textContent = 'Détail non autorisé';
-        gmDetailBtn.title = 'Votre rôle ne permet pas l\'accès au détail Goudalle Maçonnerie';
-      }
-
-      const cbcoDetailBtn = document.getElementById('cbcoDetailBtn');
-      if (cbcoDetailBtn && !Auth.canViewCBCO()) {
-        cbcoDetailBtn.disabled = true;
-        cbcoDetailBtn.textContent = 'Détail non autorisé';
-        cbcoDetailBtn.title = 'Votre rôle ne permet pas l\'accès au détail CBCO';
-      }
     }
 
     /**
