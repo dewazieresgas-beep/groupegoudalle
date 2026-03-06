@@ -71,8 +71,8 @@ const Auth = {
         isActive: true
       },
       // Compte référent CBCO - Gestion commerciale CBCO
-      'cbco_ref': {
-        username: 'cbco_ref',
+      'mathieu': {
+        username: 'mathieu',
         password: '123',
         role: this.ROLES.REFERENT_CBCO,
         displayName: 'Mathieu',
