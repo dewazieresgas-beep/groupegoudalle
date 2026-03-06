@@ -207,8 +207,8 @@
               <thead>
                 <tr>
                   <th>Mois</th>
-                  <th>Montant CE (K€)</th>
-                  <th>Montant CT (K€)</th>
+                  <th>Montant chantier estimé en cours (K€)</th>
+                  <th>Montant chantier estimé terminé (K€)</th>
                   <th>Total mensuel (K€)</th>
                   <th>Cumul annuel (K€)</th>
                   <th>Actions</th>
@@ -668,7 +668,7 @@
 
     function exportYearCsv() {
       const totals = computeRowTotals(sheetState.rows);
-      const headers = ['Annee', 'Mois', 'Montant CE (K€)', 'Montant CT (K€)', 'Total mensuel (K€)', 'Cumul annuel (K€)'];
+      const headers = ['Annee', 'Mois', 'Montant chantier en cours (K€)', 'Montant chantier terminé (K€)', 'Total mensuel (K€)', 'Cumul annuel (K€)'];
       const lines = [headers.join(';')];
 
       sheetState.rows.forEach(row => {

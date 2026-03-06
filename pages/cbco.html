@@ -63,11 +63,11 @@
               <div class="cbco-stat-value" id="currentMonthYear">—</div>
             </div>
             <div class="cbco-stat-box">
-              <div class="cbco-stat-label">Montant estimé CE</div>
+              <div class="cbco-stat-label">Montant estimé chantier en cours</div>
               <div class="cbco-stat-value" id="currentMontantCours">0 K€</div>
             </div>
             <div class="cbco-stat-box">
-              <div class="cbco-stat-label">Montant estimé CT</div>
+              <div class="cbco-stat-label">Montant estimé chantier terminé</div>
               <div class="cbco-stat-value" id="currentMontantTermines">0 K€</div>
             </div>
             <div class="cbco-stat-box">
@@ -121,8 +121,8 @@
               <tr>
                 <th>Année</th>
                 <th>Mois</th>
-                <th>Montant CE (K€)</th>
-                <th>Montant CT (K€)</th>
+                <th>Montant chantier en cours (K€)</th>
+                <th>Montant chantier terminé (K€)</th>
                 <th>Total mensuel (K€)</th>
                 <th>Cumul annuel (K€)</th>
               </tr>
@@ -354,8 +354,19 @@
 
       years.forEach((year, idx) => {
         const entries = byYear[year].sort((a, b) => a.month - b.month);
-        const monthLabels = entries.map(e => MONTH_NAMES[e.month]);
-        const cumulValues = entries.map(e => e.cumulAnnuel);
+
+        // Aligner chaque cumul sur son vrai mois (1..12)
+        const cumulByMonth = {};
+        entries.forEach(e => {
+          cumulByMonth[e.month] = e.cumulAnnuel;
+        });
+
+        const cumulValues = Array.from({ length: 12 }, (_, i) => {
+          const month = i + 1;
+          return Object.prototype.hasOwnProperty.call(cumulByMonth, month)
+            ? cumulByMonth[month]
+            : null;
+        });
 
         const color = colors[idx % colors.length];
         datasets.push({
@@ -366,7 +377,8 @@
           tension: 0,
           fill: false,
           pointRadius: 3,
-          pointHoverRadius: 5
+          pointHoverRadius: 5,
+          spanGaps: false
         });
       });
 
@@ -374,9 +386,8 @@
       const ctx = document.getElementById('cbcoChart').getContext('2d');
       if (cbcoChart) cbcoChart.destroy();
 
-      // Récupérer les labels de mois (tous les mois de toutes les années)
-      const maxMonths = Math.max(...years.map(y => byYear[y].length));
-      const labels = Array.from({length: maxMonths}, (_, i) => MONTH_NAMES[i + 1]);
+      // Toujours afficher Janvier à Décembre
+      const labels = Array.from({ length: 12 }, (_, i) => MONTH_NAMES[i + 1]);
 
       cbcoChart = new Chart(ctx, {
         type: 'line',
