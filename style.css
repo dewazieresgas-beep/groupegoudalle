@@ -572,7 +572,7 @@ a:hover {
 }
 
 .smiley-emoji {
-  height: 85%;
+  height: 100%;
   width: auto;
   max-height: 100px;
   max-width: 100px;
@@ -1296,7 +1296,8 @@ tbody tr:last-child td {
 }
 
 .cbco-stat-box.highlight .cbco-stat-value {
-  color: white;
+  color: var(--primary);
+  font-weight: 800;
 }
 
 .cbco-chart-section {
