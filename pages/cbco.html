@@ -82,6 +82,18 @@
         </div>
       </div>
 
+      <!-- SECTION GRAPHIQUE ANNÉE EN COURS -->
+      <div class="cbco-year-chart-section card">
+        <div class="card-title">
+          <h2>Détail mensuel de l'année en cours</h2>
+        </div>
+        <div class="card-body">
+          <div class="cbco-chart-container">
+            <canvas id="currentYearChart"></canvas>
+          </div>
+        </div>
+      </div>
+
       <!-- SECTION RÉSUMÉ ANNUEL -->
       <div class="cbco-summary-section card">
         <div class="card-title">
@@ -139,6 +151,7 @@
   <script>
     // Variables globales
     let cbcoChart;
+    let currentYearChart;
     const MONTH_NAMES = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
                           'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
@@ -475,6 +488,91 @@
      */
 
     /**
+     * Génère le graphique des montants mensuels pour l'année en cours
+     */
+    function renderCurrentYearChart() {
+      const currentYear = new Date().getFullYear();
+      const data = getCBCOData().filter(e => e.year === currentYear).sort((a, b) => a.month - b.month);
+      
+      // Créer des tableaux pour les 12 mois avec null pour les mois sans données
+      const montantCours = Array(12).fill(null);
+      const montantTermines = Array(12).fill(null);
+      const montantTotal = Array(12).fill(null);
+      
+      data.forEach(e => {
+        const idx = e.month - 1;
+        montantCours[idx] = e.montantChantiersCours;
+        montantTermines[idx] = e.montantChantiersTermines;
+        montantTotal[idx] = e.montantTotal;
+      });
+      
+      const ctx = document.getElementById('currentYearChart').getContext('2d');
+      if (currentYearChart) currentYearChart.destroy();
+      
+      const labels = Array.from({ length: 12 }, (_, i) => MONTH_NAMES[i + 1]);
+      
+      currentYearChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Chantier en cours (K€)',
+              data: montantCours,
+              backgroundColor: '#3498db',
+              borderColor: '#2980b9',
+              borderWidth: 1
+            },
+            {
+              label: 'Chantier terminé (K€)',
+              data: montantTermines,
+              backgroundColor: '#2ecc71',
+              borderColor: '#27ae60',
+              borderWidth: 1
+            },
+            {
+              label: 'Total mensuel (K€)',
+              data: montantTotal,
+              backgroundColor: '#e74c3c',
+              borderColor: '#c0392b',
+              borderWidth: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top'
+            },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const v = ctx.parsed?.y;
+                  return `${ctx.dataset.label}: ${formatCBCOCurrency(v)}`;
+                }
+              }
+            },
+            title: {
+              display: true,
+              text: `Année ${currentYear}`
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: (value) => formatCBCOCurrency(value)
+              }
+            }
+          }
+        }
+      });
+    }
+
+    /**
      * Télécharge le rapport en image
      */
     function downloadCBCOReport() {
@@ -494,6 +592,7 @@
       const data = getCBCOData().sort(compareByYearMonthDesc);
       displayCurrentData();
       renderCBCOChart();
+      renderCurrentYearChart();
       renderDataTable(data);
       renderSummaryTable();
     }
