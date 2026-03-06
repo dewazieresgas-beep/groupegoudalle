@@ -617,35 +617,87 @@
         container.style.width = '1200px';
         container.style.backgroundColor = '#ffffff';
         container.style.padding = '30px';
+        container.style.fontFamily = 'Arial, sans-serif';
         document.body.appendChild(container);
 
-        // Cloner les 3 sections
-        const chartSection = document.querySelector('.cbco-chart-section');
+        // Convertir les canvas Chart.js en images
+        const cbcoChartImage = cbcoChart ? cbcoChart.toBase64Image() : null;
+        const currentYearChartImage = currentYearChart ? currentYearChart.toBase64Image() : null;
+
+        // Section 1: Graphique des cumuls annuels
+        if (cbcoChartImage) {
+          const section1 = document.createElement('div');
+          section1.style.backgroundColor = '#fff';
+          section1.style.border = '1px solid #ddd';
+          section1.style.borderRadius = '8px';
+          section1.style.padding = '20px';
+          section1.style.marginBottom = '20px';
+          
+          const title1 = document.createElement('h2');
+          title1.textContent = 'Évolution du cumul annuel par année';
+          title1.style.margin = '0 0 15px 0';
+          title1.style.fontSize = '20px';
+          title1.style.color = '#333';
+          section1.appendChild(title1);
+          
+          const img1 = document.createElement('img');
+          img1.src = cbcoChartImage;
+          img1.style.width = '100%';
+          img1.style.height = 'auto';
+          section1.appendChild(img1);
+          
+          container.appendChild(section1);
+        }
+
+        // Section 2: Dernière saisie
         const currentSection = document.querySelector('.cbco-current-section');
-        const yearChartSection = document.querySelector('.cbco-year-chart-section');
-
-        if (chartSection) {
-          const chartClone = chartSection.cloneNode(true);
-          // Retirer les boutons de filtre pour le PDF
-          const filterDiv = chartClone.querySelector('div[style*="margin-bottom: 15px"]');
-          if (filterDiv) filterDiv.remove();
-          container.appendChild(chartClone);
-        }
-
         if (currentSection) {
-          const currentClone = currentSection.cloneNode(true);
-          currentClone.style.marginTop = '20px';
-          container.appendChild(currentClone);
+          const section2 = document.createElement('div');
+          section2.style.backgroundColor = '#fff';
+          section2.style.border = '1px solid #ddd';
+          section2.style.borderRadius = '8px';
+          section2.style.padding = '20px';
+          section2.style.marginBottom = '20px';
+          
+          const title2 = document.createElement('h2');
+          title2.textContent = 'Dernière saisie';
+          title2.style.margin = '0 0 15px 0';
+          title2.style.fontSize = '20px';
+          title2.style.color = '#333';
+          section2.appendChild(title2);
+          
+          const gridClone = currentSection.querySelector('.cbco-current-grid').cloneNode(true);
+          section2.appendChild(gridClone);
+          
+          container.appendChild(section2);
         }
 
-        if (yearChartSection) {
-          const yearChartClone = yearChartSection.cloneNode(true);
-          yearChartClone.style.marginTop = '20px';
-          container.appendChild(yearChartClone);
+        // Section 3: Détail mensuel année en cours
+        if (currentYearChartImage) {
+          const section3 = document.createElement('div');
+          section3.style.backgroundColor = '#fff';
+          section3.style.border = '1px solid #ddd';
+          section3.style.borderRadius = '8px';
+          section3.style.padding = '20px';
+          
+          const title3 = document.createElement('h2');
+          title3.textContent = 'Détail mensuel de l\'année en cours';
+          title3.style.margin = '0 0 15px 0';
+          title3.style.fontSize = '20px';
+          title3.style.color = '#333';
+          section3.appendChild(title3);
+          
+          const img3 = document.createElement('img');
+          img3.src = currentYearChartImage;
+          img3.style.width = '100%';
+          img3.style.height = 'auto';
+          section3.appendChild(img3);
+          
+          container.appendChild(section3);
         }
 
-        // Attendre que les graphiques soient rendus
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Attendre que les images soient chargées
+        await new Promise(resolve => setTimeout(resolve, 300));
 
         // Capturer l'image
         const canvas = await html2canvas(container, {
