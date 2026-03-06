@@ -517,7 +517,14 @@ function injectGMSecondaryBar() {
  */
 function getCBCOData() {
   const data = localStorage.getItem('goudalle_cbco_data');
-  return data ? JSON.parse(data) : [];
+  const entries = data ? JSON.parse(data) : [];
+  
+  // Recalculer les cumuls pour garantir la cohérence
+  if (entries.length > 0) {
+    calculateCBCOCumuls(entries);
+  }
+  
+  return entries;
 }
 
 /**
