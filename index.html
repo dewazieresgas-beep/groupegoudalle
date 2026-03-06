@@ -129,10 +129,10 @@
         const monthNames = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
                             'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
         
-        // Formater les valeurs en K€ (convertir EUR en K€)
-        const ceK = new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 0, maximumFractionDigits: 0}).format(lastEntry.montantChantiersCours / 1000);
-        const ctK = new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 0, maximumFractionDigits: 0}).format(lastEntry.montantChantiersTermines / 1000);
-        const cumulK = new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 0, maximumFractionDigits: 0}).format(lastEntry.cumulAnnuel / 1000);
+        // Formater les valeurs en K€ (déjà en K€, pas de conversion)
+        const ceK = new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 0, maximumFractionDigits: 0}).format(lastEntry.montantChantiersCours);
+        const ctK = new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 0, maximumFractionDigits: 0}).format(lastEntry.montantChantiersTermines);
+        const cumulK = new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 0, maximumFractionDigits: 0}).format(lastEntry.cumulAnnuel);
         
         document.getElementById('cbco-content').innerHTML = `
           <table style="width: 100%; border-collapse: collapse;">

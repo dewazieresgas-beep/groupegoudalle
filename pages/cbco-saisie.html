@@ -273,11 +273,10 @@
     }
 
     function formatCurrency(value) {
-      const kValue = toKiloeuro(value);
       return new Intl.NumberFormat('fr-FR', {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0
-      }).format(kValue) + ' K€';
+      }).format(value) + ' K€';
     }
 
     function normalizeNumber(value) {
@@ -306,9 +305,9 @@
       entries.forEach(entry => {
         const row = rows[entry.month - 1];
         if (!row) return;
-        // Convertir euros stockés en K€ pour l'affichage
-        row.montantChantiersCours = toKiloeuro(normalizeNumber(entry.montantChantiersCours));
-        row.montantChantiersTermines = toKiloeuro(normalizeNumber(entry.montantChantiersTermines));
+        // Garder les valeurs en EUR (pas de conversion ici)
+        row.montantChantiersCours = normalizeNumber(entry.montantChantiersCours);
+        row.montantChantiersTermines = normalizeNumber(entry.montantChantiersTermines);
       });
 
       return rows;
@@ -400,7 +399,7 @@
               inputmode="decimal"
               data-month="${row.month}"
               data-field="montantChantiersCours"
-              value="${row.montantChantiersCours ? (row.montantChantiersCours / 1000) : ''}"
+              value="${row.montantChantiersCours || ''}"
               placeholder="0"
             >
           </td>
@@ -411,7 +410,7 @@
               inputmode="decimal"
               data-month="${row.month}"
               data-field="montantChantiersTermines"
-              value="${row.montantChantiersTermines ? (row.montantChantiersTermines / 1000) : ''}"
+              value="${row.montantChantiersTermines || ''}"
               placeholder="0"
             >
           </td>
@@ -463,8 +462,7 @@
       const row = sheetState.rows[month - 1];
       if (!row) return;
 
-      // Multiplier par 1000 car l'utilisateur saisit en "milliers"
-      row[field] = normalizeNumber(input.value) * 1000;
+      row[field] = normalizeNumber(input.value);
       updateComputedColumns();
       refreshDirtyState();
     }
@@ -483,8 +481,7 @@
 
       const value = normalizeNumber(row[field]);
       row[field] = value;
-      // Afficher en divisé par 1000 (format simplifié)
-      input.value = value > 0 ? (value / 1000) : '';
+      input.value = value > 0 ? value : '';
       pushHistorySnapshot();
       updateComputedColumns();
       refreshDirtyState();
@@ -641,9 +638,9 @@
         const existingMonths = new Set(existingForYear.map(entry => entry.month));
 
         sheetState.rows.forEach(row => {
-          // Convertir K€ en euros pour le stockage
-          const cours = fromKiloeuro(row.montantChantiersCours);
-          const termines = fromKiloeuro(row.montantChantiersTermines);
+          // Les valeurs sont déjà en EUR, pas besoin de conversion
+          const cours = normalizeNumber(row.montantChantiersCours);
+          const termines = normalizeNumber(row.montantChantiersTermines);
           const total = cours + termines;
 
           if (total > 0) {

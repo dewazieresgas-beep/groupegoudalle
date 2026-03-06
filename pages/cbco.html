@@ -154,15 +154,14 @@
 
     /**
      * Formate un nombre en devise K€
-     * @param {number} value - Valeur en EUR à formater
+     * @param {number} value - Valeur en K€ à formater
      * @returns {string} - "1 234 K€"
      */
     function formatCBCOCurrency(value) {
-      const kValue = value / 1000;
       return new Intl.NumberFormat('fr-FR', { 
         minimumFractionDigits: 0, 
         maximumFractionDigits: 0 
-      }).format(kValue) + ' K€';
+      }).format(value) + ' K€';
     }
 
     /**
