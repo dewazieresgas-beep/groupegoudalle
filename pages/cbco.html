@@ -6,6 +6,7 @@
   <title>CBCO - Indicateur Commercial - Intranet</title>
   <link rel="stylesheet" href="../style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
   <script src="../js/auth.js"></script>
@@ -190,7 +191,7 @@
       const container = document.getElementById('yearFilterContainer');
       container.innerHTML = '';
       
-      years.forEach(year => {
+      years.forEach((year, index) => {
         const label = document.createElement('label');
         label.style.display = 'flex';
         label.style.alignItems = 'center';
@@ -205,7 +206,8 @@
         checkbox.type = 'checkbox';
         checkbox.value = year;
         checkbox.className = 'year-checkbox';
-        checkbox.checked = true;
+        // Cocher seulement les 3 dernières années par défaut
+        checkbox.checked = index < 3;
         checkbox.onchange = filterTableByYear;
         
         const span = document.createElement('span');
@@ -247,7 +249,7 @@
       const container = document.getElementById('chartYearFilterContainer');
       container.innerHTML = '';
       
-      years.forEach(year => {
+      years.forEach((year, index) => {
         const label = document.createElement('label');
         label.style.display = 'flex';
         label.style.alignItems = 'center';
@@ -262,7 +264,8 @@
         checkbox.type = 'checkbox';
         checkbox.value = year;
         checkbox.className = 'chart-year-checkbox';
-        checkbox.checked = true;
+        // Cocher seulement les 3 dernières années par défaut
+        checkbox.checked = index < 3;
         checkbox.onchange = renderCBCOChart;
         
         const span = document.createElement('span');
@@ -604,9 +607,68 @@
     /**
      * Télécharge le rapport en image
      */
-    function downloadCBCOReport() {
-      alert('📥 Fonctionnalité de téléchargement en cours de développement');
-      // À implémenter avec html2canvas si nécessaire
+    async function downloadCBCOReport() {
+      try {
+        // Créer un conteneur temporaire pour les 3 sections
+        const container = document.createElement('div');
+        container.style.position = 'absolute';
+        container.style.left = '-9999px';
+        container.style.top = '0';
+        container.style.width = '1200px';
+        container.style.backgroundColor = '#ffffff';
+        container.style.padding = '30px';
+        document.body.appendChild(container);
+
+        // Cloner les 3 sections
+        const chartSection = document.querySelector('.cbco-chart-section');
+        const currentSection = document.querySelector('.cbco-current-section');
+        const yearChartSection = document.querySelector('.cbco-year-chart-section');
+
+        if (chartSection) {
+          const chartClone = chartSection.cloneNode(true);
+          // Retirer les boutons de filtre pour le PDF
+          const filterDiv = chartClone.querySelector('div[style*="margin-bottom: 15px"]');
+          if (filterDiv) filterDiv.remove();
+          container.appendChild(chartClone);
+        }
+
+        if (currentSection) {
+          const currentClone = currentSection.cloneNode(true);
+          currentClone.style.marginTop = '20px';
+          container.appendChild(currentClone);
+        }
+
+        if (yearChartSection) {
+          const yearChartClone = yearChartSection.cloneNode(true);
+          yearChartClone.style.marginTop = '20px';
+          container.appendChild(yearChartClone);
+        }
+
+        // Attendre que les graphiques soient rendus
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Capturer l'image
+        const canvas = await html2canvas(container, {
+          backgroundColor: '#ffffff',
+          scale: 2,
+          logging: false,
+          useCORS: true
+        });
+
+        // Nettoyer le conteneur temporaire
+        document.body.removeChild(container);
+
+        // Télécharger l'image
+        const link = document.createElement('a');
+        const date = new Date().toISOString().split('T')[0];
+        link.download = `rapport_cbco_${date}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+
+      } catch (error) {
+        console.error('Erreur lors de la génération du rapport:', error);
+        alert('Erreur lors de la génération du rapport. Veuillez réessayer.');
+      }
     }
 
     /**

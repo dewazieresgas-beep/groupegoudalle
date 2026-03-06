@@ -5,6 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Accueil - Intranet Goudalle</title>
   <link rel="stylesheet" href="./style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 1024px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 </head>
 <body>
   <script src="./js/auth.js"></script>
@@ -28,23 +42,35 @@
     <main class="main-content">
       <h1>Tableau de bord</h1>
 
-      <div class="card">
-        <div class="card-title">
-          <h2>Goudalle Maconnerie</h2>
+      <div class="dashboard-grid">
+        <!-- GOUDALLE MAÇONNERIE -->
+        <div class="card">
+          <div class="card-title" style="display: flex; align-items: center; gap: 12px;">
+            <img src="./assets/goudalle-maconnerie.png" alt="Goudalle Maçonnerie" style="height: 50px; width: auto;">
+            <div>
+              <h2 style="margin: 0;">Goudalle Maçonnerie</h2>
+              <div id="gm-week-range" style="font-size: 14px; color: #666; margin-top: 4px;"></div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div id="gm-content">Chargement...</div>
+            <button id="gmDetailBtn" onclick="goToGM()" class="btn btn-primary mt-3">Accéder au détail</button>
+          </div>
         </div>
-        <div class="card-body">
-          <div id="gm-content">Chargement...</div>
-          <button id="gmDetailBtn" onclick="goToGM()" class="btn btn-primary mt-3">Accéder au détail</button>
-        </div>
-      </div>
 
-      <div class="card" id="cbcoCard">
-        <div class="card-title">
-          <h2>💼 CBCO - Indicateur Commercial</h2>
-        </div>
-        <div class="card-body">
-          <div id="cbco-content">Chargement...</div>
-          <button id="cbcoDetailBtn" onclick="goToCBCO()" class="btn btn-primary mt-3">Accéder au détail</button>
+        <!-- CBCO -->
+        <div class="card" id="cbcoCard">
+          <div class="card-title" style="display: flex; align-items: center; gap: 12px;">
+            <img src="./assets/cbco.png" alt="CBCO" style="height: 50px; width: auto;">
+            <h2 style="margin: 0;">CBCO - Indicateur Commercial</h2>
+          </div>
+          <div class="card-body">
+            <p style="margin-bottom: 10px; font-size: 14px;"><strong>Évolution du cumul annuel par année</strong></p>
+            <div style="position: relative; height: 280px;">
+              <canvas id="cbcoHomeChart"></canvas>
+            </div>
+            <button id="cbcoDetailBtn" onclick="goToCBCO()" class="btn btn-primary mt-3">Accéder au détail</button>
+          </div>
         </div>
       </div>
 
@@ -83,16 +109,15 @@
         // Obtenir les dates de la semaine
         const dateRange = getWeekDateRange(lastWeek.week, lastWeek.year);
 
-        // Mettre à jour le titre du card
-        const card = document.querySelector('.card');
-        if (card) {
-          const title = card.querySelector('.card-title h2');
-          title.textContent = `Volume de béton coulé du ${dateRange.monday} au ${dateRange.friday}`;
+        // Mettre à jour la période affichée
+        const weekRangeElement = document.getElementById('gm-week-range');
+        if (weekRangeElement) {
+          weekRangeElement.textContent = `du ${dateRange.monday} au ${dateRange.friday}`;
         }
 
         // Afficher les données dans des cartes KPI
         document.getElementById('gm-content').innerHTML = `
-          <div class="kpi-grid kpi-grid-home">
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 10px;">
             <div class="kpi-box">
               <div class="kpi-label">m³ coulés</div>
               <div class="kpi-value">${lastWeek.m3.toFixed(2)}</div>
@@ -109,7 +134,7 @@
               <div class="smiley">${getSmileyEmoji(smiley)}</div>
             </div>
           </div>
-          <div class="comment-box">
+          <div class="comment-box" style="font-size: 13px; padding: 8px;">
             <strong>Commentaire : </strong> ${lastWeek.comment}
           </div>
         `;
@@ -121,56 +146,7 @@
       }
 
       // ===== SECTION CBCO =====
-      const cbcoData = getCBCOData().sort(compareByYearMonthDesc);
-      if (cbcoData.length === 0) {
-        document.getElementById('cbco-content').innerHTML = '<p>Aucune donnée saisie encore</p>';
-      } else {
-        const monthNames = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-                            'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-        const latestYear = cbcoData[0].year;
-        const yearRows = cbcoData
-          .filter(entry => entry.year === latestYear)
-          .sort((a, b) => a.month - b.month);
-
-        const tableRows = yearRows.map(entry => {
-          const ceK = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(entry.montantChantiersCours);
-          const ctK = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(entry.montantChantiersTermines);
-          const totalK = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(entry.montantTotal);
-          const cumulK = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(entry.cumulAnnuel);
-
-          return `
-            <tr>
-              <td style="padding: 10px; border-bottom: 1px solid var(--border-light);">${entry.year}</td>
-              <td style="padding: 10px; border-bottom: 1px solid var(--border-light);">${monthNames[entry.month]}</td>
-              <td style="padding: 10px; text-align: right; border-bottom: 1px solid var(--border-light);">${ceK}</td>
-              <td style="padding: 10px; text-align: right; border-bottom: 1px solid var(--border-light);">${ctK}</td>
-              <td style="padding: 10px; text-align: right; border-bottom: 1px solid var(--border-light);">${totalK}</td>
-              <td style="padding: 10px; text-align: right; border-bottom: 1px solid var(--border-light);">${cumulK}</td>
-            </tr>
-          `;
-        }).join('');
-
-        document.getElementById('cbco-content').innerHTML = `
-          <p style="margin-bottom: 10px;"><strong>Tableau CBCO ${latestYear}</strong></p>
-          <div style="overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse; min-width: 700px;">
-              <thead>
-                <tr style="background: #f5f5f5;">
-                  <th style="padding: 10px; text-align: left; border-bottom: 2px solid var(--accent);">Année</th>
-                  <th style="padding: 10px; text-align: left; border-bottom: 2px solid var(--accent);">Mois</th>
-                  <th style="padding: 10px; text-align: right; border-bottom: 2px solid var(--accent);">Chantier estiméen cours (K€)</th>
-                  <th style="padding: 10px; text-align: right; border-bottom: 2px solid var(--accent);">Chantier estimé terminé (K€)</th>
-                  <th style="padding: 10px; text-align: right; border-bottom: 2px solid var(--accent);">Total mensuel (K€)</th>
-                  <th style="padding: 10px; text-align: right; border-bottom: 2px solid var(--accent);">Cumul annuel (K€)</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${tableRows}
-              </tbody>
-            </table>
-          </div>
-        `;
-      }
+      renderCBCOHomeChart();
 
       // Les indicateurs sont visibles par tous sur l'accueil,
       // mais le détail reste protégé par permissions sur les pages dédiées.
@@ -187,6 +163,127 @@
         cbcoDetailBtn.textContent = 'Détail non autorisé';
         cbcoDetailBtn.title = 'Votre rôle ne permet pas l\'accès au détail CBCO';
       }
+    }
+
+    /**
+     * Génère le graphique CBCO pour la page d'accueil
+     * Affiche les 3 dernières années par défaut
+     */
+    let cbcoHomeChart;
+    function renderCBCOHomeChart() {
+      const MONTH_NAMES = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                            'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+      
+      const byYear = getCBCOByYear();
+      const allYears = Object.keys(byYear).sort((a, b) => a - b);
+      
+      // Prendre seulement les 3 dernières années
+      const years = allYears.slice(-3);
+      
+      if (years.length === 0) {
+        const canvas = document.getElementById('cbcoHomeChart');
+        if (canvas) {
+          const ctx = canvas.getContext('2d');
+          ctx.font = '16px Arial';
+          ctx.fillStyle = '#666';
+          ctx.textAlign = 'center';
+          ctx.fillText('Aucune donnée disponible', canvas.width / 2, canvas.height / 2);
+        }
+        return;
+      }
+
+      // Préparer les datasets pour chaque année
+      const datasets = [];
+      const colors = [
+        { border: '#3498db' },
+        { border: '#2ecc71' },
+        { border: '#e74c3c' },
+        { border: '#f39c12' },
+        { border: '#9b59b6' },
+        { border: '#1abc9c' },
+        { border: '#e67e22' },
+        { border: '#34495e' },
+        { border: '#c0392b' },
+        { border: '#16a085' },
+      ];
+
+      years.forEach((year, idx) => {
+        const entries = byYear[year].sort((a, b) => a.month - b.month);
+
+        // Aligner chaque cumul sur son vrai mois (1..12)
+        const cumulByMonth = {};
+        entries.forEach(e => {
+          cumulByMonth[e.month] = e.cumulAnnuel;
+        });
+
+        const cumulValues = Array.from({ length: 12 }, (_, i) => {
+          const month = i + 1;
+          return Object.prototype.hasOwnProperty.call(cumulByMonth, month)
+            ? cumulByMonth[month]
+            : null;
+        });
+
+        const color = colors[idx % colors.length];
+        datasets.push({
+          label: `Année ${year}`,
+          data: cumulValues,
+          borderColor: color.border,
+          backgroundColor: color.border,
+          tension: 0,
+          fill: false,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          spanGaps: false
+        });
+      });
+
+      // Créer le graphique
+      const ctx = document.getElementById('cbcoHomeChart').getContext('2d');
+      if (cbcoHomeChart) cbcoHomeChart.destroy();
+
+      const labels = Array.from({ length: 12 }, (_, i) => MONTH_NAMES[i + 1]);
+
+      const formatCBCOCurrency = (value) => {
+        return new Intl.NumberFormat('fr-FR', { 
+          minimumFractionDigits: 0, 
+          maximumFractionDigits: 0 
+        }).format(value) + ' K€';
+      };
+
+      cbcoHomeChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top'
+            },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const v = ctx.parsed?.y;
+                  return `Cumul annuel : ${formatCBCOCurrency(v)}`;
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: (value) => formatCBCOCurrency(value)
+              }
+            }
+          }
+        }
+      });
     }
 
     /**
