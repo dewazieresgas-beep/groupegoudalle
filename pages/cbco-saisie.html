@@ -275,8 +275,8 @@
     function formatCurrency(value) {
       const kValue = toKiloeuro(value);
       return new Intl.NumberFormat('fr-FR', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
       }).format(kValue) + ' K€';
     }
 
@@ -400,8 +400,8 @@
               inputmode="decimal"
               data-month="${row.month}"
               data-field="montantChantiersCours"
-              value="${row.montantChantiersCours ? row.montantChantiersCours.toFixed(2) : ''}"
-              placeholder="0.00"
+              value="${row.montantChantiersCours ? (row.montantChantiersCours % 1 === 0 ? row.montantChantiersCours.toFixed(0) : row.montantChantiersCours.toFixed(2)) : ''}"
+              placeholder="0"
             >
           </td>
           <td>
@@ -411,12 +411,12 @@
               inputmode="decimal"
               data-month="${row.month}"
               data-field="montantChantiersTermines"
-              value="${row.montantChantiersTermines ? row.montantChantiersTermines.toFixed(2) : ''}"
-              placeholder="0.00"
+              value="${row.montantChantiersTermines ? (row.montantChantiersTermines % 1 === 0 ? row.montantChantiersTermines.toFixed(0) : row.montantChantiersTermines.toFixed(2)) : ''}"
+              placeholder="0"
             >
           </td>
-          <td id="sheetTotal-${row.month}" class="sheet-cell-total">0,00 EUR</td>
-          <td id="sheetCumul-${row.month}" class="sheet-cell-cumul">0,00 EUR</td>
+          <td id="sheetTotal-${row.month}" class="sheet-cell-total">0 K€</td>
+          <td id="sheetCumul-${row.month}" class="sheet-cell-cumul">0 K€</td>
           <td>
             <button class="btn btn-small btn-secondary" type="button" onclick="resetRow(${row.month})">Reset ligne</button>
           </td>

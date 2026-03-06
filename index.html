@@ -129,25 +129,30 @@
         const monthNames = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
                             'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
         
+        // Formater les valeurs en K€ (convertir EUR en K€)
+        const ceK = new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 0, maximumFractionDigits: 0}).format(lastEntry.montantChantiersCours / 1000);
+        const ctK = new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 0, maximumFractionDigits: 0}).format(lastEntry.montantChantiersTermines / 1000);
+        const cumulK = new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 0, maximumFractionDigits: 0}).format(lastEntry.cumulAnnuel / 1000);
+        
         document.getElementById('cbco-content').innerHTML = `
-          <div class="kpi-grid kpi-grid-home">
-            <div class="kpi-box">
-              <div class="kpi-label">Période</div>
-              <div class="kpi-value">${monthNames[lastEntry.month]} ${lastEntry.year}</div>
-            </div>
-            <div class="kpi-box">
-              <div class="kpi-label">CE (EUR)</div>
-              <div class="kpi-value">${new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 0}).format(lastEntry.montantChantiersCours)}</div>
-            </div>
-            <div class="kpi-box">
-              <div class="kpi-label">CT (EUR)</div>
-              <div class="kpi-value">${new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 0}).format(lastEntry.montantChantiersTermines)}</div>
-            </div>
-            <div class="kpi-box" style="background: linear-gradient(135deg, var(--accent-light), var(--accent));">
-              <div class="kpi-label">Cumul annuel (EUR)</div>
-              <div class="kpi-value">${new Intl.NumberFormat('fr-FR', {minimumFractionDigits: 0}).format(lastEntry.cumulAnnuel)}</div>
-            </div>
-          </div>
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="background: #f5f5f5;">
+                <th style="padding: 10px; text-align: left; border-bottom: 2px solid var(--accent);">Période</th>
+                <th style="padding: 10px; text-align: right; border-bottom: 2px solid var(--accent);">CE (K€)</th>
+                <th style="padding: 10px; text-align: right; border-bottom: 2px solid var(--accent);">CT (K€)</th>
+                <th style="padding: 10px; text-align: right; border-bottom: 2px solid var(--accent);">Cumul annuel (K€)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding: 10px; border-bottom: 1px solid var(--border-light);">${monthNames[lastEntry.month]} ${lastEntry.year}</td>
+                <td style="padding: 10px; text-align: right; border-bottom: 1px solid var(--border-light);">${ceK}</td>
+                <td style="padding: 10px; text-align: right; border-bottom: 1px solid var(--border-light);">${ctK}</td>
+                <td style="padding: 10px; text-align: right; border-bottom: 1px solid var(--border-light);">${cumulK}</td>
+              </tr>
+            </tbody>
+          </table>
         `;
       }
 

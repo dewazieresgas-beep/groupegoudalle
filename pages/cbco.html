@@ -44,19 +44,19 @@
             </div>
             <div class="cbco-stat-box">
               <div class="cbco-stat-label">Montant estimé CE</div>
-              <div class="cbco-stat-value" id="currentMontantCours">0 €</div>
+              <div class="cbco-stat-value" id="currentMontantCours">0 K€</div>
             </div>
             <div class="cbco-stat-box">
               <div class="cbco-stat-label">Montant estimé CT</div>
-              <div class="cbco-stat-value" id="currentMontantTermines">0 €</div>
+              <div class="cbco-stat-value" id="currentMontantTermines">0 K€</div>
             </div>
             <div class="cbco-stat-box">
               <div class="cbco-stat-label">Montant total mensuel</div>
-              <div class="cbco-stat-value" id="currentMontantTotal">0 €</div>
+              <div class="cbco-stat-value" id="currentMontantTotal">0 K€</div>
             </div>
             <div class="cbco-stat-box highlight">
               <div class="cbco-stat-label">Cumul annuel</div>
-              <div class="cbco-stat-value" id="currentCumulAnnuel">0 €</div>
+              <div class="cbco-stat-value" id="currentCumulAnnuel">0 K€</div>
             </div>
           </div>
         </div>
@@ -90,10 +90,10 @@
               <tr>
                 <th>Année</th>
                 <th>Mois</th>
-                <th>Montant CE (€)</th>
-                <th>Montant CT (€)</th>
-                <th>Total mensuel (€)</th>
-                <th>Cumul annuel (€)</th>
+                <th>Montant CE (K€)</th>
+                <th>Montant CT (K€)</th>
+                <th>Total mensuel (K€)</th>
+                <th>Cumul annuel (K€)</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -143,15 +143,16 @@
     }
 
     /**
-     * Formate un nombre en devise
-     * @param {number} value - Valeur à formater
-     * @returns {string} - "1 234,56 €"
+     * Formate un nombre en devise K€
+     * @param {number} value - Valeur en EUR à formater
+     * @returns {string} - "1 234 K€"
      */
     function formatCBCOCurrency(value) {
+      const kValue = value / 1000;
       return new Intl.NumberFormat('fr-FR', { 
-        minimumFractionDigits: 2, 
-        maximumFractionDigits: 2 
-      }).format(value) + ' €';
+        minimumFractionDigits: 0, 
+        maximumFractionDigits: 0 
+      }).format(kValue) + ' K€';
     }
 
     /**
@@ -193,10 +194,10 @@
       
       if (data.length === 0) {
         document.getElementById('currentMonthYear').textContent = '—';
-        document.getElementById('currentMontantCours').textContent = '0 €';
-        document.getElementById('currentMontantTermines').textContent = '0 €';
-        document.getElementById('currentMontantTotal').textContent = '0 €';
-        document.getElementById('currentCumulAnnuel').textContent = '0 €';
+        document.getElementById('currentMontantCours').textContent = '0 K€';
+        document.getElementById('currentMontantTermines').textContent = '0 K€';
+        document.getElementById('currentMontantTotal').textContent = '0 K€';
+        document.getElementById('currentCumulAnnuel').textContent = '0 K€';
         return;
       }
 
