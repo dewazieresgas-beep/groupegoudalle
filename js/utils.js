@@ -710,7 +710,7 @@ function injectCBCOSecondaryBar() {
   // Saisies - référents CBCO et direction
   if (canEdit) {
     const saisieActive = currentPage === 'cbco-saisie.html' ? ' active' : '';
-    secondaryItems += `<a href="${base}pages/cbco-saisie.html" class="sidebar-item${saisieActive}">✏️ Saisies données</a>`;
+    secondaryItems += `<a href="${base}pages/cbco-saisie.html" class="sidebar-item${saisieActive}">✏️ Saisie chiffre d'affaires</a>`;
     const commercialActive = currentPage === 'cbco-commercial.html' ? ' active' : '';
     secondaryItems += `<a href="${base}pages/cbco-commercial.html" class="sidebar-item${commercialActive}">💼 Saisie indicateurs commercial</a>`;
   }
