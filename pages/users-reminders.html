@@ -34,8 +34,8 @@
 
           <div class="alert alert-warning" style="margin-bottom: 20px;">
             <strong>ℹ️ Fonctionnement :</strong><br>
-            • <strong>GM (hebdomadaire)</strong> : 1er rappel le jour de la date butoir + relance le lundi suivant si non saisi<br>
-            • <strong>CBCO (mensuel)</strong> : 1er rappel le jour de la date butoir + relance 2 jours après si non saisi<br>
+            • <strong>Indicateur hebdomadaire</strong> : 1er rappel le <strong>lundi</strong> de la semaine suivante + relance le <strong>mercredi</strong> si non saisi<br>
+            • <strong>Indicateur mensuel</strong> : 1er rappel le <strong>1er</strong> du mois suivant + relance le <strong>3</strong> si non saisi<br>
             • Chaque email contient un <strong>lien cliquable</strong> vers la page de saisie<br><br>
             <strong>⚙️ Configuration requise :</strong> Ce système utilise <a href="https://www.emailjs.com/" target="_blank" rel="noopener">EmailJS</a> (gratuit jusqu'à 200 emails/mois).<br>
             1. Créez un compte sur emailjs.com<br>
@@ -53,27 +53,9 @@
               </label>
             </div>
 
-            <!-- Dates butoir -->
-            <h3 style="margin: 25px 0 15px; font-size: 16px; color: var(--primary);">📅 Dates butoir</h3>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-              <div class="form-group">
-                <label for="gmDeadlineDay">Indicateur GM – Jour de la semaine</label>
-                <select id="gmDeadlineDay">
-                  <option value="1">Lundi</option>
-                  <option value="2">Mardi</option>
-                  <option value="3">Mercredi</option>
-                  <option value="4">Jeudi</option>
-                  <option value="5">Vendredi</option>
-                  <option value="6">Samedi</option>
-                  <option value="0">Dimanche</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="cbcoDeadlineDay">CBCO – Jour du mois</label>
-                <input type="number" id="cbcoDeadlineDay" min="1" max="28" value="5">
-                <small style="color: #7f8c8d;">Date limite pour saisir les données du mois précédent</small>
-              </div>
-            </div>
+            <!-- Récurrence par indicateur -->
+            <h3 style="margin: 25px 0 15px; font-size: 16px; color: var(--primary);">📅 Récurrence par indicateur</h3>
+            <div id="indicatorRecurrenceList"></div>
 
             <!-- Lien du site -->
             <h3 style="margin: 25px 0 15px; font-size: 16px; color: var(--primary);">🔗 Lien du site</h3>
@@ -83,6 +65,7 @@
               <small style="color: #7f8c8d;">Utilisé pour générer les liens cliquables dans les emails</small>
             </div>
 
+            <!-- EmailJS -->
             <h3 style="margin: 25px 0 15px; font-size: 16px; color: var(--primary);">🔑 Configuration EmailJS</h3>
             <div class="form-group">
               <label for="emailjsPublicKey">Public Key</label>
@@ -123,30 +106,59 @@
       div.textContent = message;
       div.className = `alert alert-${type}`;
       div.style.display = 'block';
-      setTimeout(() => { div.style.display = 'none'; }, 5000);
+      if (type === 'success') {
+        setTimeout(() => { div.style.display = 'none'; }, 5000);
+      }
+    }
+
+    function renderRecurrenceSelectors(indicators) {
+      const container = document.getElementById('indicatorRecurrenceList');
+      let html = '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">';
+
+      for (const [indId, indDef] of Object.entries(Reminders.INDICATORS)) {
+        const current = (indicators[indId] || {}).recurrence || 'hebdomadaire';
+        html += `
+          <div class="form-group">
+            <label for="recurrence_${indId}">${indDef.label}</label>
+            <select id="recurrence_${indId}">
+              <option value="hebdomadaire" ${current === 'hebdomadaire' ? 'selected' : ''}>📅 Hebdomadaire (rappel lundi + relance mercredi)</option>
+              <option value="mensuel" ${current === 'mensuel' ? 'selected' : ''}>📆 Mensuel (rappel le 1er + relance le 3)</option>
+            </select>
+          </div>
+        `;
+      }
+
+      html += '</div>';
+      container.innerHTML = html;
     }
 
     function loadReminderConfig() {
       const config = Reminders.getConfig();
       document.getElementById('reminderEnabled').checked = config.enabled;
-      document.getElementById('gmDeadlineDay').value = config.gmDeadlineDay;
-      document.getElementById('cbcoDeadlineDay').value = config.cbcoDeadlineDay;
       document.getElementById('siteUrl').value = config.siteUrl;
       document.getElementById('emailjsServiceId').value = config.emailjsServiceId;
       document.getElementById('emailjsTemplateId').value = config.emailjsTemplateId;
       document.getElementById('emailjsPublicKey').value = config.emailjsPublicKey;
+      renderRecurrenceSelectors(config.indicators);
     }
 
     function handleSaveReminders(event) {
       event.preventDefault();
+
+      // Collecter les récurrences
+      const indicators = {};
+      for (const indId of Object.keys(Reminders.INDICATORS)) {
+        const sel = document.getElementById(`recurrence_${indId}`);
+        indicators[indId] = { recurrence: sel ? sel.value : 'hebdomadaire' };
+      }
+
       const config = {
         enabled: document.getElementById('reminderEnabled').checked,
-        gmDeadlineDay: parseInt(document.getElementById('gmDeadlineDay').value),
-        cbcoDeadlineDay: parseInt(document.getElementById('cbcoDeadlineDay').value),
         siteUrl: document.getElementById('siteUrl').value.trim(),
         emailjsServiceId: document.getElementById('emailjsServiceId').value.trim(),
         emailjsTemplateId: document.getElementById('emailjsTemplateId').value.trim(),
-        emailjsPublicKey: document.getElementById('emailjsPublicKey').value.trim()
+        emailjsPublicKey: document.getElementById('emailjsPublicKey').value.trim(),
+        indicators
       };
 
       if (config.enabled && (!config.emailjsServiceId || !config.emailjsTemplateId || !config.emailjsPublicKey)) {
@@ -155,7 +167,12 @@
       }
 
       Reminders.saveConfig(config);
-      Auth.audit('REMINDERS_CONFIG', `Rappels ${config.enabled ? 'activés' : 'désactivés'} – GM: ${Reminders.JOURS_FR[config.gmDeadlineDay]}, CBCO: ${config.cbcoDeadlineDay} du mois`);
+
+      const recDetails = Object.entries(indicators).map(([id, c]) => {
+        const label = Reminders.INDICATORS[id] ? Reminders.INDICATORS[id].label : id;
+        return `${label}: ${c.recurrence}`;
+      }).join(', ');
+      Auth.audit('REMINDERS_CONFIG', `Rappels ${config.enabled ? 'activés' : 'désactivés'} – ${recDetails}`);
       showReminderMessage('✅ Configuration des rappels enregistrée', 'success');
     }
 
@@ -174,32 +191,29 @@
     function refreshReminderStatus() {
       const status = Reminders.getReminderStatus();
       const div = document.getElementById('reminderStatus');
-      const week = getCurrentWeek();
-      const year = getCurrentYear();
-      const today = new Date();
-      const prevMonth = today.getMonth() === 0 ? 12 : today.getMonth();
-      const prevYear = today.getMonth() === 0 ? year - 1 : year;
 
-      div.innerHTML = `
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-          <div style="padding: 15px; border-radius: 8px; background: ${status.gm.missing > 0 ? 'rgba(231, 76, 60, 0.1)' : 'rgba(39, 174, 96, 0.1)'}; border-left: 4px solid ${status.gm.missing > 0 ? '#e74c3c' : '#27ae60'};">
-            <strong>GM – S${String(week).padStart(2, '0')}/${year}</strong><br>
+      let html = '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">';
+
+      for (const [indId, st] of Object.entries(status)) {
+        const hasMissing = st.missing > 0;
+        const bg = hasMissing ? 'rgba(231, 76, 60, 0.1)' : 'rgba(39, 174, 96, 0.1)';
+        const border = hasMissing ? '#e74c3c' : '#27ae60';
+        const recLabel = st.recurrence === 'hebdomadaire' ? '(hebdo)' : '(mensuel)';
+
+        html += `
+          <div style="padding: 15px; border-radius: 8px; background: ${bg}; border-left: 4px solid ${border};">
+            <strong>${st.label} ${recLabel} – ${st.periodLabel}</strong><br>
             <span style="font-size: 14px; color: #555;">
-              ${status.gm.missing > 0
-                ? `⚠️ Pas de saisie – ${status.gm.users.join(', ')}`
+              ${hasMissing
+                ? `⚠️ Pas de saisie – ${st.users.join(', ')}`
                 : '✅ Données saisies'}
             </span>
           </div>
-          <div style="padding: 15px; border-radius: 8px; background: ${status.cbco.missing > 0 ? 'rgba(231, 76, 60, 0.1)' : 'rgba(39, 174, 96, 0.1)'}; border-left: 4px solid ${status.cbco.missing > 0 ? '#e74c3c' : '#27ae60'};">
-            <strong>CBCO – ${Reminders.MOIS_FR[prevMonth]} ${prevYear}</strong><br>
-            <span style="font-size: 14px; color: #555;">
-              ${status.cbco.missing > 0
-                ? `⚠️ Pas de saisie – ${status.cbco.users.join(', ')}`
-                : '✅ Données saisies'}
-            </span>
-          </div>
-        </div>
-      `;
+        `;
+      }
+
+      html += '</div>';
+      div.innerHTML = html;
     }
 
     function init() {

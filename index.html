@@ -427,6 +427,11 @@
 
       const labels = Array.from({ length: 12 }, (_, i) => MONTH_NAMES[i + 1]);
 
+      // Trouver le dernier mois avec données dans l'année la plus récente
+      const latestYear = years[years.length - 1];
+      const latestEntries = byYear[latestYear].sort((a, b) => a.month - b.month);
+      const lastMonthIndex = latestEntries.length > 0 ? latestEntries[latestEntries.length - 1].month - 1 : -1;
+
       const formatCBCOCurrency = (value) => {
         return new Intl.NumberFormat('fr-FR', { 
           minimumFractionDigits: 0, 
@@ -459,6 +464,12 @@
             }
           },
           scales: {
+            x: {
+              ticks: {
+                color: (context) => context.index === lastMonthIndex ? '#e74c3c' : undefined,
+                font: (context) => context.index === lastMonthIndex ? { weight: 'bold', size: 13 } : {}
+              }
+            },
             y: {
               beginAtZero: true,
               ticks: {
