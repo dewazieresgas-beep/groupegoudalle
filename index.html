@@ -169,39 +169,42 @@
           const targetX = lastPoint.x;
           const targetY = lastPoint.y;
 
-          const startX = Math.min(chartArea.right - 10, targetX + 80);
-          const startY = Math.max(chartArea.top + 14, targetY - 70);
+          // Flèche type mockup: segment horizontal puis diagonale vers le dernier point
+          const arrowY = Math.max(16, chartArea.top - 58);
+          const startX = Math.max(12, chartArea.left + 6);
+          const elbowX = Math.max(startX + 140, targetX - 110);
+          const endX = targetX + 2;
+          const endY = targetY - 2;
 
           canvasCtx.save();
           canvasCtx.strokeStyle = '#111111';
           canvasCtx.fillStyle = '#111111';
-          canvasCtx.lineWidth = 2.5;
+          canvasCtx.lineWidth = 4;
+          canvasCtx.lineCap = 'round';
+          canvasCtx.lineJoin = 'round';
 
-          // Ligne principale de la flèche
+          // Segment horizontal + segment diagonal
           canvasCtx.beginPath();
-          canvasCtx.moveTo(startX, startY);
-          canvasCtx.lineTo(targetX + 3, targetY - 4);
+          canvasCtx.moveTo(startX, arrowY);
+          canvasCtx.lineTo(elbowX, arrowY);
+          canvasCtx.lineTo(endX, endY);
           canvasCtx.stroke();
 
           // Pointe de la flèche
-          const angle = Math.atan2((targetY - 4) - startY, (targetX + 3) - startX);
-          const headLen = 10;
+          const angle = Math.atan2(endY - arrowY, endX - elbowX);
+          const headLen = 14;
           canvasCtx.beginPath();
-          canvasCtx.moveTo(targetX + 3, targetY - 4);
+          canvasCtx.moveTo(endX, endY);
           canvasCtx.lineTo(
-            targetX + 3 - headLen * Math.cos(angle - Math.PI / 6),
-            targetY - 4 - headLen * Math.sin(angle - Math.PI / 6)
+            endX - headLen * Math.cos(angle - Math.PI / 6),
+            endY - headLen * Math.sin(angle - Math.PI / 6)
           );
           canvasCtx.lineTo(
-            targetX + 3 - headLen * Math.cos(angle + Math.PI / 6),
-            targetY - 4 - headLen * Math.sin(angle + Math.PI / 6)
+            endX - headLen * Math.cos(angle + Math.PI / 6),
+            endY - headLen * Math.sin(angle + Math.PI / 6)
           );
           canvasCtx.closePath();
           canvasCtx.fill();
-
-          // Libellé court
-          canvasCtx.font = '600 12px Arial';
-          canvasCtx.fillText('Derniere semaine', startX - 105, startY - 6);
           canvasCtx.restore();
         }
       };
