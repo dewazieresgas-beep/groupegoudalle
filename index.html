@@ -168,10 +168,12 @@
           const targetX = lastPoint.x;
           const targetY = lastPoint.y;
 
-          // Flèche type mockup: segment horizontal puis diagonale vers le dernier point
-          const arrowY = Math.max(12, chartArea.top - 30);
-          const startX = chartArea.left + (chartArea.width * 0.34);
-          const elbowX = chartArea.left + (chartArea.width * 0.76);
+          // Flèche = soulignement du KPI puis diagonale vers le dernier point
+          const canvas = chartInstance.canvas;
+          const arrowY = 4;
+          const centerX = canvas.width / 2;
+          const startX = centerX - 120;
+          const elbowX = centerX + 120;
           const endX = targetX + 2;
           const endY = targetY - 2;
 
@@ -239,11 +241,13 @@
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          layout: {
+            padding: { top: 14 }
+          },
           interaction: { mode: 'index', intersect: false },
           plugins: {
             legend: {
-              display: true,
-              position: 'top'
+              display: false
             },
             tooltip: {
               callbacks: {
