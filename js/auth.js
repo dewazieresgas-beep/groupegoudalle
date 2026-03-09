@@ -15,7 +15,7 @@ const Auth = {
   ROLES: {
     DIRECTION: 'direction',  // Accès complet : gestion + administration + audit
     REFERENT: 'referent',    // Accès intermédiaire : gestion + saisie
-    REFERENT_CBCO: 'referent_cbco',  // Référent CBCO : gestion commerciale
+    REFERENT_CBCO: 'referent_cbco',  // Référent CBCO : suivi chiffre d'affaires
     LECTURE: 'lecture'       // Accès minimal : consultation uniquement
   },
 
@@ -132,7 +132,7 @@ const Auth = {
         createdBy: 'acgoudalle',
         isActive: true
       },
-      // Compte référent CBCO - Gestion commerciale CBCO
+      // Compte référent CBCO - Suivi chiffre d'affaires CBCO
       'mathieu': {
         username: 'mathieu',
         password: '123',

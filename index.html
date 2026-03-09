@@ -139,6 +139,21 @@
         </div>
       </div>
 
+      <!-- TAUX DE RÉUSSITE COMMERCIAL -->
+      <div class="card" style="margin-bottom: 20px;">
+        <div class="card-title">
+          <h2>💼 Taux de réussite commercial CBCO – Mois dernier</h2>
+        </div>
+        <div class="card-body">
+          <div style="display: flex; align-items: center; gap: 30px; flex-wrap: wrap;">
+            <div style="position: relative; width: 180px; height: 180px; flex-shrink: 0;">
+              <canvas id="commercialTauxChart"></canvas>
+            </div>
+            <div id="commercialTauxDetails" style="flex: 1; min-width: 200px;"></div>
+          </div>
+        </div>
+      </div>
+
     </main>
   </div>
 
@@ -336,6 +351,9 @@
       // ===== SECTION CBCO =====
       renderCBCOHomeChart();
 
+      // ===== TAUX DE RÉUSSITE COMMERCIAL =====
+      renderCommercialTauxChart();
+
       // ===== RAPPELS AUTOMATIQUES (direction uniquement) =====
       if (Auth.isDirection()) {
         Reminders.checkAndSendReminders().then(results => {
@@ -500,6 +518,121 @@
      */
     function goToAdmin() {
       window.location.href = './pages/gm-admin.html';
+    }
+
+    /**
+     * Affiche le graphique taux de réussite commercial CBCO du mois dernier
+     */
+    let commercialTauxChart;
+    function renderCommercialTauxChart() {
+      const MOIS = ['', 'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+                     'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+
+      const today = new Date();
+      const prevMonth = today.getMonth() === 0 ? 12 : today.getMonth();
+      const prevYear = today.getMonth() === 0 ? today.getFullYear() - 1 : today.getFullYear();
+
+      const stats = getCBCOCommercialTauxReussite(prevMonth, prevYear);
+      const periodLabel = `${MOIS[prevMonth]} ${prevYear}`;
+
+      const detailsDiv = document.getElementById('commercialTauxDetails');
+      const ctx = document.getElementById('commercialTauxChart').getContext('2d');
+
+      if (stats.total === 0) {
+        detailsDiv.innerHTML = `
+          <div style="color: #999; font-size: 15px;">
+            <strong>Période : ${periodLabel}</strong><br><br>
+            Aucune affaire saisie sur cette période.
+          </div>
+        `;
+        // Graphique vide
+        if (commercialTauxChart) commercialTauxChart.destroy();
+        commercialTauxChart = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: ['Aucune donnée'],
+            datasets: [{ data: [1], backgroundColor: ['#e0e0e0'], borderWidth: 0 }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            cutout: '70%',
+            plugins: {
+              legend: { display: false },
+              tooltip: { enabled: false }
+            }
+          }
+        });
+        return;
+      }
+
+      const taux = stats.taux !== null ? stats.taux.toFixed(0) : '—';
+      const tauxColor = stats.taux === null ? '#999' : (stats.taux >= 50 ? '#27ae60' : '#e74c3c');
+
+      detailsDiv.innerHTML = `
+        <div style="font-size: 15px; line-height: 1.8;">
+          <strong>Période : ${periodLabel}</strong><br>
+          <span style="color: #27ae60;">✅ Gagnées : <strong>${stats.gagnees}</strong></span><br>
+          <span style="color: #e74c3c;">❌ Perdues : <strong>${stats.perdues}</strong></span><br>
+          <span style="color: #f39c12;">⏳ En cours : <strong>${stats.enCours}</strong></span><br>
+          <span>📊 Total affaires : <strong>${stats.total}</strong></span><br><br>
+          <span style="font-size: 22px; font-weight: 700; color: ${tauxColor};">
+            Taux de réussite : ${taux}${stats.taux !== null ? ' %' : ''}
+          </span>
+        </div>
+      `;
+
+      // Doughnut chart
+      const gagnees = stats.gagnees;
+      const perdues = stats.perdues;
+      const cloturees = gagnees + perdues;
+
+      if (commercialTauxChart) commercialTauxChart.destroy();
+
+      if (cloturees === 0) {
+        commercialTauxChart = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: ['En cours'],
+            datasets: [{ data: [stats.enCours], backgroundColor: ['#f39c12'], borderWidth: 0 }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            cutout: '70%',
+            plugins: {
+              legend: { display: false },
+              tooltip: { enabled: false }
+            }
+          }
+        });
+      } else {
+        commercialTauxChart = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: ['Gagnées', 'Perdues'],
+            datasets: [{
+              data: [gagnees, perdues],
+              backgroundColor: ['#27ae60', '#e74c3c'],
+              borderWidth: 2,
+              borderColor: '#fff'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            cutout: '70%',
+            plugins: {
+              legend: { display: true, position: 'bottom' },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => `${ctx.label} : ${ctx.parsed}`
+                }
+              }
+            }
+          }
+        });
+      }
     }
 
     // ===== INITIALISATION =====

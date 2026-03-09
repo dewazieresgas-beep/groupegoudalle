@@ -26,7 +26,7 @@ const Reminders = {
     },
     cbco: {
       id: 'cbco',
-      label: 'CBCO',
+      label: 'CBCO (Chiffre d\'Affaires)',
       referentRole: 'referent_cbco',
       saisiePage: 'cbco-saisie.html'
     }

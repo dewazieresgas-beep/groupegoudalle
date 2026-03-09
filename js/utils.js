@@ -510,9 +510,9 @@ function injectGMSecondaryBar() {
   }
 }
 
-// ============ CBCO COMMERCIAL DATA ============
+// ============ CBCO CHIFFRE D'AFFAIRES DATA ============
 /**
- * Récupère tous les enregistrements commerciaux CBCO du localStorage
+ * Récupère tous les enregistrements CBCO (chiffre d'affaires) du localStorage
  * @returns {Array} - Liste des enregistrements CBCO
  */
 function getCBCOData() {
@@ -542,7 +542,7 @@ function compareByYearMonthDesc(a, b) {
 }
 
 /**
- * Sauvegarde ou met à jour une entrée commerciale CBCO
+ * Sauvegarde ou met à jour une entrée CBCO (chiffre d'affaires)
  * @param {number} year - Année
  * @param {number} month - Mois (1-12)
  * @param {number} montantChantiersCours - Montant chantiers en cours
@@ -619,7 +619,7 @@ function calculateCBCOCumuls(data) {
 }
 
 /**
- * Supprime une entrée commerciale CBCO
+ * Supprime une entrée CBCO (chiffre d'affaires)
  * @param {number} year - Année
  * @param {number} month - Mois
  * @returns {Object} - { success, message }
@@ -711,6 +711,8 @@ function injectCBCOSecondaryBar() {
   if (canEdit) {
     const saisieActive = currentPage === 'cbco-saisie.html' ? ' active' : '';
     secondaryItems += `<a href="${base}pages/cbco-saisie.html" class="sidebar-item${saisieActive}">✏️ Saisies données</a>`;
+    const commercialActive = currentPage === 'cbco-commercial.html' ? ' active' : '';
+    secondaryItems += `<a href="${base}pages/cbco-commercial.html" class="sidebar-item${commercialActive}">💼 Saisie indicateurs commercial</a>`;
   }
 
   // Créer et injecter la barre secondaire
@@ -747,7 +749,7 @@ function injectCBCOSecondaryBar() {
  */
 function isCBCOPage() {
   const page = getCurrentPage();
-  return page === 'cbco.html' || page === 'cbco-saisie.html' || page === 'cbco-admin.html';
+  return page === 'cbco.html' || page === 'cbco-saisie.html' || page === 'cbco-admin.html' || page === 'cbco-commercial.html';
 }
 
 function isUsersPage() {
@@ -912,6 +914,86 @@ function restoreSubMenuStates() {
       usersSidebar.classList.add('open');
     }
   }
+}
+
+// ============ CBCO COMMERCIAL (MÉMOIRES TECHNIQUES) ============
+
+const CBCO_COMMERCIAL_KEY = 'goudalle_cbco_commercial';
+
+/**
+ * Récupère toutes les affaires commerciales CBCO
+ * @returns {Array}
+ */
+function getCBCOCommercial() {
+  const data = localStorage.getItem(CBCO_COMMERCIAL_KEY);
+  return data ? JSON.parse(data) : [];
+}
+
+/**
+ * Sauvegarde une nouvelle affaire commerciale
+ * @param {Object} entry - { nomAffaire, montant, dateEnvoi }
+ * @returns {Object} - L'entrée créée
+ */
+function saveCBCOCommercialEntry(entry) {
+  const entries = getCBCOCommercial();
+  const newEntry = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    nomAffaire: entry.nomAffaire,
+    montant: parseFloat(entry.montant) || 0,
+    dateEnvoi: entry.dateEnvoi,
+    resultat: 'en_cours',
+    createdAt: new Date().toISOString()
+  };
+  entries.push(newEntry);
+  localStorage.setItem(CBCO_COMMERCIAL_KEY, JSON.stringify(entries));
+  return newEntry;
+}
+
+/**
+ * Met à jour une affaire commerciale existante
+ * @param {string} id - ID de l'affaire
+ * @param {Object} updates - Champs à mettre à jour
+ * @returns {boolean}
+ */
+function updateCBCOCommercialEntry(id, updates) {
+  const entries = getCBCOCommercial();
+  const index = entries.findIndex(e => e.id === id);
+  if (index === -1) return false;
+  entries[index] = { ...entries[index], ...updates };
+  localStorage.setItem(CBCO_COMMERCIAL_KEY, JSON.stringify(entries));
+  return true;
+}
+
+/**
+ * Supprime une affaire commerciale
+ * @param {string} id - ID de l'affaire
+ * @returns {boolean}
+ */
+function deleteCBCOCommercialEntry(id) {
+  const entries = getCBCOCommercial();
+  const filtered = entries.filter(e => e.id !== id);
+  if (filtered.length === entries.length) return false;
+  localStorage.setItem(CBCO_COMMERCIAL_KEY, JSON.stringify(filtered));
+  return true;
+}
+
+/**
+ * Calcule le taux de réussite pour un mois/année donnés
+ * @param {number} month - Mois (1-12)
+ * @param {number} year - Année
+ * @returns {Object} - { taux, gagnees, perdues, enCours, total }
+ */
+function getCBCOCommercialTauxReussite(month, year) {
+  const entries = getCBCOCommercial().filter(e => {
+    const d = new Date(e.dateEnvoi);
+    return d.getMonth() + 1 === month && d.getFullYear() === year;
+  });
+  const gagnees = entries.filter(e => e.resultat === 'gagne').length;
+  const perdues = entries.filter(e => e.resultat === 'perdu').length;
+  const enCours = entries.filter(e => e.resultat === 'en_cours').length;
+  const cloturees = gagnees + perdues;
+  const taux = cloturees > 0 ? (gagnees / cloturees) * 100 : null;
+  return { taux, gagnees, perdues, enCours, total: entries.length };
 }
 
 // ============ SECURITY ============
