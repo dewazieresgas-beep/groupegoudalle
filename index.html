@@ -153,7 +153,7 @@
     }
 
     /**
-     * Dessine la flèche SVG de soulignement KPI vers le dernier point du graphique
+     * Dessine la flèche SVG de soulignement indicateur vers le dernier point du graphique
      */
     function drawGMArrowSVG() {
       if (!gmTrendChart) return;
@@ -216,7 +216,7 @@
 
     /**
      * Dessine le graphique de tendance avec Chart.js
-     * @param {Array} published - Liste des KPI publiés
+     * @param {Array} published - Liste des indicateurs publiés
      * @param {number} weeksBack - Nombre de semaines à afficher
      */
     function drawGMTrendChart(published, weeksBack) {
@@ -299,14 +299,14 @@
     /**
      * Initialise la page d'accueil
      * - Charge la sidebar
-     * - Affiche les données du dernier KPI publié
+     * - Affiche les données du dernier indicateur publié
      * - Affiche le card admin si utilisateur = direction
      */
     function initHome() {
       // Injecter la sidebar dans le DOM
       document.getElementById('sidebar').innerHTML = getSidebar();
 
-      // Récupérer le dernier KPI publié
+      // Récupérer le dernier indicateur publié
       const lastWeek = getLastPublishedWeek();
       if (!lastWeek) {
         document.getElementById('gm-content').innerHTML = '<p>📊 Aucune donnée publiée encore</p>';
@@ -320,7 +320,7 @@
         // Retirer le commentaire sur la carte d'accueil GM
         document.getElementById('gm-content').innerHTML = '';
 
-        // Mettre à jour le KPI compact dans l'en-tête du graphique
+        // Mettre à jour l'indicateur compact dans l'en-tête du graphique
         document.getElementById('gmInlineRatio').textContent = ratio !== null ? `${ratio.toFixed(2)} h/m³` : '--';
         document.getElementById('gmInlineSmiley').innerHTML = getSmileyEmoji(smiley);
 

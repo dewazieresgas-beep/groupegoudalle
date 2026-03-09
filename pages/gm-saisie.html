@@ -28,7 +28,7 @@
 
       <div class="card">
         <div class="card-title">
-          <h2>Nouveau KPI</h2>
+          <h2>Nouvel indicateur</h2>
         </div>
         <div class="card-body">
           <div id="message" class="alert" style="display:none;"></div>
@@ -76,7 +76,7 @@
                 <input type="checkbox" id="publish"> ✅ Publier immédiatement
               </label>
               <small style="color: #7f8c8d; display: block; margin-top: 5px;">
-                Si coché, le KPI sera directement publié. Sinon, il restera en brouillon.
+                Si coché, l'indicateur sera directement publié. Sinon, il restera en brouillon.
               </small>
             </div>
 
@@ -116,7 +116,7 @@
 
       <div class="card">
         <div class="card-title">
-          <h2>Mes KPI - Goudalle Maconnerie</h2>
+          <h2>Mes indicateurs - Goudalle Maçonnerie</h2>
         </div>
         <div class="card-body">
           <table id="kpiTable">
@@ -154,7 +154,7 @@
     }
 
     /**
-     * Gestion de la soumission du formulaire de saisie KPI
+     * Gestion de la soumission du formulaire de saisie indicateur
      * @param {Event} event - Événement de soumission
      */
     function handleSaveKPI(event) {
@@ -183,7 +183,7 @@
       const status = publish ? 'published' : 'draft';
       const kpi = saveKPI(year, week, m3, hours, comment, status);
 
-      showMessage(`✅ KPI S${String(week).padStart(2, '0')}/${year} ${status === 'published' ? 'publié' : 'enregistré en brouillon'}`, 'success');
+      showMessage(`✅ Indicateur S${String(week).padStart(2, '0')}/${year} ${status === 'published' ? 'publié' : 'enregistré en brouillon'}`, 'success');
 
       // ===== RÉINITIALISATION DU FORMULAIRE =====
       document.getElementById('year').value = getCurrentYear();
@@ -196,12 +196,12 @@
       // Cacher l'aperçu temps réel
       document.getElementById('realtimePreview').style.display = 'none';
 
-      // Rafraîchir la liste des KPI
+      // Rafraîchir la liste des indicateurs
       loadKPIs();
     }
 
     /**
-     * Charge et affiche la liste de tous les KPI
+     * Charge et affiche la liste de tous les indicateurs
      * Triés du plus récent au plus ancien
      */
     function loadKPIs() {
@@ -237,15 +237,15 @@
         `;
       }).join('');
 
-      // Message si aucun KPI
+      // Message si aucun indicateur
       if (kpis.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 20px;">Aucun KPI créé</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 20px;">Aucun indicateur créé</td></tr>`;
       }
     }
 
     /**
-     * Charge un KPI dans le formulaire pour édition
-     * @param {number} id - ID du KPI à éditer
+     * Charge un indicateur dans le formulaire pour édition
+     * @param {number} id - ID de l'indicateur à éditer
      */
     function editKPI(id) {
       const kpi = getKPIs().find(k => k.id === id);
@@ -266,12 +266,12 @@
     }
 
     /**
-     * Publie un KPI en brouillon après confirmation
-     * @param {number} year - Année du KPI
-     * @param {number} week - Semaine du KPI
+     * Publie un indicateur en brouillon après confirmation
+     * @param {number} year - Année de l'indicateur
+     * @param {number} week - Semaine de l'indicateur
      */
     function handlePublishKPI(year, week) {
-      if (confirm(`Publier le KPI S${String(week).padStart(2, '0')}/${year} ?`)) {
+      if (confirm(`Publier l'indicateur S${String(week).padStart(2, '0')}/${year} ?`)) {
         const result = window.publishKPI(year, week);  // Appel à la fonction utils.js
         showMessage(result.message, result.success ? 'success' : 'error');
         loadKPIs();  // Rafraîchir la liste
@@ -279,12 +279,12 @@
     }
 
     /**
-     * Supprime un KPI après confirmation
-     * @param {number} year - Année du KPI
-     * @param {number} week - Semaine du KPI
+     * Supprime un indicateur après confirmation
+     * @param {number} year - Année de l'indicateur
+     * @param {number} week - Semaine de l'indicateur
      */
     function handleDeleteKPI(year, week) {
-      if (confirm(`Supprimer le KPI S${String(week).padStart(2, '0')}/${year} ? Cette action est irréversible.`)) {
+      if (confirm(`Supprimer l'indicateur S${String(week).padStart(2, '0')}/${year} ? Cette action est irréversible.`)) {
         const result = window.deleteKPI(year, week);  // Appel à la fonction utils.js
         showMessage(result.message, result.success ? 'success' : 'error');
         loadKPIs();  // Rafraîchir la liste
@@ -416,7 +416,7 @@
      * - Injecte la sidebar secondaire GM
      * - Préremplit année et semaine courantes
      * - Charge les seuils de performance
-     * - Charge la liste des KPI
+     * - Charge la liste des indicateurs
      */
     function init() {
       document.getElementById('sidebar').innerHTML = getSidebar();

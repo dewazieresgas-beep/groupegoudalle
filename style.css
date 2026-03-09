@@ -468,7 +468,7 @@ a:hover {
   text-align: right;
 }
 
-/* ============ KPI DISPLAY ============ */
+/* ============ INDICATEURS DISPLAY ============ */
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -644,7 +644,7 @@ a:hover {
   align-items: start;
 }
 
-/* COLONNE 1 : KPI VERTICAUX */
+/* COLONNE 1 : INDICATEURS VERTICAUX */
 .gm-kpi-column {
   display: flex;
   flex-direction: column;
@@ -653,7 +653,7 @@ a:hover {
   justify-content: space-between;
 }
 
-/* KPI Grid - vertical stacking */
+/* Indicateurs Grid - vertical stacking */
 .gm-kpi-grid {
   display: flex;
   flex-direction: column;

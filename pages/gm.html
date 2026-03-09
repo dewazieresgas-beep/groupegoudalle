@@ -33,7 +33,7 @@
 
         <!-- CONTAINER PRINCIPAL 3 COLONNES -->
         <div class="gm-main-container">
-          <!-- COLONNE 1 : KPI VERTICAUX -->
+          <!-- COLONNE 1 : INDICATEURS VERTICAUX -->
           <div class="gm-kpi-column">
             <div class="gm-kpi-card gm-kpi-m3">
               <div class="gm-kpi-label">m³ coulés</div>
@@ -196,7 +196,7 @@
 
     /**
      * Génère le graphique de tendance h/m³ avec Chart.js
-     * @param {Array} published - Liste des KPI publiés (triés du plus récent au plus ancien)
+     * @param {Array} published - Liste des indicateurs publiés (triés du plus récent au plus ancien)
      * @param {number} weeksBack - Nombre de semaines à afficher
      */
     function renderTrendChart(published, weeksBack) {
@@ -298,7 +298,7 @@
     /**
      * Initialise la page Goudalle Maçonnerie
      * - Charge la sidebar
-     * - Affiche le dernier KPI
+     * - Affiche le dernier indicateur
      * - Génère le graphique de tendance
      * - Affiche l'historique des 4 dernières semaines
      */
@@ -313,7 +313,7 @@
         document.body.classList.add('download-mode');
       }
 
-      // Récupérer tous les KPI publiés, triés du plus récent au plus ancien
+      // Récupérer tous les indicateurs publiés, triés du plus récent au plus ancien
       const kpis = getKPIs();
       const published = kpis.filter(k => k.status === 'published').sort(compareByYearWeekDesc);
 
@@ -330,7 +330,7 @@
         });
       }
 
-      // ===== AFFICHAGE DU DERNIER KPI - NOUVEAUX ÉLÉMENTS =====
+      // ===== AFFICHAGE DU DERNIER INDICATEUR - NOUVEAUX ÉLÉMENTS =====
       if (published.length > 0) {
         const last = published[0];  // Le plus récent
         const ratio = calculateRatio(last.hours, last.m3);
@@ -358,7 +358,7 @@
           weekCommentArea.value = last.comment || '';
         }
       } else {
-        // Si pas de KPI, afficher des valeurs par défaut
+        // Si pas d'indicateur, afficher des valeurs par défaut
         document.getElementById('weekNumber').textContent = '—';
         document.getElementById('mainM3').textContent = '0.00';
         document.getElementById('mainHours').textContent = '0';
@@ -490,21 +490,21 @@
 
     /**
      * Sauvegarde le commentaire de la semaine actuelle
-     * Met à jour le KPI le plus récent avec le commentaire saisi
+     * Met à jour l'indicateur le plus récent avec le commentaire saisi
      */
     function saveWeekComment() {
       const kpis = getKPIs();
       const published = kpis.filter(k => k.status === 'published').sort(compareByYearWeekDesc);
 
       if (published.length === 0) {
-        alert('❌ Aucun KPI publié pour cette semaine');
+        alert('❌ Aucun indicateur publié pour cette semaine');
         return;
       }
 
       const last = published[0];
       const commentText = document.getElementById('weekComment').value;
 
-      // Mettre à jour le KPI avec le nouveau commentaire
+      // Mettre à jour l'indicateur avec le nouveau commentaire
       last.comment = commentText;
       last.updatedAt = new Date().toISOString();
 

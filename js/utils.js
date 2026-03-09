@@ -1,9 +1,9 @@
 /**
  * UTILITAIRES GLOBAUX
- * Fonctions partagées : KPI, semaines, sidebar, etc.
+ * Fonctions partagées : indicateurs, semaines, sidebar, etc.
  */
 
-// ============ KPI UTILS ============
+// ============ INDICATEURS UTILS ============
 /**
  * Calcule le ratio heures/m³ pour évaluer la performance
  * @param {number} hours - Nombre d'heures travaillées
@@ -187,10 +187,10 @@ function getWeekString(week) {
 }
 
 /**
- * Compare deux objets KPI par année et semaine (ordre décroissant)
- * Utilisé pour trier les KPI du plus récent au plus ancien
- * @param {Object} a - Premier KPI {year, week}
- * @param {Object} b - Deuxième KPI {year, week}
+ * Compare deux objets indicateur par année et semaine (ordre décroissant)
+ * Utilisé pour trier les indicateurs du plus récent au plus ancien
+ * @param {Object} a - Premier indicateur {year, week}
+ * @param {Object} b - Deuxième indicateur {year, week}
  * @returns {number} - Résultat de comparaison pour Array.sort()
  */
 function compareByYearWeekDesc(a, b) {
@@ -201,8 +201,8 @@ function compareByYearWeekDesc(a, b) {
 }
 
 /**
- * Récupère le dernier KPI publié (le plus récent)
- * @returns {Object|null} - KPI le plus récent ou null si aucun
+ * Récupère le dernier indicateur publié (le plus récent)
+ * @returns {Object|null} - Indicateur le plus récent ou null si aucun
  */
 function getLastPublishedWeek() {
   const kpis = getKPIs();
@@ -210,10 +210,10 @@ function getLastPublishedWeek() {
   return published[0] || null;
 }
 
-// ============ KPI STORAGE ============
+// ============ INDICATEURS STORAGE ============
 /**
- * Récupère tous les KPI stockés dans localStorage
- * @returns {Array} - Liste des KPI ou tableau vide
+ * Récupère tous les indicateurs stockés dans localStorage
+ * @returns {Array} - Liste des indicateurs ou tableau vide
  */
 function getKPIs() {
   const kpis = localStorage.getItem('goudalle_kpis');
@@ -221,22 +221,22 @@ function getKPIs() {
 }
 
 /**
- * Enregistre ou met à jour un KPI pour une semaine donnée
+ * Enregistre ou met à jour un indicateur pour une semaine donnée
  * @param {number} year - Année
  * @param {number} week - Numéro de semaine
  * @param {number} m3 - m³ coulés
  * @param {number} hours - Heures travaillées
  * @param {string} comment - Commentaire sur la semaine
  * @param {string} status - Statut : 'draft' (brouillon) ou 'published' (publié)
- * @returns {Object} - KPI créé/mis à jour
+ * @returns {Object} - Indicateur créé/mis à jour
  */
 function saveKPI(year, week, m3, hours, comment, status = 'draft') {
   const kpis = getKPIs();
   
-  // Vérifier si un KPI existe déjà pour cette semaine (mise à jour)
+  // Vérifier si un indicateur existe déjà pour cette semaine (mise à jour)
   const existing = kpis.find(k => k.year === year && k.week === week);
   
-  // Créer ou mettre à jour le KPI
+  // Créer ou mettre à jour l'indicateur
   const kpi = {
     id: existing?.id || Date.now(),  // Conserver l'ID si mise à jour
     year,
@@ -251,55 +251,55 @@ function saveKPI(year, week, m3, hours, comment, status = 'draft') {
     updatedBy: Auth.getSession().username
   };
 
-  // Supprimer l'ancien KPI de cette semaine s'il existe, puis ajouter le nouveau
+  // Supprimer l'ancien indicateur de cette semaine s'il existe, puis ajouter le nouveau
   const filtered = kpis.filter(k => !(k.year === year && k.week === week));
   filtered.push(kpi);
   
   localStorage.setItem('goudalle_kpis', JSON.stringify(filtered));
-  Auth.audit('KPI_SAVED', `KPI S${String(week).padStart(2, '0')}/${year} - Status: ${status}`);
+  Auth.audit('KPI_SAVED', `Indicateur S${String(week).padStart(2, '0')}/${year} - Status: ${status}`);
   
   return kpi;
 }
 
 /**
- * Publie un KPI en brouillon (le rend visible à tous)
- * @param {number} year - Année du KPI
- * @param {number} week - Semaine du KPI
+ * Publie un indicateur en brouillon (le rend visible à tous)
+ * @param {number} year - Année de l'indicateur
+ * @param {number} week - Semaine de l'indicateur
  * @returns {Object} - { success: boolean, message: string }
  */
 function publishKPI(year, week) {
   const kpis = getKPIs();
   const kpi = kpis.find(k => k.year === year && k.week === week);
   
-  if (!kpi) return { success: false, message: '❌ KPI non trouvé' };
+  if (!kpi) return { success: false, message: '❌ Indicateur non trouvé' };
   
   kpi.status = 'published';
   kpi.updatedAt = new Date().toISOString();
   kpi.updatedBy = Auth.getSession().username;
   
   localStorage.setItem('goudalle_kpis', JSON.stringify(kpis));
-  Auth.audit('KPI_PUBLISHED', `KPI S${String(week).padStart(2, '0')}/${year} publié`);
+  Auth.audit('KPI_PUBLISHED', `Indicateur S${String(week).padStart(2, '0')}/${year} publié`);
   
-  return { success: true, message: '✅ KPI publié' };
+  return { success: true, message: '✅ Indicateur publié' };
 }
 
 /**
- * Supprime un KPI pour une semaine donnée
- * @param {number} year - Année du KPI
- * @param {number} week - Semaine du KPI
+ * Supprime un indicateur pour une semaine donnée
+ * @param {number} year - Année de l'indicateur
+ * @param {number} week - Semaine de l'indicateur
  * @returns {Object} - { success: boolean, message: string }
  */
 function deleteKPI(year, week) {
   const kpis = getKPIs();
   const index = kpis.findIndex(k => k.year === year && k.week === week);
 
-  if (index === -1) return { success: false, message: '❌ KPI non trouvé' };
+  if (index === -1) return { success: false, message: '❌ Indicateur non trouvé' };
 
   kpis.splice(index, 1);
   localStorage.setItem('goudalle_kpis', JSON.stringify(kpis));
-  Auth.audit('KPI_DELETED', `KPI S${String(week).padStart(2, '0')}/${year} supprimé`);
+  Auth.audit('KPI_DELETED', `Indicateur S${String(week).padStart(2, '0')}/${year} supprimé`);
 
-  return { success: true, message: '🗑️ KPI supprimé' };
+  return { success: true, message: '🗑️ Indicateur supprimé' };
 }
 
 // ============ UI HELPERS ============
