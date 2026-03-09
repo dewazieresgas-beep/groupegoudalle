@@ -9,8 +9,6 @@
 <body>
   <script src="../js/auth.js"></script>
   <script src="../js/utils.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-  <script src="../js/reminders.js"></script>
   <script>
     window.APP_LOGO = 'groupe';
   </script>
@@ -25,9 +23,9 @@
     <main class="main-content">
       <h1>Gestion des Utilisateurs</h1>
 
-      <div class="card" id="section-create">
+      <div class="card">
         <div class="card-title">
-          <h2>Creer un nouvel utilisateur</h2>
+          <h2>Créer un nouvel utilisateur</h2>
         </div>
         <div class="card-body">
           <div id="message" class="alert" style="display:none;"></div>
@@ -75,7 +73,7 @@
         </div>
       </div>
 
-      <div class="card" id="section-list">
+      <div class="card">
         <div class="card-title">
           <h2>Liste des utilisateurs</h2>
         </div>
@@ -99,146 +97,21 @@
         </div>
       </div>
 
-      <div class="card" id="section-admin-code">
-        <div class="card-title">
-          <h2>Code d'administration</h2>
-        </div>
-        <div class="card-body">
-          <div class="alert alert-warning">
-            <strong>⚠️ Important :</strong> Ce code est requis pour créer des comptes avec les rôles Référent et Direction.
-          </div>
-
-          <form onsubmit="handleChangeAdminCode(event)">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-              <div class="form-group">
-                <label for="newAdminCode">Nouveau code *</label>
-                <input type="password" id="newAdminCode" minlength="4" required>
-              </div>
-              <div class="form-group">
-                <label for="confirmAdminCode">Confirmation *</label>
-                <input type="password" id="confirmAdminCode" minlength="4" required>
-              </div>
-            </div>
-            <button type="submit" class="btn btn-primary">🔐 Changer le code</button>
-          </form>
-        </div>
-      </div>
-
-      <!-- ============ RAPPELS PAR EMAIL ============ -->
-      <div class="card" id="section-reminders">
-        <div class="card-title">
-          <h2>📧 Rappels par email</h2>
-        </div>
-        <div class="card-body">
-          <div id="reminderMessage" class="alert" style="display:none;"></div>
-
-          <div class="alert alert-warning" style="margin-bottom: 20px;">
-            <strong>ℹ️ Fonctionnement :</strong><br>
-            • <strong>GM (hebdomadaire)</strong> : 1er rappel le jour de la date butoir + relance le lundi suivant si non saisi<br>
-            • <strong>CBCO (mensuel)</strong> : 1er rappel le jour de la date butoir + relance 2 jours après si non saisi<br>
-            • Chaque email contient un <strong>lien cliquable</strong> vers la page de saisie<br><br>
-            <strong>⚙️ Configuration requise :</strong> Ce système utilise <a href="https://www.emailjs.com/" target="_blank" rel="noopener">EmailJS</a> (gratuit jusqu'à 200 emails/mois).<br>
-            1. Créez un compte sur emailjs.com<br>
-            2. Ajoutez un <strong>Email Service</strong> (Gmail, Outlook…)<br>
-            3. Créez un <strong>Email Template</strong> avec ces variables : <code>{{to_email}}</code>, <code>{{to_name}}</code>, <code>{{subject}}</code>, <code>{{message}}</code><br>
-            4. Copiez les identifiants ci-dessous
-          </div>
-
-          <form onsubmit="handleSaveReminders(event)">
-            <!-- Activation -->
-            <div class="form-group" style="margin-bottom: 20px;">
-              <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                <input type="checkbox" id="reminderEnabled" style="width: 20px; height: 20px;">
-                <strong>Activer les rappels automatiques</strong>
-              </label>
-            </div>
-
-            <!-- Dates butoir -->
-            <h3 style="margin: 25px 0 15px; font-size: 16px; color: var(--primary);">📅 Dates butoir</h3>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-              <div class="form-group">
-                <label for="gmDeadlineDay">Indicateur GM – Jour de la semaine</label>
-                <select id="gmDeadlineDay">
-                  <option value="1">Lundi</option>
-                  <option value="2">Mardi</option>
-                  <option value="3">Mercredi</option>
-                  <option value="4">Jeudi</option>
-                  <option value="5">Vendredi</option>
-                  <option value="6">Samedi</option>
-                  <option value="0">Dimanche</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="cbcoDeadlineDay">CBCO – Jour du mois</label>
-                <input type="number" id="cbcoDeadlineDay" min="1" max="28" value="5">
-                <small style="color: #7f8c8d;">Date limite pour saisir les données du mois précédent</small>
-              </div>
-            </div>
-
-            <!-- EmailJS -->
-            <h3 style="margin: 25px 0 15px; font-size: 16px; color: var(--primary);">� Lien du site</h3>
-            <div class="form-group">
-              <label for="siteUrl">URL de base de l'intranet</label>
-              <input type="text" id="siteUrl" placeholder="Ex : https://intranet.goudalle.fr">
-              <small style="color: #7f8c8d;">Utilisé pour générer les liens cliquables dans les emails</small>
-            </div>
-
-            <h3 style="margin: 25px 0 15px; font-size: 16px; color: var(--primary);">�🔑 Configuration EmailJS</h3>
-            <div class="form-group">
-              <label for="emailjsPublicKey">Public Key</label>
-              <input type="text" id="emailjsPublicKey" placeholder="Ex : abc123XYZ...">
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-              <div class="form-group">
-                <label for="emailjsServiceId">Service ID</label>
-                <input type="text" id="emailjsServiceId" placeholder="Ex : service_xxxxxxx">
-              </div>
-              <div class="form-group">
-                <label for="emailjsTemplateId">Template ID</label>
-                <input type="text" id="emailjsTemplateId" placeholder="Ex : template_xxxxxxx">
-              </div>
-            </div>
-
-            <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
-              <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
-              <button type="button" class="btn btn-secondary" onclick="handleTestEmail()">📨 Test (moi)</button>
-              <button type="button" class="btn btn-secondary" onclick="handleTestAllEmails()">📧 Test (tous les référents)</button>
-            </div>
-          </form>
-
-          <!-- Statut des saisies -->
-          <div id="reminderStatusSection" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
-            <h3 style="font-size: 16px; color: var(--primary); margin-bottom: 15px;">📊 État des saisies cette période</h3>
-            <div id="reminderStatus"></div>
-          </div>
-        </div>
-      </div>
-
     </main>
   </div>
 
   <script>
-    /**
-     * Affiche un message de feedback à l'utilisateur
-     * @param {string} message - Message à afficher
-     * @param {string} type - Type : 'success' ou 'error'
-     */
     function showMessage(message, type) {
       const msgDiv = document.getElementById('message');
       msgDiv.textContent = message;
       msgDiv.className = `alert alert-${type}`;
       msgDiv.style.display = 'block';
-      window.scrollTo(0, 0);  // Remonter en haut pour voir le message
+      window.scrollTo(0, 0);
     }
 
-    /**
-     * Gestion de la création d'un nouvel utilisateur
-     * @param {Event} event - Événement de soumission du formulaire
-     */
     function handleCreateUser(event) {
       event.preventDefault();
 
-      // Récupérer les données du formulaire
       const firstName = document.getElementById('firstName').value.trim();
       const lastName = document.getElementById('lastName').value.trim();
       const email = document.getElementById('email').value.trim();
@@ -248,48 +121,38 @@
 
       const displayName = `${firstName} ${lastName}`;
 
-      // ===== SÉCURITÉ : CODE ADMIN POUR RÔLES PRIVILÉGIÉS =====
-      // Si le rôle est direction ou référent, demander le code admin
       let adminCode = null;
       if (role === 'direction' || role === 'referent') {
         adminCode = prompt('Entre le code d\'administration pour créer un compte ' + role + ':');
-        if (!adminCode) return;  // Annulé par l'utilisateur
+        if (!adminCode) return;
       }
 
-      // ===== CRÉATION DU COMPTE =====
       const result = Auth.registerUser(username, password, displayName, email, role, adminCode);
 
       if (result.success) {
         showMessage(result.message, 'success');
-        // Réinitialiser le formulaire
         document.getElementById('firstName').value = '';
         document.getElementById('lastName').value = '';
         document.getElementById('email').value = '';
         document.getElementById('username').value = '';
         document.getElementById('password').value = '';
         document.getElementById('role').value = '';
-        loadUsers();  // Rafraîchir la liste
+        loadUsers();
       } else {
         showMessage(result.message, 'error');
       }
     }
 
-    /**
-     * Charge et affiche la liste de tous les utilisateurs
-     * Affiche : username, nom, email, rôle, date de création, statut et actions
-     */
     function loadUsers() {
       const users = Auth.getUserList();
       const tbody = document.querySelector('#usersTable tbody');
 
-      // Mapping des rôles vers des libellés lisibles
       const roleNames = {
         'direction': '🗝️ Direction',
         'referent': '📊 Référent',
         'lecture': '👁️ Consultation'
       };
 
-      // Générer les lignes du tableau
       tbody.innerHTML = users.map(u => {
         const date = new Date(u.createdAt);
         return `
@@ -313,29 +176,20 @@
         `;
       }).join('');
 
-      // Message si aucun utilisateur
       if (users.length === 0) {
         tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 20px;">Aucun utilisateur</td></tr>`;
       }
     }
 
-    /**
-     * Désactive un utilisateur après confirmation
-     * @param {string} username - Nom d'utilisateur à désactiver
-     */
     function disableUser(username) {
       if (confirm(`Désactiver l'utilisateur ${username} ?`)) {
         const result = Auth.disableUser(username);
         if (result.success) {
-          loadUsers();  // Rafraîchir la liste
+          loadUsers();
         }
       }
     }
 
-    /**
-     * Réactive un utilisateur désactivé après confirmation
-     * @param {string} username - Nom d'utilisateur à réactiver
-     */
     function enableUser(username) {
       if (confirm(`Réactiver l'utilisateur ${username} ?`)) {
         const result = Auth.enableUser(username);
@@ -345,119 +199,10 @@
       }
     }
 
-    function handleChangeAdminCode(event) {
-      event.preventDefault();
-
-      const newCode = document.getElementById('newAdminCode').value;
-      const confirmCode = document.getElementById('confirmAdminCode').value;
-
-      if (newCode !== confirmCode) {
-        showMessage('❌ Les codes ne correspondent pas', 'error');
-        return;
-      }
-
-      const result = Auth.setAdminCode(newCode, Auth.getSession());
-      if (result.success) {
-        showMessage(result.message, 'success');
-        document.getElementById('newAdminCode').value = '';
-        document.getElementById('confirmAdminCode').value = '';
-      } else {
-        showMessage(result.message, 'error');
-      }
-    }
-
     function init() {
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectUsersSecondaryBar();
       loadUsers();
-      loadReminderConfig();
-      refreshReminderStatus();
-    }
-
-    // ============ RAPPELS EMAIL ============
-
-    function showReminderMessage(message, type) {
-      const div = document.getElementById('reminderMessage');
-      div.textContent = message;
-      div.className = `alert alert-${type}`;
-      div.style.display = 'block';
-      setTimeout(() => { div.style.display = 'none'; }, 5000);
-    }
-
-    function loadReminderConfig() {
-      const config = Reminders.getConfig();
-      document.getElementById('reminderEnabled').checked = config.enabled;
-      document.getElementById('gmDeadlineDay').value = config.gmDeadlineDay;
-      document.getElementById('cbcoDeadlineDay').value = config.cbcoDeadlineDay;
-      document.getElementById('siteUrl').value = config.siteUrl;
-      document.getElementById('emailjsServiceId').value = config.emailjsServiceId;
-      document.getElementById('emailjsTemplateId').value = config.emailjsTemplateId;
-      document.getElementById('emailjsPublicKey').value = config.emailjsPublicKey;
-    }
-
-    function handleSaveReminders(event) {
-      event.preventDefault();
-      const config = {
-        enabled: document.getElementById('reminderEnabled').checked,
-        gmDeadlineDay: parseInt(document.getElementById('gmDeadlineDay').value),
-        cbcoDeadlineDay: parseInt(document.getElementById('cbcoDeadlineDay').value),
-        siteUrl: document.getElementById('siteUrl').value.trim(),
-        emailjsServiceId: document.getElementById('emailjsServiceId').value.trim(),
-        emailjsTemplateId: document.getElementById('emailjsTemplateId').value.trim(),
-        emailjsPublicKey: document.getElementById('emailjsPublicKey').value.trim()
-      };
-
-      if (config.enabled && (!config.emailjsServiceId || !config.emailjsTemplateId || !config.emailjsPublicKey)) {
-        showReminderMessage('❌ Remplissez tous les champs EmailJS avant d\'activer', 'error');
-        return;
-      }
-
-      Reminders.saveConfig(config);
-      Auth.audit('REMINDERS_CONFIG', `Rappels ${config.enabled ? 'activés' : 'désactivés'} – GM: ${Reminders.JOURS_FR[config.gmDeadlineDay]}, CBCO: ${config.cbcoDeadlineDay} du mois`);
-      showReminderMessage('✅ Configuration des rappels enregistrée', 'success');
-    }
-
-    async function handleTestEmail() {
-      const result = await Reminders.sendTestEmail();
-      showReminderMessage(result.message, result.success ? 'success' : 'error');
-    }
-
-    async function handleTestAllEmails() {
-      if (!confirm('Envoyer un email de test à tous les référents actifs ?')) return;
-      showReminderMessage('⏳ Envoi en cours...', 'success');
-      const result = await Reminders.sendTestToAll();
-      showReminderMessage(result.message, result.success ? 'success' : 'error');
-    }
-
-    function refreshReminderStatus() {
-      const status = Reminders.getReminderStatus();
-      const div = document.getElementById('reminderStatus');
-      const week = getCurrentWeek();
-      const year = getCurrentYear();
-      const today = new Date();
-      const prevMonth = today.getMonth() === 0 ? 12 : today.getMonth();
-      const prevYear = today.getMonth() === 0 ? year - 1 : year;
-
-      div.innerHTML = `
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-          <div style="padding: 15px; border-radius: 8px; background: ${status.gm.missing > 0 ? 'rgba(231, 76, 60, 0.1)' : 'rgba(39, 174, 96, 0.1)'}; border-left: 4px solid ${status.gm.missing > 0 ? '#e74c3c' : '#27ae60'};">
-            <strong>GM – S${String(week).padStart(2, '0')}/${year}</strong><br>
-            <span style="font-size: 14px; color: #555;">
-              ${status.gm.missing > 0
-                ? `⚠️ Pas de saisie – ${status.gm.users.join(', ')}`
-                : '✅ Données saisies'}
-            </span>
-          </div>
-          <div style="padding: 15px; border-radius: 8px; background: ${status.cbco.missing > 0 ? 'rgba(231, 76, 60, 0.1)' : 'rgba(39, 174, 96, 0.1)'}; border-left: 4px solid ${status.cbco.missing > 0 ? '#e74c3c' : '#27ae60'};">
-            <strong>CBCO – ${Reminders.MOIS_FR[prevMonth]} ${prevYear}</strong><br>
-            <span style="font-size: 14px; color: #555;">
-              ${status.cbco.missing > 0
-                ? `⚠️ Pas de saisie – ${status.cbco.users.join(', ')}`
-                : '✅ Données saisies'}
-            </span>
-          </div>
-        </div>
-      `;
     }
 
     window.addEventListener('load', init);

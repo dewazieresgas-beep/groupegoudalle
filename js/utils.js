@@ -368,7 +368,7 @@ function getSidebar() {
 
   // ===== SECTIONS ADMINISTRATIVES (direction uniquement) =====
   if (isDirection) {
-    const usersActive = currentPage === 'users-admin.html' ? ' active' : '';
+    const usersActive = isUsersPage() ? ' active' : '';
     const auditActive = currentPage === 'audit.html' ? ' active' : '';
     items += `
       <a href="${base}pages/users-admin.html" class="sidebar-item${usersActive}">👥 Utilisateurs</a>
@@ -750,6 +750,11 @@ function isCBCOPage() {
   return page === 'cbco.html' || page === 'cbco-saisie.html' || page === 'cbco-admin.html';
 }
 
+function isUsersPage() {
+  const page = getCurrentPage();
+  return page === 'users-admin.html' || page === 'users-code.html' || page === 'users-reminders.html';
+}
+
 /**
  * Fonction utilitaire pour formater les nombres en devise EUR
  * @param {number} value - La valeur à formater
@@ -824,17 +829,23 @@ function injectUsersSecondaryBar() {
   const session = Auth.getSession();
   if (!session) return;
 
+  const base = getBasePath();
+  const currentPage = getCurrentPage();
+
+  const usersActive = currentPage === 'users-admin.html' ? ' active' : '';
+  const codeActive = currentPage === 'users-code.html' ? ' active' : '';
+  const remindersActive = currentPage === 'users-reminders.html' ? ' active' : '';
+
   const secondaryItems = `
-    <a href="#section-create" class="sidebar-item" onclick="scrollToSection('section-create', this)">➕ Créer utilisateur</a>
-    <a href="#section-list" class="sidebar-item" onclick="scrollToSection('section-list', this)">📋 Liste utilisateurs</a>
-    <a href="#section-admin-code" class="sidebar-item" onclick="scrollToSection('section-admin-code', this)">🔐 Code admin</a>
-    <a href="#section-reminders" class="sidebar-item" onclick="scrollToSection('section-reminders', this)">📧 Rappels email</a>
+    <a href="${base}pages/users-admin.html" class="sidebar-item${usersActive}">👥 Utilisateurs</a>
+    <a href="${base}pages/users-code.html" class="sidebar-item${codeActive}">🔐 Code admin</a>
+    <a href="${base}pages/users-reminders.html" class="sidebar-item${remindersActive}">📧 Rappels email</a>
   `;
 
   const barHTML = `
     <aside class="sidebar-secondary" id="usersSidebar">
       <div class="sidebar-secondary-content">
-        <div class="sidebar-secondary-title">👥 Utilisateurs</div>
+        <div class="sidebar-secondary-title">👥 Administration</div>
         <button class="sidebar-secondary-close" onclick="toggleUsersSidebar();">✕</button>
         <nav class="sidebar-secondary-nav">
           ${secondaryItems}
@@ -852,23 +863,6 @@ function injectUsersSecondaryBar() {
   if (usersSidebar) {
     usersSidebar.classList.add('open');
   }
-
-  // Activer le premier item par défaut
-  const firstItem = document.querySelector('#usersSidebar .sidebar-item');
-  if (firstItem) firstItem.classList.add('active');
-}
-
-/**
- * Scroll vers une section et met à jour l'item actif dans la barre secondaire
- */
-function scrollToSection(sectionId, clickedItem) {
-  const section = document.getElementById(sectionId);
-  if (section) {
-    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-  // Mettre à jour l'item actif
-  document.querySelectorAll('#usersSidebar .sidebar-item').forEach(item => item.classList.remove('active'));
-  if (clickedItem) clickedItem.classList.add('active');
 }
 
 /**
