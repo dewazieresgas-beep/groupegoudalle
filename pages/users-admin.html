@@ -9,6 +9,8 @@
 <body>
   <script src="../js/auth.js"></script>
   <script src="../js/utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <script src="../js/reminders.js"></script>
   <script>
     window.APP_LOGO = 'groupe';
   </script>
@@ -121,6 +123,85 @@
           </form>
         </div>
       </div>
+
+      <!-- ============ RAPPELS PAR EMAIL ============ -->
+      <div class="card">
+        <div class="card-title">
+          <h2>📧 Rappels par email</h2>
+        </div>
+        <div class="card-body">
+          <div id="reminderMessage" class="alert" style="display:none;"></div>
+
+          <div class="alert alert-warning" style="margin-bottom: 20px;">
+            <strong>ℹ️ Configuration requise :</strong> Ce système utilise <a href="https://www.emailjs.com/" target="_blank" rel="noopener">EmailJS</a> (gratuit jusqu'à 200 emails/mois).<br>
+            1. Créez un compte sur emailjs.com<br>
+            2. Ajoutez un <strong>Email Service</strong> (Gmail, Outlook…)<br>
+            3. Créez un <strong>Email Template</strong> avec ces variables : <code>{{to_email}}</code>, <code>{{to_name}}</code>, <code>{{subject}}</code>, <code>{{message}}</code><br>
+            4. Copiez les identifiants ci-dessous
+          </div>
+
+          <form onsubmit="handleSaveReminders(event)">
+            <!-- Activation -->
+            <div class="form-group" style="margin-bottom: 20px;">
+              <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                <input type="checkbox" id="reminderEnabled" style="width: 20px; height: 20px;">
+                <strong>Activer les rappels automatiques</strong>
+              </label>
+            </div>
+
+            <!-- Dates butoir -->
+            <h3 style="margin: 25px 0 15px; font-size: 16px; color: var(--primary);">📅 Dates butoir</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+              <div class="form-group">
+                <label for="gmDeadlineDay">Indicateur GM – Jour de la semaine</label>
+                <select id="gmDeadlineDay">
+                  <option value="1">Lundi</option>
+                  <option value="2">Mardi</option>
+                  <option value="3">Mercredi</option>
+                  <option value="4">Jeudi</option>
+                  <option value="5">Vendredi</option>
+                  <option value="6">Samedi</option>
+                  <option value="0">Dimanche</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="cbcoDeadlineDay">CBCO – Jour du mois</label>
+                <input type="number" id="cbcoDeadlineDay" min="1" max="28" value="5">
+                <small style="color: #7f8c8d;">Date limite pour saisir les données du mois précédent</small>
+              </div>
+            </div>
+
+            <!-- EmailJS -->
+            <h3 style="margin: 25px 0 15px; font-size: 16px; color: var(--primary);">🔑 Configuration EmailJS</h3>
+            <div class="form-group">
+              <label for="emailjsPublicKey">Public Key</label>
+              <input type="text" id="emailjsPublicKey" placeholder="Ex : abc123XYZ...">
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+              <div class="form-group">
+                <label for="emailjsServiceId">Service ID</label>
+                <input type="text" id="emailjsServiceId" placeholder="Ex : service_xxxxxxx">
+              </div>
+              <div class="form-group">
+                <label for="emailjsTemplateId">Template ID</label>
+                <input type="text" id="emailjsTemplateId" placeholder="Ex : template_xxxxxxx">
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+              <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
+              <button type="button" class="btn btn-secondary" onclick="handleTestEmail()">📨 Envoyer un test</button>
+            </div>
+          </form>
+
+          <!-- Statut des saisies -->
+          <div id="reminderStatusSection" style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+            <h3 style="font-size: 16px; color: var(--primary); margin-bottom: 15px;">📊 État des saisies cette période</h3>
+            <div id="reminderStatus"></div>
+          </div>
+        </div>
+      </div>
+
     </main>
   </div>
 
@@ -276,6 +357,85 @@
     function init() {
       document.getElementById('sidebar').innerHTML = getSidebar();
       loadUsers();
+      loadReminderConfig();
+      refreshReminderStatus();
+    }
+
+    // ============ RAPPELS EMAIL ============
+
+    function showReminderMessage(message, type) {
+      const div = document.getElementById('reminderMessage');
+      div.textContent = message;
+      div.className = `alert alert-${type}`;
+      div.style.display = 'block';
+      setTimeout(() => { div.style.display = 'none'; }, 5000);
+    }
+
+    function loadReminderConfig() {
+      const config = Reminders.getConfig();
+      document.getElementById('reminderEnabled').checked = config.enabled;
+      document.getElementById('gmDeadlineDay').value = config.gmDeadlineDay;
+      document.getElementById('cbcoDeadlineDay').value = config.cbcoDeadlineDay;
+      document.getElementById('emailjsServiceId').value = config.emailjsServiceId;
+      document.getElementById('emailjsTemplateId').value = config.emailjsTemplateId;
+      document.getElementById('emailjsPublicKey').value = config.emailjsPublicKey;
+    }
+
+    function handleSaveReminders(event) {
+      event.preventDefault();
+      const config = {
+        enabled: document.getElementById('reminderEnabled').checked,
+        gmDeadlineDay: parseInt(document.getElementById('gmDeadlineDay').value),
+        cbcoDeadlineDay: parseInt(document.getElementById('cbcoDeadlineDay').value),
+        emailjsServiceId: document.getElementById('emailjsServiceId').value.trim(),
+        emailjsTemplateId: document.getElementById('emailjsTemplateId').value.trim(),
+        emailjsPublicKey: document.getElementById('emailjsPublicKey').value.trim()
+      };
+
+      if (config.enabled && (!config.emailjsServiceId || !config.emailjsTemplateId || !config.emailjsPublicKey)) {
+        showReminderMessage('❌ Remplissez tous les champs EmailJS avant d\'activer', 'error');
+        return;
+      }
+
+      Reminders.saveConfig(config);
+      Auth.audit('REMINDERS_CONFIG', `Rappels ${config.enabled ? 'activés' : 'désactivés'} – GM: ${Reminders.JOURS_FR[config.gmDeadlineDay]}, CBCO: ${config.cbcoDeadlineDay} du mois`);
+      showReminderMessage('✅ Configuration des rappels enregistrée', 'success');
+    }
+
+    async function handleTestEmail() {
+      const result = await Reminders.sendTestEmail();
+      showReminderMessage(result.message, result.success ? 'success' : 'error');
+    }
+
+    function refreshReminderStatus() {
+      const status = Reminders.getReminderStatus();
+      const div = document.getElementById('reminderStatus');
+      const week = getCurrentWeek();
+      const year = getCurrentYear();
+      const today = new Date();
+      const prevMonth = today.getMonth() === 0 ? 12 : today.getMonth();
+      const prevYear = today.getMonth() === 0 ? year - 1 : year;
+
+      div.innerHTML = `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+          <div style="padding: 15px; border-radius: 8px; background: ${status.gm.missing > 0 ? 'rgba(231, 76, 60, 0.1)' : 'rgba(39, 174, 96, 0.1)'}; border-left: 4px solid ${status.gm.missing > 0 ? '#e74c3c' : '#27ae60'};">
+            <strong>GM – S${String(week).padStart(2, '0')}/${year}</strong><br>
+            <span style="font-size: 14px; color: #555;">
+              ${status.gm.missing > 0
+                ? `⚠️ Pas de saisie – ${status.gm.users.join(', ')}`
+                : '✅ Données saisies'}
+            </span>
+          </div>
+          <div style="padding: 15px; border-radius: 8px; background: ${status.cbco.missing > 0 ? 'rgba(231, 76, 60, 0.1)' : 'rgba(39, 174, 96, 0.1)'}; border-left: 4px solid ${status.cbco.missing > 0 ? '#e74c3c' : '#27ae60'};">
+            <strong>CBCO – ${Reminders.MOIS_FR[prevMonth]} ${prevYear}</strong><br>
+            <span style="font-size: 14px; color: #555;">
+              ${status.cbco.missing > 0
+                ? `⚠️ Pas de saisie – ${status.cbco.users.join(', ')}`
+                : '✅ Données saisies'}
+            </span>
+          </div>
+        </div>
+      `;
     }
 
     window.addEventListener('load', init);

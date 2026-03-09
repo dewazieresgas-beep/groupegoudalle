@@ -6,6 +6,7 @@
   <title>Accueil - Intranet Goudalle</title>
   <link rel="stylesheet" href="./style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <style>
     .dashboard-grid {
       display: grid;
@@ -77,6 +78,7 @@
 <body>
   <script src="./js/auth.js"></script>
   <script src="./js/utils.js"></script>
+  <script src="./js/reminders.js"></script>
   <script>
     // Définir le logo à utiliser (groupe ou maconnerie)
     window.APP_LOGO = 'groupe';
@@ -95,6 +97,9 @@
     
     <main class="main-content">
       <h1>Tableau de bord</h1>
+
+      <!-- Notification des rappels envoyés -->
+      <div id="reminderNotif" style="display:none; padding: 12px 18px; border-radius: 8px; background: rgba(52, 152, 219, 0.12); border-left: 4px solid #3498db; margin-bottom: 18px; font-size: 14px; color: #2c3e50;"></div>
 
       <div class="dashboard-grid">
         <!-- GOUDALLE MAÇONNERIE -->
@@ -330,6 +335,18 @@
 
       // ===== SECTION CBCO =====
       renderCBCOHomeChart();
+
+      // ===== RAPPELS AUTOMATIQUES (direction uniquement) =====
+      if (Auth.isDirection()) {
+        Reminders.checkAndSendReminders().then(results => {
+          if (results.length > 0) {
+            const notif = document.getElementById('reminderNotif');
+            const details = results.map(r => `${r.indicator} → ${r.user}`).join(', ');
+            notif.innerHTML = `📧 <strong>${results.length} rappel(s) envoyé(s) :</strong> ${details}`;
+            notif.style.display = 'block';
+          }
+        });
+      }
     }
 
     /**
