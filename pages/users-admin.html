@@ -25,7 +25,7 @@
     <main class="main-content">
       <h1>Gestion des Utilisateurs</h1>
 
-      <div class="card">
+      <div class="card" id="section-create">
         <div class="card-title">
           <h2>Creer un nouvel utilisateur</h2>
         </div>
@@ -75,7 +75,7 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" id="section-list">
         <div class="card-title">
           <h2>Liste des utilisateurs</h2>
         </div>
@@ -99,7 +99,7 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" id="section-admin-code">
         <div class="card-title">
           <h2>Code d'administration</h2>
         </div>
@@ -125,7 +125,7 @@
       </div>
 
       <!-- ============ RAPPELS PAR EMAIL ============ -->
-      <div class="card">
+      <div class="card" id="section-reminders">
         <div class="card-title">
           <h2>📧 Rappels par email</h2>
         </div>
@@ -368,6 +368,7 @@
 
     function init() {
       document.getElementById('sidebar').innerHTML = getSidebar();
+      injectUsersSecondaryBar();
       loadUsers();
       loadReminderConfig();
       refreshReminderStatus();

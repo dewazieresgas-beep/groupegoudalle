@@ -817,6 +817,77 @@ function toggleCBCOSidebar(event) {
 }
 
 /**
+ * Génère et injecte la barre de navigation secondaire Utilisateurs
+ * À appeler sur la page users-admin.html
+ */
+function injectUsersSecondaryBar() {
+  const session = Auth.getSession();
+  if (!session) return;
+
+  const secondaryItems = `
+    <a href="#section-create" class="sidebar-item" onclick="scrollToSection('section-create', this)">➕ Créer utilisateur</a>
+    <a href="#section-list" class="sidebar-item" onclick="scrollToSection('section-list', this)">📋 Liste utilisateurs</a>
+    <a href="#section-admin-code" class="sidebar-item" onclick="scrollToSection('section-admin-code', this)">🔐 Code admin</a>
+    <a href="#section-reminders" class="sidebar-item" onclick="scrollToSection('section-reminders', this)">📧 Rappels email</a>
+  `;
+
+  const barHTML = `
+    <aside class="sidebar-secondary" id="usersSidebar">
+      <div class="sidebar-secondary-content">
+        <div class="sidebar-secondary-title">👥 Utilisateurs</div>
+        <button class="sidebar-secondary-close" onclick="toggleUsersSidebar();">✕</button>
+        <nav class="sidebar-secondary-nav">
+          ${secondaryItems}
+        </nav>
+      </div>
+    </aside>
+  `;
+
+  const sidebar = document.querySelector('.sidebar');
+  if (sidebar) {
+    sidebar.insertAdjacentHTML('afterend', barHTML);
+  }
+
+  const usersSidebar = document.getElementById('usersSidebar');
+  if (usersSidebar) {
+    usersSidebar.classList.add('open');
+  }
+
+  // Activer le premier item par défaut
+  const firstItem = document.querySelector('#usersSidebar .sidebar-item');
+  if (firstItem) firstItem.classList.add('active');
+}
+
+/**
+ * Scroll vers une section et met à jour l'item actif dans la barre secondaire
+ */
+function scrollToSection(sectionId, clickedItem) {
+  const section = document.getElementById(sectionId);
+  if (section) {
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  // Mettre à jour l'item actif
+  document.querySelectorAll('#usersSidebar .sidebar-item').forEach(item => item.classList.remove('active'));
+  if (clickedItem) clickedItem.classList.add('active');
+}
+
+/**
+ * Toggle la barre de navigation secondaire Utilisateurs
+ */
+function toggleUsersSidebar(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  const usersSidebar = document.getElementById('usersSidebar');
+  if (!usersSidebar) return;
+
+  const isOpen = usersSidebar.classList.toggle('open');
+  localStorage.setItem('users_sidebar_state', isOpen ? 'open' : 'closed');
+}
+
+/**
  * Restaure l'état de la barre de navigation secondaire depuis localStorage
  * Appelé automatiquement au chargement de la page
  */
@@ -836,6 +907,15 @@ function restoreSubMenuStates() {
     const cbcoSidebar = document.getElementById('cbcoSidebar');
     if (cbcoSidebar) {
       cbcoSidebar.classList.add('open');
+    }
+  }
+
+  // Restaurer l'état du sidebar secondaire Utilisateurs
+  const usersState = localStorage.getItem('users_sidebar_state');
+  if (usersState === 'open') {
+    const usersSidebar = document.getElementById('usersSidebar');
+    if (usersSidebar) {
+      usersSidebar.classList.add('open');
     }
   }
 }
