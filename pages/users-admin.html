@@ -133,7 +133,11 @@
           <div id="reminderMessage" class="alert" style="display:none;"></div>
 
           <div class="alert alert-warning" style="margin-bottom: 20px;">
-            <strong>ℹ️ Configuration requise :</strong> Ce système utilise <a href="https://www.emailjs.com/" target="_blank" rel="noopener">EmailJS</a> (gratuit jusqu'à 200 emails/mois).<br>
+            <strong>ℹ️ Fonctionnement :</strong><br>
+            • <strong>GM (hebdomadaire)</strong> : 1er rappel le jour de la date butoir + relance le lundi suivant si non saisi<br>
+            • <strong>CBCO (mensuel)</strong> : 1er rappel le jour de la date butoir + relance 2 jours après si non saisi<br>
+            • Chaque email contient un <strong>lien cliquable</strong> vers la page de saisie<br><br>
+            <strong>⚙️ Configuration requise :</strong> Ce système utilise <a href="https://www.emailjs.com/" target="_blank" rel="noopener">EmailJS</a> (gratuit jusqu'à 200 emails/mois).<br>
             1. Créez un compte sur emailjs.com<br>
             2. Ajoutez un <strong>Email Service</strong> (Gmail, Outlook…)<br>
             3. Créez un <strong>Email Template</strong> avec ces variables : <code>{{to_email}}</code>, <code>{{to_name}}</code>, <code>{{subject}}</code>, <code>{{message}}</code><br>
@@ -172,7 +176,14 @@
             </div>
 
             <!-- EmailJS -->
-            <h3 style="margin: 25px 0 15px; font-size: 16px; color: var(--primary);">🔑 Configuration EmailJS</h3>
+            <h3 style="margin: 25px 0 15px; font-size: 16px; color: var(--primary);">� Lien du site</h3>
+            <div class="form-group">
+              <label for="siteUrl">URL de base de l'intranet</label>
+              <input type="text" id="siteUrl" placeholder="Ex : https://intranet.goudalle.fr">
+              <small style="color: #7f8c8d;">Utilisé pour générer les liens cliquables dans les emails</small>
+            </div>
+
+            <h3 style="margin: 25px 0 15px; font-size: 16px; color: var(--primary);">�🔑 Configuration EmailJS</h3>
             <div class="form-group">
               <label for="emailjsPublicKey">Public Key</label>
               <input type="text" id="emailjsPublicKey" placeholder="Ex : abc123XYZ...">
@@ -188,9 +199,10 @@
               </div>
             </div>
 
-            <div style="display: flex; gap: 10px; margin-top: 15px;">
+            <div style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;">
               <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
-              <button type="button" class="btn btn-secondary" onclick="handleTestEmail()">📨 Envoyer un test</button>
+              <button type="button" class="btn btn-secondary" onclick="handleTestEmail()">📨 Test (moi)</button>
+              <button type="button" class="btn btn-secondary" onclick="handleTestAllEmails()">📧 Test (tous les référents)</button>
             </div>
           </form>
 
@@ -376,6 +388,7 @@
       document.getElementById('reminderEnabled').checked = config.enabled;
       document.getElementById('gmDeadlineDay').value = config.gmDeadlineDay;
       document.getElementById('cbcoDeadlineDay').value = config.cbcoDeadlineDay;
+      document.getElementById('siteUrl').value = config.siteUrl;
       document.getElementById('emailjsServiceId').value = config.emailjsServiceId;
       document.getElementById('emailjsTemplateId').value = config.emailjsTemplateId;
       document.getElementById('emailjsPublicKey').value = config.emailjsPublicKey;
@@ -387,6 +400,7 @@
         enabled: document.getElementById('reminderEnabled').checked,
         gmDeadlineDay: parseInt(document.getElementById('gmDeadlineDay').value),
         cbcoDeadlineDay: parseInt(document.getElementById('cbcoDeadlineDay').value),
+        siteUrl: document.getElementById('siteUrl').value.trim(),
         emailjsServiceId: document.getElementById('emailjsServiceId').value.trim(),
         emailjsTemplateId: document.getElementById('emailjsTemplateId').value.trim(),
         emailjsPublicKey: document.getElementById('emailjsPublicKey').value.trim()
@@ -404,6 +418,13 @@
 
     async function handleTestEmail() {
       const result = await Reminders.sendTestEmail();
+      showReminderMessage(result.message, result.success ? 'success' : 'error');
+    }
+
+    async function handleTestAllEmails() {
+      if (!confirm('Envoyer un email de test à tous les référents actifs ?')) return;
+      showReminderMessage('⏳ Envoi en cours...', 'success');
+      const result = await Reminders.sendTestToAll();
       showReminderMessage(result.message, result.success ? 'success' : 'error');
     }
 

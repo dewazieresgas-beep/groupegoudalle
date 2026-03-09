@@ -4,10 +4,9 @@
  * 
  * Fonctionnement :
  * - Vérifie automatiquement au chargement du dashboard (direction uniquement)
- * - Envoie un rappel 2 jours avant la date butoir
- * - Envoie un rappel final le jour de la date butoir
- * - Référents GM → rappel hebdomadaire (indicateurs GM)
- * - Référents CBCO → rappel mensuel (données CBCO)
+ * - GM (hebdomadaire) : rappel le jour de la date butoir + relance le lundi suivant
+ * - CBCO (mensuel) : rappel le jour de la date butoir + relance 2 jours après
+ * - Chaque email contient un lien cliquable vers la page de saisie
  */
 
 const Reminders = {
@@ -25,6 +24,7 @@ const Reminders = {
       enabled: false,
       gmDeadlineDay: 5,       // Jour de la semaine : 0=Dim, 1=Lun, 2=Mar, 3=Mer, 4=Jeu, 5=Ven, 6=Sam
       cbcoDeadlineDay: 5,     // Jour du mois (1-28)
+      siteUrl: '',            // URL de base du site (ex: https://intranet.goudalle.fr)
       emailjsServiceId: '',
       emailjsTemplateId: '',
       emailjsPublicKey: ''
@@ -113,43 +113,53 @@ const Reminders = {
     if (!config.emailjsServiceId || !config.emailjsTemplateId || !config.emailjsPublicKey) return [];
 
     const today = new Date();
-    const todayDay = today.getDay();
+    const todayDay = today.getDay(); // 0=Dim..6=Sam
     const todayDate = today.getDate();
     const results = [];
     const users = Auth.getAllUsers();
+    const baseUrl = (config.siteUrl || '').replace(/\/+$/, '');
+    const gmLink = baseUrl ? `${baseUrl}/pages/gm-saisie.html` : '';
+    const cbcoLink = baseUrl ? `${baseUrl}/pages/cbco-saisie.html` : '';
 
     // ===== RAPPELS GM (hebdomadaire) =====
-    const gmReminderDay = (config.gmDeadlineDay - 2 + 7) % 7;
-    const isGmReminder = todayDay === gmReminderDay;
-    const isGmFinal = todayDay === config.gmDeadlineDay;
+    // 1er rappel = le jour de la date butoir
+    // 2e rappel (relance) = le lundi suivant si toujours pas saisi
+    const isGmDeadline = todayDay === config.gmDeadlineDay;
+    const isGmRelance = todayDay === 1; // Lundi
 
-    if (isGmReminder || isGmFinal) {
-      const type = isGmReminder ? 'gm_rappel' : 'gm_final';
+    if (isGmDeadline || isGmRelance) {
       const week = getCurrentWeek();
       const year = getCurrentYear();
+      // Pour la relance du lundi, vérifier la semaine précédente
+      const checkWeek = isGmRelance ? (week === 1 ? 52 : week - 1) : week;
+      const checkYear = isGmRelance && week === 1 ? year - 1 : year;
+      const type = isGmDeadline ? 'gm_deadline' : 'gm_relance';
 
-      if (!this.hasGMData(week, year)) {
+      if (!this.hasGMData(checkWeek, checkYear)) {
         const referents = Object.values(users).filter(u =>
           u.isActive && u.role === 'referent' && u.email
         );
 
         const deadlineStr = this.JOURS_FR[config.gmDeadlineDay];
+        const linkHtml = gmLink ? `\n\n👉 Saisir maintenant : ${gmLink}` : '';
 
         for (const user of referents) {
-          if (this.wasAlreadySent(type, week, year, user.username)) continue;
+          if (this.wasAlreadySent(type, checkWeek, checkYear, user.username)) continue;
 
-          const subject = isGmReminder
-            ? `⏰ Rappel : Saisie indicateur GM – S${String(week).padStart(2, '0')}/${year}`
-            : `🚨 Dernier jour : Saisie indicateur GM – S${String(week).padStart(2, '0')}/${year}`;
+          const sLabel = `S${String(checkWeek).padStart(2, '0')}/${checkYear}`;
 
-          const message = isGmReminder
-            ? `Bonjour ${user.displayName},\n\nVous n'avez pas encore saisi les indicateurs Goudalle Maçonnerie pour la semaine ${week} (${year}).\n\nLa date limite est ${deadlineStr}.\n\nMerci de vous connecter à l'intranet pour effectuer la saisie.\n\nCordialement,\nIntranet Goudalle`
-            : `Bonjour ${user.displayName},\n\n⚠️ C'est aujourd'hui le dernier jour pour saisir les indicateurs Goudalle Maçonnerie pour la semaine ${week} (${year}).\n\nMerci de vous connecter rapidement à l'intranet.\n\nCordialement,\nIntranet Goudalle`;
+          const subject = isGmDeadline
+            ? `⏰ Rappel : Saisie indicateur GM – ${sLabel}`
+            : `🚨 Relance : Indicateur GM non saisi – ${sLabel}`;
+
+          const message = isGmDeadline
+            ? `Bonjour ${user.displayName},\n\nC'est aujourd'hui ${deadlineStr}, date limite pour saisir les indicateurs Goudalle Maçonnerie de la semaine ${checkWeek} (${checkYear}).\n\nMerci de vous connecter pour effectuer la saisie.${linkHtml}\n\nCordialement,\nIntranet Goudalle`
+            : `Bonjour ${user.displayName},\n\n⚠️ Les indicateurs Goudalle Maçonnerie de la semaine ${checkWeek} (${checkYear}) n'ont toujours pas été saisis.\n\nLa date limite était ${deadlineStr} dernier. Merci de régulariser la situation dès que possible.${linkHtml}\n\nCordialement,\nIntranet Goudalle`;
 
           const sent = await this.sendEmail(config, user.email, user.displayName, subject, message);
           if (sent) {
-            this.recordSentReminder({ type, period: week, year, sentTo: user.username });
-            Auth.audit('REMINDER_SENT', `${type} → ${user.displayName} (${user.email}) – S${week}/${year}`);
+            this.recordSentReminder({ type, period: checkWeek, year: checkYear, sentTo: user.username });
+            Auth.audit('REMINDER_SENT', `${type} → ${user.displayName} (${user.email}) – ${sLabel}`);
             results.push({ type, user: user.displayName, indicator: 'GM' });
           }
         }
@@ -157,19 +167,14 @@ const Reminders = {
     }
 
     // ===== RAPPELS CBCO (mensuel) =====
-    // Deadline = jour X du mois courant, pour les données du mois précédent
-    const cbcoDeadline = new Date(today.getFullYear(), today.getMonth(), config.cbcoDeadlineDay);
-    const cbcoReminderDate = new Date(cbcoDeadline);
-    cbcoReminderDate.setDate(cbcoReminderDate.getDate() - 2);
+    // 1er rappel = le jour de la date butoir
+    // 2e rappel (relance) = 2 jours après si toujours pas saisi
+    const isCbcoDeadline = todayDate === config.cbcoDeadlineDay;
+    const isCbcoRelance = todayDate === config.cbcoDeadlineDay + 2;
 
-    const isCbcoReminder = todayDate === cbcoReminderDate.getDate()
-      && today.getMonth() === cbcoReminderDate.getMonth();
-    const isCbcoFinal = todayDate === config.cbcoDeadlineDay;
+    if (isCbcoDeadline || isCbcoRelance) {
+      const type = isCbcoDeadline ? 'cbco_deadline' : 'cbco_relance';
 
-    if (isCbcoReminder || isCbcoFinal) {
-      const type = isCbcoReminder ? 'cbco_rappel' : 'cbco_final';
-
-      // Mois à vérifier = mois précédent
       const prevMonth = today.getMonth() === 0 ? 12 : today.getMonth();
       const prevYear = today.getMonth() === 0 ? today.getFullYear() - 1 : today.getFullYear();
 
@@ -178,19 +183,19 @@ const Reminders = {
           u.isActive && u.role === 'referent_cbco' && u.email
         );
 
-        const currentMonthName = this.MOIS_FR[today.getMonth() + 1];
         const prevMonthName = this.MOIS_FR[prevMonth];
+        const linkHtml = cbcoLink ? `\n\n👉 Saisir maintenant : ${cbcoLink}` : '';
 
         for (const user of referents) {
           if (this.wasAlreadySent(type, prevMonth, prevYear, user.username)) continue;
 
-          const subject = isCbcoReminder
+          const subject = isCbcoDeadline
             ? `⏰ Rappel : Saisie CBCO – ${prevMonthName} ${prevYear}`
-            : `🚨 Dernier jour : Saisie CBCO – ${prevMonthName} ${prevYear}`;
+            : `🚨 Relance : Données CBCO non saisies – ${prevMonthName} ${prevYear}`;
 
-          const message = isCbcoReminder
-            ? `Bonjour ${user.displayName},\n\nVous n'avez pas encore saisi vos données CBCO pour ${prevMonthName} ${prevYear}.\n\nLa date limite est le ${config.cbcoDeadlineDay} ${currentMonthName}.\n\nMerci de vous connecter à l'intranet pour effectuer la saisie.\n\nCordialement,\nIntranet Goudalle`
-            : `Bonjour ${user.displayName},\n\n⚠️ C'est aujourd'hui le dernier jour pour saisir vos données CBCO pour ${prevMonthName} ${prevYear}.\n\nMerci de vous connecter rapidement à l'intranet.\n\nCordialement,\nIntranet Goudalle`;
+          const message = isCbcoDeadline
+            ? `Bonjour ${user.displayName},\n\nC'est aujourd'hui la date limite pour saisir vos données CBCO pour ${prevMonthName} ${prevYear}.\n\nMerci de vous connecter pour effectuer la saisie.${linkHtml}\n\nCordialement,\nIntranet Goudalle`
+            : `Bonjour ${user.displayName},\n\n⚠️ Les données CBCO pour ${prevMonthName} ${prevYear} n'ont toujours pas été saisies.\n\nLa date limite était le ${config.cbcoDeadlineDay}. Merci de régulariser la situation dès que possible.${linkHtml}\n\nCordialement,\nIntranet Goudalle`;
 
           const sent = await this.sendEmail(config, user.email, user.displayName, subject, message);
           if (sent) {
@@ -219,17 +224,71 @@ const Reminders = {
       return { success: false, message: '❌ Aucun email associé à votre compte' };
     }
 
+    const baseUrl = (config.siteUrl || '').replace(/\/+$/, '');
+    const linkGM = baseUrl ? `\n\n👉 Page GM : ${baseUrl}/pages/gm-saisie.html` : '';
+    const linkCBCO = baseUrl ? `\n👉 Page CBCO : ${baseUrl}/pages/cbco-saisie.html` : '';
+
     const sent = await this.sendEmail(
       config,
       session.email,
       session.displayName,
       '✅ Test Rappels – Intranet Goudalle',
-      `Bonjour ${session.displayName},\n\nCeci est un email de test du système de rappels de l'Intranet Goudalle.\n\nSi vous recevez cet email, la configuration est correcte !\n\nCordialement,\nIntranet Goudalle`
+      `Bonjour ${session.displayName},\n\nCeci est un email de test du système de rappels de l'Intranet Goudalle.\n\nSi vous recevez cet email, la configuration est correcte !${linkGM}${linkCBCO}\n\nCordialement,\nIntranet Goudalle`
     );
 
     return sent
       ? { success: true, message: `✅ Email de test envoyé à ${session.email}` }
       : { success: false, message: '❌ Erreur lors de l\'envoi. Vérifiez la configuration EmailJS.' };
+  },
+
+  /**
+   * Envoie un email de test à tous les référents concernés
+   */
+  async sendTestToAll() {
+    const config = this.getConfig();
+    if (!config.emailjsServiceId || !config.emailjsTemplateId || !config.emailjsPublicKey) {
+      return { success: false, message: '❌ Configuration EmailJS incomplète', sent: 0, failed: 0 };
+    }
+
+    const users = Auth.getAllUsers();
+    const baseUrl = (config.siteUrl || '').replace(/\/+$/, '');
+    const referents = Object.values(users).filter(u =>
+      u.isActive && (u.role === 'referent' || u.role === 'referent_cbco') && u.email
+    );
+
+    if (referents.length === 0) {
+      return { success: false, message: '❌ Aucun référent actif avec email trouvé', sent: 0, failed: 0 };
+    }
+
+    let sent = 0;
+    let failed = 0;
+    const details = [];
+
+    for (const user of referents) {
+      const isGM = user.role === 'referent';
+      const link = baseUrl
+        ? `\n\n👉 Accéder à la saisie : ${baseUrl}/pages/${isGM ? 'gm-saisie' : 'cbco-saisie'}.html`
+        : '';
+
+      const ok = await this.sendEmail(
+        config,
+        user.email,
+        user.displayName,
+        '✅ Test Rappels – Intranet Goudalle',
+        `Bonjour ${user.displayName},\n\nCeci est un email de test du système de rappels de l'Intranet Goudalle.\n\nVous recevrez des rappels pour la saisie de vos indicateurs ${isGM ? 'Goudalle Maçonnerie (GM)' : 'CBCO'} lorsque les données ne sont pas encore renseignées.${link}\n\nCordialement,\nIntranet Goudalle`
+      );
+
+      if (ok) {
+        sent++;
+        details.push(`✅ ${user.displayName}`);
+      } else {
+        failed++;
+        details.push(`❌ ${user.displayName}`);
+      }
+    }
+
+    const message = `${sent} envoyé(s), ${failed} échec(s) sur ${referents.length} référent(s) :\n${details.join('\n')}`;
+    return { success: failed === 0, message, sent, failed };
   },
 
   /**
