@@ -48,7 +48,6 @@
           <div class="card-title" style="display: flex; justify-content: center; align-items: center; height: 70px;">
             <img src="./assets/goudalle-maconnerie.png" alt="Goudalle Maçonnerie" style="height: 60px; width: auto;">
           </div>
-          <div id="gm-week-range" style="font-size: 12px; color: #666; text-align: center; padding: 0 15px; margin-bottom: 15px;"></div>
           <div class="card-body">
             <div id="gm-content">Chargement...</div>
             
@@ -56,12 +55,10 @@
             <div id="gm-chart-section" style="margin-top: 20px;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                 <h3 style="margin: 0; font-size: 14px; font-weight: 600;">Tendance h/m³</h3>
-                <select id="gmTrendRange" style="padding: 5px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; cursor: pointer;">
-                  <option value="4">1 mois</option>
-                  <option value="8">2 mois</option>
-                  <option value="52">1 an</option>
-                  <option value="104">2 ans</option>
-                </select>
+                <div id="gm-inline-kpi" style="display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px; border: 1px solid #ddd; border-radius: 8px; background: #fff;">
+                  <strong id="gmInlineRatio" style="font-size: 14px; line-height: 1;">--</strong>
+                  <span id="gmInlineSmiley" style="font-size: 20px; line-height: 1;">🙂</span>
+                </div>
               </div>
               <div style="position: relative; height: 250px;">
                 <canvas id="gmTrendChart"></canvas>
@@ -90,26 +87,6 @@
   <script>
     // ===== GRAPHIQUE DE TENDANCE GM =====
     let gmTrendChart;
-    const GM_TREND_RANGE_STORAGE_KEY = 'goudalle_gm_trend_range_weeks';
-
-    /**
-     * Charge la préférence de plage de temps depuis localStorage
-     * @returns {number} - Nombre de semaines sauvegardé (par défaut : 4)
-     */
-    function loadGMTrendWeeksPreference() {
-      const stored = localStorage.getItem(GM_TREND_RANGE_STORAGE_KEY);
-      const weeks = parseInt(stored || '', 10);
-      if ([4, 8, 52, 104].includes(weeks)) return weeks;
-      return 4;  // Par défaut : 1 mois
-    }
-
-    /**
-     * Sauvegarde la préférence de plage de temps
-     * @param {number} weeks - Nombre de semaines à sauvegarder
-     */
-    function saveGMTrendWeeksPreference(weeks) {
-      localStorage.setItem(GM_TREND_RANGE_STORAGE_KEY, String(weeks));
-    }
 
     /**
      * Récupère une variable CSS (pour les couleurs du graphique)
@@ -129,21 +106,8 @@
       const kpis = getKPIs();
       const published = kpis.filter(k => k.status === 'published').sort(compareByYearWeekDesc);
 
-      // Initialiser le sélecteur de période
-      const trendSelect = document.getElementById('gmTrendRange');
-      const initialWeeks = loadGMTrendWeeksPreference();
-      if (trendSelect) {
-        trendSelect.value = String(initialWeeks);
-        // Écouter les changements de période
-        trendSelect.addEventListener('change', () => {
-          const weeks = parseInt(trendSelect.value, 10);
-          saveGMTrendWeeksPreference(weeks);
-          drawGMTrendChart(published, weeks);
-        });
-      }
-
-      // Dessiner le graphique
-      drawGMTrendChart(published, initialWeeks);
+      // Toujours afficher 1 mois (4 semaines)
+      drawGMTrendChart(published, 4);
     }
 
     /**
@@ -234,35 +198,23 @@
       const lastWeek = getLastPublishedWeek();
       if (!lastWeek) {
         document.getElementById('gm-content').innerHTML = '<p>📊 Aucune donnée publiée encore</p>';
+        document.getElementById('gmInlineRatio').textContent = '--';
+        document.getElementById('gmInlineSmiley').textContent = '🙂';
       } else {
         // Calculer le ratio et déterminer la performance
         const ratio = calculateRatio(lastWeek.hours, lastWeek.m3);
         const smiley = getSmiley(ratio);
 
-        // Obtenir les dates de la semaine
-        const dateRange = getWeekDateRange(lastWeek.week, lastWeek.year);
-
-        // Mettre à jour la période affichée
-        const weekRangeElement = document.getElementById('gm-week-range');
-        if (weekRangeElement) {
-          weekRangeElement.textContent = `du ${dateRange.monday} au ${dateRange.friday}`;
-        }
-
-        // Afficher les données dans des cartes KPI
+        // Afficher uniquement le commentaire (KPI intégré dans l'en-tête du graphique)
         document.getElementById('gm-content').innerHTML = `
-          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 10px;">
-            <div class="kpi-box ${smiley}">
-              <div class="kpi-label">h/m³</div>
-              <div class="kpi-value">${ratio !== null ? ratio.toFixed(2) : '—'}</div>
-            </div>
-            <div class="kpi-box ${smiley}">
-              <div style="font-size: 12px; line-height: 1;">${getSmileyEmoji(smiley)}</div>
-            </div>
-          </div>
           <div class="comment-box" style="font-size: 12px; padding: 8px; background: #f9f9f9; border-radius: 4px; border-left: 3px solid var(--accent);">
             <strong>Commentaire : </strong> ${lastWeek.comment}
           </div>
         `;
+
+        // Mettre à jour le KPI compact dans l'en-tête du graphique
+        document.getElementById('gmInlineRatio').textContent = ratio !== null ? `${ratio.toFixed(2)} h/m³` : '--';
+        document.getElementById('gmInlineSmiley').textContent = getSmileyEmoji(smiley);
 
         // Rendre le graphique de tendance
         renderGMTrendChart();
