@@ -68,12 +68,13 @@
                 <th>Nom de l'affaire</th>
                 <th>Montant (€)</th>
                 <th>Date d'envoi</th>
-                <th>Statut</th>
+                <th>Date de réponse</th>
+                <th>Résultat</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              <tr><td colspan="5" style="text-align:center; padding: 20px;">Chargement...</td></tr>
+              <tr><td colspan="6" style="text-align:center; padding: 20px;">Chargement...</td></tr>
             </tbody>
           </table>
         </div>
@@ -121,11 +122,35 @@
       loadAffaires();
     }
 
-    function changeStatut(id, newStatut) {
-      if (updateCBCOCommercialEntry(id, { resultat: newStatut })) {
+    function enregistrerReponse(id) {
+      const dateInput = document.getElementById(`dateReponse_${id}`);
+      const resultatInput = document.getElementById(`resultat_${id}`);
+      const dateReponse = dateInput.value;
+      const resultat = resultatInput.value;
+
+      if (!dateReponse) {
+        showMessage('❌ Veuillez saisir la date de réponse', 'error');
+        return;
+      }
+      if (resultat === 'en_cours') {
+        showMessage('❌ Veuillez sélectionner Gagné ou Perdu', 'error');
+        return;
+      }
+
+      if (updateCBCOCommercialEntry(id, { resultat, dateReponse })) {
         const entry = getCBCOCommercial().find(e => e.id === id);
-        const label = STATUT_LABELS[newStatut]?.label || newStatut;
-        Auth.audit('CBCO_COMMERCIAL_STATUS', `${entry?.nomAffaire || id} → ${label}`);
+        const label = STATUT_LABELS[resultat]?.label || resultat;
+        Auth.audit('CBCO_COMMERCIAL_STATUS', `${entry?.nomAffaire || id} → ${label} (réponse le ${new Date(dateReponse).toLocaleDateString('fr-FR')})`);
+        showMessage('✅ Réponse enregistrée', 'success');
+        loadAffaires();
+      }
+    }
+
+    function reinitialiserStatut(id) {
+      if (!confirm('Remettre cette affaire en cours ?')) return;
+      if (updateCBCOCommercialEntry(id, { resultat: 'en_cours', dateReponse: null })) {
+        const entry = getCBCOCommercial().find(e => e.id === id);
+        Auth.audit('CBCO_COMMERCIAL_STATUS', `${entry?.nomAffaire || id} → Remis en cours`);
         loadAffaires();
       }
     }
@@ -159,7 +184,7 @@
       const tbody = document.querySelector('#affairesTable tbody');
 
       if (entries.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px; color: #999;">Aucune affaire pour cette année</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 20px; color: #999;">Aucune affaire pour cette année</td></tr>';
         return;
       }
 
@@ -167,25 +192,52 @@
 
       tbody.innerHTML = entries.map(e => {
         const s = STATUT_LABELS[e.resultat] || STATUT_LABELS['en_cours'];
-        const dateStr = new Date(e.dateEnvoi).toLocaleDateString('fr-FR');
+        const dateEnvoiStr = new Date(e.dateEnvoi).toLocaleDateString('fr-FR');
+        const isCloturee = e.resultat === 'gagne' || e.resultat === 'perdu';
 
-        const statutSelect = `
-          <select onchange="changeStatut('${e.id}', this.value)" style="width: auto; min-width: 120px; padding: 4px 8px; font-size: 13px;">
-            <option value="en_cours" ${e.resultat === 'en_cours' ? 'selected' : ''}>⏳ En cours</option>
-            <option value="gagne" ${e.resultat === 'gagne' ? 'selected' : ''}>✅ Gagné</option>
-            <option value="perdu" ${e.resultat === 'perdu' ? 'selected' : ''}>❌ Perdu</option>
-          </select>
-        `;
+        let dateReponseCell;
+        let resultatCell;
+        let actionsCell;
+
+        if (isCloturee) {
+          const dateRepStr = e.dateReponse ? new Date(e.dateReponse).toLocaleDateString('fr-FR') : '—';
+          dateReponseCell = `<td>${dateRepStr}</td>`;
+          resultatCell = `<td><span class="badge ${s.badge}">${s.label}</span></td>`;
+          actionsCell = `
+            <td>
+              <button class="btn btn-small btn-secondary" onclick="reinitialiserStatut('${e.id}')" title="Remettre en cours">↩️</button>
+              <button class="btn btn-small btn-danger" onclick="deleteAffaire('${e.id}')" title="Supprimer">🗑️</button>
+            </td>
+          `;
+        } else {
+          dateReponseCell = `<td><input type="date" id="dateReponse_${e.id}" style="padding: 4px 8px; font-size: 13px; width: 140px;"></td>`;
+          resultatCell = `
+            <td>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <select id="resultat_${e.id}" style="width: auto; min-width: 110px; padding: 4px 8px; font-size: 13px;">
+                  <option value="en_cours" selected>⏳ En cours</option>
+                  <option value="gagne">✅ Gagné</option>
+                  <option value="perdu">❌ Perdu</option>
+                </select>
+                <button class="btn btn-small btn-primary" onclick="enregistrerReponse('${e.id}')" title="Enregistrer la réponse">✔️</button>
+              </div>
+            </td>
+          `;
+          actionsCell = `
+            <td>
+              <button class="btn btn-small btn-danger" onclick="deleteAffaire('${e.id}')" title="Supprimer">🗑️</button>
+            </td>
+          `;
+        }
 
         return `
           <tr>
             <td><strong>${e.nomAffaire}</strong></td>
             <td>${formatMontant(e.montant)}</td>
-            <td>${dateStr}</td>
-            <td>${statutSelect}</td>
-            <td>
-              <button class="btn btn-small btn-danger" onclick="deleteAffaire('${e.id}')">🗑️</button>
-            </td>
+            <td>${dateEnvoiStr}</td>
+            ${dateReponseCell}
+            ${resultatCell}
+            ${actionsCell}
           </tr>
         `;
       }).join('');

@@ -942,6 +942,7 @@ function saveCBCOCommercialEntry(entry) {
     montant: parseFloat(entry.montant) || 0,
     dateEnvoi: entry.dateEnvoi,
     resultat: 'en_cours',
+    dateReponse: null,
     createdAt: new Date().toISOString()
   };
   entries.push(newEntry);
