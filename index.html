@@ -13,13 +13,37 @@
       gap: 20px;
       margin-bottom: 20px;
     }
+    .dashboard-grid > .card {
+      display: flex;
+      flex-direction: column;
+    }
+    .dashboard-grid > .card > .card-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
     .gm-chart-kpi {
       display: flex;
       justify-content: center;
       align-items: center;
       gap: 12px;
-      padding-bottom: 6px;
-      margin-bottom: 14px;
+      padding-bottom: 0;
+      margin-bottom: 0;
+      position: relative;
+    }
+    .gm-arrow-underline {
+      position: relative;
+      height: 10px;
+      margin-bottom: 0;
+      overflow: visible;
+    }
+    .gm-arrow-underline svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      overflow: visible;
+      z-index: 2;
+      pointer-events: none;
     }
     .gm-chart-kpi-value {
       font-size: 56px;
@@ -87,7 +111,10 @@
                 <div id="gmInlineRatio" class="gm-chart-kpi-value">--</div>
                 <div id="gmInlineSmiley" class="gm-chart-kpi-smiley">🙂</div>
               </div>
-              <div style="position: relative; height: 250px;">
+              <div class="gm-arrow-underline">
+                <svg id="gmArrowSvg" viewBox="0 0 400 50" preserveAspectRatio="none"></svg>
+              </div>
+              <div style="position: relative; flex: 1; min-height: 200px;">
                 <canvas id="gmTrendChart"></canvas>
               </div>
             </div>
@@ -100,7 +127,7 @@
             <img src="./assets/cbco.png" alt="CBCO" style="height: 60px; width: auto;">
           </div>
           <div class="card-body">
-            <div style="position: relative; height: 280px;">
+            <div style="position: relative; flex: 1; min-height: 200px;">
               <canvas id="cbcoHomeChart"></canvas>
             </div>
           </div>
@@ -123,6 +150,57 @@
     function getCssVar(name, fallback) {
       const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
       return value || fallback;
+    }
+
+    /**
+     * Dessine la flèche SVG de soulignement KPI vers le dernier point du graphique
+     */
+    function drawGMArrowSVG() {
+      if (!gmTrendChart) return;
+      const meta = gmTrendChart.getDatasetMeta(0);
+      const points = meta?.data || [];
+      if (points.length === 0) return;
+
+      const lastPoint = points[points.length - 1];
+      if (!lastPoint) return;
+
+      const canvas = gmTrendChart.canvas;
+      const svgEl = document.getElementById('gmArrowSvg');
+      const arrowContainer = svgEl?.parentElement;
+      if (!svgEl || !arrowContainer) return;
+
+      // Coordonnées du dernier point : position relative au container SVG
+      const canvasRect = canvas.getBoundingClientRect();
+      const containerRect = arrowContainer.getBoundingClientRect();
+
+      const targetX = canvasRect.left - containerRect.left + lastPoint.x;
+      const targetY = canvasRect.top - containerRect.top + lastPoint.y;
+
+      // Soulignement centré
+      const containerW = containerRect.width;
+      const containerH = containerRect.height;
+      const lineY = 4;
+      const startX = containerW * 0.15;
+      const elbowX = containerW * 0.85;
+
+      // Mise à jour du viewBox
+      svgEl.setAttribute('viewBox', `0 0 ${containerW} ${containerH + targetY}`);
+      svgEl.style.width = containerW + 'px';
+      svgEl.style.height = Math.max(containerH, targetY + 10) + 'px';
+
+      // Calcul de la pointe
+      const angle = Math.atan2(targetY - lineY, targetX - elbowX);
+      const hl = 12;
+      const ax = targetX - hl * Math.cos(angle - Math.PI / 6);
+      const ay = targetY - hl * Math.sin(angle - Math.PI / 6);
+      const bx = targetX - hl * Math.cos(angle + Math.PI / 6);
+      const by = targetY - hl * Math.sin(angle + Math.PI / 6);
+
+      svgEl.innerHTML = `
+        <line x1="${startX}" y1="${lineY}" x2="${elbowX}" y2="${lineY}" stroke="#111" stroke-width="4" stroke-linecap="round"/>
+        <line x1="${elbowX}" y1="${lineY}" x2="${targetX}" y2="${targetY}" stroke="#111" stroke-width="4" stroke-linecap="round"/>
+        <polygon points="${targetX},${targetY} ${ax},${ay} ${bx},${by}" fill="#111"/>
+      `;
     }
 
     /**
@@ -154,65 +232,12 @@
       const lineColor = getCssVar('--accent-dark', '#6b8e6f');
       const fillColor = 'rgba(107, 142, 111, 0.12)';
       const threshold = getKpiRatioThreshold();
-      const lastWeekArrowPlugin = {
-        id: 'lastWeekArrow',
-        afterDatasetsDraw(chartInstance) {
-          const meta = chartInstance.getDatasetMeta(0);
-          const points = meta?.data || [];
-          if (points.length === 0) return;
-
-          const lastPoint = points[points.length - 1];
-          if (!lastPoint) return;
-
-          const { ctx: canvasCtx, chartArea } = chartInstance;
-          const targetX = lastPoint.x;
-          const targetY = lastPoint.y;
-
-          // Flèche = soulignement du KPI puis diagonale vers le dernier point
-          const canvas = chartInstance.canvas;
-          const arrowY = 4;
-          const centerX = canvas.width / 2;
-          const startX = centerX - 120;
-          const elbowX = centerX + 120;
-          const endX = targetX + 2;
-          const endY = targetY - 2;
-
-          canvasCtx.save();
-          canvasCtx.strokeStyle = '#111111';
-          canvasCtx.fillStyle = '#111111';
-          canvasCtx.lineWidth = 4;
-          canvasCtx.lineCap = 'round';
-          canvasCtx.lineJoin = 'round';
-
-          // Segment horizontal + segment diagonal
-          canvasCtx.beginPath();
-          canvasCtx.moveTo(startX, arrowY);
-          canvasCtx.lineTo(elbowX, arrowY);
-          canvasCtx.lineTo(endX, endY);
-          canvasCtx.stroke();
-
-          // Pointe de la flèche
-          const angle = Math.atan2(endY - arrowY, endX - elbowX);
-          const headLen = 14;
-          canvasCtx.beginPath();
-          canvasCtx.moveTo(endX, endY);
-          canvasCtx.lineTo(
-            endX - headLen * Math.cos(angle - Math.PI / 6),
-            endY - headLen * Math.sin(angle - Math.PI / 6)
-          );
-          canvasCtx.lineTo(
-            endX - headLen * Math.cos(angle + Math.PI / 6),
-            endY - headLen * Math.sin(angle + Math.PI / 6)
-          );
-          canvasCtx.closePath();
-          canvasCtx.fill();
-          canvasCtx.restore();
-        }
-      };
-
       gmTrendChart = new Chart(ctx, {
         type: 'line',
-        plugins: [lastWeekArrowPlugin],
+        plugins: [{
+          id: 'drawArrowAfter',
+          afterRender: () => drawGMArrowSVG()
+        }],
         data: {
           labels,
           datasets: [
@@ -241,9 +266,6 @@
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          layout: {
-            padding: { top: 14 }
-          },
           interaction: { mode: 'index', intersect: false },
           plugins: {
             legend: {
