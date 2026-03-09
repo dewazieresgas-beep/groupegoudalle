@@ -605,7 +605,8 @@ const Auth = {
    */
   requirePermission(permission) {
     if (!this.hasAccess(permission)) {
-      window.location.href = './pages/error-access.html';
+      const base = window.location.pathname.includes('/pages/') ? '' : 'pages/';
+      window.location.href = `./${base}error-access.html`;
       return false;
     }
     return true;

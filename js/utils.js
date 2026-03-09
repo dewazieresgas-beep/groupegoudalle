@@ -3,6 +3,23 @@
  * Fonctions partagées : indicateurs, semaines, sidebar, etc.
  */
 
+// ============ SÉCURITÉ ============
+/**
+ * Échappe les caractères HTML pour prévenir les injections XSS
+ * À utiliser lors de l'insertion de contenu utilisateur dans le DOM via innerHTML
+ * @param {string} str - Chaîne à échapper
+ * @returns {string} - Chaîne sécurisée
+ */
+function escapeHtml(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // ============ INDICATEURS UTILS ============
 /**
  * Calcule le ratio heures/m³ pour évaluer la performance
@@ -106,7 +123,7 @@ function getCurrentPage() {
  */
 function isGMPage() {
   const page = getCurrentPage();
-  return page === 'gm.html' || page === 'gm-saisie.html' || page === 'gm-admin.html';
+  return page === 'gm.html' || page === 'gm-saisie.html';
 }
 
 // ============ WEEK UTILS ============
@@ -749,7 +766,7 @@ function injectCBCOSecondaryBar() {
  */
 function isCBCOPage() {
   const page = getCurrentPage();
-  return page === 'cbco.html' || page === 'cbco-saisie.html' || page === 'cbco-admin.html' || page === 'cbco-commercial.html';
+  return page === 'cbco.html' || page === 'cbco-saisie.html' || page === 'cbco-commercial.html';
 }
 
 function isUsersPage() {

@@ -238,8 +238,8 @@
 
   <script>
     const MONTH_NAMES = [
-      '', 'Janvier', 'Fevrier', 'Mars', 'Avril', 'Mai', 'Juin',
-      'Juillet', 'Aout', 'Septembre', 'Octobre', 'Novembre', 'Decembre'
+      '', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+      'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
     ];
 
     const sheetState = {
@@ -356,10 +356,10 @@
       const status = document.getElementById('sheetStatus');
       status.className = 'sheet-status';
       if (sheetState.isDirty) {
-        status.textContent = 'Modifications non enregistrees';
+        status.textContent = 'Modifications non enregistrées';
         status.classList.add('dirty');
       } else {
-        status.textContent = 'Donnees sauvegardees';
+        status.textContent = 'Données sauvegardées';
         status.classList.add('saved');
       }
 
@@ -535,11 +535,11 @@
     function loadYearFromInput() {
       const year = parseInt(document.getElementById('sheetYear').value, 10);
       if (!Number.isFinite(year) || year < 2020 || year > 2100) {
-        showMessage('Veuillez saisir une annee valide entre 2020 et 2100.', 'error');
+        showMessage('Veuillez saisir une année valide entre 2020 et 2100.', 'error');
         return;
       }
 
-      if (sheetState.isDirty && !confirm('Des modifications non enregistrees existent. Continuer et les perdre ?')) {
+      if (sheetState.isDirty && !confirm('Des modifications non enregistrées existent. Continuer et les perdre ?')) {
         return;
       }
 
@@ -567,7 +567,7 @@
 
     function discardChanges() {
       if (!sheetState.isDirty) return;
-      if (!confirm('Annuler toutes les modifications non sauvegardees ?')) return;
+      if (!confirm('Annuler toutes les modifications non sauvegardées ?')) return;
 
       sheetState.rows = cloneRows(sheetState.savedRows);
       sheetState.history = [cloneRows(sheetState.savedRows)];
@@ -575,7 +575,7 @@
       renderTableRows();
       refreshHistoryButtons();
       refreshDirtyState();
-      showMessage('Modifications annulees.', 'info');
+      showMessage('Modifications annulées.', 'info');
     }
 
     function resetRow(month) {
@@ -596,14 +596,14 @@
     }
 
     function copyFromPreviousYear() {
-      if (sheetState.isDirty && !confirm('Des modifications existent. Remplacer par les donnees de N-1 ?')) {
+      if (sheetState.isDirty && !confirm('Des modifications existent. Remplacer par les données de N-1 ?')) {
         return;
       }
 
       const previousRows = monthRowsFromStorage(sheetState.year - 1);
       const hasData = previousRows.some(row => (row.montantChantiersCours + row.montantChantiersTermines) > 0);
       if (!hasData) {
-        showMessage(`Aucune donnee trouvee pour ${sheetState.year - 1}.`, 'error');
+        showMessage(`Aucune donnée trouvée pour ${sheetState.year - 1}.`, 'error');
         return;
       }
 
@@ -613,7 +613,7 @@
       renderTableRows();
       refreshHistoryButtons();
       refreshDirtyState();
-      showMessage(`Donnees de ${sheetState.year - 1} copiees dans ${sheetState.year}.`, 'success');
+      showMessage(`Données de ${sheetState.year - 1} copiées dans ${sheetState.year}.`, 'success');
     }
 
     function clearYear() {
@@ -629,7 +629,7 @@
       renderTableRows();
       refreshHistoryButtons();
       refreshDirtyState();
-      showMessage(`Annee ${sheetState.year} videe. Pensez a sauvegarder.`, 'info');
+      showMessage(`Année ${sheetState.year} vidée. Pensez à sauvegarder.`, 'info');
     }
 
     function saveSpreadsheet() {
@@ -659,16 +659,16 @@
         renderTableRows();
         refreshHistoryButtons();
         refreshDirtyState();
-        showMessage(`Donnees ${sheetState.year} sauvegardees avec succes.`, 'success');
+        showMessage(`Données ${sheetState.year} sauvegardées avec succès.`, 'success');
       } catch (error) {
         console.error(error);
-        showMessage('Erreur pendant la sauvegarde des donnees CBCO.', 'error');
+        showMessage('Erreur pendant la sauvegarde des données CBCO.', 'error');
       }
     }
 
     function exportYearCsv() {
       const totals = computeRowTotals(sheetState.rows);
-      const headers = ['Annee', 'Mois', 'Montant chantier en cours (K€)', 'Montant chantier terminé (K€)', 'Total mensuel (K€)', 'Cumul annuel (K€)'];
+      const headers = ['Année', 'Mois', 'Montant chantier en cours (K€)', 'Montant chantier terminé (K€)', 'Total mensuel (K€)', 'Cumul annuel (K€)'];
       const lines = [headers.join(';')];
 
       sheetState.rows.forEach(row => {
@@ -730,14 +730,14 @@
         <div>Formulaire de contact</div>
       </div>
       <div>
-        <div class="footer-title">Realisations</div>
+        <div class="footer-title">Réalisations</div>
         <div>Agricole / Elevage</div>
         <div>Tertiaire / Habitat</div>
-        <div>Public / Sante</div>
+        <div>Public / Santé</div>
       </div>
       <div>
         <div class="footer-title">Goudalle recrute</div>
-        <div>Decouvrir nos metiers</div>
+        <div>Découvrir nos métiers</div>
         <div>Voir nos offres</div>
       </div>
     </div>

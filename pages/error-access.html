@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Acces Refuse - Intranet Goudalle</title>
+  <title>Accès Refusé - Intranet Goudalle</title>
   <link rel="stylesheet" href="../style.css">
   <style>
     body {
@@ -50,38 +50,24 @@
     window.APP_LOGO = 'groupe';
   </script>
 
-  <header class="sidebar">
-    <div class="topbar">
-      <div>Tel. +33 (0)3 21 90 98 98</div>
-      <div><a href="#">Contact</a></div>
-    </div>
-    <div class="mainbar">
-      <div class="brand">
-        <img src="../assets/groupe.png" alt="Logo Groupe">
-        <div class="brand-text">
-          <div class="brand-title">GOUDALLE</div>
-          <div class="brand-subtitle">Groupe - Intranet</div>
-        </div>
-      </div>
-      <nav class="sidebar-nav">
-        <a href="../index.html" class="sidebar-item">Accueil</a>
-        <a href="../login.html" class="sidebar-item">Connexion</a>
-      </nav>
-    </div>
-  </header>
+  <div class="app-container">
+    <div id="sidebar"></div>
 
-  <div class="error-container">
-    <div class="error-icon">🔒</div>
-    <h1 class="error-title">Accès Refusé</h1>
-    <p class="error-message">
-      Vous n'avez pas les permissions nécessaires pour accéder à cette page.<br>
-      Contactez un administrateur si vous pensez qu'il s'agit d'une erreur.
-    </p>
+    <main class="main-content">
+      <div class="error-container">
+        <div class="error-icon">🔒</div>
+        <h1 class="error-title">Accès Refusé</h1>
+        <p class="error-message">
+          Vous n'avez pas les permissions nécessaires pour accéder à cette page.<br>
+          Contactez un administrateur si vous pensez qu'il s'agit d'une erreur.
+        </p>
 
     <div class="btn-group">
       <button onclick="goHome()" class="btn btn-primary">🏠 Accueil</button>
       <button onclick="goBack()" class="btn btn-secondary">← Retour</button>
     </div>
+      </div>
+    </main>
   </div>
 
   <footer class="site-footer">
@@ -98,14 +84,14 @@
         <div>Formulaire de contact</div>
       </div>
       <div>
-        <div class="footer-title">Realisations</div>
+        <div class="footer-title">Réalisations</div>
         <div>Agricole / Elevage</div>
         <div>Tertiaire / Habitat</div>
-        <div>Public / Sante</div>
+        <div>Public / Santé</div>
       </div>
       <div>
         <div class="footer-title">Goudalle recrute</div>
-        <div>Decouvrir nos metiers</div>
+        <div>Découvrir nos métiers</div>
         <div>Voir nos offres</div>
       </div>
     </div>
@@ -130,6 +116,8 @@
     // Si l'utilisateur n'est pas connecté, le rediriger vers la page de connexion
     if (!Auth.isConnected()) {
       window.location.href = '../login.html';
+    } else {
+      document.getElementById('sidebar').innerHTML = getSidebar();
     }
   </script>
 </body>

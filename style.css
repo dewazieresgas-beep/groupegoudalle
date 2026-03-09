@@ -19,6 +19,7 @@
   
   --border: #d4ccc3;       /* Gris beige */
   --border-light: #f0ece6; /* Beige léger */
+  --text-light: #a89b90;   /* Texte léger */
   
   --shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
