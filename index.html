@@ -51,6 +51,22 @@
           <div id="gm-week-range" style="font-size: 12px; color: #666; text-align: center; padding: 0 15px; margin-bottom: 15px;"></div>
           <div class="card-body">
             <div id="gm-content">Chargement...</div>
+            
+            <!-- GRAPHIQUE DE TENDANCE -->
+            <div id="gm-chart-section" style="margin-top: 20px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="margin: 0; font-size: 14px; font-weight: 600;">Tendance h/m³</h3>
+                <select id="gmTrendRange" style="padding: 5px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; cursor: pointer;">
+                  <option value="4">1 mois</option>
+                  <option value="8">2 mois</option>
+                  <option value="52">1 an</option>
+                  <option value="104">2 ans</option>
+                </select>
+              </div>
+              <div style="position: relative; height: 250px;">
+                <canvas id="gmTrendChart"></canvas>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -72,6 +88,138 @@
   </div>
 
   <script>
+    // ===== GRAPHIQUE DE TENDANCE GM =====
+    let gmTrendChart;
+    const GM_TREND_RANGE_STORAGE_KEY = 'goudalle_gm_trend_range_weeks';
+
+    /**
+     * Charge la préférence de plage de temps depuis localStorage
+     * @returns {number} - Nombre de semaines sauvegardé (par défaut : 4)
+     */
+    function loadGMTrendWeeksPreference() {
+      const stored = localStorage.getItem(GM_TREND_RANGE_STORAGE_KEY);
+      const weeks = parseInt(stored || '', 10);
+      if ([4, 8, 52, 104].includes(weeks)) return weeks;
+      return 4;  // Par défaut : 1 mois
+    }
+
+    /**
+     * Sauvegarde la préférence de plage de temps
+     * @param {number} weeks - Nombre de semaines à sauvegarder
+     */
+    function saveGMTrendWeeksPreference(weeks) {
+      localStorage.setItem(GM_TREND_RANGE_STORAGE_KEY, String(weeks));
+    }
+
+    /**
+     * Récupère une variable CSS (pour les couleurs du graphique)
+     * @param {string} name - Nom de la variable CSS (ex: '--accent-dark')
+     * @param {string} fallback - Valeur par défaut si non trouvée
+     * @returns {string} - Valeur de la variable CSS
+     */
+    function getCssVar(name, fallback) {
+      const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      return value || fallback;
+    }
+
+    /**
+     * Génère le graphique de tendance h/m³ pour la page d'accueil
+     */
+    function renderGMTrendChart() {
+      const kpis = getKPIs();
+      const published = kpis.filter(k => k.status === 'published').sort(compareByYearWeekDesc);
+
+      // Initialiser le sélecteur de période
+      const trendSelect = document.getElementById('gmTrendRange');
+      const initialWeeks = loadGMTrendWeeksPreference();
+      if (trendSelect) {
+        trendSelect.value = String(initialWeeks);
+        // Écouter les changements de période
+        trendSelect.addEventListener('change', () => {
+          const weeks = parseInt(trendSelect.value, 10);
+          saveGMTrendWeeksPreference(weeks);
+          drawGMTrendChart(published, weeks);
+        });
+      }
+
+      // Dessiner le graphique
+      drawGMTrendChart(published, initialWeeks);
+    }
+
+    /**
+     * Dessine le graphique de tendance avec Chart.js
+     * @param {Array} published - Liste des KPI publiés
+     * @param {number} weeksBack - Nombre de semaines à afficher
+     */
+    function drawGMTrendChart(published, weeksBack) {
+      const slice = published.slice(0, weeksBack).reverse();
+      if (slice.length === 0) return;
+
+      const labels = slice.map(k => `S${String(k.week).padStart(2, '0')}/${k.year}`);
+      const ratioData = slice.map(k => calculateRatio(k.hours, k.m3));
+
+      const ctx = document.getElementById('gmTrendChart').getContext('2d');
+      if (gmTrendChart) gmTrendChart.destroy();
+
+      const lineColor = getCssVar('--accent-dark', '#6b8e6f');
+      const fillColor = 'rgba(107, 142, 111, 0.12)';
+      const threshold = getKpiRatioThreshold();
+
+      gmTrendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'h/m³',
+              data: ratioData,
+              borderColor: lineColor,
+              backgroundColor: fillColor,
+              tension: 0,
+              spanGaps: false,
+              pointRadius: 3,
+              pointHoverRadius: 5,
+              fill: true
+            },
+            {
+              label: `Seuil (${threshold} h/m³)`,
+              data: new Array(labels.length).fill(threshold),
+              borderColor: '#e74c3c',
+              borderWidth: 2,
+              borderDash: [5, 5],
+              pointRadius: 0,
+              fill: false
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top'
+            },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const v = ctx.parsed?.y;
+                  return Number.isFinite(v) ? `h/m³ : ${v.toFixed(2)}` : 'h/m³ : —';
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'h/m³' }
+            }
+          }
+        }
+      });
+    }
+
     /**
      * Initialise la page d'accueil
      * - Charge la sidebar
@@ -103,14 +251,6 @@
         // Afficher les données dans des cartes KPI
         document.getElementById('gm-content').innerHTML = `
           <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 10px;">
-            <div class="kpi-box">
-              <div class="kpi-label">m³ coulés</div>
-              <div class="kpi-value">${lastWeek.m3.toFixed(2)}</div>
-            </div>
-            <div class="kpi-box">
-              <div class="kpi-label">Heures</div>
-              <div class="kpi-value">${lastWeek.hours.toFixed(2)}</div>
-            </div>
             <div class="kpi-box ${smiley}">
               <div class="kpi-label">h/m³</div>
               <div class="kpi-value">${ratio !== null ? ratio.toFixed(2) : '—'}</div>
@@ -123,6 +263,9 @@
             <strong>Commentaire : </strong> ${lastWeek.comment}
           </div>
         `;
+
+        // Rendre le graphique de tendance
+        renderGMTrendChart();
       }
 
       // ===== SECTION CBCO =====
