@@ -83,6 +83,42 @@
     </main>
   </div>
 
+  <!-- MODALE DE MODIFICATION -->
+  <div id="editModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
+    <div style="background:#fff; border-radius:12px; padding:30px; max-width:500px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+      <h2 style="margin-top:0; margin-bottom:20px;">✏️ Modifier l'affaire</h2>
+      <input type="hidden" id="editId">
+      <div class="form-group">
+        <label for="editNom">Nom de l'affaire *</label>
+        <input type="text" id="editNom" required>
+      </div>
+      <div class="form-group">
+        <label for="editMontant">Montant de l'offre / estimatif (€) *</label>
+        <input type="number" id="editMontant" min="0" step="0.01" required>
+      </div>
+      <div class="form-group">
+        <label for="editDateEnvoi">Date d'envoi du mémoire technique *</label>
+        <input type="date" id="editDateEnvoi" required>
+      </div>
+      <div class="form-group">
+        <label for="editDateReponse">Date de réponse</label>
+        <input type="date" id="editDateReponse">
+      </div>
+      <div class="form-group">
+        <label for="editResultat">Résultat</label>
+        <select id="editResultat">
+          <option value="en_cours">⏳ En cours</option>
+          <option value="gagne">✅ Gagné</option>
+          <option value="perdu">❌ Perdu</option>
+        </select>
+      </div>
+      <div style="display:flex; gap:10px; margin-top:20px;">
+        <button class="btn btn-primary" onclick="saveEdit()">💾 Enregistrer</button>
+        <button class="btn btn-secondary" onclick="closeEditModal()">Annuler</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const STATUT_LABELS = {
       'en_cours': { label: '⏳ En cours', badge: 'badge-warning' },
@@ -155,6 +191,51 @@
       }
     }
 
+    function openEditModal(id) {
+      const entry = getCBCOCommercial().find(e => e.id === id);
+      if (!entry) return;
+      document.getElementById('editId').value = entry.id;
+      document.getElementById('editNom').value = entry.nomAffaire;
+      document.getElementById('editMontant').value = entry.montant;
+      document.getElementById('editDateEnvoi').value = entry.dateEnvoi;
+      document.getElementById('editDateReponse').value = entry.dateReponse || '';
+      document.getElementById('editResultat').value = entry.resultat || 'en_cours';
+      document.getElementById('editModal').style.display = 'flex';
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').style.display = 'none';
+    }
+
+    function saveEdit() {
+      const id = document.getElementById('editId').value;
+      const nomAffaire = document.getElementById('editNom').value.trim();
+      const montant = parseFloat(document.getElementById('editMontant').value);
+      const dateEnvoi = document.getElementById('editDateEnvoi').value;
+      const dateReponse = document.getElementById('editDateReponse').value || null;
+      const resultat = document.getElementById('editResultat').value;
+
+      if (!nomAffaire || !dateEnvoi || isNaN(montant)) {
+        showMessage('❌ Veuillez remplir tous les champs obligatoires', 'error');
+        return;
+      }
+
+      if ((resultat === 'gagne' || resultat === 'perdu') && !dateReponse) {
+        showMessage('❌ Veuillez saisir la date de réponse pour une affaire gagnée ou perdue', 'error');
+        return;
+      }
+
+      const updates = { nomAffaire, montant, dateEnvoi, dateReponse, resultat };
+      if (resultat === 'en_cours') updates.dateReponse = null;
+
+      if (updateCBCOCommercialEntry(id, updates)) {
+        Auth.audit('CBCO_COMMERCIAL_EDITED', `Affaire modifiée : ${nomAffaire}`);
+        showMessage('✅ Affaire modifiée avec succès', 'success');
+        closeEditModal();
+        loadAffaires();
+      }
+    }
+
     function deleteAffaire(id) {
       const entry = getCBCOCommercial().find(e => e.id === id);
       if (!confirm(`Supprimer l'affaire « ${entry?.nomAffaire || ''} » ?`)) return;
@@ -205,6 +286,7 @@
           resultatCell = `<td><span class="badge ${s.badge}">${s.label}</span></td>`;
           actionsCell = `
             <td>
+              <button class="btn btn-small btn-secondary" onclick="openEditModal('${e.id}')" title="Modifier">✏️</button>
               <button class="btn btn-small btn-secondary" onclick="reinitialiserStatut('${e.id}')" title="Remettre en cours">↩️</button>
               <button class="btn btn-small btn-danger" onclick="deleteAffaire('${e.id}')" title="Supprimer">🗑️</button>
             </td>
@@ -225,6 +307,7 @@
           `;
           actionsCell = `
             <td>
+              <button class="btn btn-small btn-secondary" onclick="openEditModal('${e.id}')" title="Modifier">✏️</button>
               <button class="btn btn-small btn-danger" onclick="deleteAffaire('${e.id}')" title="Supprimer">🗑️</button>
             </td>
           `;
