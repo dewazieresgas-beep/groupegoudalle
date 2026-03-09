@@ -101,7 +101,6 @@
             <img src="./assets/cbco.png" alt="CBCO" style="height: 60px; width: auto;">
           </div>
           <div class="card-body">
-            <p style="margin: 0 0 10px 0; font-size: 14px; text-align: center;"><strong>Évolution du cumul annuel par année</strong></p>
             <div style="position: relative; height: 280px;">
               <canvas id="cbcoHomeChart"></canvas>
             </div>
@@ -156,9 +155,60 @@
       const lineColor = getCssVar('--accent-dark', '#6b8e6f');
       const fillColor = 'rgba(107, 142, 111, 0.12)';
       const threshold = getKpiRatioThreshold();
+      const lastWeekArrowPlugin = {
+        id: 'lastWeekArrow',
+        afterDatasetsDraw(chartInstance) {
+          const meta = chartInstance.getDatasetMeta(0);
+          const points = meta?.data || [];
+          if (points.length === 0) return;
+
+          const lastPoint = points[points.length - 1];
+          if (!lastPoint) return;
+
+          const { ctx: canvasCtx, chartArea } = chartInstance;
+          const targetX = lastPoint.x;
+          const targetY = lastPoint.y;
+
+          const startX = Math.min(chartArea.right - 10, targetX + 80);
+          const startY = Math.max(chartArea.top + 14, targetY - 70);
+
+          canvasCtx.save();
+          canvasCtx.strokeStyle = '#111111';
+          canvasCtx.fillStyle = '#111111';
+          canvasCtx.lineWidth = 2.5;
+
+          // Ligne principale de la flèche
+          canvasCtx.beginPath();
+          canvasCtx.moveTo(startX, startY);
+          canvasCtx.lineTo(targetX + 3, targetY - 4);
+          canvasCtx.stroke();
+
+          // Pointe de la flèche
+          const angle = Math.atan2((targetY - 4) - startY, (targetX + 3) - startX);
+          const headLen = 10;
+          canvasCtx.beginPath();
+          canvasCtx.moveTo(targetX + 3, targetY - 4);
+          canvasCtx.lineTo(
+            targetX + 3 - headLen * Math.cos(angle - Math.PI / 6),
+            targetY - 4 - headLen * Math.sin(angle - Math.PI / 6)
+          );
+          canvasCtx.lineTo(
+            targetX + 3 - headLen * Math.cos(angle + Math.PI / 6),
+            targetY - 4 - headLen * Math.sin(angle + Math.PI / 6)
+          );
+          canvasCtx.closePath();
+          canvasCtx.fill();
+
+          // Libellé court
+          canvasCtx.font = '600 12px Arial';
+          canvasCtx.fillText('Derniere semaine', startX - 105, startY - 6);
+          canvasCtx.restore();
+        }
+      };
 
       gmTrendChart = new Chart(ctx, {
         type: 'line',
+        plugins: [lastWeekArrowPlugin],
         data: {
           labels,
           datasets: [
@@ -233,12 +283,8 @@
         const ratio = calculateRatio(lastWeek.hours, lastWeek.m3);
         const smiley = getSmiley(ratio);
 
-        // Afficher uniquement le commentaire (KPI intégré dans l'en-tête du graphique)
-        document.getElementById('gm-content').innerHTML = `
-          <div class="comment-box" style="font-size: 12px; padding: 8px; background: #f9f9f9; border-radius: 4px; border-left: 3px solid var(--accent);">
-            <strong>Commentaire : </strong> ${lastWeek.comment}
-          </div>
-        `;
+        // Retirer le commentaire sur la carte d'accueil GM
+        document.getElementById('gm-content').innerHTML = '';
 
         // Mettre à jour le KPI compact dans l'en-tête du graphique
         document.getElementById('gmInlineRatio').textContent = ratio !== null ? `${ratio.toFixed(2)} h/m³` : '--';
