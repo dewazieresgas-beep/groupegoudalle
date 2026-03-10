@@ -22,59 +22,65 @@
 
     <main class="main-content">
       <h1>🏗️ Sylve Support — Import Balance Âgée</h1>
-      <p class="subtitle" style="margin-bottom: 24px; color: #666;">Importez l'export Excel Sage « Balance Âgée » pour chaque entreprise</p>
+      <p class="subtitle" style="margin-bottom: 24px; color: #666;">Importez l'export Excel Sage « Balance Âgée » pour chaque entreprise, mois par mois</p>
 
       <div id="message" class="alert" style="display:none;"></div>
 
-      <!-- ZONE D'IMPORT CBCO -->
-      <div class="card ss-import-card" id="importCardCBCO">
-        <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-          <h2 style="margin:0;">📁 CBCO</h2>
-          <span class="badge badge-secondary" id="statusCBCO">Aucun import</span>
-        </div>
+      <!-- ZONE D'IMPORT COMMUNE -->
+      <div class="card ss-import-card">
+        <div class="card-title"><h2 style="margin:0;">📥 Nouvel import</h2></div>
         <div class="card-body">
-          <div class="ss-import-zone" id="dropZoneCBCO" onclick="document.getElementById('fileCBCO').click()">
-            <input type="file" id="fileCBCO" accept=".xlsx,.xls" style="display:none;" onchange="handleFileSelect('cbco', this)">
+          <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:end; margin-bottom:16px;">
+            <div>
+              <label style="font-weight:600; font-size:0.85em; display:block; margin-bottom:4px;">Entreprise</label>
+              <select id="selectEntreprise" class="form-control" style="min-width:200px;">
+                <option value="cbco">CBCO</option>
+                <option value="gc">Goudalle Charpente</option>
+                <option value="gm">Goudalle Maçonnerie</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-weight:600; font-size:0.85em; display:block; margin-bottom:4px;">Mois</label>
+              <select id="selectMois" class="form-control" style="min-width:140px;"></select>
+            </div>
+            <div>
+              <label style="font-weight:600; font-size:0.85em; display:block; margin-bottom:4px;">Année</label>
+              <select id="selectAnnee" class="form-control" style="min-width:100px;"></select>
+            </div>
+          </div>
+          <div class="ss-import-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+            <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none;" onchange="handleFileSelect(this)">
             <div class="ss-import-icon">📊</div>
             <p><strong>Glissez-déposez</strong> le fichier Excel ici<br>ou <span style="color:var(--accent-dark); text-decoration:underline;">cliquez pour sélectionner</span></p>
             <p style="font-size: 0.8em; color: #999;">Format attendu : export Balance Âgée Sage (.xlsx)</p>
           </div>
-          <div id="previewCBCO" style="display:none;"></div>
+          <div id="preview" style="display:none;"></div>
         </div>
       </div>
 
-      <!-- ZONE D'IMPORT GOUDALLE CHARPENTE -->
-      <div class="card ss-import-card" id="importCardGC">
+      <!-- HISTORIQUE PAR ENTREPRISE -->
+      <div class="card ss-import-card" id="historyCBCO">
         <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-          <h2 style="margin:0;">📁 Goudalle Charpente</h2>
-          <span class="badge badge-secondary" id="statusGC">Aucun import</span>
+          <h2 style="margin:0;">📁 CBCO — Historique imports</h2>
+          <span class="badge badge-secondary" id="countCBCO">0 imports</span>
         </div>
-        <div class="card-body">
-          <div class="ss-import-zone" id="dropZoneGC" onclick="document.getElementById('fileGC').click()">
-            <input type="file" id="fileGC" accept=".xlsx,.xls" style="display:none;" onchange="handleFileSelect('gc', this)">
-            <div class="ss-import-icon">📊</div>
-            <p><strong>Glissez-déposez</strong> le fichier Excel ici<br>ou <span style="color:var(--accent-dark); text-decoration:underline;">cliquez pour sélectionner</span></p>
-            <p style="font-size: 0.8em; color: #999;">Format attendu : export Balance Âgée Sage (.xlsx)</p>
-          </div>
-          <div id="previewGC" style="display:none;"></div>
-        </div>
+        <div class="card-body" id="historyBodyCBCO"><p style="color:#999;">Aucun import</p></div>
       </div>
 
-      <!-- ZONE D'IMPORT GOUDALLE MAÇONNERIE -->
-      <div class="card ss-import-card" id="importCardGM">
+      <div class="card ss-import-card" id="historyGC">
         <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-          <h2 style="margin:0;">📁 Goudalle Maçonnerie</h2>
-          <span class="badge badge-secondary" id="statusGM">Aucun import</span>
+          <h2 style="margin:0;">📁 Goudalle Charpente — Historique imports</h2>
+          <span class="badge badge-secondary" id="countGC">0 imports</span>
         </div>
-        <div class="card-body">
-          <div class="ss-import-zone" id="dropZoneGM" onclick="document.getElementById('fileGM').click()">
-            <input type="file" id="fileGM" accept=".xlsx,.xls" style="display:none;" onchange="handleFileSelect('gm', this)">
-            <div class="ss-import-icon">📊</div>
-            <p><strong>Glissez-déposez</strong> le fichier Excel ici<br>ou <span style="color:var(--accent-dark); text-decoration:underline;">cliquez pour sélectionner</span></p>
-            <p style="font-size: 0.8em; color: #999;">Format attendu : export Balance Âgée Sage (.xlsx)</p>
-          </div>
-          <div id="previewGM" style="display:none;"></div>
+        <div class="card-body" id="historyBodyGC"><p style="color:#999;">Aucun import</p></div>
+      </div>
+
+      <div class="card ss-import-card" id="historyGM">
+        <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <h2 style="margin:0;">📁 Goudalle Maçonnerie — Historique imports</h2>
+          <span class="badge badge-secondary" id="countGM">0 imports</span>
         </div>
+        <div class="card-body" id="historyBodyGM"><p style="color:#999;">Aucun import</p></div>
       </div>
 
     </main>
@@ -83,6 +89,8 @@
   <script>
     const ENT_LABELS = { cbco: 'CBCO', gc: 'Goudalle Charpente', gm: 'Goudalle Maçonnerie' };
     const ENT_IDS = ['cbco', 'gc', 'gm'];
+    const MOIS_NOMS = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                       'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
     function showMessage(message, type) {
       const msgDiv = document.getElementById('message');
@@ -94,12 +102,35 @@
     }
 
     /**
-     * Parse une cellule Excel en nombre (gère les formats français, espaces, etc.)
+     * Initialise les sélecteurs mois/année
+     */
+    function initSelectors() {
+      const selMois = document.getElementById('selectMois');
+      const selAnnee = document.getElementById('selectAnnee');
+      const now = new Date();
+
+      for (let m = 1; m <= 12; m++) {
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = MOIS_NOMS[m];
+        if (m === now.getMonth() + 1) opt.selected = true;
+        selMois.appendChild(opt);
+      }
+
+      for (let y = now.getFullYear(); y >= now.getFullYear() - 3; y--) {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.textContent = y;
+        selAnnee.appendChild(opt);
+      }
+    }
+
+    /**
+     * Parse une cellule Excel en nombre
      */
     function parseNumber(val) {
       if (val === undefined || val === null || val === '') return 0;
       if (typeof val === 'number') return val;
-      // Nettoyage : supprimer espaces et remplacer virgule par point
       const cleaned = String(val).replace(/\s/g, '').replace(',', '.');
       const num = parseFloat(cleaned);
       return isNaN(num) ? 0 : num;
@@ -107,7 +138,6 @@
 
     /**
      * Parse le fichier Excel Balance Âgée Sage
-     * Détecte automatiquement l'en-tête, les colonnes et les lignes clients
      */
     function parseBalanceAgeeExcel(workbook) {
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -143,7 +173,6 @@
         }
         if (score >= 3) {
           headerRow = i;
-          // Mapper dynamiquement les colonnes
           for (let j = 0; j < row.length; j++) {
             const h = String(row[j]).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
             if ((h.includes('numero') || h.includes('n°')) && !h.includes('solde')) colMap.compte = j;
@@ -154,25 +183,22 @@
             else if (/31\s*[àa]\s*45/.test(h)) colMap.j31_45 = j;
             else if (/46\s*[àa]\s*60/.test(h)) colMap.j46_60 = j;
             else if (h.includes('plus de') || /6[1-9]|>\s*60/.test(h)) colMap.j61_plus = j;
-            // "Solde non échu" contient "solde" ET "non échu" → affecter à nonEchu
             if (h.includes('solde') && (h.includes('non') || h.includes('echu'))) colMap.nonEchu = j;
           }
           break;
         }
       }
 
-      // Si aucun en-tête trouvé, chercher la première ligne avec ≥5 cellules remplies
       if (headerRow === -1) {
         for (let i = 0; i < Math.min(30, rawData.length); i++) {
           const row = rawData[i];
           const filledCells = row.filter(c => String(c).trim() !== '').length;
           if (filledCells >= 5) {
-            // Vérifier si c'est un en-tête ou directement des données
             const hasNumbers = row.slice(2).some(c => typeof c === 'number' || /^[\d\s,.-]+$/.test(String(c).trim()));
             if (!hasNumbers) {
               headerRow = i;
             } else {
-              headerRow = i - 1; // Les données commencent ici
+              headerRow = i - 1;
             }
             break;
           }
@@ -181,11 +207,9 @@
 
       console.log('📊 En-tête trouvé ligne:', headerRow, '| Mapping colonnes:', JSON.stringify(colMap));
 
-      // 3. Extraire les lignes clients (après l'en-tête)
+      // 3. Extraire les lignes clients
       const startRow = headerRow + 1;
       const clients = [];
-
-      // Patterns à ignorer : seuls les totaux et lignes de synthèse
       const skipPatterns = [
         /^total/i, /^sous.?total/i, /^s\.?total/i,
         /^totaux/i, /^c\.?\s?g[eé]n[eé]ral/i,
@@ -203,19 +227,13 @@
         const j46_60 = parseNumber(row[colMap.j46_60]);
         const j61_plus = parseNumber(row[colMap.j61_plus]);
 
-        // Ignorer les lignes complètement vides
         if (!compte && !intitule) continue;
-
-        // Ignorer les lignes Total / Sous-total
         const combined = (compte + ' ' + intitule).trim();
         if (skipPatterns.some(p => p.test(combined))) continue;
-
-        // Ignorer les lignes sans aucune valeur numérique
         if (solde === 0 && nonEchu === 0 && j1_30 === 0 && j31_45 === 0 && j46_60 === 0 && j61_plus === 0) continue;
 
         clients.push({
-          compte: compte,
-          client: intitule || compte,
+          compte, client: intitule || compte,
           solde, nonEchu, j1_30, j31_45, j46_60, j61_plus
         });
       }
@@ -227,9 +245,13 @@
     /**
      * Gestion de la sélection de fichier
      */
-    function handleFileSelect(entrepriseId, input) {
+    function handleFileSelect(input) {
       const file = input.files[0];
       if (!file) return;
+
+      const entrepriseId = document.getElementById('selectEntreprise').value;
+      const mois = parseInt(document.getElementById('selectMois').value);
+      const annee = parseInt(document.getElementById('selectAnnee').value);
 
       const reader = new FileReader();
       reader.onload = function(e) {
@@ -243,7 +265,7 @@
             return;
           }
 
-          showPreview(entrepriseId, result.clients, result.periode, file.name);
+          showPreview(entrepriseId, result.clients, result.periode, file.name, mois, annee);
         } catch (err) {
           showMessage(`❌ Erreur lors de la lecture du fichier : ${err.message}`, 'error');
         }
@@ -254,19 +276,23 @@
     /**
      * Affiche un aperçu des données parsées avant validation
      */
-    function showPreview(entrepriseId, clients, periode, fileName) {
-      const previewDiv = document.getElementById('preview' + entrepriseId.toUpperCase());
-      const dropZone = document.getElementById('dropZone' + entrepriseId.toUpperCase());
+    function showPreview(entrepriseId, clients, periode, fileName, mois, annee) {
+      const previewDiv = document.getElementById('preview');
+      const dropZone = document.getElementById('dropZone');
 
       const totalSolde = clients.reduce((s, c) => s + c.solde, 0);
       const totalRetard = clients.reduce((s, c) => s + (c.j1_30 + c.j31_45 + c.j46_60 + c.j61_plus), 0);
+
+      // Vérifier si un import existe déjà pour ce mois
+      const existing = getSylveImports(entrepriseId).find(imp => imp.mois === mois && imp.annee === annee);
 
       let html = `
         <div style="border: 2px solid var(--accent); border-radius: 8px; padding: 16px; margin-top: 12px; background: #f9fdf9;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
             <div>
-              <strong>📄 ${escapeHtml(fileName)}</strong>
-              ${periode ? `<span style="margin-left:10px; color:#666;">(${escapeHtml(periode)})</span>` : ''}
+              <strong>📄 ${escapeHtml(fileName)}</strong> — 
+              <strong>${ENT_LABELS[entrepriseId]}</strong> · ${MOIS_NOMS[mois]} ${annee}
+              ${existing ? '<span style="color:var(--danger); margin-left:8px;">⚠️ Remplacera l\'import existant pour ce mois</span>' : ''}
             </div>
             <div>
               <span class="badge badge-primary">${clients.length} clients</span>
@@ -308,8 +334,8 @@
             </table>
           </div>
           <div style="display:flex; gap:10px; margin-top:16px;">
-            <button class="btn btn-primary" onclick="confirmImport('${entrepriseId}')">✅ Valider l'import</button>
-            <button class="btn btn-secondary" onclick="cancelPreview('${entrepriseId}')">❌ Annuler</button>
+            <button class="btn btn-primary" onclick="confirmImport()">✅ Valider l'import</button>
+            <button class="btn btn-secondary" onclick="cancelPreview()">❌ Annuler</button>
           </div>
         </div>`;
 
@@ -317,99 +343,129 @@
       previewDiv.style.display = 'block';
       dropZone.style.display = 'none';
 
-      // Stocker temporairement les données parsées
-      window['_pendingImport_' + entrepriseId] = { clients, periode };
+      window._pendingImport = { entrepriseId, clients, periode, mois, annee };
     }
 
     /**
      * Confirme et sauvegarde l'import
      */
-    function confirmImport(entrepriseId) {
-      const pending = window['_pendingImport_' + entrepriseId];
-      if (!pending) return;
+    function confirmImport() {
+      const p = window._pendingImport;
+      if (!p) return;
 
-      importSylveBalanceForEntreprise(entrepriseId, pending.clients, pending.periode);
-      Auth.audit('SYLVE_IMPORT', `Import balance âgée ${ENT_LABELS[entrepriseId]} — ${pending.clients.length} clients`);
-      showMessage(`✅ Import ${ENT_LABELS[entrepriseId]} réussi : ${pending.clients.length} clients importés`, 'success');
+      importSylveBalanceForEntreprise(p.entrepriseId, p.clients, p.periode, p.mois, p.annee);
+      Auth.audit('SYLVE_IMPORT', `Import balance âgée ${ENT_LABELS[p.entrepriseId]} — ${MOIS_NOMS[p.mois]} ${p.annee} — ${p.clients.length} clients`);
+      showMessage(`✅ Import ${ENT_LABELS[p.entrepriseId]} — ${MOIS_NOMS[p.mois]} ${p.annee} : ${p.clients.length} clients importés`, 'success');
 
-      delete window['_pendingImport_' + entrepriseId];
-      refreshImportStatus();
+      delete window._pendingImport;
+      cancelPreview();
+      refreshHistory();
     }
 
     /**
      * Annule l'aperçu
      */
-    function cancelPreview(entrepriseId) {
-      const key = entrepriseId.toUpperCase();
-      document.getElementById('preview' + key).style.display = 'none';
-      document.getElementById('preview' + key).innerHTML = '';
-      document.getElementById('dropZone' + key).style.display = '';
-      // Reset le file input
-      const fileInput = document.getElementById('file' + key);
-      if (fileInput) fileInput.value = '';
-      delete window['_pendingImport_' + entrepriseId];
+    function cancelPreview() {
+      document.getElementById('preview').style.display = 'none';
+      document.getElementById('preview').innerHTML = '';
+      document.getElementById('dropZone').style.display = '';
+      document.getElementById('fileInput').value = '';
+      delete window._pendingImport;
     }
 
     /**
-     * Met à jour les statuts d'import affichés
+     * Supprime un import spécifique
      */
-    function refreshImportStatus() {
+    function deleteImport(entrepriseId, importId) {
+      const imports = getSylveImports(entrepriseId);
+      const imp = imports.find(i => i.id === importId);
+      if (!imp) return;
+
+      const label = `${ENT_LABELS[entrepriseId]} — ${MOIS_NOMS[imp.mois]} ${imp.annee}`;
+      if (!confirm(`Supprimer l'import ${label} ?`)) return;
+
+      deleteSylveImport(entrepriseId, importId);
+      Auth.audit('SYLVE_IMPORT_DELETED', `Suppression import ${label}`);
+      showMessage(`🗑️ Import ${label} supprimé`, 'success');
+      refreshHistory();
+    }
+
+    /**
+     * Pré-remplit le formulaire pour remplacer un import existant
+     */
+    function replaceImport(entrepriseId, mois, annee) {
+      document.getElementById('selectEntreprise').value = entrepriseId;
+      document.getElementById('selectMois').value = mois;
+      document.getElementById('selectAnnee').value = annee;
+      cancelPreview();
+      document.getElementById('fileInput').click();
+      window.scrollTo(0, 0);
+    }
+
+    /**
+     * Affiche l'historique des imports par entreprise
+     */
+    function refreshHistory() {
       ENT_IDS.forEach(id => {
         const key = id.toUpperCase();
-        const imp = getSylveLastImport(id);
-        const statusEl = document.getElementById('status' + key);
-        const previewDiv = document.getElementById('preview' + key);
-        const dropZone = document.getElementById('dropZone' + key);
+        const imports = getSylveImports(id);
+        const bodyEl = document.getElementById('historyBody' + key);
+        const countEl = document.getElementById('count' + key);
 
-        if (imp) {
+        countEl.textContent = imports.length + ' import' + (imports.length > 1 ? 's' : '');
+        countEl.className = imports.length > 0 ? 'badge badge-success' : 'badge badge-secondary';
+
+        if (imports.length === 0) {
+          bodyEl.innerHTML = '<p style="color:#999; margin:0;">Aucun import pour cette entreprise</p>';
+          return;
+        }
+
+        let html = `<table style="font-size:0.88em;">
+          <thead>
+            <tr>
+              <th>Période</th>
+              <th>Date d'import</th>
+              <th>Clients</th>
+              <th>Solde total</th>
+              <th>Total retard</th>
+              <th style="text-align:center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>`;
+
+        imports.forEach((imp, idx) => {
           const date = new Date(imp.importDate).toLocaleDateString('fr-FR', {
             day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
           });
-          statusEl.textContent = `✅ Importé le ${date} — ${imp.clients.length} clients`;
-          statusEl.className = 'badge badge-success';
+          const nbClients = imp.clients.length;
+          const totalSolde = imp.clients.reduce((s, c) => s + (c.solde || 0), 0);
+          const totalRetard = imp.clients.reduce((s, c) => s + ((c.j1_30||0) + (c.j31_45||0) + (c.j46_60||0) + (c.j61_plus||0)), 0);
+          const moisLabel = MOIS_NOMS[imp.mois] || '?';
+          const isLatest = idx === 0;
 
-          // Afficher un résumé compact
-          const totalRetard = imp.clients.reduce((s, c) => s + (c.j1_30 + c.j31_45 + c.j46_60 + c.j61_plus), 0);
-          previewDiv.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding:10px 0;">
-              <span>${imp.clients.length} clients — Retard total : <strong>${formatSylveEuros(totalRetard)}</strong></span>
-              <button class="btn btn-small btn-danger" onclick="clearImport('${id}')">🗑️ Supprimer cet import</button>
-            </div>`;
-          previewDiv.style.display = 'block';
-          dropZone.style.display = '';
-        } else {
-          statusEl.textContent = 'Aucun import';
-          statusEl.className = 'badge badge-secondary';
-          previewDiv.style.display = 'none';
-          previewDiv.innerHTML = '';
-          dropZone.style.display = '';
-        }
+          html += `<tr${isLatest ? ' style="background:rgba(76,175,80,0.06);"' : ''}>
+              <td><strong>${moisLabel} ${imp.annee}</strong>${isLatest ? ' <span class="badge badge-primary" style="font-size:0.7em;">Dernier</span>' : ''}</td>
+              <td>${date}</td>
+              <td>${nbClients}</td>
+              <td>${formatSylveEuros(totalSolde)}</td>
+              <td style="color:${totalRetard > 0 ? 'var(--danger)' : 'inherit'}; font-weight:600;">${formatSylveEuros(totalRetard)}</td>
+              <td style="text-align:center; white-space:nowrap;">
+                <button class="btn btn-small btn-secondary" onclick="replaceImport('${id}', ${imp.mois}, ${imp.annee})" title="Remplacer ce fichier">🔄</button>
+                <button class="btn btn-small btn-danger" onclick="deleteImport('${id}', '${imp.id}')" title="Supprimer">🗑️</button>
+              </td>
+            </tr>`;
+        });
 
-        // Reset file input
-        const fileInput = document.getElementById('file' + key);
-        if (fileInput) fileInput.value = '';
+        html += '</tbody></table>';
+        bodyEl.innerHTML = html;
       });
     }
 
     /**
-     * Supprime l'import d'une entreprise
+     * Drag & Drop sur la zone unique
      */
-    function clearImport(entrepriseId) {
-      if (!confirm(`Supprimer l'import ${ENT_LABELS[entrepriseId]} ?`)) return;
-      const data = getSylveBalance();
-      data[entrepriseId] = [];
-      saveSylveBalance(data);
-      Auth.audit('SYLVE_IMPORT_DELETED', `Suppression import ${ENT_LABELS[entrepriseId]}`);
-      showMessage(`🗑️ Import ${ENT_LABELS[entrepriseId]} supprimé`, 'success');
-      refreshImportStatus();
-    }
-
-    /**
-     * Drag & Drop
-     */
-    function setupDragDrop(entrepriseId) {
-      const key = entrepriseId.toUpperCase();
-      const zone = document.getElementById('dropZone' + key);
+    function setupDragDrop() {
+      const zone = document.getElementById('dropZone');
       if (!zone) return;
 
       zone.addEventListener('dragover', (e) => {
@@ -424,11 +480,11 @@
         zone.classList.remove('ss-import-zone-active');
         const file = e.dataTransfer.files[0];
         if (file) {
-          const input = document.getElementById('file' + key);
+          const input = document.getElementById('fileInput');
           const dt = new DataTransfer();
           dt.items.add(file);
           input.files = dt.files;
-          handleFileSelect(entrepriseId, input);
+          handleFileSelect(input);
         }
       });
     }
@@ -436,8 +492,9 @@
     function init() {
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectSylveSecondaryBar();
-      ENT_IDS.forEach(id => setupDragDrop(id));
-      refreshImportStatus();
+      initSelectors();
+      setupDragDrop();
+      refreshHistory();
     }
 
     window.addEventListener('load', init);

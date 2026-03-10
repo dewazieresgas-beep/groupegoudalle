@@ -1102,10 +1102,11 @@ const SYLVE_MOIS = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
 /**
  * Structure stockée :
  * {
- *   cbco: [ { importDate, periode, clients: [{compte, client, solde, nonEchu, j1_30, j31_45, j46_60, j61_plus}] } ],
+ *   cbco: [ { id, importDate, mois, annee, periode, clients: [{compte, client, solde, nonEchu, j1_30, j31_45, j46_60, j61_plus}] } ],
  *   gc:   [ ... ],
  *   gm:   [ ... ]
  * }
+ * Les imports sont triés du plus récent au plus ancien (index 0 = dernier import)
  */
 
 function getSylveBalance() {
@@ -1118,21 +1119,61 @@ function saveSylveBalance(data) {
 }
 
 /**
- * Importe les données d'un fichier Excel balance âgée pour une entreprise
- * Remplace l'import existant pour cette entreprise (dernier import = données actuelles)
+ * Importe les données d'un fichier Excel balance âgée pour une entreprise et un mois donné.
+ * Si un import existe déjà pour le même mois/année, il est remplacé.
+ * Sinon, un nouvel import est ajouté à l'historique.
  */
-function importSylveBalanceForEntreprise(entrepriseId, clients, periode) {
+function importSylveBalanceForEntreprise(entrepriseId, clients, periode, mois, annee) {
   const data = getSylveBalance();
-  data[entrepriseId] = [{
+  if (!data[entrepriseId]) data[entrepriseId] = [];
+
+  // Vérifier si un import existe déjà pour ce mois/année
+  const existingIdx = data[entrepriseId].findIndex(imp => imp.mois === mois && imp.annee === annee);
+
+  const entry = {
+    id: Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
     importDate: new Date().toISOString(),
+    mois: mois,
+    annee: annee,
     periode: periode || '',
     clients: clients
-  }];
+  };
+
+  if (existingIdx !== -1) {
+    // Remplacer l'import existant
+    data[entrepriseId][existingIdx] = entry;
+  } else {
+    // Ajouter et trier par date décroissante (année puis mois)
+    data[entrepriseId].push(entry);
+    data[entrepriseId].sort((a, b) => {
+      if (b.annee !== a.annee) return b.annee - a.annee;
+      return b.mois - a.mois;
+    });
+  }
+
   saveSylveBalance(data);
 }
 
 /**
- * Récupère le dernier import pour une entreprise
+ * Supprime un import spécifique par son id
+ */
+function deleteSylveImport(entrepriseId, importId) {
+  const data = getSylveBalance();
+  if (!data[entrepriseId]) return;
+  data[entrepriseId] = data[entrepriseId].filter(imp => imp.id !== importId);
+  saveSylveBalance(data);
+}
+
+/**
+ * Récupère tous les imports d'une entreprise (triés du plus récent au plus ancien)
+ */
+function getSylveImports(entrepriseId) {
+  const data = getSylveBalance();
+  return data[entrepriseId] || [];
+}
+
+/**
+ * Récupère le dernier import (le plus récent) pour une entreprise
  */
 function getSylveLastImport(entrepriseId) {
   const data = getSylveBalance();
