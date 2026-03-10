@@ -1,44 +1,56 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Goudalle Maconnerie - Paiements en attente</title>
+  <title>GM - Paiements en attente</title>
   <link rel="stylesheet" href="../style.css">
   <style>
-    .pe-table {
-      width: 100%;
-      table-layout: fixed;
-      font-size: 0.78em;
-    }
-    .pe-table th,
-    .pe-table td {
-      padding: 8px 6px;
-      vertical-align: middle;
-    }
-    .pe-table th:nth-child(1) { width: 18%; }
-    .pe-table th:nth-child(2) { width: 10%; }
-    .pe-table th:nth-child(3),
-    .pe-table th:nth-child(4),
-    .pe-table th:nth-child(5),
-    .pe-table th:nth-child(6) { width: 10%; }
-    .pe-table th:nth-child(7),
-    .pe-table th:nth-child(8) { width: 8%; }
-    .pe-table th:nth-child(9) { width: 16%; }
+    .pe-table { width: 100%; table-layout: fixed; font-size: 0.78em; }
+    .pe-table th, .pe-table td { padding: 8px 6px; vertical-align: top; }
+    .pe-table th:nth-child(1) { width: 30%; }
+    .pe-table th:nth-child(2) { width: 12%; }
+    .pe-table th:nth-child(3) { width: 16%; }
+    .pe-table th:nth-child(4) { width: 20%; }
+    .pe-table th:nth-child(5) { width: 22%; }
 
-    .pe-cell {
+    .pe-select { position: relative; }
+    .pe-select-btn { width: 100%; }
+    .pe-select-menu {
+      display: none;
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      width: 220px;
+      max-height: 220px;
+      overflow: auto;
+      background: #fff;
+      border: 1px solid #d6d6d6;
+      border-radius: 6px;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+      z-index: 20;
+      padding: 6px;
+    }
+    .pe-select.open .pe-select-menu { display: block; }
+    .pe-select-item {
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 6px;
+      padding: 4px 2px;
+      font-size: 0.92em;
     }
-    .pe-cell input[type="checkbox"] {
-      flex: 0 0 auto;
-      margin: 0;
+
+    .pe-amount-line {
+      display: grid;
+      grid-template-columns: 1fr 110px;
+      gap: 6px;
+      align-items: center;
+      margin-bottom: 6px;
     }
-    .pe-cell input[type="number"] {
-      min-width: 0;
-      width: 100%;
-    }
+    .pe-amount-line:last-child { margin-bottom: 0; }
+    .pe-amount-label { font-size: 0.88em; color: #4e5e4e; }
+
+    .pe-comment { min-height: 58px; resize: vertical; }
   </style>
 </head>
 <body>
@@ -57,7 +69,7 @@
 
     <main class="main-content">
       <div class="d-flex justify-between items-center mb-3" style="gap: 12px; flex-wrap: wrap;">
-        <h1 class="mb-0">Paiements en attente - Goudalle Maconnerie</h1>
+        <h1 class="mb-0">Paiements en attente - Maçonnerie</h1>
       </div>
 
       <div id="message" class="alert" style="display:none;"></div>
@@ -67,16 +79,25 @@
 
   <script>
     const ENTREPRISE_ID = 'gm';
-    const ENTREPRISE_LABEL = 'Goudalle Maconnerie';
+    const ENTREPRISE_LABEL = 'Goudalle Maçonnerie';
     const ENTREPRISE_LOGO = '../assets/goudalle-maconnerie.png';
     const MONTHS = ['', 'Janvier', 'Fevrier', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Aout', 'Septembre', 'Octobre', 'Novembre', 'Decembre'];
+    const TYPE_OPTIONS = [
+      { id: 'sans_raison', label: 'DÛ sans raison' },
+      { id: 'avec_reserves', label: 'DÛ avec reserves' },
+      { id: 'rg_attente', label: 'DÛ RG en attente' },
+      { id: 'litiges', label: 'DÛ litiges' },
+      { id: 'regle', label: 'Soldé' },
+      { id: 'acompte', label: 'Acompte sur encours' },
+      { id: 'autre', label: 'Autre' }
+    ];
 
     function showMessage(message, type) {
       const msg = document.getElementById('message');
       msg.textContent = message;
       msg.className = `alert alert-${type}`;
       msg.style.display = 'block';
-      setTimeout(() => { msg.style.display = 'none'; }, 2200);
+      setTimeout(() => { msg.style.display = 'none'; }, 1800);
     }
 
     function parseInputNumber(val) {
@@ -86,82 +107,173 @@
       return Number.isFinite(n) ? n : 0;
     }
 
-    function getRetard(client) {
-      return (client.j1_30 || 0) + (client.j31_45 || 0) + (client.j46_60 || 0) + (client.j61_plus || 0);
-    }
-
     function formatInputNumber(value) {
       const n = Number(value) || 0;
       return n ? (Math.round(n * 100) / 100).toString() : '';
     }
 
-    function applyRowRules(row) {
-      const retard = parseInputNumber(row.dataset.retard);
-      const reasonFields = ['sansRaison', 'avecReserves', 'rgAttente', 'litiges', 'solde', 'acompte'];
-      const checks = {};
-      const inputs = {};
+    function getRetard(client) {
+      return (client.j1_30 || 0) + (client.j31_45 || 0) + (client.j46_60 || 0) + (client.j61_plus || 0);
+    }
 
-      reasonFields.forEach(field => {
-        checks[field] = row.querySelector(`[data-check="${field}"]`);
-        inputs[field] = row.querySelector(`[data-field="${field}"]`);
+    function getOptionLabel(typeId) {
+      const opt = TYPE_OPTIONS.find(o => o.id === typeId);
+      return opt ? opt.label : typeId;
+    }
+
+    function closeAllSelectMenus() {
+      document.querySelectorAll('.pe-select.open').forEach(el => el.classList.remove('open'));
+    }
+
+    function getSelectedTypes(row) {
+      return Array.from(row.querySelectorAll('.pe-select-menu input[type="checkbox"]:checked')).map(i => i.dataset.type);
+    }
+
+    function readAmountsFromRow(row) {
+      const amounts = {};
+      row.querySelectorAll('.pe-amount-input').forEach(input => {
+        amounts[input.dataset.type] = parseInputNumber(input.value);
       });
+      return amounts;
+    }
 
-      const checked = reasonFields.filter(f => checks[f] && checks[f].checked);
+    function buildAmountsHtml(selectedTypes, amounts) {
+      if (!selectedTypes.length) {
+        return '<em style="color:#888; font-size:0.86em;">Choisir au moins un motif</em>';
+      }
+      return selectedTypes.map(typeId => `
+        <div class="pe-amount-line">
+          <div class="pe-amount-label">${escapeHtml(getOptionLabel(typeId))}</div>
+          <input type="number" step="0.01" class="form-control pe-amount-input" data-type="${typeId}" value="${formatInputNumber(amounts[typeId])}">
+        </div>
+      `).join('');
+    }
 
-      if (checked.includes('solde') || checked.includes('acompte')) {
+    function updateSelectButtonLabel(row, selectedTypes) {
+      const btn = row.querySelector('.pe-select-btn');
+      if (!btn) return;
+      if (!selectedTypes.length) {
+        btn.textContent = 'Selectionner';
+      } else if (selectedTypes.length <= 2) {
+        btn.textContent = selectedTypes.map(getOptionLabel).join(' + ');
+      } else {
+        btn.textContent = `${selectedTypes.length} selections`;
+      }
+    }
+
+    function applyRowColor(row, selectedTypes) {
+      if (selectedTypes.includes('regle') || selectedTypes.includes('acompte') || selectedTypes.includes('rg_attente') || selectedTypes.includes('autre')) {
         row.style.backgroundColor = '';
-      } else if (checked.includes('litiges')) {
+      } else if (selectedTypes.includes('litiges')) {
         row.style.backgroundColor = '#fde2e2';
-      } else if (checked.includes('sansRaison')) {
+      } else if (selectedTypes.includes('sans_raison')) {
         row.style.backgroundColor = '#e8f6e8';
-      } else if (checked.includes('avecReserves')) {
+      } else if (selectedTypes.includes('avec_reserves')) {
         row.style.backgroundColor = '#fff0dc';
       } else {
         row.style.backgroundColor = '';
       }
+    }
 
-      if (checked.length === 1) {
-        reasonFields.forEach(field => {
-          const isSelected = checked[0] === field;
-          inputs[field].value = isSelected ? formatInputNumber(retard) : '';
-          inputs[field].readOnly = true;
-          inputs[field].disabled = true;
-        });
-      } else if (checked.length > 1) {
-        reasonFields.forEach(field => {
-          const isSelected = checked.includes(field);
-          inputs[field].readOnly = !isSelected;
-          inputs[field].disabled = !isSelected;
-          if (!isSelected) inputs[field].value = '';
-        });
-      } else {
-        reasonFields.forEach(field => {
-          inputs[field].value = '';
-          inputs[field].readOnly = true;
-          inputs[field].disabled = true;
-        });
+    function normalizeState(note, retard) {
+      const selected = Array.isArray(note.selectedTypes) ? [...note.selectedTypes] : [];
+      const amounts = (note.amounts && typeof note.amounts === 'object') ? { ...note.amounts } : {};
+
+      const legacyMapping = [
+        ['sans_raison', note.chkSansRaison || note.sansRaison > 0, note.sansRaison],
+        ['avec_reserves', note.chkAvecReserves || note.avecReserves > 0, note.avecReserves],
+        ['rg_attente', note.chkRgAttente || note.rgAttente > 0, note.rgAttente],
+        ['litiges', note.chkLitiges || note.litiges > 0, note.litiges],
+        ['regle', note.chkSolde || note.solde > 0, note.solde],
+        ['acompte', note.chkAcompte || note.acompte > 0, note.acompte]
+      ];
+
+      legacyMapping.forEach(([typeId, checked, amount]) => {
+        if (checked && !selected.includes(typeId)) selected.push(typeId);
+        if (!amounts[typeId] && Number(amount) > 0) amounts[typeId] = Number(amount);
+      });
+
+      if (selected.length === 1 && (!amounts[selected[0]] || amounts[selected[0]] === 0)) {
+        amounts[selected[0]] = retard;
       }
+
+      return {
+        selectedTypes: selected,
+        amounts,
+        commentaire: note.commentaire || ''
+      };
     }
 
     function saveRow(row, importId) {
       const compte = row.dataset.compte;
+      const selectedTypes = getSelectedTypes(row);
+      const amounts = readAmountsFromRow(row);
       const payload = {
-        chkSansRaison: !!row.querySelector('[data-check="sansRaison"]').checked,
-        chkAvecReserves: !!row.querySelector('[data-check="avecReserves"]').checked,
-        chkRgAttente: !!row.querySelector('[data-check="rgAttente"]').checked,
-        chkLitiges: !!row.querySelector('[data-check="litiges"]').checked,
-        chkSolde: !!row.querySelector('[data-check="solde"]').checked,
-        chkAcompte: !!row.querySelector('[data-check="acompte"]').checked,
-        sansRaison: parseInputNumber(row.querySelector('[data-field="sansRaison"]').value),
-        avecReserves: parseInputNumber(row.querySelector('[data-field="avecReserves"]').value),
-        rgAttente: parseInputNumber(row.querySelector('[data-field="rgAttente"]').value),
-        litiges: parseInputNumber(row.querySelector('[data-field="litiges"]').value),
-        solde: parseInputNumber(row.querySelector('[data-field="solde"]').value),
-        acompte: parseInputNumber(row.querySelector('[data-field="acompte"]').value),
-        commentaire: row.querySelector('[data-field="commentaire"]').value || ''
+        selectedTypes,
+        amounts,
+        commentaire: row.querySelector('[data-field="commentaire"]').value || '',
+
+        chkSansRaison: selectedTypes.includes('sans_raison'),
+        chkAvecReserves: selectedTypes.includes('avec_reserves'),
+        chkRgAttente: selectedTypes.includes('rg_attente'),
+        chkLitiges: selectedTypes.includes('litiges'),
+        chkSolde: selectedTypes.includes('regle'),
+        chkAcompte: selectedTypes.includes('acompte'),
+        sansRaison: amounts.sans_raison || 0,
+        avecReserves: amounts.avec_reserves || 0,
+        rgAttente: amounts.rg_attente || 0,
+        litiges: amounts.litiges || 0,
+        solde: amounts.regle || 0,
+        acompte: amounts.acompte || 0
       };
+
       saveSylvePaiementAttente(ENTREPRISE_ID, importId, compte, payload);
       showMessage('Sauvegarde effectuee', 'success');
+    }
+
+    function onSelectionChanged(row, retard, importId) {
+      const selectedTypes = getSelectedTypes(row);
+      const currentAmounts = readAmountsFromRow(row);
+
+      if (selectedTypes.length === 1 && (!currentAmounts[selectedTypes[0]] || currentAmounts[selectedTypes[0]] === 0)) {
+        currentAmounts[selectedTypes[0]] = retard;
+      }
+
+      row.querySelector('.pe-amounts-cell').innerHTML = buildAmountsHtml(selectedTypes, currentAmounts);
+      updateSelectButtonLabel(row, selectedTypes);
+      applyRowColor(row, selectedTypes);
+
+      row.querySelectorAll('.pe-amount-input').forEach(input => {
+        input.addEventListener('change', () => saveRow(row, importId));
+      });
+
+      saveRow(row, importId);
+    }
+
+    function bindRowInteractions(row, retard, importId) {
+      const select = row.querySelector('.pe-select');
+      const btn = row.querySelector('.pe-select-btn');
+
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const wasOpen = select.classList.contains('open');
+        closeAllSelectMenus();
+        if (!wasOpen) select.classList.add('open');
+      });
+
+      row.querySelectorAll('.pe-select-menu input[type="checkbox"]').forEach(chk => {
+        chk.addEventListener('change', () => onSelectionChanged(row, retard, importId));
+      });
+
+      row.querySelectorAll('.pe-amount-input').forEach(input => {
+        input.addEventListener('change', () => saveRow(row, importId));
+      });
+
+      row.querySelector('[data-field="commentaire"]').addEventListener('change', () => saveRow(row, importId));
+
+      updateSelectButtonLabel(row, getSelectedTypes(row));
+      applyRowColor(row, getSelectedTypes(row));
     }
 
     function render() {
@@ -182,23 +294,25 @@
 
       const rows = clients.map(c => {
         const note = getSylvePaiementAttente(ENTREPRISE_ID, imp.id, c.compte);
-        const chkSansRaison = !!(note.chkSansRaison || note.sansRaison > 0);
-        const chkAvecReserves = !!(note.chkAvecReserves || note.avecReserves > 0);
-        const chkRgAttente = !!(note.chkRgAttente || note.rgAttente > 0);
-        const chkLitiges = !!(note.chkLitiges || note.litiges > 0);
-        const chkSolde = !!(note.chkSolde || note.solde > 0);
-        const chkAcompte = !!(note.chkAcompte || note.acompte > 0);
+        const state = normalizeState(note, c.retard);
+
+        const optionsHtml = TYPE_OPTIONS.map(opt => {
+          const checked = state.selectedTypes.includes(opt.id) ? 'checked' : '';
+          return `<label class="pe-select-item"><input type="checkbox" data-type="${opt.id}" ${checked}>${escapeHtml(opt.label)}</label>`;
+        }).join('');
+
         return `
           <tr data-compte="${escapeHtml(c.compte)}" data-retard="${c.retard}">
             <td><strong>${escapeHtml(c.client)}</strong></td>
             <td style="font-weight:600; white-space:nowrap;">${formatSylveEuros(c.retard)}</td>
-            <td><div class="pe-cell"><input type="checkbox" class="pe-reason-check" data-check="sansRaison" ${chkSansRaison ? 'checked' : ''}><input type="number" step="0.01" class="form-control pe-reason-input" data-field="sansRaison" value="${formatInputNumber(note.sansRaison)}"></div></td>
-            <td><div class="pe-cell"><input type="checkbox" class="pe-reason-check" data-check="avecReserves" ${chkAvecReserves ? 'checked' : ''}><input type="number" step="0.01" class="form-control pe-reason-input" data-field="avecReserves" value="${formatInputNumber(note.avecReserves)}"></div></td>
-            <td><div class="pe-cell"><input type="checkbox" class="pe-reason-check" data-check="rgAttente" ${chkRgAttente ? 'checked' : ''}><input type="number" step="0.01" class="form-control pe-reason-input" data-field="rgAttente" value="${formatInputNumber(note.rgAttente)}"></div></td>
-            <td><div class="pe-cell"><input type="checkbox" class="pe-reason-check" data-check="litiges" ${chkLitiges ? 'checked' : ''}><input type="number" step="0.01" class="form-control pe-reason-input" data-field="litiges" value="${formatInputNumber(note.litiges)}"></div></td>
-            <td><div class="pe-cell"><input type="checkbox" class="pe-reason-check" data-check="solde" ${chkSolde ? 'checked' : ''}><input type="number" step="0.01" class="form-control pe-reason-input" data-field="solde" value="${formatInputNumber(note.solde)}"></div></td>
-            <td><div class="pe-cell"><input type="checkbox" class="pe-reason-check" data-check="acompte" ${chkAcompte ? 'checked' : ''}><input type="number" step="0.01" class="form-control pe-reason-input" data-field="acompte" value="${formatInputNumber(note.acompte)}"></div></td>
-            <td><input type="text" class="form-control pe-save-input" data-field="commentaire" value="${escapeHtml(note.commentaire || '')}"></td>
+            <td>
+              <div class="pe-select">
+                <button type="button" class="btn btn-secondary pe-select-btn">Selectionner</button>
+                <div class="pe-select-menu">${optionsHtml}</div>
+              </div>
+            </td>
+            <td class="pe-amounts-cell">${buildAmountsHtml(state.selectedTypes, state.amounts)}</td>
+            <td><textarea class="form-control pe-comment" data-field="commentaire" placeholder="Commentaire">${escapeHtml(state.commentaire)}</textarea></td>
           </tr>
         `;
       }).join('');
@@ -212,40 +326,29 @@
             </div>
             <span class="badge badge-primary">Import: ${periode} - ${clients.length} clients en retard</span>
           </div>
-          <div class="card-body" style="overflow:auto;">
+          <div class="card-body">
             <table class="pe-table">
               <thead>
                 <tr>
                   <th style="text-align:center;">Client</th>
                   <th style="text-align:center;">Retard total</th>
-                  <th style="text-align:center;">DÛ<br>sans raison</th>
-                  <th style="text-align:center;">DÛ<br>avec reserves</th>
-                  <th style="text-align:center;">DÛ<br>RG en attente</th>
-                  <th style="text-align:center;">DÛ<br>litiges</th>
-                  <th style="text-align:center;">Soldé</th>
-                  <th style="text-align:center;">Acompte sur encours</th>
+                  <th style="text-align:center;">Selection</th>
+                  <th style="text-align:center;">Montants</th>
                   <th style="text-align:center;">Commentaire</th>
                 </tr>
               </thead>
-              <tbody>${rows || '<tr><td colspan="9" style="text-align:center; color:#999;">Aucun client en retard</td></tr>'}</tbody>
+              <tbody>${rows || '<tr><td colspan="5" style="text-align:center; color:#999;">Aucun client en retard</td></tr>'}</tbody>
             </table>
           </div>
         </div>
       `;
 
       root.querySelectorAll('tbody tr[data-compte]').forEach(row => {
-        applyRowRules(row);
-        row.querySelectorAll('.pe-reason-check').forEach(chk => {
-          chk.addEventListener('change', () => {
-            applyRowRules(row);
-            saveRow(row, imp.id);
-          });
-        });
-        row.querySelectorAll('.pe-reason-input, .pe-save-input').forEach(input => {
-          input.addEventListener('change', () => saveRow(row, imp.id));
-        });
+        bindRowInteractions(row, parseInputNumber(row.dataset.retard), imp.id);
       });
     }
+
+    document.addEventListener('click', () => closeAllSelectMenus());
 
     function init() {
       document.getElementById('sidebar').innerHTML = getSidebar();
@@ -259,3 +362,5 @@
   <footer class="site-footer"></footer>
 </body>
 </html>
+
+

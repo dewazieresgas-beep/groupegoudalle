@@ -1215,7 +1215,11 @@ function getSylveBalance() {
  * Structure :
  * {
  *   "entrepriseId::importId::compte": {
- *     sansRaison, avecReserves, rgAttente, litiges, solde, acompte, commentaire, updatedAt
+ *     selectedTypes: ["litiges", "regle"],
+ *     amounts: { litiges: 1200, regle: 800 },
+ *     commentaire,
+ *     ...legacyFields,
+ *     updatedAt
  *   }
  * }
  */
@@ -1232,6 +1236,8 @@ function getSylvePaiementAttente(entrepriseId, importId, compte) {
   const data = getSylvePaiementsAttente();
   const key = `${entrepriseId}::${importId}::${String(compte || '').trim()}`;
   return data[key] || {
+    selectedTypes: [],
+    amounts: {},
     chkSansRaison: false,
     chkAvecReserves: false,
     chkRgAttente: false,
@@ -1251,7 +1257,20 @@ function getSylvePaiementAttente(entrepriseId, importId, compte) {
 function saveSylvePaiementAttente(entrepriseId, importId, compte, payload) {
   const data = getSylvePaiementsAttente();
   const key = `${entrepriseId}::${importId}::${String(compte || '').trim()}`;
+  const selectedTypes = Array.isArray(payload.selectedTypes)
+    ? payload.selectedTypes.map(v => String(v || '').trim()).filter(Boolean)
+    : [];
+  const rawAmounts = (payload.amounts && typeof payload.amounts === 'object') ? payload.amounts : {};
+  const amounts = {};
+  Object.keys(rawAmounts).forEach(typeId => {
+    const safeTypeId = String(typeId || '').trim();
+    if (!safeTypeId) return;
+    amounts[safeTypeId] = Number(rawAmounts[typeId]) || 0;
+  });
+
   data[key] = {
+    selectedTypes,
+    amounts,
     chkSansRaison: !!payload.chkSansRaison,
     chkAvecReserves: !!payload.chkAvecReserves,
     chkRgAttente: !!payload.chkRgAttente,
