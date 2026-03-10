@@ -25,7 +25,7 @@
     <main class="main-content">
       <!-- SECTION EN-TÊTE -->
       <div class="cbco-header">
-        <h1>� Chiffre d'Affaires CBCO</h1>
+        <h1>Chiffre d'Affaires CBCO</h1>
         <p class="subtitle">Suivi de la croissance du chiffre d'affaires - Cumul annuel par année</p>
         <div style="margin-top: 15px;">
           <button onclick="downloadCBCOReport()" class="btn btn-secondary">📥 Télécharger le rapport</button>
@@ -52,32 +52,66 @@
         </div>
       </div>
 
-      <!-- SECTION INDICATEUR PRINCIPAL - DERNIÈRE ENTRÉE -->
-      <div class="cbco-current-section card">
-        <div class="card-title">
-          <h2>Dernière saisie</h2>
+      <!-- SECTION INDICATEURS CÔTE À CÔTE -->
+      <div class="cbco-indicators-row">
+        <!-- INDICATEUR CHIFFRE D'AFFAIRES -->
+        <div class="cbco-current-section card">
+          <div class="card-title">
+            <h2>📊 Chiffre d'affaires — Dernière saisie</h2>
+          </div>
+          <div class="card-body">
+            <div class="cbco-current-grid">
+              <div class="cbco-stat-box">
+                <div class="cbco-stat-label">Mois / Année</div>
+                <div class="cbco-stat-value" id="currentMonthYear">—</div>
+              </div>
+              <div class="cbco-stat-box">
+                <div class="cbco-stat-label">Montant estimé chantier en cours</div>
+                <div class="cbco-stat-value" id="currentMontantCours">0 K€</div>
+              </div>
+              <div class="cbco-stat-box">
+                <div class="cbco-stat-label">Montant estimé chantier terminé</div>
+                <div class="cbco-stat-value" id="currentMontantTermines">0 K€</div>
+              </div>
+              <div class="cbco-stat-box">
+                <div class="cbco-stat-label">Montant total mensuel</div>
+                <div class="cbco-stat-value" id="currentMontantTotal">0 K€</div>
+              </div>
+              <div class="cbco-stat-box highlight">
+                <div class="cbco-stat-label">Cumul annuel</div>
+                <div class="cbco-stat-value" id="currentCumulAnnuel">0 K€</div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="card-body">
-          <div class="cbco-current-grid">
-            <div class="cbco-stat-box">
-              <div class="cbco-stat-label">Mois / Année</div>
-              <div class="cbco-stat-value" id="currentMonthYear">—</div>
-            </div>
-            <div class="cbco-stat-box">
-              <div class="cbco-stat-label">Montant estimé chantier en cours</div>
-              <div class="cbco-stat-value" id="currentMontantCours">0 K€</div>
-            </div>
-            <div class="cbco-stat-box">
-              <div class="cbco-stat-label">Montant estimé chantier terminé</div>
-              <div class="cbco-stat-value" id="currentMontantTermines">0 K€</div>
-            </div>
-            <div class="cbco-stat-box">
-              <div class="cbco-stat-label">Montant total mensuel</div>
-              <div class="cbco-stat-value" id="currentMontantTotal">0 K€</div>
-            </div>
-            <div class="cbco-stat-box highlight">
-              <div class="cbco-stat-label">Cumul annuel</div>
-              <div class="cbco-stat-value" id="currentCumulAnnuel">0 K€</div>
+
+        <!-- INDICATEUR COMMERCIAL -->
+        <div class="cbco-commercial-section card">
+          <div class="card-title">
+            <h2>💼 Indicateur Commercial</h2>
+          </div>
+          <div class="card-body">
+            <div class="cbco-current-grid">
+              <div class="cbco-stat-box">
+                <div class="cbco-stat-label">Affaires envoyées</div>
+                <div class="cbco-stat-value" id="commercialTotal">0</div>
+              </div>
+              <div class="cbco-stat-box" style="border-color: #2ecc71;">
+                <div class="cbco-stat-label">Gagnées</div>
+                <div class="cbco-stat-value" id="commercialGagnees" style="color: #27ae60;">0</div>
+              </div>
+              <div class="cbco-stat-box" style="border-color: #e74c3c;">
+                <div class="cbco-stat-label">Perdues</div>
+                <div class="cbco-stat-value" id="commercialPerdues" style="color: #e74c3c;">0</div>
+              </div>
+              <div class="cbco-stat-box">
+                <div class="cbco-stat-label">En cours</div>
+                <div class="cbco-stat-value" id="commercialEnCours">0</div>
+              </div>
+              <div class="cbco-stat-box highlight">
+                <div class="cbco-stat-label">Taux de réussite</div>
+                <div class="cbco-stat-value" id="commercialTaux">—</div>
+              </div>
             </div>
           </div>
         </div>
@@ -740,6 +774,30 @@
       renderCurrentYearChart();
       filterTableByYear();
       renderSummaryTable();
+      displayCommercialData();
+    }
+
+    /**
+     * Affiche les données de l'indicateur commercial
+     */
+    function displayCommercialData() {
+      const currentYear = new Date().getFullYear();
+      const entries = getCBCOCommercial().filter(e => {
+        const d = new Date(e.dateEnvoi);
+        return d.getFullYear() === currentYear;
+      });
+
+      const gagnees = entries.filter(e => e.resultat === 'gagne').length;
+      const perdues = entries.filter(e => e.resultat === 'perdu').length;
+      const enCours = entries.filter(e => e.resultat === 'en_cours').length;
+      const cloturees = gagnees + perdues;
+      const taux = cloturees > 0 ? ((gagnees / cloturees) * 100).toFixed(1) : null;
+
+      document.getElementById('commercialTotal').textContent = entries.length;
+      document.getElementById('commercialGagnees').textContent = gagnees;
+      document.getElementById('commercialPerdues').textContent = perdues;
+      document.getElementById('commercialEnCours').textContent = enCours;
+      document.getElementById('commercialTaux').textContent = taux !== null ? taux + ' %' : '—';
     }
 
     window.addEventListener('load', initCBCO);
