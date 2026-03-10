@@ -1090,7 +1090,7 @@ function injectSylveSecondaryBar() {
 }
 
 // ============ SYLVE SUPPORT DATA ============
-const SYLVE_FACTURES_KEY = 'goudalle_sylve_factures';
+const SYLVE_BALANCE_KEY = 'goudalle_sylve_balance';
 const SYLVE_ENTREPRISES = [
   { id: 'cbco', label: 'CBCO' },
   { id: 'gc', label: 'Goudalle Charpente' },
@@ -1100,156 +1100,137 @@ const SYLVE_MOIS = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
                     'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
 /**
- * Récupère toutes les factures Sylve Support
- * @returns {Array}
+ * Structure stockée :
+ * {
+ *   cbco: [ { importDate, periode, clients: [{compte, client, solde, nonEchu, j1_30, j31_45, j46_60, j61_plus}] } ],
+ *   gc:   [ ... ],
+ *   gm:   [ ... ]
+ * }
  */
-function getSylveFactures() {
-  const data = localStorage.getItem(SYLVE_FACTURES_KEY);
-  return data ? JSON.parse(data) : [];
+
+function getSylveBalance() {
+  const data = localStorage.getItem(SYLVE_BALANCE_KEY);
+  return data ? JSON.parse(data) : { cbco: [], gc: [], gm: [] };
+}
+
+function saveSylveBalance(data) {
+  localStorage.setItem(SYLVE_BALANCE_KEY, JSON.stringify(data));
 }
 
 /**
- * Sauvegarde une nouvelle facture
- * @param {Object} entry - Données de la facture
- * @returns {Object} - Facture créée
+ * Importe les données d'un fichier Excel balance âgée pour une entreprise
+ * Remplace l'import existant pour cette entreprise (dernier import = données actuelles)
  */
-function saveSylveFacture(entry) {
-  const factures = getSylveFactures();
-  const newEntry = {
-    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
-    numeroFacture: entry.numeroFacture,
-    client: entry.client,
-    montantHT: parseFloat(entry.montantHT) || 0,
-    dateFacture: entry.dateFacture,
-    dateEcheance: entry.dateEcheance,
-    statut: entry.statut || 'non_payee',
-    entreprise: entry.entreprise,
-    commentaire: entry.commentaire || '',
-    createdAt: new Date().toISOString()
-  };
-  factures.push(newEntry);
-  localStorage.setItem(SYLVE_FACTURES_KEY, JSON.stringify(factures));
-  return newEntry;
+function importSylveBalanceForEntreprise(entrepriseId, clients, periode) {
+  const data = getSylveBalance();
+  data[entrepriseId] = [{
+    importDate: new Date().toISOString(),
+    periode: periode || '',
+    clients: clients
+  }];
+  saveSylveBalance(data);
 }
 
 /**
- * Met à jour une facture existante
- * @param {string} id - ID de la facture
- * @param {Object} updates - Champs à mettre à jour
- * @returns {boolean}
+ * Récupère le dernier import pour une entreprise
  */
-function updateSylveFacture(id, updates) {
-  const factures = getSylveFactures();
-  const index = factures.findIndex(f => f.id === id);
-  if (index === -1) return false;
-  factures[index] = { ...factures[index], ...updates };
-  localStorage.setItem(SYLVE_FACTURES_KEY, JSON.stringify(factures));
-  return true;
+function getSylveLastImport(entrepriseId) {
+  const data = getSylveBalance();
+  const imports = data[entrepriseId] || [];
+  return imports.length > 0 ? imports[0] : null;
 }
 
 /**
- * Supprime une facture
- * @param {string} id - ID de la facture
- * @returns {boolean}
+ * Récupère tous les clients de toutes les entreprises (dernier import)
  */
-function deleteSylveFacture(id) {
-  const factures = getSylveFactures();
-  const filtered = factures.filter(f => f.id !== id);
-  if (filtered.length === factures.length) return false;
-  localStorage.setItem(SYLVE_FACTURES_KEY, JSON.stringify(filtered));
-  return true;
-}
-
-/**
- * Calcule la balance âgée par entreprise pour les factures non payées
- * Ventile les retards en tranches : 0-30j, 30-60j, 60-90j, >90j
- * @returns {Object} - { cbco: {...}, gc: {...}, gm: {...}, consolide: {...} }
- */
-function getSylveBalanceAgee() {
-  const factures = getSylveFactures().filter(f => f.statut === 'non_payee');
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const result = {};
+function getSylveAllClients() {
+  const data = getSylveBalance();
+  const all = [];
   SYLVE_ENTREPRISES.forEach(e => {
-    result[e.id] = { '0_30': 0, '30_60': 0, '60_90': 0, '90_plus': 0, total: 0 };
-  });
-  result.consolide = { '0_30': 0, '30_60': 0, '60_90': 0, '90_plus': 0, total: 0 };
-
-  factures.forEach(f => {
-    const echeance = new Date(f.dateEcheance);
-    echeance.setHours(0, 0, 0, 0);
-    const retardJours = Math.max(0, Math.floor((today - echeance) / (1000 * 60 * 60 * 24)));
-    const montant = f.montantHT;
-    const ent = f.entreprise;
-
-    let tranche;
-    if (retardJours <= 30) tranche = '0_30';
-    else if (retardJours <= 60) tranche = '30_60';
-    else if (retardJours <= 90) tranche = '60_90';
-    else tranche = '90_plus';
-
-    if (result[ent]) {
-      result[ent][tranche] += montant;
-      result[ent].total += montant;
+    const imp = data[e.id] && data[e.id][0];
+    if (imp) {
+      imp.clients.forEach(c => {
+        all.push({ ...c, entreprise: e.id });
+      });
     }
-    result.consolide[tranche] += montant;
-    result.consolide.total += montant;
+  });
+  return all;
+}
+
+/**
+ * Calcule les totaux de retard par entreprise à partir des imports balance âgée
+ */
+function getSylveTotalRetards() {
+  const data = getSylveBalance();
+  const result = { cbco: 0, gc: 0, gm: 0, total: 0 };
+
+  SYLVE_ENTREPRISES.forEach(e => {
+    const imp = data[e.id] && data[e.id][0];
+    if (imp) {
+      imp.clients.forEach(c => {
+        const retard = (c.j1_30 || 0) + (c.j31_45 || 0) + (c.j46_60 || 0) + (c.j61_plus || 0);
+        result[e.id] += retard;
+      });
+      result.total += result[e.id];
+    }
   });
 
   return result;
 }
 
 /**
- * Calcule les retards mensuels par entreprise
- * @returns {Array} - [{mois, annee, cbco, gc, gm, total}, ...]
+ * Calcule la balance âgée consolidée par tranches
  */
-function getSylveRetardsMensuels() {
-  const factures = getSylveFactures().filter(f => f.statut === 'non_payee');
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+function getSylveBalanceAgee() {
+  const data = getSylveBalance();
+  const result = {};
+  SYLVE_ENTREPRISES.forEach(e => {
+    result[e.id] = { j1_30: 0, j31_45: 0, j46_60: 0, j61_plus: 0, nonEchu: 0, total: 0 };
+  });
+  result.consolide = { j1_30: 0, j31_45: 0, j46_60: 0, j61_plus: 0, nonEchu: 0, total: 0 };
 
-  // Regrouper par mois d'échéance
-  const map = {};
-  factures.forEach(f => {
-    const echeance = new Date(f.dateEcheance);
-    if (echeance >= today) return; // Pas encore en retard
-    const key = `${echeance.getFullYear()}-${String(echeance.getMonth() + 1).padStart(2, '0')}`;
-    if (!map[key]) {
-      map[key] = { mois: echeance.getMonth() + 1, annee: echeance.getFullYear(), cbco: 0, gc: 0, gm: 0, total: 0 };
+  SYLVE_ENTREPRISES.forEach(e => {
+    const imp = data[e.id] && data[e.id][0];
+    if (imp) {
+      imp.clients.forEach(c => {
+        result[e.id].j1_30 += (c.j1_30 || 0);
+        result[e.id].j31_45 += (c.j31_45 || 0);
+        result[e.id].j46_60 += (c.j46_60 || 0);
+        result[e.id].j61_plus += (c.j61_plus || 0);
+        result[e.id].nonEchu += (c.nonEchu || 0);
+        result[e.id].total += (c.solde || 0);
+      });
+      result.consolide.j1_30 += result[e.id].j1_30;
+      result.consolide.j31_45 += result[e.id].j31_45;
+      result.consolide.j46_60 += result[e.id].j46_60;
+      result.consolide.j61_plus += result[e.id].j61_plus;
+      result.consolide.nonEchu += result[e.id].nonEchu;
+      result.consolide.total += result[e.id].total;
     }
-    map[key][f.entreprise] += f.montantHT;
-    map[key].total += f.montantHT;
   });
 
-  return Object.values(map).sort((a, b) => {
-    if (a.annee !== b.annee) return a.annee - b.annee;
-    return a.mois - b.mois;
-  });
+  return result;
 }
 
 /**
- * Calcule les clients avec le plus de retard
- * @returns {Array} - [{client, montant, pourcentage, entreprise}, ...]
+ * Top clients en retard (classement consolidé)
  */
 function getSylveClientsEnRetard() {
-  const factures = getSylveFactures().filter(f => f.statut === 'non_payee');
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
+  const allClients = getSylveAllClients();
   const clientMap = {};
   let totalRetard = 0;
 
-  factures.forEach(f => {
-    const echeance = new Date(f.dateEcheance);
-    if (echeance >= today) return;
-    const key = f.client;
+  allClients.forEach(c => {
+    const retard = (c.j1_30 || 0) + (c.j31_45 || 0) + (c.j46_60 || 0) + (c.j61_plus || 0);
+    if (retard <= 0) return;
+
+    const key = c.client.toUpperCase().trim();
     if (!clientMap[key]) {
-      clientMap[key] = { client: f.client, montant: 0, entreprises: new Set() };
+      clientMap[key] = { client: c.client, montant: 0, entreprises: new Set() };
     }
-    clientMap[key].montant += f.montantHT;
-    clientMap[key].entreprises.add(f.entreprise);
-    totalRetard += f.montantHT;
+    clientMap[key].montant += retard;
+    clientMap[key].entreprises.add(c.entreprise);
+    totalRetard += retard;
   });
 
   return Object.values(clientMap)
@@ -1263,28 +1244,7 @@ function getSylveClientsEnRetard() {
 }
 
 /**
- * Calcule le total des retards par entreprise
- * @returns {Object} - { cbco: number, gc: number, gm: number, total: number }
- */
-function getSylveTotalRetards() {
-  const factures = getSylveFactures().filter(f => f.statut === 'non_payee');
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const result = { cbco: 0, gc: 0, gm: 0, total: 0 };
-  factures.forEach(f => {
-    const echeance = new Date(f.dateEcheance);
-    if (echeance >= today) return;
-    result[f.entreprise] += f.montantHT;
-    result.total += f.montantHT;
-  });
-  return result;
-}
-
-/**
  * Formate un montant en M€
- * @param {number} value - Montant en euros
- * @returns {string}
  */
 function formatMEuros(value) {
   return (value / 1000000).toFixed(2) + ' M€';
@@ -1292,8 +1252,6 @@ function formatMEuros(value) {
 
 /**
  * Formate un montant en € lisible
- * @param {number} value - Montant en euros
- * @returns {string}
  */
 function formatSylveEuros(value) {
   return new Intl.NumberFormat('fr-FR', {

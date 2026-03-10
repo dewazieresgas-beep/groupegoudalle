@@ -52,18 +52,27 @@
               <input type="text" id="username" minlength="3" required>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
               <div class="form-group">
                 <label for="password">Mot de passe *</label>
                 <input type="password" id="password" minlength="3" required>
               </div>
               <div class="form-group">
-                <label for="role">Rôle *</label>
-                <select id="role" required>
+                <label for="niveau">Niveau d'accès *</label>
+                <select id="niveau" required onchange="updateEntrepriseVisibility()">
                   <option value="">-- Sélectionner --</option>
                   <option value="lecture">👁️ Consultation</option>
                   <option value="referent">📊 Référent</option>
                   <option value="direction">🗝️ Direction</option>
+                </select>
+              </div>
+              <div class="form-group" id="entrepriseGroup" style="display:none;">
+                <label for="entreprise">Entreprise *</label>
+                <select id="entreprise">
+                  <option value="">-- Sélectionner --</option>
+                  <option value="gm">Goudalle Maçonnerie</option>
+                  <option value="cbco">CBCO</option>
+                  <option value="sylve">Sylve Support</option>
                 </select>
               </div>
             </div>
@@ -101,6 +110,20 @@
   </div>
 
   <script>
+    function updateEntrepriseVisibility() {
+      const niveau = document.getElementById('niveau').value;
+      const groupe = document.getElementById('entrepriseGroup');
+      const select = document.getElementById('entreprise');
+      if (niveau === 'referent') {
+        groupe.style.display = '';
+        select.required = true;
+      } else {
+        groupe.style.display = 'none';
+        select.required = false;
+        select.value = '';
+      }
+    }
+
     function showMessage(message, type) {
       const msgDiv = document.getElementById('message');
       msgDiv.textContent = message;
@@ -117,12 +140,25 @@
       const email = document.getElementById('email').value.trim();
       const username = document.getElementById('username').value.trim();
       const password = document.getElementById('password').value;
-      const role = document.getElementById('role').value;
+      const niveau = document.getElementById('niveau').value;
+      const entreprise = document.getElementById('entreprise').value;
+
+      // Déterminer le rôle final
+      let role = niveau;
+      if (niveau === 'referent') {
+        if (!entreprise) {
+          showMessage('❌ Veuillez sélectionner une entreprise pour le rôle référent.', 'error');
+          return;
+        }
+        if (entreprise === 'cbco') role = 'referent_cbco';
+        else if (entreprise === 'sylve') role = 'referent_sylve';
+        else role = 'referent'; // GM
+      }
 
       const displayName = `${firstName} ${lastName}`;
 
       let adminCode = null;
-      if (role === 'direction' || role === 'referent') {
+      if (role !== 'lecture') {
         adminCode = prompt('Entre le code d\'administration pour créer un compte ' + role + ':');
         if (!adminCode) return;
       }
@@ -136,7 +172,9 @@
         document.getElementById('email').value = '';
         document.getElementById('username').value = '';
         document.getElementById('password').value = '';
-        document.getElementById('role').value = '';
+        document.getElementById('niveau').value = '';
+        document.getElementById('entreprise').value = '';
+        updateEntrepriseVisibility();
         loadUsers();
       } else {
         showMessage(result.message, 'error');
@@ -149,7 +187,9 @@
 
       const roleNames = {
         'direction': '🗝️ Direction',
-        'referent': '📊 Référent',
+        'referent': '📊 Référent GM',
+        'referent_cbco': '📊 Référent CBCO',
+        'referent_sylve': '📊 Référent Sylve',
         'lecture': '👁️ Consultation'
       };
 

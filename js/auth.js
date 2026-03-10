@@ -16,6 +16,7 @@ const Auth = {
     DIRECTION: 'direction',  // Accès complet : gestion + administration + audit
     REFERENT: 'referent',    // Accès intermédiaire : gestion + saisie
     REFERENT_CBCO: 'referent_cbco',  // Référent CBCO : suivi chiffre d'affaires
+    REFERENT_SYLVE: 'referent_sylve',  // Référent Sylve Support
     LECTURE: 'lecture'       // Accès minimal : consultation uniquement
   },
 
@@ -24,6 +25,7 @@ const Auth = {
     direction: ['gm', 'users_admin', 'thresholds', 'audit', 'gm_saisie', 'gm_admin', 'cbco', 'cbco_saisie', 'cbco_admin', 'sylve', 'sylve_saisie'], // Tout
     referent: ['gm', 'gm_saisie', 'gm_admin', 'thresholds', 'sylve'],  // Gestion + saisie
     referent_cbco: ['cbco', 'cbco_saisie', 'cbco_admin', 'sylve'],  // CBCO uniquement
+    referent_sylve: ['sylve', 'sylve_saisie'],  // Sylve Support uniquement
     lecture: ['gm', 'sylve']                                // Consultation seule
   },
 
@@ -355,7 +357,7 @@ const Auth = {
 
     // ===== ÉTAPE 3 : CONTRÔLE DE SÉCURITÉ POUR RÔLES PRIVILÉGIÉS =====
     // Les rôles DIRECTION et REFERENT nécessitent un code admin pour être créés
-    if (role === this.ROLES.DIRECTION || role === this.ROLES.REFERENT) {
+    if (role !== this.ROLES.LECTURE) {
       const correctCode = localStorage.getItem(this.STORAGE_KEY_ADMIN_CODE);
       if (adminCode !== correctCode) {
         return { 

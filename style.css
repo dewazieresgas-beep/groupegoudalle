@@ -1735,3 +1735,46 @@ canvas {
   }
 }
 
+/* Import cards (saisie page) */
+.ss-import-card {
+  margin-bottom: 24px;
+}
+
+.ss-import-zone {
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  padding: 40px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  background: var(--card-bg);
+  color: #888;
+}
+
+.ss-import-zone:hover {
+  border-color: var(--accent);
+  background: rgba(59, 130, 246, 0.04);
+  color: var(--accent);
+}
+
+.ss-import-zone-active {
+  border-color: var(--accent);
+  background: rgba(59, 130, 246, 0.08);
+  color: var(--accent);
+}
+
+.ss-import-icon {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+}
+
+.ss-import-zone p {
+  margin: 4px 0;
+  font-size: 0.95rem;
+}
+
+.ss-import-zone small {
+  color: #aaa;
+  font-size: 0.82rem;
+}
+
