@@ -197,6 +197,7 @@
         // Conversion TTC -> HT
         if (/\b20\b/.test(s)) return 1 / 1.2;
         if (/\b10\b/.test(s)) return 1 / 1.1;
+        // S'il n'y a pas de precision 10%/20%, on considere deja HT
         return 1;
       };
 
@@ -217,7 +218,8 @@
       const sectionStarts = [];
       for (let i = 0; i < rawData.length; i++) {
         const marker = normalizeCell(rawData[i][2]); // Colonne C
-        if (marker.startsWith('clients')) {
+        // Certains exports utilisent "Client ..." (singulier) au lieu de "Clients ..."
+        if (/^clients?\b/.test(marker)) {
           sectionStarts.push(i);
         }
       }
@@ -383,7 +385,10 @@
               ${sections.map(s => {
                 const multiplier = Number(s.taxMultiplier || 1);
                 const coeffLabel = `x${multiplier.toFixed(4)}`;
-                return `<div>• <strong>${escapeHtml(s.label)}</strong> - Lignes ${s.fromRow} a ${s.toRow} - ${s.clients} client${s.clients > 1 ? 's' : ''} - Conversion TTC -> HT appliquee: <strong>${coeffLabel}</strong></div>`;
+                const conversionText = multiplier === 1
+                  ? `Aucune conversion (deja HT): <strong>${coeffLabel}</strong>`
+                  : `Conversion TTC -> HT appliquee: <strong>${coeffLabel}</strong>`;
+                return `<div>• <strong>${escapeHtml(s.label)}</strong> - Lignes ${s.fromRow} a ${s.toRow} - ${s.clients} client${s.clients > 1 ? 's' : ''} - ${conversionText}</div>`;
               }).join('')}
             </div>
           </div>`
