@@ -22,7 +22,7 @@ const Auth = {
 
   // Permissions par rôle - définit ce que chaque rôle peut faire
   PERMISSIONS: {
-    direction: ['gm', 'users_admin', 'thresholds', 'audit', 'gm_saisie', 'gm_admin', 'cbco', 'cbco_saisie', 'cbco_admin', 'sylve', 'sylve_saisie'], // Tout
+    direction: ['gm', 'users_admin', 'thresholds', 'audit', 'gm_saisie', 'gm_admin', 'gc', 'gc_saisie', 'gc_admin', 'cbco', 'cbco_saisie', 'cbco_admin', 'sylve', 'sylve_saisie'], // Tout
     referent: ['gm', 'gm_saisie', 'gm_admin', 'thresholds', 'sylve'],  // Gestion + saisie
     referent_cbco: ['cbco', 'cbco_saisie', 'cbco_admin', 'sylve'],  // CBCO uniquement
     referent_sylve: ['sylve', 'sylve_saisie'],  // Sylve Support uniquement
@@ -267,9 +267,15 @@ const Auth = {
   hasAccess(permission) {
     const session = this.getSession();
     if (!session) return false;
+    const currentUser = this.getCurrentUser();
+    const effectiveRole = currentUser?.role || session.role;
+
+    // Le rôle direction doit toujours conserver un accès total,
+    // même si une permission n'a pas encore été ajoutée dans la liste.
+    if (effectiveRole === this.ROLES.DIRECTION) return true;
 
     // Récupérer la liste des permissions pour ce rôle
-    const userPermissions = this.PERMISSIONS[session.role] || [];
+    const userPermissions = this.PERMISSIONS[effectiveRole] || [];
     return userPermissions.includes(permission);
   },
 
