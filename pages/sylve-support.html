@@ -81,23 +81,10 @@
       <!-- TABLEAU C: Clients avec retard le plus important -->
       <div class="card">
         <div class="card-title">
-          <h2>🏆 Clients avec retard le plus important</h2>
+          <h2>🏆 Clients — Retard le plus important</h2>
         </div>
-        <div class="card-body">
-          <table id="ssClientsTable">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Client</th>
-                <th>Montant HT en retard</th>
-                <th>% du total</th>
-                <th>Entreprise(s)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td colspan="5" style="text-align:center; padding: 20px;">Chargement...</td></tr>
-            </tbody>
-          </table>
+        <div class="card-body" id="ssClientsContainer">
+          <p style="text-align:center; padding: 20px; color:#999;">Chargement...</p>
         </div>
       </div>
     </main>
@@ -121,28 +108,68 @@
     }
 
     /**
-     * Affiche le tableau des clients en retard
+     * Affiche le top 3 clients en retard PAR ENTREPRISE
      */
     function renderClientsTable() {
-      const clients = getSylveClientsEnRetard();
-      const tbody = document.querySelector('#ssClientsTable tbody');
+      const container = document.getElementById('ssClientsContainer');
+      const data = getSylveBalance();
+      const entreprises = [
+        { id: 'gc', label: 'Goudalle Charpente', logo: '../assets/goudalle-charpente.png' },
+        { id: 'cbco', label: 'CBCO', logo: '../assets/cbco.png' },
+        { id: 'gm', label: 'Goudalle Maçonnerie', logo: '../assets/goudalle-maconnerie.png' }
+      ];
 
-      if (clients.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px;">Aucun client en retard</td></tr>';
+      let hasData = false;
+      let html = '';
+
+      entreprises.forEach(ent => {
+        const imp = data[ent.id] && data[ent.id][0];
+        if (!imp || !imp.clients || imp.clients.length === 0) return;
+
+        const clientsRetard = imp.clients.map(c => ({
+          client: c.client,
+          retard: (c.j1_30 || 0) + (c.j31_45 || 0) + (c.j46_60 || 0) + (c.j61_plus || 0)
+        })).filter(c => c.retard > 0);
+
+        if (clientsRetard.length === 0) return;
+        hasData = true;
+
+        const totalRetard = clientsRetard.reduce((s, c) => s + c.retard, 0);
+        const top3 = clientsRetard.sort((a, b) => b.retard - a.retard).slice(0, 3);
+
+        html += `<div style="margin-bottom:20px;">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+            <img src="${ent.logo}" alt="${escapeHtml(ent.label)}" style="height:28px;">
+            <strong style="font-size:1em;">${escapeHtml(ent.label)}</strong>
+          </div>
+          <table style="font-size:0.92em;">
+            <thead>
+              <tr>
+                <th>Client</th>
+                <th style="text-align:right;">Montant HT</th>
+                <th style="text-align:right; width:70px;">%</th>
+              </tr>
+            </thead>
+            <tbody>`;
+
+        top3.forEach(c => {
+          const pct = totalRetard > 0 ? ((c.retard / totalRetard) * 100).toFixed(0) : 0;
+          html += `<tr>
+                <td><strong>${escapeHtml(c.client)}</strong></td>
+                <td style="text-align:right;">${formatSylveEuros(c.retard)}</td>
+                <td style="text-align:right; font-weight:600;">${pct} %</td>
+              </tr>`;
+        });
+
+        html += `</tbody></table></div>`;
+      });
+
+      if (!hasData) {
+        container.innerHTML = '<p style="text-align:center; padding:20px; color:#999;">Aucun client en retard</p>';
         return;
       }
 
-      const entLabels = { cbco: 'CBCO', gc: 'Goudalle Charpente', gm: 'Goudalle Maçonnerie' };
-
-      tbody.innerHTML = clients.map((c, i) => `
-        <tr>
-          <td><strong>${i + 1}</strong></td>
-          <td><strong>${escapeHtml(c.client)}</strong></td>
-          <td>${formatSylveEuros(c.montant)}</td>
-          <td>${c.pourcentage.toFixed(1)} %</td>
-          <td>${c.entreprises.map(e => entLabels[e] || e).join(', ')}</td>
-        </tr>
-      `).join('');
+      container.innerHTML = html;
     }
 
     /**
