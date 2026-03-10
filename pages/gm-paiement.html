@@ -5,6 +5,41 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Goudalle Maconnerie - Paiements en attente</title>
   <link rel="stylesheet" href="../style.css">
+  <style>
+    .pe-table {
+      width: 100%;
+      table-layout: fixed;
+      font-size: 0.78em;
+    }
+    .pe-table th,
+    .pe-table td {
+      padding: 8px 6px;
+      vertical-align: middle;
+    }
+    .pe-table th:nth-child(1) { width: 18%; }
+    .pe-table th:nth-child(2) { width: 10%; }
+    .pe-table th:nth-child(3),
+    .pe-table th:nth-child(4),
+    .pe-table th:nth-child(5),
+    .pe-table th:nth-child(6) { width: 10%; }
+    .pe-table th:nth-child(7),
+    .pe-table th:nth-child(8) { width: 8%; }
+    .pe-table th:nth-child(9) { width: 16%; }
+
+    .pe-cell {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .pe-cell input[type="checkbox"] {
+      flex: 0 0 auto;
+      margin: 0;
+    }
+    .pe-cell input[type="number"] {
+      min-width: 0;
+      width: 100%;
+    }
+  </style>
 </head>
 <body>
   <script src="../js/auth.js"></script>
@@ -157,12 +192,12 @@
           <tr data-compte="${escapeHtml(c.compte)}" data-retard="${c.retard}">
             <td><strong>${escapeHtml(c.client)}</strong></td>
             <td style="font-weight:600; white-space:nowrap;">${formatSylveEuros(c.retard)}</td>
-            <td><div style="display:flex; align-items:center; gap:6px;"><input type="checkbox" class="pe-reason-check" data-check="sansRaison" ${chkSansRaison ? 'checked' : ''}><input type="number" step="0.01" class="form-control pe-reason-input" data-field="sansRaison" value="${formatInputNumber(note.sansRaison)}"></div></td>
-            <td><div style="display:flex; align-items:center; gap:6px;"><input type="checkbox" class="pe-reason-check" data-check="avecReserves" ${chkAvecReserves ? 'checked' : ''}><input type="number" step="0.01" class="form-control pe-reason-input" data-field="avecReserves" value="${formatInputNumber(note.avecReserves)}"></div></td>
-            <td><div style="display:flex; align-items:center; gap:6px;"><input type="checkbox" class="pe-reason-check" data-check="rgAttente" ${chkRgAttente ? 'checked' : ''}><input type="number" step="0.01" class="form-control pe-reason-input" data-field="rgAttente" value="${formatInputNumber(note.rgAttente)}"></div></td>
-            <td><div style="display:flex; align-items:center; gap:6px;"><input type="checkbox" class="pe-reason-check" data-check="litiges" ${chkLitiges ? 'checked' : ''}><input type="number" step="0.01" class="form-control pe-reason-input" data-field="litiges" value="${formatInputNumber(note.litiges)}"></div></td>
-            <td><div style="display:flex; align-items:center; gap:6px;"><input type="checkbox" class="pe-reason-check" data-check="solde" ${chkSolde ? 'checked' : ''}><input type="number" step="0.01" class="form-control pe-reason-input" data-field="solde" value="${formatInputNumber(note.solde)}"></div></td>
-            <td><div style="display:flex; align-items:center; gap:6px;"><input type="checkbox" class="pe-reason-check" data-check="acompte" ${chkAcompte ? 'checked' : ''}><input type="number" step="0.01" class="form-control pe-reason-input" data-field="acompte" value="${formatInputNumber(note.acompte)}"></div></td>
+            <td><div class="pe-cell"><input type="checkbox" class="pe-reason-check" data-check="sansRaison" ${chkSansRaison ? 'checked' : ''}><input type="number" step="0.01" class="form-control pe-reason-input" data-field="sansRaison" value="${formatInputNumber(note.sansRaison)}"></div></td>
+            <td><div class="pe-cell"><input type="checkbox" class="pe-reason-check" data-check="avecReserves" ${chkAvecReserves ? 'checked' : ''}><input type="number" step="0.01" class="form-control pe-reason-input" data-field="avecReserves" value="${formatInputNumber(note.avecReserves)}"></div></td>
+            <td><div class="pe-cell"><input type="checkbox" class="pe-reason-check" data-check="rgAttente" ${chkRgAttente ? 'checked' : ''}><input type="number" step="0.01" class="form-control pe-reason-input" data-field="rgAttente" value="${formatInputNumber(note.rgAttente)}"></div></td>
+            <td><div class="pe-cell"><input type="checkbox" class="pe-reason-check" data-check="litiges" ${chkLitiges ? 'checked' : ''}><input type="number" step="0.01" class="form-control pe-reason-input" data-field="litiges" value="${formatInputNumber(note.litiges)}"></div></td>
+            <td><div class="pe-cell"><input type="checkbox" class="pe-reason-check" data-check="solde" ${chkSolde ? 'checked' : ''}><input type="number" step="0.01" class="form-control pe-reason-input" data-field="solde" value="${formatInputNumber(note.solde)}"></div></td>
+            <td><div class="pe-cell"><input type="checkbox" class="pe-reason-check" data-check="acompte" ${chkAcompte ? 'checked' : ''}><input type="number" step="0.01" class="form-control pe-reason-input" data-field="acompte" value="${formatInputNumber(note.acompte)}"></div></td>
             <td><input type="text" class="form-control pe-save-input" data-field="commentaire" value="${escapeHtml(note.commentaire || '')}"></td>
           </tr>
         `;
@@ -178,7 +213,7 @@
             <span class="badge badge-primary">Import: ${periode} - ${clients.length} clients en retard</span>
           </div>
           <div class="card-body" style="overflow:auto;">
-            <table style="font-size:0.86em; min-width:1450px;">
+            <table class="pe-table">
               <thead>
                 <tr>
                   <th style="text-align:center;">Client</th>
