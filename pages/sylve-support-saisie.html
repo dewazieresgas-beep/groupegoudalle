@@ -196,90 +196,137 @@
         }
       }
 
-      // 2. Trouver la ligne d'en-tête via mots-clés
-      let headerRow = -1;
-      const colMap = { compte: 0, intitule: 1, solde: 2, nonEchu: 3, j1_30: 4, j31_45: 5, j46_60: 6, j61_plus: 7 };
+      const normalizeCell = (value) => String(value || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
 
-      for (let i = 0; i < Math.min(30, rawData.length); i++) {
-        const row = rawData[i];
-        let score = 0;
-        for (let j = 0; j < row.length; j++) {
-          const h = String(row[j]).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-          if (h.includes('solde') || h.includes('intitul') || h.includes('numero') ||
-              h.includes('compte') || h.includes('echu') || h.includes('jour') ||
-              h.includes('plus de') || h.includes('non echu')) {
-            score++;
-          }
-        }
-        if (score >= 3) {
-          headerRow = i;
-          for (let j = 0; j < row.length; j++) {
-            const h = String(row[j]).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-            if ((h.includes('numero') || h.includes('n°')) && !h.includes('solde')) colMap.compte = j;
-            else if (h.includes('intitul') || h === 'nom' || h === 'client') colMap.intitule = j;
-            else if (h.includes('solde') && !h.includes('non') && !h.includes('echu')) colMap.solde = j;
-            else if (h.includes('non') && h.includes('echu')) colMap.nonEchu = j;
-            else if (/1\s*[àa]\s*30/.test(h)) colMap.j1_30 = j;
-            else if (/31\s*[àa]\s*45/.test(h)) colMap.j31_45 = j;
-            else if (/46\s*[àa]\s*60/.test(h)) colMap.j46_60 = j;
-            else if (h.includes('plus de') || /6[1-9]|>\s*60/.test(h)) colMap.j61_plus = j;
-            if (h.includes('solde') && (h.includes('non') || h.includes('echu'))) colMap.nonEchu = j;
-          }
-          break;
+      // Colonnes fixes selon le format Sage fourni par l'utilisateur :
+      // C: numéro compte, D: intitulé, G: solde compte, I: non échu, K: 1-30j, N: 31-45j, P: 46-60j, R: +61j
+      const col = {
+        compte: 2,
+        intitule: 3,
+        soldeCompte: 6,
+        nonEchu: 8,
+        j1_30: 10,
+        j31_45: 13,
+        j46_60: 15,
+        j61_plus: 17
+      };
+
+      // 2. Repérer dynamiquement chaque bloc "Clients ..."
+      const sectionStarts = [];
+      for (let i = 0; i < rawData.length; i++) {
+        const marker = normalizeCell(rawData[i][2]); // Colonne C
+        if (marker.startsWith('clients')) {
+          sectionStarts.push(i);
         }
       }
 
-      if (headerRow === -1) {
-        for (let i = 0; i < Math.min(30, rawData.length); i++) {
-          const row = rawData[i];
-          const filledCells = row.filter(c => String(c).trim() !== '').length;
-          if (filledCells >= 5) {
-            const hasNumbers = row.slice(2).some(c => typeof c === 'number' || /^[\d\s,.-]+$/.test(String(c).trim()));
-            if (!hasNumbers) {
-              headerRow = i;
-            } else {
-              headerRow = i - 1;
-            }
-            break;
-          }
-        }
-      }
-
-      console.log('📊 En-tête trouvé ligne:', headerRow, '| Mapping colonnes:', JSON.stringify(colMap));
-
-      // 3. Extraire les lignes clients
-      const startRow = headerRow + 1;
       const clients = [];
+      const sectionsInfo = [];
       const skipPatterns = [
         /^total/i, /^sous.?total/i, /^s\.?total/i,
-        /^totaux/i, /^c\.?\s?g[eé]n[eé]ral/i,
+        /^totaux/i, /^c\.?\s?general/i,
         /^%\s*p[eé]riode/i
       ];
 
-      for (let i = startRow; i < rawData.length; i++) {
-        const row = rawData[i];
-        const compte = String(row[colMap.compte] || '').trim();
-        const intitule = String(row[colMap.intitule] || '').trim();
-        const solde = parseNumber(row[colMap.solde]);
-        const nonEchu = parseNumber(row[colMap.nonEchu]);
-        const j1_30 = parseNumber(row[colMap.j1_30]);
-        const j31_45 = parseNumber(row[colMap.j31_45]);
-        const j46_60 = parseNumber(row[colMap.j46_60]);
-        const j61_plus = parseNumber(row[colMap.j61_plus]);
+      sectionStarts.forEach(startRow => {
+        const sectionLabel = String(rawData[startRow][2] || '').trim() || 'Clients';
+        // Fin de section = première ligne contenant "Total C. général" en colonne A
+        let endRow = rawData.length;
+        for (let r = startRow + 1; r < rawData.length; r++) {
+          const colA = normalizeCell(rawData[r][0]);
+          if (colA.includes('total c.') && colA.includes('general')) {
+            endRow = r;
+            break;
+          }
+        }
 
-        if (!compte && !intitule) continue;
-        const combined = (compte + ' ' + intitule).trim();
-        if (skipPatterns.some(p => p.test(combined))) continue;
-        if (solde === 0 && nonEchu === 0 && j1_30 === 0 && j31_45 === 0 && j46_60 === 0 && j61_plus === 0) continue;
+        let sectionAccepted = 0;
 
-        clients.push({
-          compte, client: intitule || compte,
-          solde, nonEchu, j1_30, j31_45, j46_60, j61_plus
+        // Les données commencent juste après la ligne "Clients ..."
+        for (let i = startRow + 1; i < endRow; i++) {
+          const row = rawData[i];
+          const compte = String(row[col.compte] || '').trim();
+          const intitule = String(row[col.intitule] || '').trim();
+          const soldeCompte = parseNumber(row[col.soldeCompte]);
+          const nonEchu = parseNumber(row[col.nonEchu]);
+          const j1_30 = parseNumber(row[col.j1_30]);
+          const j31_45 = parseNumber(row[col.j31_45]);
+          const j46_60 = parseNumber(row[col.j46_60]);
+          const j61_plus = parseNumber(row[col.j61_plus]);
+          const soldeCalc = nonEchu + j1_30 + j31_45 + j46_60 + j61_plus;
+          const solde = soldeCompte !== 0 ? soldeCompte : soldeCalc;
+
+          if (!compte && !intitule) continue;
+          const combined = (compte + ' ' + intitule).trim();
+          if (skipPatterns.some(p => p.test(normalizeCell(combined)))) continue;
+          if (solde === 0 && nonEchu === 0 && j1_30 === 0 && j31_45 === 0 && j46_60 === 0 && j61_plus === 0) continue;
+
+          clients.push({
+            compte,
+            client: intitule || compte,
+            solde,
+            nonEchu,
+            j1_30,
+            j31_45,
+            j46_60,
+            j61_plus
+          });
+          sectionAccepted++;
+        }
+
+        sectionsInfo.push({
+          label: sectionLabel,
+          fromRow: startRow + 2,
+          toRow: Math.max(startRow + 1, endRow),
+          clients: sectionAccepted
         });
+      });
+
+      // Fallback sécurité : si aucun bloc "Clients" détecté, tenter extraction générique à partir de l'en-tête
+      if (clients.length === 0) {
+        console.warn('⚠️ Aucun bloc "Clients" détecté, fallback parser générique activé.');
+        for (let i = 0; i < rawData.length; i++) {
+          const row = rawData[i];
+          const intitule = String(row[col.intitule] || '').trim();
+          if (!intitule) continue;
+          const soldeCompte = parseNumber(row[col.soldeCompte]);
+          const nonEchu = parseNumber(row[col.nonEchu]);
+          const j1_30 = parseNumber(row[col.j1_30]);
+          const j31_45 = parseNumber(row[col.j31_45]);
+          const j46_60 = parseNumber(row[col.j46_60]);
+          const j61_plus = parseNumber(row[col.j61_plus]);
+          const soldeCalc = nonEchu + j1_30 + j31_45 + j46_60 + j61_plus;
+          const solde = soldeCompte !== 0 ? soldeCompte : soldeCalc;
+          if (solde <= 0) continue;
+          clients.push({
+            compte: String(row[col.compte] || '').trim(),
+            client: intitule,
+            solde,
+            nonEchu,
+            j1_30,
+            j31_45,
+            j46_60,
+            j61_plus
+          });
+        }
+
+        if (clients.length > 0) {
+          sectionsInfo.push({
+            label: 'Fallback générique',
+            fromRow: 1,
+            toRow: rawData.length,
+            clients: clients.length
+          });
+        }
       }
 
-      console.log('📊 Clients extraits:', clients.length, '| Exemples:', clients.slice(0, 3));
-      return { clients, periode };
+      console.log('📊 Sections clients détectées:', sectionStarts.length, '| Clients extraits:', clients.length, '| Exemples:', clients.slice(0, 3));
+      return { clients, periode, sectionsInfo };
     }
 
     /**
@@ -305,7 +352,7 @@
             return;
           }
 
-          showPreview(entrepriseId, result.clients, result.periode, file.name, mois, annee);
+          showPreview(entrepriseId, result.clients, result.periode, file.name, mois, annee, result.sectionsInfo || []);
         } catch (err) {
           showMessage(`❌ Erreur lors de la lecture du fichier : ${err.message}`, 'error');
         }
@@ -316,7 +363,7 @@
     /**
      * Affiche un aperçu des données parsées avant validation
      */
-    function showPreview(entrepriseId, clients, periode, fileName, mois, annee) {
+    function showPreview(entrepriseId, clients, periode, fileName, mois, annee, sectionsInfo) {
       const previewDiv = document.getElementById('preview');
       const dropZone = document.getElementById('dropZone');
 
@@ -325,6 +372,13 @@
 
       // Vérifier si un import existe déjà pour ce mois
       const existing = getSylveImports(entrepriseId).find(imp => imp.mois === mois && imp.annee === annee);
+
+      const sections = Array.isArray(sectionsInfo) ? sectionsInfo : [];
+      const sectionsHtml = sections.length > 0
+        ? `<div style="margin:8px 0 12px 0; padding:10px; background:#eef7ee; border:1px solid #d3e9d3; border-radius:6px; font-size:0.83em; color:#315a31;">
+            <strong>Blocs détectés :</strong> ${sections.map(s => `${escapeHtml(s.label)} (lignes ${s.fromRow}-${s.toRow}, ${s.clients} client${s.clients > 1 ? 's' : ''})`).join(' · ')}
+          </div>`
+        : '';
 
       let html = `
         <div style="border: 2px solid var(--accent); border-radius: 8px; padding: 16px; margin-top: 12px; background: #f9fdf9;">
@@ -339,6 +393,7 @@
               <span class="badge badge-warning" style="margin-left:5px;">Retard total : ${formatSylveEuros(totalRetard)}</span>
             </div>
           </div>
+          ${sectionsHtml}
           <div style="max-height: 300px; overflow-y: auto; border-radius: 6px;">
             <table style="font-size: 0.85em;">
               <thead>
