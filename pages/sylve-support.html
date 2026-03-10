@@ -98,13 +98,13 @@
      * Affiche les KPI principaux
      */
     function renderKPIs() {
-      const balance = getSylveBalanceAgee();
+      const retards = getSylveTotalRetards();
       const clientsEnRetard = getSylveClientsEnRetard();
 
-      document.getElementById('kpiTotalRetard').textContent = formatSylveEuros(balance.consolide.total);
-      document.getElementById('kpiRetardCBCO').textContent = formatSylveEuros(balance.cbco.total);
-      document.getElementById('kpiRetardGC').textContent = formatSylveEuros(balance.gc.total);
-      document.getElementById('kpiRetardGM').textContent = formatSylveEuros(balance.gm.total);
+      document.getElementById('kpiTotalRetard').textContent = formatSylveEuros(retards.total);
+      document.getElementById('kpiRetardCBCO').textContent = formatSylveEuros(retards.cbco);
+      document.getElementById('kpiRetardGC').textContent = formatSylveEuros(retards.gc);
+      document.getElementById('kpiRetardGM').textContent = formatSylveEuros(retards.gm);
       document.getElementById('kpiNbImpayees').textContent = clientsEnRetard.length;
     }
 
