@@ -203,6 +203,14 @@
         .replace(/\s+/g, ' ')
         .trim();
 
+      const getSectionTaxMultiplier = (sectionLabel) => {
+        const s = normalizeCell(sectionLabel);
+        if (s.includes('autoliquidation')) return 1;
+        if (/\b20\b/.test(s)) return 1.2;
+        if (/\b10\b/.test(s)) return 1.1;
+        return 1;
+      };
+
       // Colonnes fixes selon le format Sage fourni par l'utilisateur :
       // C: numéro compte, D: intitulé, G: solde compte, I: non échu, K: 1-30j, N: 31-45j, P: 46-60j, R: +61j
       const col = {
@@ -235,6 +243,7 @@
 
       sectionStarts.forEach(startRow => {
         const sectionLabel = String(rawData[startRow][2] || '').trim() || 'Clients';
+        const taxMultiplier = getSectionTaxMultiplier(sectionLabel);
         // Fin de section = première ligne contenant "Total C. général" en colonne A
         let endRow = rawData.length;
         for (let r = startRow + 1; r < rawData.length; r++) {
@@ -254,10 +263,11 @@
           const intitule = String(row[col.intitule] || '').trim();
           const soldeCompte = parseNumber(row[col.soldeCompte]);
           const nonEchu = parseNumber(row[col.nonEchu]);
-          const j1_30 = parseNumber(row[col.j1_30]);
-          const j31_45 = parseNumber(row[col.j31_45]);
-          const j46_60 = parseNumber(row[col.j46_60]);
-          const j61_plus = parseNumber(row[col.j61_plus]);
+          // Conversion TVA uniquement sur les retards (K/N/P/R), pas sur le non échu (I)
+          const j1_30 = parseNumber(row[col.j1_30]) * taxMultiplier;
+          const j31_45 = parseNumber(row[col.j31_45]) * taxMultiplier;
+          const j46_60 = parseNumber(row[col.j46_60]) * taxMultiplier;
+          const j61_plus = parseNumber(row[col.j61_plus]) * taxMultiplier;
           const soldeCalc = nonEchu + j1_30 + j31_45 + j46_60 + j61_plus;
           const solde = soldeCompte !== 0 ? soldeCompte : soldeCalc;
 
@@ -274,7 +284,9 @@
             j1_30,
             j31_45,
             j46_60,
-            j61_plus
+            j61_plus,
+            section: sectionLabel,
+            taxMultiplier
           });
           sectionAccepted++;
         }
@@ -283,7 +295,8 @@
           label: sectionLabel,
           fromRow: startRow + 2,
           toRow: Math.max(startRow + 1, endRow),
-          clients: sectionAccepted
+          clients: sectionAccepted,
+          taxMultiplier
         });
       });
 
@@ -376,7 +389,7 @@
       const sections = Array.isArray(sectionsInfo) ? sectionsInfo : [];
       const sectionsHtml = sections.length > 0
         ? `<div style="margin:8px 0 12px 0; padding:10px; background:#eef7ee; border:1px solid #d3e9d3; border-radius:6px; font-size:0.83em; color:#315a31;">
-            <strong>Blocs détectés :</strong> ${sections.map(s => `${escapeHtml(s.label)} (lignes ${s.fromRow}-${s.toRow}, ${s.clients} client${s.clients > 1 ? 's' : ''})`).join(' · ')}
+            <strong>Blocs détectés :</strong> ${sections.map(s => `${escapeHtml(s.label)} (lignes ${s.fromRow}-${s.toRow}, ${s.clients} client${s.clients > 1 ? 's' : ''}, coeff. ${s.taxMultiplier})`).join(' · ')}
           </div>`
         : '';
 
