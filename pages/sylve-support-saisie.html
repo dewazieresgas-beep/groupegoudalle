@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sylve Support - Saisie Factures - Intranet</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+  <script>
+    window.APP_LOGO = 'sylve';
+  </script>
+  <script>
+    Auth.requirePermission('sylve_saisie');
+  </script>
+
+  <div class="app-container">
+    <div id="sidebar"></div>
+
+    <main class="main-content">
+      <h1>🏗️ Sylve Support — Saisie des factures</h1>
+      <p class="subtitle" style="margin-bottom: 24px; color: #666;">Gestion des factures clients — balance âgée</p>
+
+      <div id="message" class="alert" style="display:none;"></div>
+
+      <!-- FORMULAIRE DE SAISIE -->
+      <div class="card">
+        <div class="card-title">
+          <h2>📝 Nouvelle facture</h2>
+        </div>
+        <div class="card-body">
+          <form onsubmit="handleAddFacture(event)">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+              <div class="form-group">
+                <label for="numeroFacture">Numéro de facture *</label>
+                <input type="text" id="numeroFacture" placeholder="Ex : F-2026001" required>
+              </div>
+              <div class="form-group">
+                <label for="client">Nom du client *</label>
+                <input type="text" id="client" placeholder="Ex : Mairie de Preures" required>
+              </div>
+              <div class="form-group">
+                <label for="montantHT">Montant HT (€) *</label>
+                <input type="number" id="montantHT" min="0" step="0.01" placeholder="Ex : 150000" required>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+              <div class="form-group">
+                <label for="dateFacture">Date de facture *</label>
+                <input type="date" id="dateFacture" required>
+              </div>
+              <div class="form-group">
+                <label for="dateEcheance">Date d'échéance *</label>
+                <input type="date" id="dateEcheance" required>
+              </div>
+              <div class="form-group">
+                <label for="entreprise">Entreprise bénéficiaire *</label>
+                <select id="entreprise" required>
+                  <option value="">— Choisir —</option>
+                  <option value="cbco">CBCO</option>
+                  <option value="gc">Goudalle Charpente</option>
+                  <option value="gm">Goudalle Maçonnerie</option>
+                </select>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+              <div class="form-group">
+                <label for="statut">Statut *</label>
+                <select id="statut" required>
+                  <option value="non_payee">❌ Non payée</option>
+                  <option value="payee">✅ Payée</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="commentaire">Commentaire (optionnel)</label>
+                <input type="text" id="commentaire" placeholder="Remarque éventuelle...">
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary">➕ Ajouter la facture</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- FILTRES ET TABLEAU -->
+      <div class="card">
+        <div class="card-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <h2>📋 Liste des factures</h2>
+          <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <select id="filterEntreprise" onchange="loadFactures()" style="width: auto; min-width: 150px;">
+              <option value="all">Toutes les entreprises</option>
+              <option value="cbco">CBCO</option>
+              <option value="gc">Goudalle Charpente</option>
+              <option value="gm">Goudalle Maçonnerie</option>
+            </select>
+            <select id="filterStatut" onchange="loadFactures()" style="width: auto; min-width: 120px;">
+              <option value="all">Tous statuts</option>
+              <option value="non_payee">Non payées</option>
+              <option value="payee">Payées</option>
+            </select>
+            <select id="sortBy" onchange="loadFactures()" style="width: auto; min-width: 130px;">
+              <option value="date_desc">Date ↓</option>
+              <option value="date_asc">Date ↑</option>
+              <option value="client_asc">Client A-Z</option>
+              <option value="client_desc">Client Z-A</option>
+              <option value="montant_desc">Montant ↓</option>
+              <option value="montant_asc">Montant ↑</option>
+            </select>
+          </div>
+        </div>
+        <div class="card-body">
+          <table id="facturesTable">
+            <thead>
+              <tr>
+                <th>N° Facture</th>
+                <th>Client</th>
+                <th>Montant HT</th>
+                <th>Date facture</th>
+                <th>Échéance</th>
+                <th>Entreprise</th>
+                <th>Statut</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="8" style="text-align:center; padding: 20px;">Chargement...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- MODALE DE MODIFICATION -->
+  <div id="editModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
+    <div style="background:#fff; border-radius:12px; padding:30px; max-width:600px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto;">
+      <h2 style="margin-top:0; margin-bottom:20px;">✏️ Modifier la facture</h2>
+      <input type="hidden" id="editId">
+      <div class="form-group">
+        <label for="editNumero">Numéro de facture *</label>
+        <input type="text" id="editNumero" required>
+      </div>
+      <div class="form-group">
+        <label for="editClient">Client *</label>
+        <input type="text" id="editClient" required>
+      </div>
+      <div class="form-group">
+        <label for="editMontant">Montant HT (€) *</label>
+        <input type="number" id="editMontant" min="0" step="0.01" required>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div class="form-group">
+          <label for="editDateFacture">Date de facture *</label>
+          <input type="date" id="editDateFacture" required>
+        </div>
+        <div class="form-group">
+          <label for="editDateEcheance">Date d'échéance *</label>
+          <input type="date" id="editDateEcheance" required>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div class="form-group">
+          <label for="editEntreprise">Entreprise *</label>
+          <select id="editEntreprise" required>
+            <option value="cbco">CBCO</option>
+            <option value="gc">Goudalle Charpente</option>
+            <option value="gm">Goudalle Maçonnerie</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="editStatut">Statut *</label>
+          <select id="editStatut" required>
+            <option value="non_payee">❌ Non payée</option>
+            <option value="payee">✅ Payée</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="editCommentaire">Commentaire</label>
+        <input type="text" id="editCommentaire">
+      </div>
+      <div style="display:flex; gap:10px; margin-top:20px;">
+        <button class="btn btn-primary" onclick="saveEdit()">💾 Enregistrer</button>
+        <button class="btn btn-secondary" onclick="closeEditModal()">Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const ENT_LABELS = { cbco: 'CBCO', gc: 'Goudalle Charpente', gm: 'Goudalle Maçonnerie' };
+    const STATUT_LABELS = {
+      'non_payee': { label: '❌ Non payée', badge: 'badge-danger' },
+      'payee': { label: '✅ Payée', badge: 'badge-success' }
+    };
+
+    function showMessage(message, type) {
+      const msgDiv = document.getElementById('message');
+      msgDiv.textContent = message;
+      msgDiv.className = `alert alert-${type}`;
+      msgDiv.style.display = 'block';
+      window.scrollTo(0, 0);
+      if (type === 'success') setTimeout(() => { msgDiv.style.display = 'none'; }, 4000);
+    }
+
+    function handleAddFacture(event) {
+      event.preventDefault();
+
+      const numeroFacture = document.getElementById('numeroFacture').value.trim();
+      const client = document.getElementById('client').value.trim();
+      const montantHT = document.getElementById('montantHT').value;
+      const dateFacture = document.getElementById('dateFacture').value;
+      const dateEcheance = document.getElementById('dateEcheance').value;
+      const entreprise = document.getElementById('entreprise').value;
+      const statut = document.getElementById('statut').value;
+      const commentaire = document.getElementById('commentaire').value.trim();
+
+      if (!numeroFacture || !client || !montantHT || !dateFacture || !dateEcheance || !entreprise) {
+        showMessage('❌ Tous les champs obligatoires doivent être remplis', 'error');
+        return;
+      }
+
+      saveSylveFacture({ numeroFacture, client, montantHT, dateFacture, dateEcheance, statut, entreprise, commentaire });
+      Auth.audit('SYLVE_FACTURE_ADDED', `Facture ${numeroFacture} - ${client} - ${formatSylveEuros(parseFloat(montantHT))} - ${ENT_LABELS[entreprise]}`);
+      showMessage('✅ Facture ajoutée avec succès', 'success');
+
+      // Reset form
+      document.getElementById('numeroFacture').value = '';
+      document.getElementById('client').value = '';
+      document.getElementById('montantHT').value = '';
+      document.getElementById('commentaire').value = '';
+      document.getElementById('dateFacture').valueAsDate = new Date();
+
+      loadFactures();
+    }
+
+    function loadFactures() {
+      const filterEnt = document.getElementById('filterEntreprise').value;
+      const filterStat = document.getElementById('filterStatut').value;
+      const sortBy = document.getElementById('sortBy').value;
+
+      let factures = getSylveFactures();
+
+      // Filtrer par entreprise
+      if (filterEnt !== 'all') {
+        factures = factures.filter(f => f.entreprise === filterEnt);
+      }
+      // Filtrer par statut
+      if (filterStat !== 'all') {
+        factures = factures.filter(f => f.statut === filterStat);
+      }
+
+      // Trier
+      switch (sortBy) {
+        case 'date_desc':
+          factures.sort((a, b) => new Date(b.dateFacture) - new Date(a.dateFacture));
+          break;
+        case 'date_asc':
+          factures.sort((a, b) => new Date(a.dateFacture) - new Date(b.dateFacture));
+          break;
+        case 'client_asc':
+          factures.sort((a, b) => a.client.localeCompare(b.client));
+          break;
+        case 'client_desc':
+          factures.sort((a, b) => b.client.localeCompare(a.client));
+          break;
+        case 'montant_desc':
+          factures.sort((a, b) => b.montantHT - a.montantHT);
+          break;
+        case 'montant_asc':
+          factures.sort((a, b) => a.montantHT - b.montantHT);
+          break;
+      }
+
+      const tbody = document.querySelector('#facturesTable tbody');
+
+      if (factures.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 20px; color: #999;">Aucune facture pour ces critères</td></tr>';
+        return;
+      }
+
+      const formatDate = (d) => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      tbody.innerHTML = factures.map(f => {
+        const s = STATUT_LABELS[f.statut] || STATUT_LABELS['non_payee'];
+        const echeance = new Date(f.dateEcheance);
+        const enRetard = f.statut === 'non_payee' && echeance < today;
+        const retardStyle = enRetard ? 'color: var(--danger); font-weight: 600;' : '';
+
+        return `
+          <tr>
+            <td><strong>${escapeHtml(f.numeroFacture)}</strong></td>
+            <td>${escapeHtml(f.client)}</td>
+            <td>${formatSylveEuros(f.montantHT)}</td>
+            <td>${formatDate(f.dateFacture)}</td>
+            <td style="${retardStyle}">${formatDate(f.dateEcheance)}${enRetard ? ' ⚠️' : ''}</td>
+            <td>${ENT_LABELS[f.entreprise] || f.entreprise}</td>
+            <td><span class="badge ${s.badge}">${s.label}</span></td>
+            <td>
+              <button class="btn btn-small btn-secondary" onclick="openEditModal('${f.id}')" title="Modifier">✏️</button>
+              <button class="btn btn-small btn-danger" onclick="deleteFacture('${f.id}')" title="Supprimer">🗑️</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function openEditModal(id) {
+      const f = getSylveFactures().find(f => f.id === id);
+      if (!f) return;
+      document.getElementById('editId').value = f.id;
+      document.getElementById('editNumero').value = f.numeroFacture;
+      document.getElementById('editClient').value = f.client;
+      document.getElementById('editMontant').value = f.montantHT;
+      document.getElementById('editDateFacture').value = f.dateFacture;
+      document.getElementById('editDateEcheance').value = f.dateEcheance;
+      document.getElementById('editEntreprise').value = f.entreprise;
+      document.getElementById('editStatut').value = f.statut;
+      document.getElementById('editCommentaire').value = f.commentaire || '';
+      document.getElementById('editModal').style.display = 'flex';
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').style.display = 'none';
+    }
+
+    function saveEdit() {
+      const id = document.getElementById('editId').value;
+      const updates = {
+        numeroFacture: document.getElementById('editNumero').value.trim(),
+        client: document.getElementById('editClient').value.trim(),
+        montantHT: parseFloat(document.getElementById('editMontant').value),
+        dateFacture: document.getElementById('editDateFacture').value,
+        dateEcheance: document.getElementById('editDateEcheance').value,
+        entreprise: document.getElementById('editEntreprise').value,
+        statut: document.getElementById('editStatut').value,
+        commentaire: document.getElementById('editCommentaire').value.trim()
+      };
+
+      if (!updates.numeroFacture || !updates.client || isNaN(updates.montantHT) || !updates.dateFacture || !updates.dateEcheance || !updates.entreprise) {
+        showMessage('❌ Veuillez remplir tous les champs obligatoires', 'error');
+        return;
+      }
+
+      if (updateSylveFacture(id, updates)) {
+        Auth.audit('SYLVE_FACTURE_EDITED', `Facture modifiée : ${updates.numeroFacture}`);
+        showMessage('✅ Facture modifiée avec succès', 'success');
+        closeEditModal();
+        loadFactures();
+      }
+    }
+
+    function deleteFacture(id) {
+      const f = getSylveFactures().find(f => f.id === id);
+      if (!confirm(`Supprimer la facture « ${f?.numeroFacture || ''} » ?`)) return;
+      if (deleteSylveFacture(id)) {
+        Auth.audit('SYLVE_FACTURE_DELETED', `Facture supprimée : ${f?.numeroFacture || id}`);
+        showMessage('🗑️ Facture supprimée', 'success');
+        loadFactures();
+      }
+    }
+
+    function init() {
+      document.getElementById('sidebar').innerHTML = getSidebar();
+      injectSylveSecondaryBar();
+      document.getElementById('dateFacture').valueAsDate = new Date();
+
+      // Injecter les données de démo si nécessaire
+      initSylveDemoData();
+
+      loadFactures();
+    }
+
+    window.addEventListener('load', init);
+  </script>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div>
+        <div class="footer-title">Goudalle Groupe</div>
+        <div>50 rue Principale</div>
+        <div>RD343 - 62550 Preures</div>
+        <div>Tel. 03 21 90 98 98</div>
+      </div>
+      <div>
+        <div class="footer-title">Contact</div>
+        <a class="footer-link" href="#">contact@goudalle.fr</a>
+        <div>Formulaire de contact</div>
+      </div>
+      <div>
+        <div class="footer-title">Réalisations</div>
+        <div>Agricole / Elevage</div>
+        <div>Tertiaire / Habitat</div>
+        <div>Public / Santé</div>
+      </div>
+      <div>
+        <div class="footer-title">Goudalle recrute</div>
+        <div>Découvrir nos métiers</div>
+        <div>Voir nos offres</div>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

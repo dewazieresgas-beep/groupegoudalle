@@ -154,6 +154,30 @@
         </div>
       </div>
 
+      <!-- SYLVE SUPPORT - RETARDS RÈGLEMENTS -->
+      <div class="dashboard-grid" style="margin-bottom: 20px;">
+        <div class="card">
+          <div class="card-title">
+            <h2>🏗️ Retard règlements clients — en M€</h2>
+          </div>
+          <div class="card-body">
+            <div style="position: relative; flex: 1; min-height: 200px;">
+              <canvas id="ssHomeRetardChart"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">
+            <h2>🏗️ Retard règlements / CA mensuel</h2>
+          </div>
+          <div class="card-body">
+            <div style="position: relative; flex: 1; min-height: 200px;">
+              <canvas id="ssHomeRetardCAChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </main>
   </div>
 
@@ -365,6 +389,9 @@
           }
         });
       }
+
+      // ===== SYLVE SUPPORT CHARTS =====
+      renderSylveHomeCharts();
     }
 
     /**
@@ -628,6 +655,132 @@
                 callbacks: {
                   label: (ctx) => `${ctx.label} : ${ctx.parsed}`
                 }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    // ===== SYLVE SUPPORT - GRAPHIQUES ACCUEIL =====
+    let ssHomeRetardChart, ssHomeRetardCAChart;
+
+    function renderSylveHomeCharts() {
+      // Injecter données de démo si nécessaire
+      initSylveDemoData();
+
+      const retards = getSylveRetardsMensuels();
+      if (retards.length === 0) return;
+
+      const MOIS_COURT = ['', 'Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+      const labels = retards.map(r => `${MOIS_COURT[r.mois]} ${r.annee}`);
+
+      // Graphique 1 : Retards en M€ (courbes)
+      const ctx1 = document.getElementById('ssHomeRetardChart');
+      if (ctx1) {
+        if (ssHomeRetardChart) ssHomeRetardChart.destroy();
+        ssHomeRetardChart = new Chart(ctx1.getContext('2d'), {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [
+              {
+                label: 'CBCO',
+                data: retards.map(r => r.cbco / 1000000),
+                borderColor: '#3498db',
+                backgroundColor: '#3498db',
+                tension: 0.3,
+                fill: false,
+                pointRadius: 3
+              },
+              {
+                label: 'Goudalle Charpente',
+                data: retards.map(r => r.gc / 1000000),
+                borderColor: '#2ecc71',
+                backgroundColor: '#2ecc71',
+                tension: 0.3,
+                fill: false,
+                pointRadius: 3
+              },
+              {
+                label: 'Goudalle Maçonnerie',
+                data: retards.map(r => r.gm / 1000000),
+                borderColor: '#e67e22',
+                backgroundColor: '#e67e22',
+                tension: 0.3,
+                fill: false,
+                pointRadius: 3
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: true, position: 'top' },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)} M€`
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: { callback: (v) => v.toFixed(2) + ' M€' }
+              }
+            }
+          }
+        });
+      }
+
+      // Graphique 2 : Retards en € (barres)
+      const ctx2 = document.getElementById('ssHomeRetardCAChart');
+      if (ctx2) {
+        if (ssHomeRetardCAChart) ssHomeRetardCAChart.destroy();
+        ssHomeRetardCAChart = new Chart(ctx2.getContext('2d'), {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [
+              {
+                label: 'CBCO',
+                data: retards.map(r => r.cbco),
+                backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                borderColor: '#3498db',
+                borderWidth: 1
+              },
+              {
+                label: 'Goudalle Charpente',
+                data: retards.map(r => r.gc),
+                backgroundColor: 'rgba(46, 204, 113, 0.7)',
+                borderColor: '#2ecc71',
+                borderWidth: 1
+              },
+              {
+                label: 'Goudalle Maçonnerie',
+                data: retards.map(r => r.gm),
+                backgroundColor: 'rgba(230, 126, 34, 0.7)',
+                borderColor: '#e67e22',
+                borderWidth: 1
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: true, position: 'top' },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => `${ctx.dataset.label}: ${formatSylveEuros(ctx.parsed.y)}`
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: { callback: (v) => formatSylveEuros(v) }
               }
             }
           }

@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sylve Support - Balance Âgée Clients - Intranet</title>
+  <link rel="stylesheet" href="../style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+  <script>
+    window.APP_LOGO = 'sylve';
+  </script>
+  <script>
+    Auth.requirePermission('sylve');
+  </script>
+
+  <div class="app-container">
+    <div id="sidebar"></div>
+
+    <main class="main-content">
+      <!-- EN-TÊTE -->
+      <div class="ss-header">
+        <h1>🏗️ Sylve Support — Balance Âgée Clients</h1>
+        <p class="subtitle">Suivi des retards de règlements clients par entreprise</p>
+      </div>
+
+      <!-- KPI PRINCIPAUX -->
+      <div class="ss-kpi-row">
+        <div class="ss-kpi-card">
+          <div class="ss-kpi-label">Total retards</div>
+          <div class="ss-kpi-value" id="kpiTotalRetard">0 €</div>
+        </div>
+        <div class="ss-kpi-card" style="border-top-color: #3498db;">
+          <div class="ss-kpi-label">CBCO</div>
+          <div class="ss-kpi-value" id="kpiRetardCBCO">0 €</div>
+        </div>
+        <div class="ss-kpi-card" style="border-top-color: #2ecc71;">
+          <div class="ss-kpi-label">Goudalle Charpente</div>
+          <div class="ss-kpi-value" id="kpiRetardGC">0 €</div>
+        </div>
+        <div class="ss-kpi-card" style="border-top-color: #e67e22;">
+          <div class="ss-kpi-label">Goudalle Maçonnerie</div>
+          <div class="ss-kpi-value" id="kpiRetardGM">0 €</div>
+        </div>
+        <div class="ss-kpi-card" style="border-top-color: #9b59b6;">
+          <div class="ss-kpi-label">Factures impayées</div>
+          <div class="ss-kpi-value" id="kpiNbImpayees">0</div>
+        </div>
+      </div>
+
+      <!-- GRAPHIQUES CÔTE À CÔTE -->
+      <div class="ss-charts-row">
+        <!-- Graphique 1: Retard règlements en M€ -->
+        <div class="card">
+          <div class="card-title">
+            <h2>📈 Retard règlements clients — en M€</h2>
+          </div>
+          <div class="card-body">
+            <div class="ss-chart-container">
+              <canvas id="ssRetardChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Graphique 2: Retard / CA mensuel -->
+        <div class="card">
+          <div class="card-title">
+            <h2>📊 Retard règlements clients / CA mensuel</h2>
+          </div>
+          <div class="card-body">
+            <div class="ss-chart-container">
+              <canvas id="ssRetardCAChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TABLEAU A: Balance âgée par entreprise -->
+      <div class="card">
+        <div class="card-title">
+          <h2>📋 Analyse balance âgée clients</h2>
+        </div>
+        <div class="card-body">
+          <table id="ssBalanceTable">
+            <thead>
+              <tr>
+                <th>Tranche</th>
+                <th>CBCO</th>
+                <th>Goudalle Charpente</th>
+                <th>Goudalle Maçonnerie</th>
+                <th>Consolidé</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="5" style="text-align:center; padding: 20px;">Chargement...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TABLEAU B: Ventilation mensuelle -->
+      <div class="card">
+        <div class="card-title">
+          <h2>📅 Ventilation mensuelle des retards</h2>
+        </div>
+        <div class="card-body">
+          <table id="ssVentilationTable">
+            <thead>
+              <tr>
+                <th>Mois</th>
+                <th>CBCO</th>
+                <th>Goudalle Charpente</th>
+                <th>Goudalle Maçonnerie</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="5" style="text-align:center; padding: 20px;">Chargement...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TABLEAU C: Clients avec retard le plus important -->
+      <div class="card">
+        <div class="card-title">
+          <h2>🏆 Clients avec retard le plus important</h2>
+        </div>
+        <div class="card-body">
+          <table id="ssClientsTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Client</th>
+                <th>Montant HT en retard</th>
+                <th>% du total</th>
+                <th>Entreprise(s)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="5" style="text-align:center; padding: 20px;">Chargement...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    let ssRetardChart, ssRetardCAChart;
+
+    /**
+     * Affiche les KPI principaux
+     */
+    function renderKPIs() {
+      const totaux = getSylveTotalRetards();
+      const impayees = getSylveFactures().filter(f => f.statut === 'non_payee').length;
+
+      document.getElementById('kpiTotalRetard').textContent = formatSylveEuros(totaux.total);
+      document.getElementById('kpiRetardCBCO').textContent = formatSylveEuros(totaux.cbco);
+      document.getElementById('kpiRetardGC').textContent = formatSylveEuros(totaux.gc);
+      document.getElementById('kpiRetardGM').textContent = formatSylveEuros(totaux.gm);
+      document.getElementById('kpiNbImpayees').textContent = impayees;
+    }
+
+    /**
+     * Affiche le tableau de balance âgée
+     */
+    function renderBalanceTable() {
+      const balance = getSylveBalanceAgee();
+      const tranches = [
+        { key: '0_30', label: '0 – 30 jours' },
+        { key: '30_60', label: '30 – 60 jours' },
+        { key: '60_90', label: '60 – 90 jours' },
+        { key: '90_plus', label: '> 90 jours' }
+      ];
+
+      const tbody = document.querySelector('#ssBalanceTable tbody');
+      let html = tranches.map(t => `
+        <tr>
+          <td><strong>${t.label}</strong></td>
+          <td>${formatSylveEuros(balance.cbco[t.key])}</td>
+          <td>${formatSylveEuros(balance.gc[t.key])}</td>
+          <td>${formatSylveEuros(balance.gm[t.key])}</td>
+          <td><strong>${formatSylveEuros(balance.consolide[t.key])}</strong></td>
+        </tr>
+      `).join('');
+
+      // Ligne total
+      html += `
+        <tr style="background: var(--lighter); font-weight: 700;">
+          <td><strong>TOTAL</strong></td>
+          <td><strong>${formatSylveEuros(balance.cbco.total)}</strong></td>
+          <td><strong>${formatSylveEuros(balance.gc.total)}</strong></td>
+          <td><strong>${formatSylveEuros(balance.gm.total)}</strong></td>
+          <td><strong style="color: var(--danger);">${formatSylveEuros(balance.consolide.total)}</strong></td>
+        </tr>
+      `;
+
+      tbody.innerHTML = html;
+    }
+
+    /**
+     * Affiche le tableau de ventilation mensuelle
+     */
+    function renderVentilationTable() {
+      const retards = getSylveRetardsMensuels();
+      const tbody = document.querySelector('#ssVentilationTable tbody');
+
+      if (retards.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px;">Aucun retard enregistré</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = retards.map(r => `
+        <tr>
+          <td><strong>${SYLVE_MOIS[r.mois]} ${r.annee}</strong></td>
+          <td>${formatSylveEuros(r.cbco)}</td>
+          <td>${formatSylveEuros(r.gc)}</td>
+          <td>${formatSylveEuros(r.gm)}</td>
+          <td><strong>${formatSylveEuros(r.total)}</strong></td>
+        </tr>
+      `).join('');
+    }
+
+    /**
+     * Affiche le tableau des clients en retard
+     */
+    function renderClientsTable() {
+      const clients = getSylveClientsEnRetard();
+      const tbody = document.querySelector('#ssClientsTable tbody');
+
+      if (clients.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px;">Aucun client en retard</td></tr>';
+        return;
+      }
+
+      const entLabels = { cbco: 'CBCO', gc: 'Goudalle Charpente', gm: 'Goudalle Maçonnerie' };
+
+      tbody.innerHTML = clients.map((c, i) => `
+        <tr>
+          <td><strong>${i + 1}</strong></td>
+          <td><strong>${escapeHtml(c.client)}</strong></td>
+          <td>${formatSylveEuros(c.montant)}</td>
+          <td>${c.pourcentage.toFixed(1)} %</td>
+          <td>${c.entreprises.map(e => entLabels[e] || e).join(', ')}</td>
+        </tr>
+      `).join('');
+    }
+
+    /**
+     * Graphique 1: Retard règlements en M€ (courbes)
+     */
+    function renderRetardChart() {
+      const retards = getSylveRetardsMensuels();
+      if (retards.length === 0) return;
+
+      const labels = retards.map(r => `${SYLVE_MOIS[r.mois].substring(0, 3)} ${r.annee}`);
+
+      const ctx = document.getElementById('ssRetardChart').getContext('2d');
+      if (ssRetardChart) ssRetardChart.destroy();
+
+      ssRetardChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'CBCO',
+              data: retards.map(r => r.cbco / 1000000),
+              borderColor: '#3498db',
+              backgroundColor: '#3498db',
+              tension: 0.3,
+              fill: false,
+              pointRadius: 4
+            },
+            {
+              label: 'Goudalle Charpente',
+              data: retards.map(r => r.gc / 1000000),
+              borderColor: '#2ecc71',
+              backgroundColor: '#2ecc71',
+              tension: 0.3,
+              fill: false,
+              pointRadius: 4
+            },
+            {
+              label: 'Goudalle Maçonnerie',
+              data: retards.map(r => r.gm / 1000000),
+              borderColor: '#e67e22',
+              backgroundColor: '#e67e22',
+              tension: 0.3,
+              fill: false,
+              pointRadius: 4
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: true, position: 'top' },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)} M€`
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { callback: (v) => v.toFixed(2) + ' M€' }
+            }
+          }
+        }
+      });
+    }
+
+    /**
+     * Graphique 2: Retard / CA mensuel (barres)
+     */
+    function renderRetardCAChart() {
+      const retards = getSylveRetardsMensuels();
+      if (retards.length === 0) return;
+
+      const labels = retards.map(r => `${SYLVE_MOIS[r.mois].substring(0, 3)} ${r.annee}`);
+
+      const ctx = document.getElementById('ssRetardCAChart').getContext('2d');
+      if (ssRetardCAChart) ssRetardCAChart.destroy();
+
+      ssRetardCAChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'CBCO',
+              data: retards.map(r => r.cbco),
+              backgroundColor: 'rgba(52, 152, 219, 0.7)',
+              borderColor: '#3498db',
+              borderWidth: 1
+            },
+            {
+              label: 'Goudalle Charpente',
+              data: retards.map(r => r.gc),
+              backgroundColor: 'rgba(46, 204, 113, 0.7)',
+              borderColor: '#2ecc71',
+              borderWidth: 1
+            },
+            {
+              label: 'Goudalle Maçonnerie',
+              data: retards.map(r => r.gm),
+              backgroundColor: 'rgba(230, 126, 34, 0.7)',
+              borderColor: '#e67e22',
+              borderWidth: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: true, position: 'top' },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${ctx.dataset.label}: ${formatSylveEuros(ctx.parsed.y)}`
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { callback: (v) => formatSylveEuros(v) }
+            },
+            x: {
+              stacked: false
+            }
+          }
+        }
+      });
+    }
+
+    /**
+     * Initialise la page Sylve Support
+     */
+    function initSylveSupport() {
+      document.getElementById('sidebar').innerHTML = getSidebar();
+      injectSylveSecondaryBar();
+
+      // Injecter les données de démo si nécessaire
+      initSylveDemoData();
+
+      renderKPIs();
+      renderBalanceTable();
+      renderVentilationTable();
+      renderClientsTable();
+      renderRetardChart();
+      renderRetardCAChart();
+    }
+
+    window.addEventListener('load', initSylveSupport);
+  </script>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div>
+        <div class="footer-title">Goudalle Groupe</div>
+        <div>50 rue Principale</div>
+        <div>RD343 - 62550 Preures</div>
+        <div>Tel. 03 21 90 98 98</div>
+      </div>
+      <div>
+        <div class="footer-title">Contact</div>
+        <a class="footer-link" href="#">contact@goudalle.fr</a>
+        <div>Formulaire de contact</div>
+      </div>
+      <div>
+        <div class="footer-title">Réalisations</div>
+        <div>Agricole / Elevage</div>
+        <div>Tertiaire / Habitat</div>
+        <div>Public / Santé</div>
+      </div>
+      <div>
+        <div class="footer-title">Goudalle recrute</div>
+        <div>Découvrir nos métiers</div>
+        <div>Voir nos offres</div>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

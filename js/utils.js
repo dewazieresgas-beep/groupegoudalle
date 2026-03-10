@@ -340,6 +340,8 @@ function getLogoPath() {
     logoFile = 'goudalle-maconnerie.png';
   } else if (window.APP_LOGO === 'cbco') {
     logoFile = 'cbco.png';
+  } else if (window.APP_LOGO === 'sylve') {
+    logoFile = 'sylve-support.png';
   }
   return `${base}assets/${logoFile}`;
 }
@@ -381,6 +383,12 @@ function getSidebar() {
   if (Auth.canViewCBCO()) {
     const cbcoActive = isCBCOPage() ? ' active' : '';
     items += `<a href="${base}pages/cbco.html" class="sidebar-item${cbcoActive}">💼 CBCO</a>`;
+  }
+
+  // ===== SECTION SYLVE SUPPORT =====
+  if (Auth.canViewSylve()) {
+    const ssActive = isSylvePage() ? ' active' : '';
+    items += `<a href="${base}pages/sylve-support.html" class="sidebar-item${ssActive}">🏗️ Sylve Support</a>`;
   }
 
   // ===== SECTIONS ADMINISTRATIVES (direction uniquement) =====
@@ -769,6 +777,15 @@ function isCBCOPage() {
   return page === 'cbco.html' || page === 'cbco-saisie.html' || page === 'cbco-commercial.html';
 }
 
+/**
+ * Vérifie si la page courante est une page Sylve Support
+ * @returns {boolean}
+ */
+function isSylvePage() {
+  const page = getCurrentPage();
+  return page === 'sylve-support.html' || page === 'sylve-support-saisie.html';
+}
+
 function isUsersPage() {
   const page = getCurrentPage();
   return page === 'users-admin.html' || page === 'users-code.html' || page === 'users-reminders.html';
@@ -1012,6 +1029,325 @@ function getCBCOCommercialTauxReussite(month, year) {
   const cloturees = gagnees + perdues;
   const taux = cloturees > 0 ? (gagnees / cloturees) * 100 : null;
   return { taux, gagnees, perdues, enCours, total: entries.length };
+}
+
+/**
+ * Toggle la barre de navigation secondaire Sylve Support
+ * @param {Event} event - Événement du clic (optionnel)
+ */
+function toggleSylveSidebar(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  const sidebar = document.getElementById('sylveSidebar');
+  if (!sidebar) return;
+  const isOpen = sidebar.classList.toggle('open');
+  localStorage.setItem('sylve_sidebar_state', isOpen ? 'open' : 'closed');
+}
+
+/**
+ * Génère et injecte la barre de navigation secondaire Sylve Support
+ */
+function injectSylveSecondaryBar() {
+  const session = Auth.getSession();
+  if (!session) return;
+
+  const canEdit = Auth.canEditSylve();
+  const base = getBasePath();
+  const currentPage = getCurrentPage();
+
+  let secondaryItems = '';
+  const consultationActive = currentPage === 'sylve-support.html' ? ' active' : '';
+  secondaryItems += `<a href="${base}pages/sylve-support.html" class="sidebar-item${consultationActive}">📊 Dashboard</a>`;
+
+  if (canEdit) {
+    const saisieActive = currentPage === 'sylve-support-saisie.html' ? ' active' : '';
+    secondaryItems += `<a href="${base}pages/sylve-support-saisie.html" class="sidebar-item${saisieActive}">✏️ Saisie factures</a>`;
+  }
+
+  if (secondaryItems) {
+    const barHTML = `
+      <aside class="sidebar-secondary" id="sylveSidebar">
+        <div class="sidebar-secondary-content">
+          <div class="sidebar-secondary-title">🏗️ SYLVE SUPPORT</div>
+          <button class="sidebar-secondary-close" onclick="toggleSylveSidebar();">✕</button>
+          <nav class="sidebar-secondary-nav">
+            ${secondaryItems}
+          </nav>
+        </div>
+      </aside>
+    `;
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) {
+      sidebar.insertAdjacentHTML('afterend', barHTML);
+    }
+    const sylveSidebar = document.getElementById('sylveSidebar');
+    if (sylveSidebar) {
+      sylveSidebar.classList.add('open');
+    }
+  }
+}
+
+// ============ SYLVE SUPPORT DATA ============
+const SYLVE_FACTURES_KEY = 'goudalle_sylve_factures';
+const SYLVE_ENTREPRISES = [
+  { id: 'cbco', label: 'CBCO' },
+  { id: 'gc', label: 'Goudalle Charpente' },
+  { id: 'gm', label: 'Goudalle Maçonnerie' }
+];
+const SYLVE_MOIS = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                    'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+
+/**
+ * Récupère toutes les factures Sylve Support
+ * @returns {Array}
+ */
+function getSylveFactures() {
+  const data = localStorage.getItem(SYLVE_FACTURES_KEY);
+  return data ? JSON.parse(data) : [];
+}
+
+/**
+ * Sauvegarde une nouvelle facture
+ * @param {Object} entry - Données de la facture
+ * @returns {Object} - Facture créée
+ */
+function saveSylveFacture(entry) {
+  const factures = getSylveFactures();
+  const newEntry = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    numeroFacture: entry.numeroFacture,
+    client: entry.client,
+    montantHT: parseFloat(entry.montantHT) || 0,
+    dateFacture: entry.dateFacture,
+    dateEcheance: entry.dateEcheance,
+    statut: entry.statut || 'non_payee',
+    entreprise: entry.entreprise,
+    commentaire: entry.commentaire || '',
+    createdAt: new Date().toISOString()
+  };
+  factures.push(newEntry);
+  localStorage.setItem(SYLVE_FACTURES_KEY, JSON.stringify(factures));
+  return newEntry;
+}
+
+/**
+ * Met à jour une facture existante
+ * @param {string} id - ID de la facture
+ * @param {Object} updates - Champs à mettre à jour
+ * @returns {boolean}
+ */
+function updateSylveFacture(id, updates) {
+  const factures = getSylveFactures();
+  const index = factures.findIndex(f => f.id === id);
+  if (index === -1) return false;
+  factures[index] = { ...factures[index], ...updates };
+  localStorage.setItem(SYLVE_FACTURES_KEY, JSON.stringify(factures));
+  return true;
+}
+
+/**
+ * Supprime une facture
+ * @param {string} id - ID de la facture
+ * @returns {boolean}
+ */
+function deleteSylveFacture(id) {
+  const factures = getSylveFactures();
+  const filtered = factures.filter(f => f.id !== id);
+  if (filtered.length === factures.length) return false;
+  localStorage.setItem(SYLVE_FACTURES_KEY, JSON.stringify(filtered));
+  return true;
+}
+
+/**
+ * Calcule la balance âgée par entreprise pour les factures non payées
+ * Ventile les retards en tranches : 0-30j, 30-60j, 60-90j, >90j
+ * @returns {Object} - { cbco: {...}, gc: {...}, gm: {...}, consolide: {...} }
+ */
+function getSylveBalanceAgee() {
+  const factures = getSylveFactures().filter(f => f.statut === 'non_payee');
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const result = {};
+  SYLVE_ENTREPRISES.forEach(e => {
+    result[e.id] = { '0_30': 0, '30_60': 0, '60_90': 0, '90_plus': 0, total: 0 };
+  });
+  result.consolide = { '0_30': 0, '30_60': 0, '60_90': 0, '90_plus': 0, total: 0 };
+
+  factures.forEach(f => {
+    const echeance = new Date(f.dateEcheance);
+    echeance.setHours(0, 0, 0, 0);
+    const retardJours = Math.max(0, Math.floor((today - echeance) / (1000 * 60 * 60 * 24)));
+    const montant = f.montantHT;
+    const ent = f.entreprise;
+
+    let tranche;
+    if (retardJours <= 30) tranche = '0_30';
+    else if (retardJours <= 60) tranche = '30_60';
+    else if (retardJours <= 90) tranche = '60_90';
+    else tranche = '90_plus';
+
+    if (result[ent]) {
+      result[ent][tranche] += montant;
+      result[ent].total += montant;
+    }
+    result.consolide[tranche] += montant;
+    result.consolide.total += montant;
+  });
+
+  return result;
+}
+
+/**
+ * Calcule les retards mensuels par entreprise
+ * @returns {Array} - [{mois, annee, cbco, gc, gm, total}, ...]
+ */
+function getSylveRetardsMensuels() {
+  const factures = getSylveFactures().filter(f => f.statut === 'non_payee');
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Regrouper par mois d'échéance
+  const map = {};
+  factures.forEach(f => {
+    const echeance = new Date(f.dateEcheance);
+    if (echeance >= today) return; // Pas encore en retard
+    const key = `${echeance.getFullYear()}-${String(echeance.getMonth() + 1).padStart(2, '0')}`;
+    if (!map[key]) {
+      map[key] = { mois: echeance.getMonth() + 1, annee: echeance.getFullYear(), cbco: 0, gc: 0, gm: 0, total: 0 };
+    }
+    map[key][f.entreprise] += f.montantHT;
+    map[key].total += f.montantHT;
+  });
+
+  return Object.values(map).sort((a, b) => {
+    if (a.annee !== b.annee) return a.annee - b.annee;
+    return a.mois - b.mois;
+  });
+}
+
+/**
+ * Calcule les clients avec le plus de retard
+ * @returns {Array} - [{client, montant, pourcentage, entreprise}, ...]
+ */
+function getSylveClientsEnRetard() {
+  const factures = getSylveFactures().filter(f => f.statut === 'non_payee');
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const clientMap = {};
+  let totalRetard = 0;
+
+  factures.forEach(f => {
+    const echeance = new Date(f.dateEcheance);
+    if (echeance >= today) return;
+    const key = f.client;
+    if (!clientMap[key]) {
+      clientMap[key] = { client: f.client, montant: 0, entreprises: new Set() };
+    }
+    clientMap[key].montant += f.montantHT;
+    clientMap[key].entreprises.add(f.entreprise);
+    totalRetard += f.montantHT;
+  });
+
+  return Object.values(clientMap)
+    .map(c => ({
+      client: c.client,
+      montant: c.montant,
+      pourcentage: totalRetard > 0 ? (c.montant / totalRetard * 100) : 0,
+      entreprises: [...c.entreprises]
+    }))
+    .sort((a, b) => b.montant - a.montant);
+}
+
+/**
+ * Calcule le total des retards par entreprise
+ * @returns {Object} - { cbco: number, gc: number, gm: number, total: number }
+ */
+function getSylveTotalRetards() {
+  const factures = getSylveFactures().filter(f => f.statut === 'non_payee');
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const result = { cbco: 0, gc: 0, gm: 0, total: 0 };
+  factures.forEach(f => {
+    const echeance = new Date(f.dateEcheance);
+    if (echeance >= today) return;
+    result[f.entreprise] += f.montantHT;
+    result.total += f.montantHT;
+  });
+  return result;
+}
+
+/**
+ * Formate un montant en M€
+ * @param {number} value - Montant en euros
+ * @returns {string}
+ */
+function formatMEuros(value) {
+  return (value / 1000000).toFixed(2) + ' M€';
+}
+
+/**
+ * Formate un montant en € lisible
+ * @param {number} value - Montant en euros
+ * @returns {string}
+ */
+function formatSylveEuros(value) {
+  return new Intl.NumberFormat('fr-FR', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(value) + ' €';
+}
+
+/**
+ * Injecte les données de démonstration Sylve Support si aucune donnée n'existe
+ */
+function initSylveDemoData() {
+  if (getSylveFactures().length > 0) return;
+
+  const clients = [
+    'Mairie de Preures', 'SCI Durand', 'SA Lefebvre Construction',
+    'SARL Dubois & Fils', 'Commune de Boulogne', 'Lycée St-Joseph',
+    'Habitat 62', 'Résidence Les Pins', 'Groupe Immobilier Nord',
+    'Clinique du Littoral', 'Centre Commercial Atlantis', 'EHPAD Les Oliviers'
+  ];
+  const entreprises = ['cbco', 'gc', 'gm'];
+
+  const demoFactures = [];
+  let factNum = 2025001;
+
+  // Générer des factures sur les 12 derniers mois
+  for (let i = 0; i < 30; i++) {
+    const moisOffset = Math.floor(Math.random() * 12);
+    const dateFacture = new Date();
+    dateFacture.setMonth(dateFacture.getMonth() - moisOffset);
+    dateFacture.setDate(Math.floor(Math.random() * 28) + 1);
+
+    const delaiPaiement = [30, 45, 60, 90][Math.floor(Math.random() * 4)];
+    const dateEcheance = new Date(dateFacture);
+    dateEcheance.setDate(dateEcheance.getDate() + delaiPaiement);
+
+    const montant = Math.floor(Math.random() * 200000) + 5000;
+    const estPayee = Math.random() > 0.45;
+
+    demoFactures.push({
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7) + i,
+      numeroFacture: 'F-' + (factNum++),
+      client: clients[Math.floor(Math.random() * clients.length)],
+      montantHT: montant,
+      dateFacture: dateFacture.toISOString().split('T')[0],
+      dateEcheance: dateEcheance.toISOString().split('T')[0],
+      statut: estPayee ? 'payee' : 'non_payee',
+      entreprise: entreprises[Math.floor(Math.random() * entreprises.length)],
+      commentaire: '',
+      createdAt: new Date().toISOString()
+    });
+  }
+
+  localStorage.setItem(SYLVE_FACTURES_KEY, JSON.stringify(demoFactures));
 }
 
 // ============ SECURITY ============

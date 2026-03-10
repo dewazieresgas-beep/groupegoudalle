@@ -21,10 +21,10 @@ const Auth = {
 
   // Permissions par rôle - définit ce que chaque rôle peut faire
   PERMISSIONS: {
-    direction: ['gm', 'users_admin', 'thresholds', 'audit', 'gm_saisie', 'gm_admin', 'cbco', 'cbco_saisie', 'cbco_admin'], // Tout
-    referent: ['gm', 'gm_saisie', 'gm_admin', 'thresholds'],  // Gestion + saisie
-    referent_cbco: ['cbco', 'cbco_saisie', 'cbco_admin'],  // CBCO uniquement
-    lecture: ['gm']                                // Consultation seule
+    direction: ['gm', 'users_admin', 'thresholds', 'audit', 'gm_saisie', 'gm_admin', 'cbco', 'cbco_saisie', 'cbco_admin', 'sylve', 'sylve_saisie'], // Tout
+    referent: ['gm', 'gm_saisie', 'gm_admin', 'thresholds', 'sylve'],  // Gestion + saisie
+    referent_cbco: ['cbco', 'cbco_saisie', 'cbco_admin', 'sylve'],  // CBCO uniquement
+    lecture: ['gm', 'sylve']                                // Consultation seule
   },
 
   // ============ INITIALIZATION ============
@@ -308,6 +308,14 @@ const Auth = {
 
   canEditCBCO() {
     return this.hasAccess('cbco_saisie') || this.hasAccess('cbco_admin');
+  },
+
+  canViewSylve() {
+    return this.hasAccess('sylve');
+  },
+
+  canEditSylve() {
+    return this.hasAccess('sylve_saisie');
   },
 
   // ============ USER MANAGEMENT ============
