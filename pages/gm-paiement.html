@@ -55,6 +55,76 @@
       return (client.j1_30 || 0) + (client.j31_45 || 0) + (client.j46_60 || 0) + (client.j61_plus || 0);
     }
 
+    function formatInputNumber(value) {
+      const n = Number(value) || 0;
+      return n ? (Math.round(n * 100) / 100).toString() : '';
+    }
+
+    function applyRowRules(row) {
+      const retard = parseInputNumber(row.dataset.retard);
+      const reasonFields = ['sansRaison', 'avecReserves', 'rgAttente', 'litiges'];
+      const checks = {};
+      const inputs = {};
+
+      reasonFields.forEach(field => {
+        checks[field] = row.querySelector(`[data-check="${field}"]`);
+        inputs[field] = row.querySelector(`[data-field="${field}"]`);
+      });
+
+      const checked = reasonFields.filter(f => checks[f] && checks[f].checked);
+
+      if (checked.includes('litiges')) {
+        row.style.backgroundColor = '#fde2e2';
+      } else if (checked.includes('sansRaison')) {
+        row.style.backgroundColor = '#e8f6e8';
+      } else if (checked.includes('avecReserves')) {
+        row.style.backgroundColor = '#fff0dc';
+      } else {
+        row.style.backgroundColor = '';
+      }
+
+      if (checked.length === 1) {
+        reasonFields.forEach(field => {
+          const isSelected = checked[0] === field;
+          inputs[field].value = isSelected ? formatInputNumber(retard) : '';
+          inputs[field].readOnly = true;
+          inputs[field].disabled = true;
+        });
+      } else if (checked.length > 1) {
+        reasonFields.forEach(field => {
+          const isSelected = checked.includes(field);
+          inputs[field].readOnly = !isSelected;
+          inputs[field].disabled = !isSelected;
+          if (!isSelected) inputs[field].value = '';
+        });
+      } else {
+        reasonFields.forEach(field => {
+          inputs[field].value = '';
+          inputs[field].readOnly = true;
+          inputs[field].disabled = true;
+        });
+      }
+    }
+
+    function saveRow(row, importId) {
+      const compte = row.dataset.compte;
+      const payload = {
+        chkSansRaison: !!row.querySelector('[data-check="sansRaison"]').checked,
+        chkAvecReserves: !!row.querySelector('[data-check="avecReserves"]').checked,
+        chkRgAttente: !!row.querySelector('[data-check="rgAttente"]').checked,
+        chkLitiges: !!row.querySelector('[data-check="litiges"]').checked,
+        sansRaison: parseInputNumber(row.querySelector('[data-field="sansRaison"]').value),
+        avecReserves: parseInputNumber(row.querySelector('[data-field="avecReserves"]').value),
+        rgAttente: parseInputNumber(row.querySelector('[data-field="rgAttente"]').value),
+        litiges: parseInputNumber(row.querySelector('[data-field="litiges"]').value),
+        solde: parseInputNumber(row.querySelector('[data-field="solde"]').value),
+        acompte: parseInputNumber(row.querySelector('[data-field="acompte"]').value),
+        commentaire: row.querySelector('[data-field="commentaire"]').value || ''
+      };
+      saveSylvePaiementAttente(ENTREPRISE_ID, importId, compte, payload);
+      showMessage('Sauvegarde effectuee', 'success');
+    }
+
     function render() {
       const imp = getSylveLastImport(ENTREPRISE_ID);
       const root = document.getElementById('content');
@@ -73,17 +143,21 @@
 
       const rows = clients.map(c => {
         const note = getSylvePaiementAttente(ENTREPRISE_ID, imp.id, c.compte);
+        const chkSansRaison = !!(note.chkSansRaison || note.sansRaison > 0);
+        const chkAvecReserves = !!(note.chkAvecReserves || note.avecReserves > 0);
+        const chkRgAttente = !!(note.chkRgAttente || note.rgAttente > 0);
+        const chkLitiges = !!(note.chkLitiges || note.litiges > 0);
         return `
-          <tr data-compte="${escapeHtml(c.compte)}">
+          <tr data-compte="${escapeHtml(c.compte)}" data-retard="${c.retard}">
             <td><strong>${escapeHtml(c.client)}</strong></td>
             <td style="font-weight:600; white-space:nowrap;">${formatSylveEuros(c.retard)}</td>
-            <td><input type="number" step="0.01" class="form-control pe-input" data-field="sansRaison" value="${note.sansRaison || ''}"></td>
-            <td><input type="number" step="0.01" class="form-control pe-input" data-field="avecReserves" value="${note.avecReserves || ''}"></td>
-            <td><input type="number" step="0.01" class="form-control pe-input" data-field="rgAttente" value="${note.rgAttente || ''}"></td>
-            <td><input type="number" step="0.01" class="form-control pe-input" data-field="litiges" value="${note.litiges || ''}"></td>
-            <td><input type="number" step="0.01" class="form-control pe-input" data-field="solde" value="${note.solde || ''}"></td>
-            <td><input type="number" step="0.01" class="form-control pe-input" data-field="acompte" value="${note.acompte || ''}"></td>
-            <td><input type="text" class="form-control pe-input" data-field="commentaire" value="${escapeHtml(note.commentaire || '')}"></td>
+            <td><div style="display:flex; align-items:center; gap:6px;"><input type="checkbox" class="pe-reason-check" data-check="sansRaison" ${chkSansRaison ? 'checked' : ''}><input type="number" step="0.01" class="form-control pe-reason-input" data-field="sansRaison" value="${formatInputNumber(note.sansRaison)}"></div></td>
+            <td><div style="display:flex; align-items:center; gap:6px;"><input type="checkbox" class="pe-reason-check" data-check="avecReserves" ${chkAvecReserves ? 'checked' : ''}><input type="number" step="0.01" class="form-control pe-reason-input" data-field="avecReserves" value="${formatInputNumber(note.avecReserves)}"></div></td>
+            <td><div style="display:flex; align-items:center; gap:6px;"><input type="checkbox" class="pe-reason-check" data-check="rgAttente" ${chkRgAttente ? 'checked' : ''}><input type="number" step="0.01" class="form-control pe-reason-input" data-field="rgAttente" value="${formatInputNumber(note.rgAttente)}"></div></td>
+            <td><div style="display:flex; align-items:center; gap:6px;"><input type="checkbox" class="pe-reason-check" data-check="litiges" ${chkLitiges ? 'checked' : ''}><input type="number" step="0.01" class="form-control pe-reason-input" data-field="litiges" value="${formatInputNumber(note.litiges)}"></div></td>
+            <td style="background:#e8f6e8;"><input type="number" step="0.01" class="form-control pe-save-input" data-field="solde" value="${formatInputNumber(note.solde)}"></td>
+            <td style="background:#e8f6e8;"><input type="number" step="0.01" class="form-control pe-save-input" data-field="acompte" value="${formatInputNumber(note.acompte)}"></td>
+            <td><input type="text" class="form-control pe-save-input" data-field="commentaire" value="${escapeHtml(note.commentaire || '')}"></td>
           </tr>
         `;
       }).join('');
@@ -107,8 +181,8 @@
                   <th style="text-align:center;">DÛ<br>avec reserves</th>
                   <th style="text-align:center;">DÛ<br>RG en attente</th>
                   <th style="text-align:center;">DÛ<br>litiges</th>
-                  <th style="text-align:center;">Soldé</th>
-                  <th style="text-align:center;">Acompte sur encours</th>
+                  <th style="text-align:center; background:#cfe8cf;">Soldé</th>
+                  <th style="text-align:center; background:#cfe8cf;">Acompte sur encours</th>
                   <th style="text-align:center;">Commentaire</th>
                 </tr>
               </thead>
@@ -118,21 +192,16 @@
         </div>
       `;
 
-      root.querySelectorAll('.pe-input').forEach(input => {
-        input.addEventListener('change', () => {
-          const tr = input.closest('tr');
-          const compte = tr.dataset.compte;
-          const payload = {
-            sansRaison: parseInputNumber(tr.querySelector('[data-field="sansRaison"]').value),
-            avecReserves: parseInputNumber(tr.querySelector('[data-field="avecReserves"]').value),
-            rgAttente: parseInputNumber(tr.querySelector('[data-field="rgAttente"]').value),
-            litiges: parseInputNumber(tr.querySelector('[data-field="litiges"]').value),
-            solde: parseInputNumber(tr.querySelector('[data-field="solde"]').value),
-            acompte: parseInputNumber(tr.querySelector('[data-field="acompte"]').value),
-            commentaire: tr.querySelector('[data-field="commentaire"]').value || ''
-          };
-          saveSylvePaiementAttente(ENTREPRISE_ID, imp.id, compte, payload);
-          showMessage('Sauvegarde effectuee', 'success');
+      root.querySelectorAll('tbody tr[data-compte]').forEach(row => {
+        applyRowRules(row);
+        row.querySelectorAll('.pe-reason-check').forEach(chk => {
+          chk.addEventListener('change', () => {
+            applyRowRules(row);
+            saveRow(row, imp.id);
+          });
+        });
+        row.querySelectorAll('.pe-reason-input, .pe-save-input').forEach(input => {
+          input.addEventListener('change', () => saveRow(row, imp.id));
         });
       });
     }

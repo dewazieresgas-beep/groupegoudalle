@@ -1232,6 +1232,10 @@ function getSylvePaiementAttente(entrepriseId, importId, compte) {
   const data = getSylvePaiementsAttente();
   const key = `${entrepriseId}::${importId}::${String(compte || '').trim()}`;
   return data[key] || {
+    chkSansRaison: false,
+    chkAvecReserves: false,
+    chkRgAttente: false,
+    chkLitiges: false,
     sansRaison: 0,
     avecReserves: 0,
     rgAttente: 0,
@@ -1246,6 +1250,10 @@ function saveSylvePaiementAttente(entrepriseId, importId, compte, payload) {
   const data = getSylvePaiementsAttente();
   const key = `${entrepriseId}::${importId}::${String(compte || '').trim()}`;
   data[key] = {
+    chkSansRaison: !!payload.chkSansRaison,
+    chkAvecReserves: !!payload.chkAvecReserves,
+    chkRgAttente: !!payload.chkRgAttente,
+    chkLitiges: !!payload.chkLitiges,
     sansRaison: Number(payload.sansRaison) || 0,
     avecReserves: Number(payload.avecReserves) || 0,
     rgAttente: Number(payload.rgAttente) || 0,
