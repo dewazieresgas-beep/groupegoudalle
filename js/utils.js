@@ -126,6 +126,15 @@ function isGMPage() {
   return page === 'gm.html' || page === 'gm-saisie.html';
 }
 
+/**
+ * Vérifie si l'utilisateur est sur une sous-page de Goudalle Charpente
+ * @returns {boolean} - true si on est sur gc.html ou gc-saisie.html
+ */
+function isGCPage() {
+  const page = getCurrentPage();
+  return page === 'gc.html' || page === 'gc-saisie.html';
+}
+
 // ============ WEEK UTILS ============
 /**
  * Calcule le numéro de semaine ISO 8601 d'une date
@@ -338,6 +347,8 @@ function getLogoPath() {
   let logoFile = 'groupe.png';  // Logo par défaut
   if (window.APP_LOGO === 'maconnerie') {
     logoFile = 'goudalle-maconnerie.png';
+  } else if (window.APP_LOGO === 'charpente') {
+    logoFile = 'goudalle-charpente.png';
   } else if (window.APP_LOGO === 'cbco') {
     logoFile = 'cbco.png';
   } else if (window.APP_LOGO === 'sylve') {
@@ -365,6 +376,7 @@ function getSidebar() {
   // Détecter la page active pour le style
   const currentPage = getCurrentPage();
   const onGMPage = isGMPage();
+  const onGCPage = isGCPage();
 
   // ===== CONSTRUCTION DU MENU HIÉRARCHIQUE SELON LES DROITS =====
   const accueilActive = currentPage === 'index.html' ? ' active' : '';
@@ -377,6 +389,10 @@ function getSidebar() {
     // Tous les utilisateurs avec accès : lien direct vers gm.html
     const gmActive = onGMPage ? ' active' : '';
     items += `<a href="${base}pages/gm.html" class="sidebar-item${gmActive}">🏭 Goudalle Maçonnerie</a>`;
+
+    // Module Goudalle Charpente (pages vides pour l'instant)
+    const gcActive = onGCPage ? ' active' : '';
+    items += `<a href="${base}pages/gc.html" class="sidebar-item${gcActive}">🪵 Goudalle Charpente</a>`;
   }
 
   // ===== SECTION CBCO =====
@@ -531,6 +547,52 @@ function injectGMSecondaryBar() {
     const gmSidebar = document.getElementById('gmSidebar');
     if (gmSidebar) {
       gmSidebar.classList.add('open');
+    }
+  }
+}
+
+/**
+ * Génère et injecte la barre de navigation secondaire Goudalle Charpente
+ * À appeler sur toutes les pages GC (gc.html, gc-saisie.html)
+ */
+function injectGCSecondaryBar() {
+  const session = Auth.getSession();
+  if (!session) return;
+
+  const canEdit = Auth.canEditGM();
+  const base = getBasePath();
+  const currentPage = getCurrentPage();
+
+  let secondaryItems = '';
+  const dashboardActive = currentPage === 'gc.html' ? ' active' : '';
+  secondaryItems += `<a href="${base}pages/gc.html" class="sidebar-item${dashboardActive}">📊 Dashboard</a>`;
+
+  if (canEdit) {
+    const saisieActive = currentPage === 'gc-saisie.html' ? ' active' : '';
+    secondaryItems += `<a href="${base}pages/gc-saisie.html" class="sidebar-item${saisieActive}">✏️ Saisies indicateurs</a>`;
+  }
+
+  if (secondaryItems) {
+    const barHTML = `
+      <aside class="sidebar-secondary" id="gcSidebar">
+        <div class="sidebar-secondary-content">
+          <div class="sidebar-secondary-title">🪵 Goudalle Charpente</div>
+          <button class="sidebar-secondary-close" onclick="toggleGCSidebar();">✕</button>
+          <nav class="sidebar-secondary-nav">
+            ${secondaryItems}
+          </nav>
+        </div>
+      </aside>
+    `;
+
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) {
+      sidebar.insertAdjacentHTML('afterend', barHTML);
+    }
+
+    const gcSidebar = document.getElementById('gcSidebar');
+    if (gcSidebar) {
+      gcSidebar.classList.add('open');
     }
   }
 }
@@ -838,6 +900,23 @@ function toggleGMSidebar(event) {
 }
 
 /**
+ * Toggle (ouvrir/fermer) la barre de navigation secondaire Goudalle Charpente
+ * @param {Event} event - Événement optionnel du clic
+ */
+function toggleGCSidebar(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  const gcSidebar = document.getElementById('gcSidebar');
+  if (!gcSidebar) return;
+
+  const isOpen = gcSidebar.classList.toggle('open');
+  localStorage.setItem('gc_sidebar_state', isOpen ? 'open' : 'closed');
+}
+
+/**
  * Toggle la barre de navigation secondaire CBCO
  * @param {Event} event - Événement du clic (optionnel)
  */
@@ -928,6 +1007,15 @@ function restoreSubMenuStates() {
     const gmSidebar = document.getElementById('gmSidebar');
     if (gmSidebar) {
       gmSidebar.classList.add('open');
+    }
+  }
+
+  // Restaurer l'état du sidebar secondaire GC
+  const gcState = localStorage.getItem('gc_sidebar_state');
+  if (gcState === 'open') {
+    const gcSidebar = document.getElementById('gcSidebar');
+    if (gcSidebar) {
+      gcSidebar.classList.add('open');
     }
   }
 
