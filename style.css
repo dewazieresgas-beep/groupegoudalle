@@ -1313,6 +1313,16 @@ tbody tr:last-child td {
   .cbco-indicators-row {
     grid-template-columns: 1fr;
   }
+  .cbco-charts-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cbco-charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 10px;
 }
 
 .cbco-chart-section {
