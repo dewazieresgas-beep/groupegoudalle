@@ -80,7 +80,8 @@
               <label style="font-weight:600; font-size:0.85em; display:block; margin-bottom:4px;">Goudalle Maçonnerie</label>
               <input type="text" id="caGM" class="form-control" placeholder="ex: 300000" style="min-width:150px;">
             </div>
-            <button class="btn btn-primary" onclick="saveCA()">💾 Enregistrer</button>
+            <button class="btn btn-primary" id="caSaveBtn" onclick="saveCA()">💾 Enregistrer</button>
+            <button class="btn btn-secondary" id="caEditBtn" onclick="editCAReference()" style="display:none;">✏️ Modifier</button>
           </div>
         </div>
       </div>
@@ -193,8 +194,9 @@
       const getSectionTaxMultiplier = (sectionLabel) => {
         const s = normalizeCell(sectionLabel);
         if (s.includes('autoliquidation')) return 1;
-        if (/\b20\b/.test(s)) return 1.2;
-        if (/\b10\b/.test(s)) return 1.1;
+        // Conversion TTC -> HT
+        if (/\b20\b/.test(s)) return 1 / 1.2;
+        if (/\b10\b/.test(s)) return 1 / 1.1;
         return 1;
       };
 
@@ -250,7 +252,7 @@
           const intitule = String(row[col.intitule] || '').trim();
           const soldeCompte = parseNumber(row[col.soldeCompte]);
           const nonEchu = parseNumber(row[col.nonEchu]);
-          // Conversion TVA uniquement sur les retards (K/N/P/R), pas sur le non échu (I)
+          // Conversion TVA TTC -> HT uniquement sur les retards (K/N/P/R), pas sur le non échu (I)
           const j1_30 = parseNumber(row[col.j1_30]) * taxMultiplier;
           const j31_45 = parseNumber(row[col.j31_45]) * taxMultiplier;
           const j46_60 = parseNumber(row[col.j46_60]) * taxMultiplier;
@@ -376,7 +378,14 @@
       const sections = Array.isArray(sectionsInfo) ? sectionsInfo : [];
       const sectionsHtml = sections.length > 0
         ? `<div style="margin:8px 0 12px 0; padding:10px; background:#eef7ee; border:1px solid #d3e9d3; border-radius:6px; font-size:0.83em; color:#315a31;">
-            <strong>Blocs détectés :</strong> ${sections.map(s => `${escapeHtml(s.label)} (lignes ${s.fromRow}-${s.toRow}, ${s.clients} client${s.clients > 1 ? 's' : ''}, coeff. ${s.taxMultiplier})`).join(' · ')}
+            <strong>Blocs detectes :</strong>
+            <div style="margin-top:6px; display:flex; flex-direction:column; gap:4px;">
+              ${sections.map(s => {
+                const multiplier = Number(s.taxMultiplier || 1);
+                const coeffLabel = `x${multiplier.toFixed(4)}`;
+                return `<div>• <strong>${escapeHtml(s.label)}</strong> - Lignes ${s.fromRow} a ${s.toRow} - ${s.clients} client${s.clients > 1 ? 's' : ''} - Conversion TTC -> HT appliquee: <strong>${coeffLabel}</strong></div>`;
+              }).join('')}
+            </div>
           </div>`
         : '';
 
@@ -593,6 +602,29 @@
       document.getElementById('caCBCO').value = ca.cbco || '';
       document.getElementById('caGC').value = ca.gc || '';
       document.getElementById('caGM').value = ca.gm || '';
+
+      const hasReference = !!(ca.bilanDate || ca.cbco || ca.gc || ca.gm);
+      setCAEditable(!hasReference);
+    }
+
+    /**
+     * Active/désactive l'édition du CA de référence
+     */
+    function setCAEditable(editable) {
+      document.getElementById('caBilanDate').disabled = !editable;
+      document.getElementById('caCBCO').disabled = !editable;
+      document.getElementById('caGC').disabled = !editable;
+      document.getElementById('caGM').disabled = !editable;
+
+      document.getElementById('caSaveBtn').style.display = editable ? '' : 'none';
+      document.getElementById('caEditBtn').style.display = editable ? 'none' : '';
+    }
+
+    /**
+     * Déverrouille le formulaire CA pour modification
+     */
+    function editCAReference() {
+      setCAEditable(true);
     }
 
     /**
@@ -610,6 +642,7 @@
       const dateTxt = ca.bilanDate ? new Date(ca.bilanDate).toLocaleDateString('fr-FR') : 'non renseignée';
       Auth.audit('SYLVE_CA', `CA de référence MAJ — date bilan: ${ca.bilanDate || 'N/A'} — CBCO: ${ca.cbco}, GC: ${ca.gc}, GM: ${ca.gm}`);
       showMessage(`✅ CA de référence enregistré (bilan du ${dateTxt})`, 'success');
+      setCAEditable(false);
     }
 
     function parseInputNumber(val) {
