@@ -75,7 +75,6 @@
         const note = getSylvePaiementAttente(ENTREPRISE_ID, imp.id, c.compte);
         return `
           <tr data-compte="${escapeHtml(c.compte)}">
-            <td>${escapeHtml(c.compte)}</td>
             <td><strong>${escapeHtml(c.client)}</strong></td>
             <td style="font-weight:600; white-space:nowrap;">${formatSylveEuros(c.retard)}</td>
             <td><input type="number" step="0.01" class="form-control pe-input" data-field="sansRaison" value="${note.sansRaison || ''}"></td>
@@ -102,7 +101,6 @@
             <table style="font-size:0.86em; min-width:1450px;">
               <thead>
                 <tr>
-                  <th>Compte</th>
                   <th>Client</th>
                   <th>Retard total</th>
                   <th>Du sans raison</th>
@@ -114,7 +112,7 @@
                   <th>Commentaire</th>
                 </tr>
               </thead>
-              <tbody>${rows || '<tr><td colspan="10" style="text-align:center; color:#999;">Aucun client en retard</td></tr>'}</tbody>
+              <tbody>${rows || '<tr><td colspan="9" style="text-align:center; color:#999;">Aucun client en retard</td></tr>'}</tbody>
             </table>
           </div>
         </div>
