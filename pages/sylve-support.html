@@ -53,10 +53,10 @@
 
       <!-- GRAPHIQUES CÔTE À CÔTE -->
       <div class="ss-charts-row">
-        <!-- Graphique 1: Balance âgée par tranche -->
+        <!-- Graphique 1: Retard règlements clients en M€ -->
         <div class="card">
           <div class="card-title">
-            <h2>📈 Balance âgée par tranche de retard</h2>
+            <h2>📈 Retard règlements clients — en M€</h2>
           </div>
           <div class="card-body">
             <div class="ss-chart-container">
@@ -65,12 +65,13 @@
           </div>
         </div>
 
-        <!-- Graphique 2: Répartition par entreprise -->
+        <!-- Graphique 2: Retard règlements / CA mensuel -->
         <div class="card">
           <div class="card-title">
-            <h2>📊 Répartition des retards par entreprise</h2>
+            <h2>📊 Retard règlements clients / CA mensuel</h2>
           </div>
           <div class="card-body">
+            <div id="caInfoBar" style="font-size:0.82em; color:#666; margin-bottom:8px;"></div>
             <div class="ss-chart-container">
               <canvas id="ssRetardCAChart"></canvas>
             </div>
@@ -173,41 +174,125 @@
     }
 
     /**
-     * Graphique 1: Balance âgée par tranche (barres groupées)
+     * Graphique 1: Retard règlements clients en M€ (courbes par mois)
      */
     function renderRetardChart() {
-      const balance = getSylveBalanceAgee();
-      if (balance.consolide.total === 0) return;
+      const retardMensuel = getSylveRetardMensuel();
+      if (retardMensuel.length === 0) return;
 
-      const labels = ['1-30 jours', '31-45 jours', '46-60 jours', '+61 jours'];
+      const labels = retardMensuel.map(r => r.label);
 
       const ctx = document.getElementById('ssRetardChart').getContext('2d');
       if (ssRetardChart) ssRetardChart.destroy();
 
       ssRetardChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'CBCO',
+              data: retardMensuel.map(r => r.cbco !== null ? r.cbco / 1000 : null),
+              borderColor: '#c4d100',
+              backgroundColor: '#c4d100',
+              borderWidth: 2,
+              tension: 0.3,
+              pointRadius: 4,
+              pointBackgroundColor: '#c4d100',
+              spanGaps: true
+            },
+            {
+              label: 'GC',
+              data: retardMensuel.map(r => r.gc !== null ? r.gc / 1000 : null),
+              borderColor: '#27ae60',
+              backgroundColor: '#27ae60',
+              borderWidth: 2,
+              tension: 0.3,
+              pointRadius: 4,
+              pointBackgroundColor: '#27ae60',
+              spanGaps: true
+            },
+            {
+              label: 'GM',
+              data: retardMensuel.map(r => r.gm !== null ? r.gm / 1000 : null),
+              borderColor: '#e74c3c',
+              backgroundColor: '#e74c3c',
+              borderWidth: 2,
+              tension: 0.3,
+              pointRadius: 4,
+              pointBackgroundColor: '#e74c3c',
+              spanGaps: true
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: true, position: 'bottom' },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)} M€`
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: { display: false },
+              ticks: { callback: (v) => v.toFixed(1) + ' M€' }
+            }
+          }
+        }
+      });
+    }
+
+    /**
+     * Graphique 2: Retard règlements clients / CA mensuel (barres groupées par mois)
+     */
+    function renderRetardCAChart() {
+      const retardCA = getSylveRetardCA();
+      const ca = getSylveCA();
+
+      // Afficher le CA de référence
+      const caBar = document.getElementById('caInfoBar');
+      if (ca.cbco || ca.gc || ca.gm) {
+        caBar.innerHTML = `CA mensuel réf. : <strong>CBCO</strong> ${formatSylveEuros(ca.cbco)} · <strong>GC</strong> ${formatSylveEuros(ca.gc)} · <strong>GM</strong> ${formatSylveEuros(ca.gm)}`;
+      } else {
+        caBar.innerHTML = '<em>Aucun CA mensuel renseigné — <a href="sylve-support-saisie.html">Saisir le CA</a></em>';
+      }
+
+      if (retardCA.length === 0) return;
+
+      const labels = retardCA.map(r => r.label);
+
+      const ctx = document.getElementById('ssRetardCAChart').getContext('2d');
+      if (ssRetardCAChart) ssRetardCAChart.destroy();
+
+      ssRetardCAChart = new Chart(ctx, {
         type: 'bar',
         data: {
           labels,
           datasets: [
             {
               label: 'CBCO',
-              data: [balance.cbco.j1_30, balance.cbco.j31_45, balance.cbco.j46_60, balance.cbco.j61_plus],
-              backgroundColor: 'rgba(52, 152, 219, 0.7)',
+              data: retardCA.map(r => r.cbco !== null ? parseFloat(r.cbco.toFixed(1)) : null),
+              backgroundColor: 'rgba(52, 152, 219, 0.8)',
               borderColor: '#3498db',
               borderWidth: 1
             },
             {
-              label: 'Goudalle Charpente',
-              data: [balance.gc.j1_30, balance.gc.j31_45, balance.gc.j46_60, balance.gc.j61_plus],
-              backgroundColor: 'rgba(46, 204, 113, 0.7)',
-              borderColor: '#2ecc71',
+              label: 'GC',
+              data: retardCA.map(r => r.gc !== null ? parseFloat(r.gc.toFixed(1)) : null),
+              backgroundColor: 'rgba(196, 209, 0, 0.85)',
+              borderColor: '#a0b000',
               borderWidth: 1
             },
             {
-              label: 'Goudalle Maçonnerie',
-              data: [balance.gm.j1_30, balance.gm.j31_45, balance.gm.j46_60, balance.gm.j61_plus],
-              backgroundColor: 'rgba(230, 126, 34, 0.7)',
-              borderColor: '#e67e22',
+              label: 'GM',
+              data: retardCA.map(r => r.gm !== null ? parseFloat(r.gm.toFixed(1)) : null),
+              backgroundColor: 'rgba(231, 76, 60, 0.8)',
+              borderColor: '#e74c3c',
               borderWidth: 1
             }
           ]
@@ -219,62 +304,16 @@
             legend: { display: true, position: 'top' },
             tooltip: {
               callbacks: {
-                label: (ctx) => `${ctx.dataset.label}: ${formatSylveEuros(ctx.parsed.y)}`
+                label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y} mois de CA`
               }
-            }
+            },
+            datalabels: undefined
           },
           scales: {
             y: {
               beginAtZero: true,
-              ticks: { callback: (v) => formatSylveEuros(v) }
-            }
-          }
-        }
-      });
-    }
-
-    /**
-     * Graphique 2: Répartition des retards par entreprise (doughnut)
-     */
-    function renderRetardCAChart() {
-      const balance = getSylveBalanceAgee();
-      const totalCBCO = balance.cbco.j1_30 + balance.cbco.j31_45 + balance.cbco.j46_60 + balance.cbco.j61_plus;
-      const totalGC = balance.gc.j1_30 + balance.gc.j31_45 + balance.gc.j46_60 + balance.gc.j61_plus;
-      const totalGM = balance.gm.j1_30 + balance.gm.j31_45 + balance.gm.j46_60 + balance.gm.j61_plus;
-
-      if (totalCBCO + totalGC + totalGM === 0) return;
-
-      const ctx = document.getElementById('ssRetardCAChart').getContext('2d');
-      if (ssRetardCAChart) ssRetardCAChart.destroy();
-
-      ssRetardCAChart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          labels: ['CBCO', 'Goudalle Charpente', 'Goudalle Maçonnerie'],
-          datasets: [{
-            data: [totalCBCO, totalGC, totalGM],
-            backgroundColor: [
-              'rgba(52, 152, 219, 0.8)',
-              'rgba(46, 204, 113, 0.8)',
-              'rgba(230, 126, 34, 0.8)'
-            ],
-            borderColor: ['#3498db', '#2ecc71', '#e67e22'],
-            borderWidth: 2
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: true, position: 'top' },
-            tooltip: {
-              callbacks: {
-                label: (ctx) => {
-                  const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
-                  const pct = total > 0 ? ((ctx.parsed / total) * 100).toFixed(1) : 0;
-                  return `${ctx.label}: ${formatSylveEuros(ctx.parsed)} (${pct}%)`;
-                }
-              }
+              title: { display: true, text: 'Nbre de mois de retard / CA' },
+              ticks: { callback: (v) => v.toFixed(1) }
             }
           }
         }

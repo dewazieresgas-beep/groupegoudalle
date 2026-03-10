@@ -1091,6 +1091,7 @@ function injectSylveSecondaryBar() {
 
 // ============ SYLVE SUPPORT DATA ============
 const SYLVE_BALANCE_KEY = 'goudalle_sylve_balance';
+const SYLVE_CA_KEY = 'goudalle_sylve_ca';
 const SYLVE_ENTREPRISES = [
   { id: 'cbco', label: 'CBCO' },
   { id: 'gc', label: 'Goudalle Charpente' },
@@ -1282,6 +1283,75 @@ function getSylveClientsEnRetard() {
       entreprises: [...c.entreprises]
     }))
     .sort((a, b) => b.montant - a.montant);
+}
+
+/**
+ * CA mensuel par entreprise
+ * Structure : { cbco: montant, gc: montant, gm: montant }
+ */
+function getSylveCA() {
+  const data = localStorage.getItem(SYLVE_CA_KEY);
+  return data ? JSON.parse(data) : { cbco: 0, gc: 0, gm: 0 };
+}
+
+function saveSylveCA(data) {
+  localStorage.setItem(SYLVE_CA_KEY, JSON.stringify(data));
+}
+
+/**
+ * Calcule le ratio retard/CA pour chaque mois importé
+ * Retourne un tableau trié par date : [{ mois, annee, label, cbco, gc, gm }]
+ * où cbco/gc/gm = totalRetard / CA (nombre de mois de retard)
+ */
+function getSylveRetardCA() {
+  const data = getSylveBalance();
+  const ca = getSylveCA();
+  const monthsMap = {};
+
+  SYLVE_ENTREPRISES.forEach(e => {
+    (data[e.id] || []).forEach(imp => {
+      const key = `${imp.annee}-${String(imp.mois).padStart(2, '0')}`;
+      if (!monthsMap[key]) {
+        monthsMap[key] = { mois: imp.mois, annee: imp.annee, cbco: null, gc: null, gm: null };
+      }
+      const totalRetard = imp.clients.reduce((s, c) => s + ((c.j1_30||0) + (c.j31_45||0) + (c.j46_60||0) + (c.j61_plus||0)), 0);
+      monthsMap[key][e.id] = ca[e.id] > 0 ? totalRetard / ca[e.id] : 0;
+    });
+  });
+
+  return Object.values(monthsMap)
+    .sort((a, b) => a.annee !== b.annee ? a.annee - b.annee : a.mois - b.mois)
+    .map(m => ({
+      ...m,
+      label: SYLVE_MOIS[m.mois].substring(0, 4).toLowerCase() + '-' + String(m.annee).slice(-2)
+    }));
+}
+
+/**
+ * Retard total mensuel par entreprise (en €)
+ * Retourne un tableau trié par date : [{ mois, annee, label, cbco, gc, gm }]
+ */
+function getSylveRetardMensuel() {
+  const data = getSylveBalance();
+  const monthsMap = {};
+
+  SYLVE_ENTREPRISES.forEach(e => {
+    (data[e.id] || []).forEach(imp => {
+      const key = `${imp.annee}-${String(imp.mois).padStart(2, '0')}`;
+      if (!monthsMap[key]) {
+        monthsMap[key] = { mois: imp.mois, annee: imp.annee, cbco: null, gc: null, gm: null };
+      }
+      const totalRetard = imp.clients.reduce((s, c) => s + ((c.j1_30||0) + (c.j31_45||0) + (c.j46_60||0) + (c.j61_plus||0)), 0);
+      monthsMap[key][e.id] = totalRetard;
+    });
+  });
+
+  return Object.values(monthsMap)
+    .sort((a, b) => a.annee !== b.annee ? a.annee - b.annee : a.mois - b.mois)
+    .map(m => ({
+      ...m,
+      label: SYLVE_MOIS[m.mois].substring(0, 4).toLowerCase() + '-' + String(m.annee).slice(-2)
+    }));
 }
 
 /**
