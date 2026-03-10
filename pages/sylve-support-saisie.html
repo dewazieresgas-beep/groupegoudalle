@@ -62,8 +62,16 @@
       <div class="card ss-import-card">
         <div class="card-title"><h2 style="margin:0;">💰 CA mensuel par entreprise (HT)</h2></div>
         <div class="card-body">
-          <p style="color:#666; font-size:0.88em; margin-bottom:14px;">Renseignez le chiffre d'affaires mensuel de référence pour calculer le ratio retard/CA</p>
+          <p style="color:#666; font-size:0.88em; margin-bottom:14px;">Renseignez le chiffre d'affaires mensuel par entreprise pour calculer le ratio retard/CA</p>
           <div style="display:flex; flex-wrap:wrap; gap:16px; align-items:end;">
+            <div>
+              <label style="font-weight:600; font-size:0.85em; display:block; margin-bottom:4px;">Mois</label>
+              <select id="caMois" class="form-control" style="min-width:130px;" onchange="loadCAForSelectedMonth()"></select>
+            </div>
+            <div>
+              <label style="font-weight:600; font-size:0.85em; display:block; margin-bottom:4px;">Année</label>
+              <select id="caAnnee" class="form-control" style="min-width:90px;" onchange="loadCAForSelectedMonth()"></select>
+            </div>
             <div>
               <label style="font-weight:600; font-size:0.85em; display:block; margin-bottom:4px;">CBCO</label>
               <input type="text" id="caCBCO" class="form-control" placeholder="ex: 400000" style="min-width:150px;">
@@ -79,6 +87,15 @@
             <button class="btn btn-primary" onclick="saveCA()">💾 Enregistrer</button>
           </div>
         </div>
+      </div>
+
+      <!-- HISTORIQUE CA -->
+      <div class="card ss-import-card" id="historyCA">
+        <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <h2 style="margin:0;">📁 Historique CA mensuel</h2>
+          <span class="badge badge-secondary" id="countCA">0 mois</span>
+        </div>
+        <div class="card-body" id="historyBodyCA"><p style="color:#999;">Aucun CA enregistré</p></div>
       </div>
 
       <!-- HISTORIQUE PAR ENTREPRISE -->
@@ -513,17 +530,121 @@
     }
 
     /**
-     * Sauvegarde les CA mensuels
+     * Initialise les sélecteurs mois/année pour le CA
+     */
+    function initCASelectors() {
+      const selMois = document.getElementById('caMois');
+      const selAnnee = document.getElementById('caAnnee');
+      const now = new Date();
+
+      for (let m = 1; m <= 12; m++) {
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = MOIS_NOMS[m];
+        if (m === now.getMonth() + 1) opt.selected = true;
+        selMois.appendChild(opt);
+      }
+
+      for (let y = now.getFullYear(); y >= now.getFullYear() - 3; y--) {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.textContent = y;
+        selAnnee.appendChild(opt);
+      }
+    }
+
+    /**
+     * Charge le CA du mois/année sélectionné dans les champs
+     */
+    function loadCAForSelectedMonth() {
+      const mois = parseInt(document.getElementById('caMois').value);
+      const annee = parseInt(document.getElementById('caAnnee').value);
+      const ca = getSylveCAForMonth(mois, annee);
+      document.getElementById('caCBCO').value = ca.cbco || '';
+      document.getElementById('caGC').value = ca.gc || '';
+      document.getElementById('caGM').value = ca.gm || '';
+    }
+
+    /**
+     * Sauvegarde le CA pour le mois/année sélectionné
      */
     function saveCA() {
-      const ca = {
-        cbco: parseInputNumber(document.getElementById('caCBCO').value),
-        gc: parseInputNumber(document.getElementById('caGC').value),
-        gm: parseInputNumber(document.getElementById('caGM').value)
-      };
-      saveSylveCA(ca);
-      Auth.audit('SYLVE_CA', `CA mensuel mis à jour — CBCO: ${ca.cbco}, GC: ${ca.gc}, GM: ${ca.gm}`);
-      showMessage('✅ CA mensuel enregistré', 'success');
+      const mois = parseInt(document.getElementById('caMois').value);
+      const annee = parseInt(document.getElementById('caAnnee').value);
+      const cbco = parseInputNumber(document.getElementById('caCBCO').value);
+      const gc = parseInputNumber(document.getElementById('caGC').value);
+      const gm = parseInputNumber(document.getElementById('caGM').value);
+
+      saveSylveCAForMonth(mois, annee, cbco, gc, gm);
+      Auth.audit('SYLVE_CA', `CA ${MOIS_NOMS[mois]} ${annee} — CBCO: ${cbco}, GC: ${gc}, GM: ${gm}`);
+      showMessage(`✅ CA ${MOIS_NOMS[mois]} ${annee} enregistré`, 'success');
+      refreshCAHistory();
+    }
+
+    /**
+     * Supprime le CA d'un mois
+     */
+    function deleteCA(mois, annee) {
+      if (!confirm(`Supprimer le CA de ${MOIS_NOMS[mois]} ${annee} ?`)) return;
+      deleteSylveCAForMonth(mois, annee);
+      Auth.audit('SYLVE_CA_DELETED', `CA ${MOIS_NOMS[mois]} ${annee} supprimé`);
+      showMessage(`🗑️ CA ${MOIS_NOMS[mois]} ${annee} supprimé`, 'success');
+      refreshCAHistory();
+    }
+
+    /**
+     * Pré-remplit le formulaire CA pour modifier un mois existant
+     */
+    function editCA(mois, annee) {
+      document.getElementById('caMois').value = mois;
+      document.getElementById('caAnnee').value = annee;
+      loadCAForSelectedMonth();
+      window.scrollTo(0, document.getElementById('historyCA').offsetTop - 200);
+    }
+
+    /**
+     * Affiche l'historique des CA enregistrés
+     */
+    function refreshCAHistory() {
+      const list = getSylveCAList();
+      const bodyEl = document.getElementById('historyBodyCA');
+      const countEl = document.getElementById('countCA');
+
+      countEl.textContent = list.length + ' mois';
+      countEl.className = list.length > 0 ? 'badge badge-success' : 'badge badge-secondary';
+
+      if (list.length === 0) {
+        bodyEl.innerHTML = '<p style="color:#999; margin:0;">Aucun CA enregistré</p>';
+        return;
+      }
+
+      let html = `<table style="font-size:0.88em;">
+        <thead>
+          <tr>
+            <th>Période</th>
+            <th>CBCO</th>
+            <th>Goudalle Charpente</th>
+            <th>Goudalle Maçonnerie</th>
+            <th style="text-align:center;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>`;
+
+      list.forEach(ca => {
+        html += `<tr>
+            <td><strong>${MOIS_NOMS[ca.mois]} ${ca.annee}</strong></td>
+            <td>${ca.cbco ? formatSylveEuros(ca.cbco) : '—'}</td>
+            <td>${ca.gc ? formatSylveEuros(ca.gc) : '—'}</td>
+            <td>${ca.gm ? formatSylveEuros(ca.gm) : '—'}</td>
+            <td style="text-align:center; white-space:nowrap;">
+              <button class="btn btn-small btn-secondary" onclick="editCA(${ca.mois}, ${ca.annee})" title="Modifier">✏️</button>
+              <button class="btn btn-small btn-danger" onclick="deleteCA(${ca.mois}, ${ca.annee})" title="Supprimer">🗑️</button>
+            </td>
+          </tr>`;
+      });
+
+      html += '</tbody></table>';
+      bodyEl.innerHTML = html;
     }
 
     function parseInputNumber(val) {
@@ -533,22 +654,14 @@
       return isNaN(num) ? 0 : num;
     }
 
-    /**
-     * Charge les CA enregistrés dans les champs
-     */
-    function loadCA() {
-      const ca = getSylveCA();
-      if (ca.cbco) document.getElementById('caCBCO').value = ca.cbco;
-      if (ca.gc) document.getElementById('caGC').value = ca.gc;
-      if (ca.gm) document.getElementById('caGM').value = ca.gm;
-    }
-
     function init() {
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectSylveSecondaryBar();
       initSelectors();
+      initCASelectors();
       setupDragDrop();
-      loadCA();
+      loadCAForSelectedMonth();
+      refreshCAHistory();
       refreshHistory();
     }
 

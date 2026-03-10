@@ -1286,12 +1286,19 @@ function getSylveClientsEnRetard() {
 }
 
 /**
- * CA mensuel par entreprise
- * Structure : { cbco: montant, gc: montant, gm: montant }
+ * CA mensuel par entreprise, stocké par mois
+ * Structure : { "YYYY-MM": { cbco: montant, gc: montant, gm: montant }, ... }
+ * Rétrocompatible avec l'ancien format { cbco, gc, gm }
  */
 function getSylveCA() {
-  const data = localStorage.getItem(SYLVE_CA_KEY);
-  return data ? JSON.parse(data) : { cbco: 0, gc: 0, gm: 0 };
+  const raw = localStorage.getItem(SYLVE_CA_KEY);
+  if (!raw) return {};
+  const data = JSON.parse(raw);
+  // Migration ancien format { cbco, gc, gm } → ignoré (pas de mois associé)
+  if (typeof data.cbco === 'number' || typeof data.gc === 'number' || typeof data.gm === 'number') {
+    return {};
+  }
+  return data;
 }
 
 function saveSylveCA(data) {
@@ -1299,13 +1306,53 @@ function saveSylveCA(data) {
 }
 
 /**
+ * Enregistre le CA pour un mois/année donné
+ */
+function saveSylveCAForMonth(mois, annee, cbco, gc, gm) {
+  const data = getSylveCA();
+  const key = `${annee}-${String(mois).padStart(2, '0')}`;
+  data[key] = { cbco: cbco || 0, gc: gc || 0, gm: gm || 0, mois, annee };
+  saveSylveCA(data);
+}
+
+/**
+ * Supprime le CA d'un mois/année donné
+ */
+function deleteSylveCAForMonth(mois, annee) {
+  const data = getSylveCA();
+  const key = `${annee}-${String(mois).padStart(2, '0')}`;
+  delete data[key];
+  saveSylveCA(data);
+}
+
+/**
+ * Récupère le CA d'un mois spécifique (ou zéros si non renseigné)
+ */
+function getSylveCAForMonth(mois, annee) {
+  const data = getSylveCA();
+  const key = `${annee}-${String(mois).padStart(2, '0')}`;
+  return data[key] || { cbco: 0, gc: 0, gm: 0 };
+}
+
+/**
+ * Retourne tous les CA enregistrés, triés par date décroissante
+ */
+function getSylveCAList() {
+  const data = getSylveCA();
+  return Object.values(data)
+    .filter(d => d.mois && d.annee)
+    .sort((a, b) => b.annee !== a.annee ? b.annee - a.annee : b.mois - a.mois);
+}
+
+/**
  * Calcule le ratio retard/CA pour chaque mois importé
+ * Utilise le CA du mois correspondant
  * Retourne un tableau trié par date : [{ mois, annee, label, cbco, gc, gm }]
  * où cbco/gc/gm = totalRetard / CA (nombre de mois de retard)
  */
 function getSylveRetardCA() {
   const data = getSylveBalance();
-  const ca = getSylveCA();
+  const caData = getSylveCA();
   const monthsMap = {};
 
   SYLVE_ENTREPRISES.forEach(e => {
@@ -1315,7 +1362,9 @@ function getSylveRetardCA() {
         monthsMap[key] = { mois: imp.mois, annee: imp.annee, cbco: null, gc: null, gm: null };
       }
       const totalRetard = imp.clients.reduce((s, c) => s + ((c.j1_30||0) + (c.j31_45||0) + (c.j46_60||0) + (c.j61_plus||0)), 0);
-      monthsMap[key][e.id] = ca[e.id] > 0 ? totalRetard / ca[e.id] : 0;
+      const monthCA = caData[key] || {};
+      const caVal = monthCA[e.id] || 0;
+      monthsMap[key][e.id] = caVal > 0 ? totalRetard / caVal : 0;
     });
   });
 

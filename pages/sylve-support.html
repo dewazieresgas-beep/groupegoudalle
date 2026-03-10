@@ -252,12 +252,12 @@
      */
     function renderRetardCAChart() {
       const retardCA = getSylveRetardCA();
-      const ca = getSylveCA();
+      const caList = getSylveCAList();
 
-      // Afficher le CA de référence
+      // Afficher le résumé CA
       const caBar = document.getElementById('caInfoBar');
-      if (ca.cbco || ca.gc || ca.gm) {
-        caBar.innerHTML = `CA mensuel réf. : <strong>CBCO</strong> ${formatSylveEuros(ca.cbco)} · <strong>GC</strong> ${formatSylveEuros(ca.gc)} · <strong>GM</strong> ${formatSylveEuros(ca.gm)}`;
+      if (caList.length > 0) {
+        caBar.innerHTML = `${caList.length} mois de CA renseigné(s) — <a href="sylve-support-saisie.html">Gérer le CA</a>`;
       } else {
         caBar.innerHTML = '<em>Aucun CA mensuel renseigné — <a href="sylve-support-saisie.html">Saisir le CA</a></em>';
       }
