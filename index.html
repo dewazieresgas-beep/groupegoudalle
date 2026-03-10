@@ -666,9 +666,6 @@
     let ssHomeRetardChart, ssHomeRetardCAChart;
 
     function renderSylveHomeCharts() {
-      // Injecter données de démo si nécessaire
-      initSylveDemoData();
-
       const retards = getSylveRetardsMensuels();
       if (retards.length === 0) return;
 

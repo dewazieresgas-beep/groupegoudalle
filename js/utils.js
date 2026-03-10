@@ -1302,54 +1302,6 @@ function formatSylveEuros(value) {
   }).format(value) + ' €';
 }
 
-/**
- * Injecte les données de démonstration Sylve Support si aucune donnée n'existe
- */
-function initSylveDemoData() {
-  if (getSylveFactures().length > 0) return;
-
-  const clients = [
-    'Mairie de Preures', 'SCI Durand', 'SA Lefebvre Construction',
-    'SARL Dubois & Fils', 'Commune de Boulogne', 'Lycée St-Joseph',
-    'Habitat 62', 'Résidence Les Pins', 'Groupe Immobilier Nord',
-    'Clinique du Littoral', 'Centre Commercial Atlantis', 'EHPAD Les Oliviers'
-  ];
-  const entreprises = ['cbco', 'gc', 'gm'];
-
-  const demoFactures = [];
-  let factNum = 2025001;
-
-  // Générer des factures sur les 12 derniers mois
-  for (let i = 0; i < 30; i++) {
-    const moisOffset = Math.floor(Math.random() * 12);
-    const dateFacture = new Date();
-    dateFacture.setMonth(dateFacture.getMonth() - moisOffset);
-    dateFacture.setDate(Math.floor(Math.random() * 28) + 1);
-
-    const delaiPaiement = [30, 45, 60, 90][Math.floor(Math.random() * 4)];
-    const dateEcheance = new Date(dateFacture);
-    dateEcheance.setDate(dateEcheance.getDate() + delaiPaiement);
-
-    const montant = Math.floor(Math.random() * 200000) + 5000;
-    const estPayee = Math.random() > 0.45;
-
-    demoFactures.push({
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7) + i,
-      numeroFacture: 'F-' + (factNum++),
-      client: clients[Math.floor(Math.random() * clients.length)],
-      montantHT: montant,
-      dateFacture: dateFacture.toISOString().split('T')[0],
-      dateEcheance: dateEcheance.toISOString().split('T')[0],
-      statut: estPayee ? 'payee' : 'non_payee',
-      entreprise: entreprises[Math.floor(Math.random() * entreprises.length)],
-      commentaire: '',
-      createdAt: new Date().toISOString()
-    });
-  }
-
-  localStorage.setItem(SYLVE_FACTURES_KEY, JSON.stringify(demoFactures));
-}
-
 // ============ SECURITY ============
 /**
  * Événement déclenché au chargement complet du DOM
