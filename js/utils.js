@@ -123,7 +123,7 @@ function getCurrentPage() {
  */
 function isGMPage() {
   const page = getCurrentPage();
-  return page === 'gm.html' || page === 'gm-saisie.html';
+  return page === 'gm.html' || page === 'gm-saisie.html' || page === 'gm-paiement.html';
 }
 
 /**
@@ -132,7 +132,7 @@ function isGMPage() {
  */
 function isGCPage() {
   const page = getCurrentPage();
-  return page === 'gc.html' || page === 'gc-saisie.html';
+  return page === 'gc.html' || page === 'gc-saisie.html' || page === 'gc-paiement.html';
 }
 
 // ============ WEEK UTILS ============
@@ -521,6 +521,8 @@ function injectGMSecondaryBar() {
   if (canEdit) {
     const saisieActive = currentPage === 'gm-saisie.html' ? ' active' : '';
     secondaryItems += `<a href="${base}pages/gm-saisie.html" class="sidebar-item${saisieActive}">✏️ Saisies indicateurs</a>`;
+    const paiementActive = currentPage === 'gm-paiement.html' ? ' active' : '';
+    secondaryItems += `<a href="${base}pages/gm-paiement.html" class="sidebar-item${paiementActive}">💳 Paiements en attente</a>`;
   }
 
   // Créer et injecter la barre secondaire
@@ -570,6 +572,8 @@ function injectGCSecondaryBar() {
   if (canEdit) {
     const saisieActive = currentPage === 'gc-saisie.html' ? ' active' : '';
     secondaryItems += `<a href="${base}pages/gc-saisie.html" class="sidebar-item${saisieActive}">✏️ Saisies indicateurs</a>`;
+    const paiementActive = currentPage === 'gc-paiement.html' ? ' active' : '';
+    secondaryItems += `<a href="${base}pages/gc-paiement.html" class="sidebar-item${paiementActive}">💳 Paiements en attente</a>`;
   }
 
   if (secondaryItems) {
@@ -800,6 +804,8 @@ function injectCBCOSecondaryBar() {
     secondaryItems += `<a href="${base}pages/cbco-saisie.html" class="sidebar-item${saisieActive}">✏️ Saisie chiffre d'affaires</a>`;
     const commercialActive = currentPage === 'cbco-commercial.html' ? ' active' : '';
     secondaryItems += `<a href="${base}pages/cbco-commercial.html" class="sidebar-item${commercialActive}">💼 Saisie indicateurs commercial</a>`;
+    const paiementActive = currentPage === 'cbco-paiement.html' ? ' active' : '';
+    secondaryItems += `<a href="${base}pages/cbco-paiement.html" class="sidebar-item${paiementActive}">💳 Paiements en attente</a>`;
   }
 
   // Créer et injecter la barre secondaire
@@ -836,7 +842,7 @@ function injectCBCOSecondaryBar() {
  */
 function isCBCOPage() {
   const page = getCurrentPage();
-  return page === 'cbco.html' || page === 'cbco-saisie.html' || page === 'cbco-commercial.html';
+  return page === 'cbco.html' || page === 'cbco-saisie.html' || page === 'cbco-commercial.html' || page === 'cbco-paiement.html';
 }
 
 /**
@@ -1180,6 +1186,7 @@ function injectSylveSecondaryBar() {
 // ============ SYLVE SUPPORT DATA ============
 const SYLVE_BALANCE_KEY = 'goudalle_sylve_balance';
 const SYLVE_CA_KEY = 'goudalle_sylve_ca';
+const SYLVE_PAIEMENTS_ATTENTE_KEY = 'goudalle_sylve_paiements_attente';
 const SYLVE_ENTREPRISES = [
   { id: 'cbco', label: 'CBCO' },
   { id: 'gc', label: 'Goudalle Charpente' },
@@ -1201,6 +1208,54 @@ const SYLVE_MOIS = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
 function getSylveBalance() {
   const data = localStorage.getItem(SYLVE_BALANCE_KEY);
   return data ? JSON.parse(data) : { cbco: [], gc: [], gm: [] };
+}
+
+/**
+ * Récupère les informations de suivi "paiements en attente".
+ * Structure :
+ * {
+ *   "entrepriseId::importId::compte": {
+ *     sansRaison, avecReserves, rgAttente, litiges, solde, acompte, commentaire, updatedAt
+ *   }
+ * }
+ */
+function getSylvePaiementsAttente() {
+  const data = localStorage.getItem(SYLVE_PAIEMENTS_ATTENTE_KEY);
+  return data ? JSON.parse(data) : {};
+}
+
+function saveSylvePaiementsAttente(data) {
+  localStorage.setItem(SYLVE_PAIEMENTS_ATTENTE_KEY, JSON.stringify(data));
+}
+
+function getSylvePaiementAttente(entrepriseId, importId, compte) {
+  const data = getSylvePaiementsAttente();
+  const key = `${entrepriseId}::${importId}::${String(compte || '').trim()}`;
+  return data[key] || {
+    sansRaison: 0,
+    avecReserves: 0,
+    rgAttente: 0,
+    litiges: 0,
+    solde: 0,
+    acompte: 0,
+    commentaire: ''
+  };
+}
+
+function saveSylvePaiementAttente(entrepriseId, importId, compte, payload) {
+  const data = getSylvePaiementsAttente();
+  const key = `${entrepriseId}::${importId}::${String(compte || '').trim()}`;
+  data[key] = {
+    sansRaison: Number(payload.sansRaison) || 0,
+    avecReserves: Number(payload.avecReserves) || 0,
+    rgAttente: Number(payload.rgAttente) || 0,
+    litiges: Number(payload.litiges) || 0,
+    solde: Number(payload.solde) || 0,
+    acompte: Number(payload.acompte) || 0,
+    commentaire: String(payload.commentaire || '').trim(),
+    updatedAt: new Date().toISOString()
+  };
+  saveSylvePaiementsAttente(data);
 }
 
 function saveSylveBalance(data) {
