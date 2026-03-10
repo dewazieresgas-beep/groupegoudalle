@@ -107,113 +107,120 @@
 
     /**
      * Parse le fichier Excel Balance Âgée Sage
-     * Détecte automatiquement les lignes clients et les colonnes
+     * Détecte automatiquement l'en-tête, les colonnes et les lignes clients
      */
     function parseBalanceAgeeExcel(workbook) {
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const rawData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
 
-      // Chercher la période dans les premières lignes
+      console.log('📊 Balance Âgée — lignes brutes (20 premières) :', rawData.slice(0, 20));
+
+      // 1. Chercher la période dans les premières lignes
       let periode = '';
-      for (let i = 0; i < Math.min(10, rawData.length); i++) {
+      for (let i = 0; i < Math.min(15, rawData.length); i++) {
+        const rowStr = rawData[i].map(c => String(c)).join(' ');
+        const dates = rowStr.match(/\d{2}\/\d{2}\/\d{2,4}/g);
+        if (dates && dates.length >= 1) {
+          periode = dates.join(' au ');
+          break;
+        }
+      }
+
+      // 2. Trouver la ligne d'en-tête via mots-clés
+      let headerRow = -1;
+      const colMap = { compte: 0, intitule: 1, solde: 2, nonEchu: 3, j1_30: 4, j31_45: 5, j46_60: 6, j61_plus: 7 };
+
+      for (let i = 0; i < Math.min(30, rawData.length); i++) {
         const row = rawData[i];
+        let score = 0;
         for (let j = 0; j < row.length; j++) {
-          const val = String(row[j]);
-          if (val.match(/p[ée]riode/i) || val.match(/\d{2}\/\d{2}\/\d{2,4}/)) {
-            // Chercher les dates dans la ligne
-            const dates = val.match(/\d{2}\/\d{2}\/\d{2,4}/g);
-            if (dates && dates.length >= 1) {
-              periode = dates.join(' au ');
+          const h = String(row[j]).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          if (h.includes('solde') || h.includes('intitul') || h.includes('numero') ||
+              h.includes('compte') || h.includes('echu') || h.includes('jour') ||
+              h.includes('plus de') || h.includes('non echu')) {
+            score++;
+          }
+        }
+        if (score >= 3) {
+          headerRow = i;
+          // Mapper dynamiquement les colonnes
+          for (let j = 0; j < row.length; j++) {
+            const h = String(row[j]).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            if ((h.includes('numero') || h.includes('n°')) && !h.includes('solde')) colMap.compte = j;
+            else if (h.includes('intitul') || h === 'nom' || h === 'client') colMap.intitule = j;
+            else if (h.includes('solde') && !h.includes('non') && !h.includes('echu')) colMap.solde = j;
+            else if (h.includes('non') && h.includes('echu')) colMap.nonEchu = j;
+            else if (/1\s*[àa]\s*30/.test(h)) colMap.j1_30 = j;
+            else if (/31\s*[àa]\s*45/.test(h)) colMap.j31_45 = j;
+            else if (/46\s*[àa]\s*60/.test(h)) colMap.j46_60 = j;
+            else if (h.includes('plus de') || /6[1-9]|>\s*60/.test(h)) colMap.j61_plus = j;
+            // "Solde non échu" contient "solde" ET "non échu" → affecter à nonEchu
+            if (h.includes('solde') && (h.includes('non') || h.includes('echu'))) colMap.nonEchu = j;
+          }
+          break;
+        }
+      }
+
+      // Si aucun en-tête trouvé, chercher la première ligne avec ≥5 cellules remplies
+      if (headerRow === -1) {
+        for (let i = 0; i < Math.min(30, rawData.length); i++) {
+          const row = rawData[i];
+          const filledCells = row.filter(c => String(c).trim() !== '').length;
+          if (filledCells >= 5) {
+            // Vérifier si c'est un en-tête ou directement des données
+            const hasNumbers = row.slice(2).some(c => typeof c === 'number' || /^[\d\s,.-]+$/.test(String(c).trim()));
+            if (!hasNumbers) {
+              headerRow = i;
+            } else {
+              headerRow = i - 1; // Les données commencent ici
             }
+            break;
           }
         }
       }
 
-      // Trouver la ligne d'en-tête avec les colonnes de tranches
-      let headerRow = -1;
-      let colCompte = -1, colIntitule = -1, colSolde = -1, colNonEchu = -1;
-      let colJ1_30 = -1, colJ31_45 = -1, colJ46_60 = -1, colJ61Plus = -1;
+      console.log('📊 En-tête trouvé ligne:', headerRow, '| Mapping colonnes:', JSON.stringify(colMap));
 
-      for (let i = 0; i < Math.min(20, rawData.length); i++) {
-        const row = rawData[i];
-        const rowStr = row.map(c => String(c).toLowerCase()).join('|');
-
-        // Chercher la ligne qui contient "30" et "jours" ou des en-têtes numériques
-        if (rowStr.includes('30') && (rowStr.includes('jour') || rowStr.includes('plus'))) {
-          headerRow = i;
-          break;
-        }
-        // Alternative : chercher "numéro" ou "compte" et "intitulé" 
-        if ((rowStr.includes('num') || rowStr.includes('compte')) && rowStr.includes('intitul')) {
-          headerRow = i;
-          break;
-        }
-      }
-
-      // Si pas trouvé, utiliser le mapping fixe Sage standard
-      // En Sage, les colonnes sont typiquement :
-      // A=Numéro de compte, B=Intitulé, C=Solde du compte, D=Solde non échu,
-      // E=1 à 30 jours, F=31 à 45 jours, G=46 à 60 jours, H=plus de 61 jours
-      colCompte = 0;
-      colIntitule = 1;
-      colSolde = 2;
-      colNonEchu = 3;
-      colJ1_30 = 4;
-      colJ31_45 = 5;
-      colJ46_60 = 6;
-      colJ61Plus = 7;
-
-      // Trouver la première ligne de données (après les en-têtes)
-      let startRow = 0;
-      for (let i = 0; i < rawData.length; i++) {
-        const row = rawData[i];
-        const cellA = String(row[0] || '').trim();
-        // Les comptes clients commencent par un chiffre (ex: 41102003, 8AMIENS, etc.)
-        // ou contiennent un code de catégorie (41xxxxxx) 
-        if (cellA.match(/^4\d{4,}/)) {
-          // C'est un code de catégorie (ex: 41102003), on continue
-          startRow = i + 1;
-          continue;
-        }
-        if (cellA.match(/^[89#]?\w+/) && row[colSolde] !== '' && parseNumber(row[colSolde]) !== 0) {
-          startRow = i;
-          break;
-        }
-      }
-
-      // Extraire les lignes clients
+      // 3. Extraire les lignes clients (après l'en-tête)
+      const startRow = headerRow + 1;
       const clients = [];
+
+      // Patterns à ignorer : seuls les totaux et lignes de synthèse
       const skipPatterns = [
-        /^total/i, /^sous.?total/i, /^s\.?total/i, /^c\.?\s?g[eé]n/i,
-        /^%\s*p[eé]riode/i, /^totaux/i, /^\s*$/,
-        /^4\d{4,}/, /^clients\s/i  // Lignes de catégorie comme "41102003 Clients 20%"
+        /^total/i, /^sous.?total/i, /^s\.?total/i,
+        /^totaux/i, /^c\.?\s?g[eé]n[eé]ral/i,
+        /^%\s*p[eé]riode/i
       ];
 
       for (let i = startRow; i < rawData.length; i++) {
         const row = rawData[i];
-        const cellA = String(row[colCompte] || '').trim();
-        const cellB = String(row[colIntitule] || '').trim();
-        const solde = parseNumber(row[colSolde]);
+        const compte = String(row[colMap.compte] || '').trim();
+        const intitule = String(row[colMap.intitule] || '').trim();
+        const solde = parseNumber(row[colMap.solde]);
+        const nonEchu = parseNumber(row[colMap.nonEchu]);
+        const j1_30 = parseNumber(row[colMap.j1_30]);
+        const j31_45 = parseNumber(row[colMap.j31_45]);
+        const j46_60 = parseNumber(row[colMap.j46_60]);
+        const j61_plus = parseNumber(row[colMap.j61_plus]);
 
-        // Ignorer les lignes vides ou de type total/catégorie
-        if (!cellA && !cellB) continue;
-        const combined = cellA + ' ' + cellB;
+        // Ignorer les lignes complètement vides
+        if (!compte && !intitule) continue;
+
+        // Ignorer les lignes Total / Sous-total
+        const combined = (compte + ' ' + intitule).trim();
         if (skipPatterns.some(p => p.test(combined))) continue;
-        if (solde === 0 && parseNumber(row[colNonEchu]) === 0 &&
-            parseNumber(row[colJ1_30]) === 0 && parseNumber(row[colJ61Plus]) === 0) continue;
+
+        // Ignorer les lignes sans aucune valeur numérique
+        if (solde === 0 && nonEchu === 0 && j1_30 === 0 && j31_45 === 0 && j46_60 === 0 && j61_plus === 0) continue;
 
         clients.push({
-          compte: cellA,
-          client: cellB || cellA,
-          solde: solde,
-          nonEchu: parseNumber(row[colNonEchu]),
-          j1_30: parseNumber(row[colJ1_30]),
-          j31_45: parseNumber(row[colJ31_45]),
-          j46_60: parseNumber(row[colJ46_60]),
-          j61_plus: parseNumber(row[colJ61Plus])
+          compte: compte,
+          client: intitule || compte,
+          solde, nonEchu, j1_30, j31_45, j46_60, j61_plus
         });
       }
 
+      console.log('📊 Clients extraits:', clients.length, '| Exemples:', clients.slice(0, 3));
       return { clients, periode };
     }
 
