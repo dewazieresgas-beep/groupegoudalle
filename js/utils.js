@@ -1286,62 +1286,68 @@ function getSylveClientsEnRetard() {
 }
 
 /**
- * CA mensuel par entreprise, stocké par mois
- * Structure : { "YYYY-MM": { cbco: montant, gc: montant, gm: montant }, ... }
- * Rétrocompatible avec l'ancien format { cbco, gc, gm }
+ * CA mensuel de référence (issu du dernier bilan)
+ * Structure : { cbco: montant, gc: montant, gm: montant, bilanDate: 'YYYY-MM-DD' }
+ * Rétrocompatible avec anciens formats:
+ * - { cbco, gc, gm }
+ * - { "YYYY-MM": { cbco, gc, gm, mois, annee }, ... }
  */
 function getSylveCA() {
   const raw = localStorage.getItem(SYLVE_CA_KEY);
-  if (!raw) return {};
+  if (!raw) return { cbco: 0, gc: 0, gm: 0, bilanDate: '' };
+
   const data = JSON.parse(raw);
-  // Migration ancien format { cbco, gc, gm } → ignoré (pas de mois associé)
-  if (typeof data.cbco === 'number' || typeof data.gc === 'number' || typeof data.gm === 'number') {
-    return {};
+
+  // Format courant
+  if (data && typeof data === 'object' && ('bilanDate' in data || 'cbco' in data || 'gc' in data || 'gm' in data)) {
+    return {
+      cbco: Number(data.cbco) || 0,
+      gc: Number(data.gc) || 0,
+      gm: Number(data.gm) || 0,
+      bilanDate: data.bilanDate || ''
+    };
   }
-  return data;
+
+  // Migration depuis ancien format par mois: prendre la période la plus récente
+  const entries = Object.values(data || {}).filter(v => v && typeof v === 'object' && ('cbco' in v || 'gc' in v || 'gm' in v));
+  if (entries.length > 0) {
+    entries.sort((a, b) => {
+      const ay = Number(a.annee) || 0;
+      const by = Number(b.annee) || 0;
+      if (by !== ay) return by - ay;
+      return (Number(b.mois) || 0) - (Number(a.mois) || 0);
+    });
+    const latest = entries[0];
+    const bilanDate = latest.annee && latest.mois
+      ? `${latest.annee}-${String(latest.mois).padStart(2, '0')}-01`
+      : '';
+    return {
+      cbco: Number(latest.cbco) || 0,
+      gc: Number(latest.gc) || 0,
+      gm: Number(latest.gm) || 0,
+      bilanDate
+    };
+  }
+
+  return { cbco: 0, gc: 0, gm: 0, bilanDate: '' };
 }
 
 function saveSylveCA(data) {
-  localStorage.setItem(SYLVE_CA_KEY, JSON.stringify(data));
+  const payload = {
+    cbco: Number(data.cbco) || 0,
+    gc: Number(data.gc) || 0,
+    gm: Number(data.gm) || 0,
+    bilanDate: data.bilanDate || ''
+  };
+  localStorage.setItem(SYLVE_CA_KEY, JSON.stringify(payload));
 }
 
 /**
- * Enregistre le CA pour un mois/année donné
- */
-function saveSylveCAForMonth(mois, annee, cbco, gc, gm) {
-  const data = getSylveCA();
-  const key = `${annee}-${String(mois).padStart(2, '0')}`;
-  data[key] = { cbco: cbco || 0, gc: gc || 0, gm: gm || 0, mois, annee };
-  saveSylveCA(data);
-}
-
-/**
- * Supprime le CA d'un mois/année donné
- */
-function deleteSylveCAForMonth(mois, annee) {
-  const data = getSylveCA();
-  const key = `${annee}-${String(mois).padStart(2, '0')}`;
-  delete data[key];
-  saveSylveCA(data);
-}
-
-/**
- * Récupère le CA d'un mois spécifique (ou zéros si non renseigné)
- */
-function getSylveCAForMonth(mois, annee) {
-  const data = getSylveCA();
-  const key = `${annee}-${String(mois).padStart(2, '0')}`;
-  return data[key] || { cbco: 0, gc: 0, gm: 0 };
-}
-
-/**
- * Retourne tous les CA enregistrés, triés par date décroissante
+ * Compatibilité d'affichage dashboard
  */
 function getSylveCAList() {
-  const data = getSylveCA();
-  return Object.values(data)
-    .filter(d => d.mois && d.annee)
-    .sort((a, b) => b.annee !== a.annee ? b.annee - a.annee : b.mois - a.mois);
+  const ca = getSylveCA();
+  return (ca.cbco || ca.gc || ca.gm) ? [ca] : [];
 }
 
 /**
@@ -1352,7 +1358,7 @@ function getSylveCAList() {
  */
 function getSylveRetardCA() {
   const data = getSylveBalance();
-  const caData = getSylveCA();
+  const ca = getSylveCA();
   const monthsMap = {};
 
   SYLVE_ENTREPRISES.forEach(e => {
@@ -1362,8 +1368,7 @@ function getSylveRetardCA() {
         monthsMap[key] = { mois: imp.mois, annee: imp.annee, cbco: null, gc: null, gm: null };
       }
       const totalRetard = imp.clients.reduce((s, c) => s + ((c.j1_30||0) + (c.j31_45||0) + (c.j46_60||0) + (c.j61_plus||0)), 0);
-      const monthCA = caData[key] || {};
-      const caVal = monthCA[e.id] || 0;
+      const caVal = Number(ca[e.id]) || 0;
       monthsMap[key][e.id] = caVal > 0 ? totalRetard / caVal : 0;
     });
   });
