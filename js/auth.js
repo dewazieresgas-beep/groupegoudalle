@@ -17,6 +17,7 @@ const Auth = {
     REFERENT: 'referent',    // Accès intermédiaire : gestion + saisie
     REFERENT_CBCO: 'referent_cbco',  // Référent CBCO : suivi chiffre d'affaires
     REFERENT_SYLVE: 'referent_sylve',  // Référent Sylve Support
+    REFERENT_GC: 'referent_gc', // Référent Goudalle Charpente
     LECTURE: 'lecture'       // Accès minimal : consultation uniquement
   },
 
@@ -26,6 +27,7 @@ const Auth = {
     referent: ['gm', 'gm_saisie', 'gm_admin', 'thresholds', 'sylve'],  // Gestion + saisie
     referent_cbco: ['cbco', 'cbco_saisie', 'cbco_admin', 'sylve'],  // CBCO uniquement
     referent_sylve: ['sylve', 'sylve_saisie'],  // Sylve Support uniquement
+    referent_gc: ['gc', 'gc_saisie'], // Goudalle Charpente uniquement
     lecture: ['gm', 'sylve']                                // Consultation seule
   },
 
@@ -88,7 +90,7 @@ const Auth = {
       'mickael': {
         username: 'mickael',
         password: '123',
-        role: this.ROLES.REFERENT,
+        role: this.ROLES.REFERENT_GC,
         displayName: 'Mickael',
         createdAt: new Date().toISOString(),
         createdBy: 'acgoudalle',
