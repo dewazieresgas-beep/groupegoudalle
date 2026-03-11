@@ -202,16 +202,6 @@
         .replace(/\s+/g, ' ')
         .trim();
 
-      const getSectionTaxMultiplier = (sectionLabel) => {
-        const s = normalizeCell(sectionLabel);
-        if (s.includes('autoliquidation')) return 1;
-        // Conversion TTC -> HT
-        if (/\b20\b/.test(s)) return 1 / 1.2;
-        if (/\b10\b/.test(s)) return 1 / 1.1;
-        // S'il n'y a pas de precision 10%/20%, on considere deja HT
-        return 1;
-      };
-
       // Colonnes fixes selon le format Sage fourni par l'utilisateur :
       // C: numéro compte, D: intitulé, G: solde compte, I: non échu, K: 1-30j, N: 31-45j, P: 46-60j, R: +61j
       const col = {
@@ -245,7 +235,6 @@
 
       sectionStarts.forEach(startRow => {
         const sectionLabel = String(rawData[startRow][2] || '').trim() || 'Clients';
-        const taxMultiplier = getSectionTaxMultiplier(sectionLabel);
         // Fin de section = première ligne contenant "Total C. général" en colonne A
         let endRow = rawData.length;
         for (let r = startRow + 1; r < rawData.length; r++) {
@@ -265,11 +254,10 @@
           const intitule = String(row[col.intitule] || '').trim();
           const soldeCompte = parseNumber(row[col.soldeCompte]);
           const nonEchu = parseNumber(row[col.nonEchu]);
-          // Conversion TVA TTC -> HT uniquement sur les retards (K/N/P/R), pas sur le non échu (I)
-          const j1_30 = parseNumber(row[col.j1_30]) * taxMultiplier;
-          const j31_45 = parseNumber(row[col.j31_45]) * taxMultiplier;
-          const j46_60 = parseNumber(row[col.j46_60]) * taxMultiplier;
-          const j61_plus = parseNumber(row[col.j61_plus]) * taxMultiplier;
+          const j1_30 = parseNumber(row[col.j1_30]);
+          const j31_45 = parseNumber(row[col.j31_45]);
+          const j46_60 = parseNumber(row[col.j46_60]);
+          const j61_plus = parseNumber(row[col.j61_plus]);
           const soldeCalc = nonEchu + j1_30 + j31_45 + j46_60 + j61_plus;
           const solde = soldeCompte !== 0 ? soldeCompte : soldeCalc;
 
@@ -287,8 +275,7 @@
             j31_45,
             j46_60,
             j61_plus,
-            section: sectionLabel,
-            taxMultiplier
+            section: sectionLabel
           });
           sectionAccepted++;
         }
@@ -297,8 +284,7 @@
           label: sectionLabel,
           fromRow: startRow + 2,
           toRow: Math.max(startRow + 1, endRow),
-          clients: sectionAccepted,
-          taxMultiplier
+          clients: sectionAccepted
         });
       });
 
@@ -394,12 +380,7 @@
             <strong>Blocs detectes :</strong>
             <div style="margin-top:6px; display:flex; flex-direction:column; gap:4px;">
               ${sections.map(s => {
-                const multiplier = Number(s.taxMultiplier || 1);
-                const coeffLabel = `x${multiplier.toFixed(4)}`;
-                const conversionText = multiplier === 1
-                  ? `Aucune conversion (deja HT): <strong>${coeffLabel}</strong>`
-                  : `Conversion TTC -> HT appliquee: <strong>${coeffLabel}</strong>`;
-                return `<div>• <strong>${escapeHtml(s.label)}</strong> - Lignes ${s.fromRow} a ${s.toRow} - ${s.clients} client${s.clients > 1 ? 's' : ''} - ${conversionText}</div>`;
+                return `<div>• <strong>${escapeHtml(s.label)}</strong> - Lignes ${s.fromRow} a ${s.toRow} - ${s.clients} client${s.clients > 1 ? 's' : ''}</div>`;
               }).join('')}
             </div>
           </div>`

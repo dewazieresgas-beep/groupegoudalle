@@ -133,7 +133,9 @@
     }
 
     function getRetard(client) {
-      return (client.j1_30 || 0) + (client.j31_45 || 0) + (client.j46_60 || 0) + (client.j61_plus || 0);
+      const base = (client.j1_30 || 0) + (client.j31_45 || 0) + (client.j46_60 || 0) + (client.j61_plus || 0);
+      const mult = Number(client.taxMultiplier) || 1;
+      return mult > 0 && mult < 1 ? (base / mult) : base;
     }
 
     function getOptionLabel(typeId) {
