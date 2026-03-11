@@ -294,9 +294,34 @@ const Auth = {
     // même si une permission n'a pas encore été ajoutée dans la liste.
     if (effectiveRole === this.ROLES.DIRECTION) return true;
 
+    // Si l'utilisateur a des permissions personnalisées, les utiliser
+    if (currentUser && Array.isArray(currentUser.customPermissions)) {
+      return currentUser.customPermissions.includes(permission);
+    }
+
     // Récupérer la liste des permissions pour ce rôle
     const userPermissions = this.PERMISSIONS[effectiveRole] || [];
     return userPermissions.includes(permission);
+  },
+
+  /**
+   * Met à jour les permissions personnalisées d'un utilisateur
+   * @param {string} username - Identifiant de l'utilisateur
+   * @param {string[]|null} permissions - Liste de permissions, ou null pour revenir aux permissions du rôle
+   * @returns {Object} - { success: boolean, message: string }
+   */
+  updateUserPermissions(username, permissions) {
+    if (!this.isDirection()) {
+      return { success: false, message: '❌ Accès refusé' };
+    }
+    const users = this.getAllUsers();
+    if (!users[username]) {
+      return { success: false, message: '❌ Utilisateur non trouvé' };
+    }
+    users[username].customPermissions = permissions;
+    localStorage.setItem(this.STORAGE_KEY_USERS, JSON.stringify(users));
+    this.audit('PERMISSIONS_UPDATED', `Permissions mises à jour : ${username}`);
+    return { success: true, message: '✅ Permissions mises à jour' };
   },
 
   canViewGM() {

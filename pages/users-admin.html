@@ -257,6 +257,103 @@
     window.addEventListener('load', init);
   </script>
 
+  <!-- Modale Gérer les accès -->
+  <div id="accessModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; overflow:auto;">
+    <div style="background:#fff; margin:5% auto; padding:30px; border-radius:10px; max-width:600px; position:relative;">
+      <h2 style="margin-top:0;">🔐 Gérer les accès — <span id="accessModalUsername"></span></h2>
+      <p style="color:#666; margin-bottom:20px;">Sélectionnez les pages auxquelles cet utilisateur aura accès. Ces permissions s'appliquent en priorité sur celles du rôle.</p>
+
+      <div id="accessCheckboxes" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;"></div>
+
+      <div style="display:flex; gap:10px; justify-content:flex-end; align-items:center;">
+        <button class="btn btn-secondary" onclick="resetAccessToRole()">🔄 Réinitialiser selon le rôle</button>
+        <button class="btn btn-secondary" onclick="closeAccessModal()">Annuler</button>
+        <button class="btn btn-primary" onclick="saveAccessModal()">💾 Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const ALL_PAGES = [
+      { key: 'gm',            label: '🏗️ Goudalle Maçonnerie' },
+      { key: 'gm_saisie',     label: '✏️ GM — Saisie' },
+      { key: 'gm_admin',      label: '⚙️ GM — Administration' },
+      { key: 'gc',            label: '🪵 Goudalle Charpente' },
+      { key: 'gc_saisie',     label: '✏️ GC — Saisie' },
+      { key: 'gc_admin',      label: '⚙️ GC — Administration' },
+      { key: 'cbco',          label: '🏢 CBCO' },
+      { key: 'cbco_saisie',   label: '✏️ CBCO — Saisie' },
+      { key: 'cbco_admin',    label: '⚙️ CBCO — Administration' },
+      { key: 'sylve',         label: '🌲 Sylve Support' },
+      { key: 'sylve_saisie',  label: '✏️ Sylve — Saisie' },
+      { key: 'users_admin',   label: '👥 Gestion Utilisateurs' },
+      { key: 'thresholds',    label: '📊 Seuils' },
+      { key: 'audit',         label: '🔍 Audit' },
+    ];
+
+    let _accessUsername = null;
+
+    function openAccessModal(username) {
+      _accessUsername = username;
+      document.getElementById('accessModalUsername').textContent = username;
+
+      const users = Auth.getAllUsers();
+      const user = users[username];
+      if (!user) return;
+
+      // Déterminer les permissions effectives
+      let currentPerms;
+      if (Array.isArray(user.customPermissions)) {
+        currentPerms = user.customPermissions;
+      } else {
+        currentPerms = Auth.PERMISSIONS[user.role] || [];
+      }
+
+      const container = document.getElementById('accessCheckboxes');
+      container.innerHTML = ALL_PAGES.map(p => `
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; padding:8px; border:1px solid #e0e0e0; border-radius:6px;">
+          <input type="checkbox" value="${p.key}" ${currentPerms.includes(p.key) ? 'checked' : ''}>
+          ${p.label}
+        </label>
+      `).join('');
+
+      document.getElementById('accessModal').style.display = 'block';
+    }
+
+    function closeAccessModal() {
+      document.getElementById('accessModal').style.display = 'none';
+      _accessUsername = null;
+    }
+
+    function resetAccessToRole() {
+      const users = Auth.getAllUsers();
+      const user = users[_accessUsername];
+      if (!user) return;
+      const rolePerms = Auth.PERMISSIONS[user.role] || [];
+      document.querySelectorAll('#accessCheckboxes input[type=checkbox]').forEach(cb => {
+        cb.checked = rolePerms.includes(cb.value);
+      });
+    }
+
+    function saveAccessModal() {
+      const selected = Array.from(document.querySelectorAll('#accessCheckboxes input[type=checkbox]:checked'))
+        .map(cb => cb.value);
+      const result = Auth.updateUserPermissions(_accessUsername, selected);
+      if (result.success) {
+        closeAccessModal();
+        showMessage(`✅ Accès de ${_accessUsername} mis à jour.`, 'success');
+        loadUsers();
+      } else {
+        alert(result.message);
+      }
+    }
+
+    // Fermer la modale en cliquant à l'extérieur
+    document.getElementById('accessModal').addEventListener('click', function(e) {
+      if (e.target === this) closeAccessModal();
+    });
+  </script>
+
   <footer class="site-footer"></footer>
 </body>
 </html>
