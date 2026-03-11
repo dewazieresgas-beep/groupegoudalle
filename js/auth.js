@@ -76,6 +76,24 @@ const Auth = {
         createdBy: 'acgoudalle',
         isActive: true
       },
+      'christelle': {
+        username: 'christelle',
+        password: '123',
+        role: this.ROLES.REFERENT_SYLVE,
+        displayName: 'Christelle',
+        createdAt: new Date().toISOString(),
+        createdBy: 'acgoudalle',
+        isActive: true
+      },
+      'mickael': {
+        username: 'mickael',
+        password: '123',
+        role: this.ROLES.REFERENT,
+        displayName: 'Mickael',
+        createdAt: new Date().toISOString(),
+        createdBy: 'acgoudalle',
+        isActive: true
+      },
       'mathieu': {
         username: 'mathieu',
         password: '123',
