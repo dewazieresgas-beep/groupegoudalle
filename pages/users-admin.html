@@ -146,9 +146,9 @@
       const perms = Array.isArray(u.customPermissions) ? u.customPermissions : (Auth.PERMISSIONS[u.role] || []);
 
       const saisieMap = [
-        { keys: ['gm_saisie', 'gm_paiement', 'gm_admin'], label: '📊 Référent GM' },
-        { keys: ['gc_saisie', 'gc_paiement', 'gc_admin'], label: '📊 Référent GC' },
-        { keys: ['cbco_saisie', 'cbco_paiement', 'cbco_commercial', 'cbco_admin'], label: '📊 Référent CBCO' },
+        { keys: ['gm_saisie', 'gm_paiement'], label: '📊 Référent GM' },
+        { keys: ['gc_saisie', 'gc_paiement'], label: '📊 Référent GC' },
+        { keys: ['cbco_saisie', 'cbco_paiement', 'cbco_commercial'], label: '📊 Référent CBCO' },
         { keys: ['sylve_saisie'], label: '📊 Référent Sylve' },
       ];
 
@@ -242,7 +242,6 @@
           { key: 'gm',          label: '📋 Consultation' },
           { key: 'gm_saisie',   label: '✏️ Saisie' },
           { key: 'gm_paiement', label: '💳 Paiement' },
-          { key: 'gm_admin',    label: '⚙️ Administration' },
         ]
       },
       {
@@ -251,7 +250,6 @@
           { key: 'gc',          label: '📋 Consultation' },
           { key: 'gc_saisie',   label: '✏️ Saisie' },
           { key: 'gc_paiement', label: '💳 Paiement' },
-          { key: 'gc_admin',    label: '⚙️ Administration' },
         ]
       },
       {
@@ -261,7 +259,6 @@
           { key: 'cbco_saisie',     label: '✏️ Saisie' },
           { key: 'cbco_paiement',   label: '💳 Paiement' },
           { key: 'cbco_commercial', label: '🤝 Commercial' },
-          { key: 'cbco_admin',      label: '⚙️ Administration' },
         ]
       },
       {

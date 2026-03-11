@@ -23,9 +23,9 @@ const Auth = {
 
   // Permissions par rôle - définit ce que chaque rôle peut faire
   PERMISSIONS: {
-    direction: ['gm', 'gm_saisie', 'gm_paiement', 'gm_admin', 'gc', 'gc_saisie', 'gc_paiement', 'gc_admin', 'cbco', 'cbco_saisie', 'cbco_paiement', 'cbco_commercial', 'cbco_admin', 'sylve', 'sylve_saisie', 'users_admin', 'thresholds'],
-    referent: ['gm', 'gm_saisie', 'gm_paiement', 'gm_admin', 'thresholds', 'sylve'],
-    referent_cbco: ['cbco', 'cbco_saisie', 'cbco_paiement', 'cbco_commercial', 'cbco_admin', 'sylve'],
+    direction: ['gm', 'gm_saisie', 'gm_paiement', 'gc', 'gc_saisie', 'gc_paiement', 'cbco', 'cbco_saisie', 'cbco_paiement', 'cbco_commercial', 'sylve', 'sylve_saisie', 'users_admin', 'thresholds'],
+    referent: ['gm', 'gm_saisie', 'gm_paiement', 'thresholds', 'sylve'],
+    referent_cbco: ['cbco', 'cbco_saisie', 'cbco_paiement', 'cbco_commercial', 'sylve'],
     referent_sylve: ['sylve', 'sylve_saisie'],
     referent_gc: ['gc', 'gc_saisie', 'gc_paiement'],
     lecture: ['gm', 'sylve']
@@ -329,7 +329,7 @@ const Auth = {
   },
 
   canEditGM() {
-    return this.hasAccess('gm_saisie') || this.hasAccess('gm_admin');
+    return this.hasAccess('gm_saisie');
   },
 
   canManageUsers() {
@@ -360,7 +360,7 @@ const Auth = {
   },
 
   canEditCBCO() {
-    return this.hasAccess('cbco_saisie') || this.hasAccess('cbco_admin');
+    return this.hasAccess('cbco_saisie');
   },
 
   canViewSylve() {
