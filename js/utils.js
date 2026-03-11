@@ -410,10 +410,8 @@ function getSidebar() {
   // ===== SECTIONS ADMINISTRATIVES (direction uniquement) =====
   if (isDirection) {
     const usersActive = isUsersPage() ? ' active' : '';
-    const auditActive = currentPage === 'audit.html' ? ' active' : '';
     items += `
       <a href="${base}pages/users-admin.html" class="sidebar-item${usersActive}">👥 Utilisateurs</a>
-      <a href="${base}pages/audit.html" class="sidebar-item${auditActive}">📋 Audit</a>
     `;
   }
 
