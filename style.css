@@ -1,3 +1,52 @@
+/* Nouvelle grille CBCO 2x2 pour alignement parfait */
+.cbco-main-grid-v2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 10px;
+  align-items: stretch;
+}
+
+@media (max-width: 1024px) {
+  .cbco-main-grid-v2 {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
+}
+
+/* Style unifié pour chaque cadre */
+.cbco-card-v2 {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border-light);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.cbco-card-title-v2 {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+  color: #fff;
+  padding: 18px 20px;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid rgba(255,255,255,0.1);
+}
+
+.cbco-card-content-v2 {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 24px 18px;
+  min-height: 0;
+  min-width: 0;
+}
 /* Grille principale CBCO pour alignement parfait des 4 cadres */
 .cbco-main-grid {
   display: grid;
