@@ -269,22 +269,50 @@
   </div>
 
   <script>
-    const ALL_PAGES = [
-      { key: 'gm',            label: '🏗️ Goudalle Maçonnerie' },
-      { key: 'gm_saisie',     label: '✏️ GM — Saisie' },
-      { key: 'gm_admin',      label: '⚙️ GM — Administration' },
-      { key: 'gc',            label: '🪵 Goudalle Charpente' },
-      { key: 'gc_saisie',     label: '✏️ GC — Saisie' },
-      { key: 'gc_admin',      label: '⚙️ GC — Administration' },
-      { key: 'cbco',          label: '🏢 CBCO' },
-      { key: 'cbco_saisie',   label: '✏️ CBCO — Saisie' },
-      { key: 'cbco_admin',    label: '⚙️ CBCO — Administration' },
-      { key: 'sylve',         label: '🌲 Sylve Support' },
-      { key: 'sylve_saisie',  label: '✏️ Sylve — Saisie' },
-      { key: 'users_admin',   label: '👥 Gestion Utilisateurs' },
-      { key: 'thresholds',    label: '📊 Seuils' },
-      { key: 'audit',         label: '🔍 Audit' },
+    const ALL_PAGES_GROUPS = [
+      {
+        group: '🏠 Général',
+        pages: [
+          { key: 'users_admin', label: '👥 Gestion Utilisateurs' },
+          { key: 'thresholds',  label: '📊 Seuils' },
+          { key: 'audit',       label: '🔍 Audit' },
+        ]
+      },
+      {
+        group: '🏗️ Goudalle Maçonnerie',
+        pages: [
+          { key: 'gm',       label: '📋 Consultation' },
+          { key: 'gm_saisie', label: '✏️ Saisie & Paiement' },
+          { key: 'gm_admin',  label: '⚙️ Administration' },
+        ]
+      },
+      {
+        group: '🪵 Goudalle Charpente',
+        pages: [
+          { key: 'gc',        label: '📋 Consultation' },
+          { key: 'gc_saisie', label: '✏️ Saisie & Paiement' },
+          { key: 'gc_admin',  label: '⚙️ Administration' },
+        ]
+      },
+      {
+        group: '🏢 CBCO',
+        pages: [
+          { key: 'cbco',        label: '📋 Consultation' },
+          { key: 'cbco_saisie', label: '✏️ Saisie, Commercial & Paiement' },
+          { key: 'cbco_admin',  label: '⚙️ Administration' },
+        ]
+      },
+      {
+        group: '🌲 Sylve Support',
+        pages: [
+          { key: 'sylve',        label: '📋 Consultation' },
+          { key: 'sylve_saisie', label: '✏️ Saisie' },
+        ]
+      },
     ];
+
+    // Liste plate pour compatibilité
+    const ALL_PAGES = ALL_PAGES_GROUPS.flatMap(g => g.pages);
 
     let _accessUsername = null;
 
@@ -296,7 +324,6 @@
       const user = users[username];
       if (!user) return;
 
-      // Déterminer les permissions effectives
       let currentPerms;
       if (Array.isArray(user.customPermissions)) {
         currentPerms = user.customPermissions;
@@ -305,11 +332,16 @@
       }
 
       const container = document.getElementById('accessCheckboxes');
-      container.innerHTML = ALL_PAGES.map(p => `
-        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; padding:8px; border:1px solid #e0e0e0; border-radius:6px;">
-          <input type="checkbox" value="${p.key}" ${currentPerms.includes(p.key) ? 'checked' : ''}>
-          ${p.label}
-        </label>
+      container.innerHTML = ALL_PAGES_GROUPS.map(group => `
+        <div style="grid-column: 1 / -1; margin-top: 12px; margin-bottom: 4px;">
+          <strong style="font-size:0.95em; color:#555; border-bottom:2px solid #e0e0e0; display:block; padding-bottom:4px;">${group.group}</strong>
+        </div>
+        ${group.pages.map(p => `
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer; padding:8px; border:1px solid #e0e0e0; border-radius:6px;">
+            <input type="checkbox" value="${p.key}" ${currentPerms.includes(p.key) ? 'checked' : ''}>
+            ${p.label}
+          </label>
+        `).join('')}
       `).join('');
 
       document.getElementById('accessModal').style.display = 'block';
