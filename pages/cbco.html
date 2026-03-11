@@ -89,6 +89,16 @@
                 <div class="cbco-stat-value" id="commercialTaux">—</div>
               </div>
             </div>
+            <!-- Donut mois dernier -->
+            <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+              <div style="font-weight: 600; margin-bottom: 12px; color: #555;">📅 Mois dernier</div>
+              <div style="display: flex; align-items: center; gap: 24px; flex-wrap: wrap;">
+                <div style="position: relative; width: 160px; height: 160px; flex-shrink: 0;">
+                  <canvas id="commercialTauxChartCBCO"></canvas>
+                </div>
+                <div id="commercialTauxDetailsCBCO" style="flex: 1; min-width: 180px;"></div>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -592,6 +602,52 @@
       renderCBCOChart();
       renderCurrentYearChart();
       displayCommercialData();
+      renderCommercialDonutCBCO();
+    }
+
+    /**
+     * Affiche le graphique donut taux de réussite commercial – mois dernier
+     */
+    let commercialDonutCBCO;
+    function renderCommercialDonutCBCO() {
+      const MOIS = ['', 'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+                     'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+      const today = new Date();
+      const prevMonth = today.getMonth() === 0 ? 12 : today.getMonth();
+      const prevYear  = today.getMonth() === 0 ? today.getFullYear() - 1 : today.getFullYear();
+
+      const stats = getCBCOCommercialTauxReussite(prevMonth, prevYear);
+      const periodLabel = `${MOIS[prevMonth]} ${prevYear}`;
+      const detailsDiv = document.getElementById('commercialTauxDetailsCBCO');
+      const ctx = document.getElementById('commercialTauxChartCBCO').getContext('2d');
+
+      if (stats.total === 0) {
+        detailsDiv.innerHTML = `<div style="color:#999;font-size:14px;"><strong>Période : ${periodLabel}</strong><br><br>Aucune affaire saisie sur cette période.</div>`;
+        if (commercialDonutCBCO) commercialDonutCBCO.destroy();
+        commercialDonutCBCO = new Chart(ctx, { type:'doughnut', data:{ labels:['Aucune donnée'], datasets:[{data:[1],backgroundColor:['#e0e0e0'],borderWidth:0}] }, options:{ responsive:true, maintainAspectRatio:true, cutout:'70%', plugins:{legend:{display:false},tooltip:{enabled:false}} } });
+        return;
+      }
+
+      const taux = stats.taux !== null ? stats.taux.toFixed(0) : '—';
+      const tauxColor = stats.taux === null ? '#999' : (stats.taux >= 50 ? '#27ae60' : '#e74c3c');
+
+      detailsDiv.innerHTML = `
+        <div style="font-size:14px;line-height:1.8;">
+          <strong>Période : ${periodLabel}</strong><br>
+          <span style="color:#27ae60;">✅ Gagnées : <strong>${stats.gagnees}</strong></span><br>
+          <span style="color:#e74c3c;">❌ Perdues : <strong>${stats.perdues}</strong></span><br>
+          <span style="color:#f39c12;">⏳ En cours : <strong>${stats.enCours}</strong></span><br>
+          <span>📊 Total affaires : <strong>${stats.total}</strong></span><br><br>
+          <span style="font-size:20px;font-weight:700;color:${tauxColor};">Taux de réussite : ${taux}${stats.taux !== null ? ' %' : ''}</span>
+        </div>`;
+
+      const cloturees = stats.gagnees + stats.perdues;
+      if (commercialDonutCBCO) commercialDonutCBCO.destroy();
+      if (cloturees === 0) {
+        commercialDonutCBCO = new Chart(ctx, { type:'doughnut', data:{ labels:['En cours'], datasets:[{data:[stats.enCours],backgroundColor:['#f39c12'],borderWidth:0}] }, options:{ responsive:true, maintainAspectRatio:true, cutout:'70%', plugins:{legend:{display:false},tooltip:{enabled:false}} } });
+      } else {
+        commercialDonutCBCO = new Chart(ctx, { type:'doughnut', data:{ labels:['Gagnées','Perdues'], datasets:[{data:[stats.gagnees,stats.perdues],backgroundColor:['#27ae60','#e74c3c'],borderWidth:2,borderColor:'#fff'}] }, options:{ responsive:true, maintainAspectRatio:true, cutout:'70%', plugins:{ legend:{display:true,position:'bottom'}, tooltip:{callbacks:{label:(c)=>`${c.label} : ${c.parsed}`}} } } });
+      }
     }
 
     /**
