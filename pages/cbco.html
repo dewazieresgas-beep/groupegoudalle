@@ -65,7 +65,7 @@
 
         <!-- Cadre 2 : Indicateur Commercial -->
         <section class="cbco-card-v2">
-          <header class="cbco-card-title-v2">💼 Indicateur Commercial</header>
+          <header class="cbco-card-title-v2">💼 Taux de réussite commercial CBCO – Mois dernier</header>
           <div class="cbco-card-content-v2">
             <!-- Donut mois dernier -->
             <div style="display: flex; align-items: center; gap: 24px; flex-wrap: wrap;">
@@ -576,7 +576,6 @@
       displayCurrentData();
       renderCBCOChart();
       renderCurrentYearChart();
-      displayCommercialData();
       renderCommercialDonutCBCO();
     }
 
@@ -623,29 +622,6 @@
       } else {
         commercialDonutCBCO = new Chart(ctx, { type:'doughnut', data:{ labels:['Gagnées','Perdues'], datasets:[{data:[stats.gagnees,stats.perdues],backgroundColor:['#27ae60','#e74c3c'],borderWidth:2,borderColor:'#fff'}] }, options:{ responsive:true, maintainAspectRatio:true, cutout:'70%', plugins:{ legend:{display:true,position:'bottom'}, tooltip:{callbacks:{label:(c)=>`${c.label} : ${c.parsed}`}} } } });
       }
-    }
-
-    /**
-     * Affiche les données de l'indicateur commercial
-     */
-    function displayCommercialData() {
-      const currentYear = new Date().getFullYear();
-      const entries = getCBCOCommercial().filter(e => {
-        const d = new Date(e.dateEnvoi);
-        return d.getFullYear() === currentYear;
-      });
-
-      const gagnees = entries.filter(e => e.resultat === 'gagne').length;
-      const perdues = entries.filter(e => e.resultat === 'perdu').length;
-      const enCours = entries.filter(e => e.resultat === 'en_cours').length;
-      const cloturees = gagnees + perdues;
-      const taux = cloturees > 0 ? ((gagnees / cloturees) * 100).toFixed(1) : null;
-
-      document.getElementById('commercialTotal').textContent = entries.length;
-      document.getElementById('commercialGagnees').textContent = gagnees;
-      document.getElementById('commercialPerdues').textContent = perdues;
-      document.getElementById('commercialEnCours').textContent = enCours;
-      document.getElementById('commercialTaux').textContent = taux !== null ? taux + ' %' : '—';
     }
 
     window.addEventListener('load', initCBCO);
