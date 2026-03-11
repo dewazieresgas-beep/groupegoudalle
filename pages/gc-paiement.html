@@ -263,6 +263,11 @@
       updateSelectButtonLabel(row, selectedTypes);
       applyRowColor(row, selectedTypes);
 
+      if (selectedTypes.length > 0) {
+        const badge = row.querySelector('.pe-badge');
+        if (badge) badge.remove();
+      }
+
       row.querySelectorAll('.pe-amount-input').forEach(input => {
         input.addEventListener('change', () => saveRow(row, importId));
       });
@@ -307,6 +312,35 @@
       applyRowColor(row, getSelectedTypes(row));
     }
 
+    function findPreviousNote(entrepriseId, currentImportId, clientKey) {
+      const allData = getSylvePaiementsAttente();
+      const suffix = '::' + String(clientKey || '').trim();
+      const prefix = entrepriseId + '::';
+      const currentPrefix = entrepriseId + '::' + currentImportId + '::';
+      let best = null;
+      Object.keys(allData).forEach(key => {
+        if (key.startsWith(prefix) && key.endsWith(suffix) && !key.startsWith(currentPrefix)) {
+          const entry = allData[key];
+          if (entry && entry.updatedAt && (!best || entry.updatedAt > best.updatedAt)) {
+            best = entry;
+          } else if (entry && !best) {
+            best = entry;
+          }
+        }
+      });
+      return best;
+    }
+
+    function getPreviousRetard(entrepriseId, currentImportId, clientKey) {
+      const imports = getSylveImports(entrepriseId);
+      for (let i = 0; i < imports.length; i++) {
+        if (imports[i].id === currentImportId) continue;
+        const found = (imports[i].clients || []).find(c => (c.client || c.compte) === clientKey);
+        if (found) return getRetard(found);
+      }
+      return null;
+    }
+
     function render() {
       const imp = getSylveLastImport(ENTREPRISE_ID);
       const root = document.getElementById('content');
@@ -318,15 +352,49 @@
 
       const clients = imp.clients
         .map(c => ({ ...c, retard: getRetard(c) }))
-        .filter(c => c.retard > 0)
-        .sort((a, b) => b.retard - a.retard);
+        .filter(c => c.retard > 0);
+
+      clients.forEach(c => {
+        const clientKey = c.client || c.compte;
+        let note = getSylvePaiementAttente(ENTREPRISE_ID, imp.id, clientKey);
+        const hasCurrentNote = note.selectedTypes && note.selectedTypes.length > 0;
+        if (!hasCurrentNote) {
+          const prev = findPreviousNote(ENTREPRISE_ID, imp.id, clientKey);
+          if (prev && prev.selectedTypes && prev.selectedTypes.length > 0) {
+            saveSylvePaiementAttente(ENTREPRISE_ID, imp.id, clientKey, prev);
+          }
+        }
+      });
+
+      clients.forEach(c => {
+        const clientKey = c.client || c.compte;
+        const note = getSylvePaiementAttente(ENTREPRISE_ID, imp.id, clientKey);
+        const hasNote = note.selectedTypes && note.selectedTypes.length > 0;
+        const prevRetard = getPreviousRetard(ENTREPRISE_ID, imp.id, clientKey);
+        const isNew = prevRetard === null;
+        const isChanged = !isNew && prevRetard !== c.retard;
+        c._clientKey = clientKey;
+        c._needsReview = !hasNote || isNew || isChanged;
+        c._isNew = isNew && !hasNote;
+        c._isChanged = isChanged;
+      });
+
+      clients.sort((a, b) => {
+        if (a._needsReview && !b._needsReview) return -1;
+        if (!a._needsReview && b._needsReview) return 1;
+        return b.retard - a.retard;
+      });
 
       const periode = `${MONTHS[imp.mois] || '?'} ${imp.annee}`;
 
       const rows = clients.map(c => {
-        const clientKey = c.client || c.compte;
+        const clientKey = c._clientKey;
         const note = getSylvePaiementAttente(ENTREPRISE_ID, imp.id, clientKey);
         const state = normalizeState(note, c.retard);
+
+        const badge = c._isNew ? ' <span class="pe-badge" style="background:#e67e22;color:#fff;padding:2px 7px;border-radius:10px;font-size:0.78em;margin-left:6px;">NOUVEAU</span>'
+          : c._isChanged ? ' <span class="pe-badge" style="background:#3498db;color:#fff;padding:2px 7px;border-radius:10px;font-size:0.78em;margin-left:6px;">MONTANT MODIFIE</span>'
+          : '';
 
         const optionsHtml = TYPE_OPTIONS.map(opt => {
           const checked = state.selectedTypes.includes(opt.id) ? 'checked' : '';
@@ -335,7 +403,7 @@
 
         return `
           <tr data-compte="${escapeHtml(clientKey)}" data-retard="${c.retard}">
-            <td><strong>${escapeHtml(c.client)}</strong></td>
+            <td><strong>${escapeHtml(c.client)}</strong>${badge}</td>
             <td style="font-weight:600; white-space:nowrap;">${formatSylveEuros(c.retard)}</td>
             <td>
               <div class="pe-select">
