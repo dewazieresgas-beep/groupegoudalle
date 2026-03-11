@@ -51,6 +51,24 @@
     .pe-amount-label { font-size: 0.88em; color: #4e5e4e; }
 
     .pe-comment { min-height: 58px; resize: vertical; }
+
+    #content .card { overflow: visible; }
+    #content .card-body { overflow: visible; }
+
+    #message {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 9999;
+      min-width: 220px;
+      max-width: 360px;
+      margin: 0;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    #message.show { opacity: 1; }
   </style>
 </head>
 <body>
@@ -97,7 +115,8 @@
       msg.textContent = message;
       msg.className = `alert alert-${type}`;
       msg.style.display = 'block';
-      setTimeout(() => { msg.style.display = 'none'; }, 1800);
+      requestAnimationFrame(() => { msg.classList.add('show'); });
+      setTimeout(() => { msg.classList.remove('show'); setTimeout(() => { msg.style.display = 'none'; }, 300); }, 1500);
     }
 
     function parseInputNumber(val) {
@@ -293,7 +312,8 @@
       const periode = `${MONTHS[imp.mois] || '?'} ${imp.annee}`;
 
       const rows = clients.map(c => {
-        const note = getSylvePaiementAttente(ENTREPRISE_ID, imp.id, c.compte);
+        const clientKey = c.client || c.compte;
+        const note = getSylvePaiementAttente(ENTREPRISE_ID, imp.id, clientKey);
         const state = normalizeState(note, c.retard);
 
         const optionsHtml = TYPE_OPTIONS.map(opt => {
@@ -302,7 +322,7 @@
         }).join('');
 
         return `
-          <tr data-compte="${escapeHtml(c.compte)}" data-retard="${c.retard}">
+          <tr data-compte="${escapeHtml(clientKey)}" data-retard="${c.retard}">
             <td><strong>${escapeHtml(c.client)}</strong></td>
             <td style="font-weight:600; white-space:nowrap;">${formatSylveEuros(c.retard)}</td>
             <td>
