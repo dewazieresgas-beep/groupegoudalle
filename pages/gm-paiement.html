@@ -32,6 +32,7 @@
       padding: 6px;
     }
     .pe-select.open .pe-select-menu { display: block; }
+    .pe-select.open-up .pe-select-menu { top: auto; bottom: calc(100% + 4px); }
     .pe-select-item {
       display: flex;
       align-items: center;
@@ -141,7 +142,7 @@
     }
 
     function closeAllSelectMenus() {
-      document.querySelectorAll('.pe-select.open').forEach(el => el.classList.remove('open'));
+      document.querySelectorAll('.pe-select.open').forEach(el => { el.classList.remove('open'); el.classList.remove('open-up'); });
     }
 
     function getSelectedTypes(row) {
@@ -278,7 +279,16 @@
         e.stopPropagation();
         const wasOpen = select.classList.contains('open');
         closeAllSelectMenus();
-        if (!wasOpen) select.classList.add('open');
+        if (!wasOpen) {
+          select.classList.add('open');
+          const menu = select.querySelector('.pe-select-menu');
+          const rect = menu.getBoundingClientRect();
+          if (rect.bottom > window.innerHeight) {
+            select.classList.add('open-up');
+          } else {
+            select.classList.remove('open-up');
+          }
+        }
       });
 
       row.querySelectorAll('.pe-select-menu input[type="checkbox"]').forEach(chk => {
