@@ -69,7 +69,7 @@
               </div>
               <div class="form-group" id="entrepriseGroup" style="display:none;">
                 <label for="entreprise">Entreprise *</label>
-                <select id="entreprise">
+                <select id="entreprise" onchange="updateCreateAccessCheckboxes()">
                   <option value="">-- Sélectionner --</option>
                   <option value="gm">Goudalle Maçonnerie</option>
                   <option value="cbco">CBCO</option>
@@ -78,8 +78,16 @@
               </div>
             </div>
 
-            <button type="submit" class="btn btn-primary">➕ Créer utilisateur</button>
+            <div class="form-group" style="margin-top: 20px;">
+              <label>Accès aux pages</label>
+              <p style="color:#666; font-size:0.9em; margin-bottom:10px;">Pré-rempli selon le rôle. Vous pouvez personnaliser.</p>
+              <div id="createAccessCheckboxes" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"></div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="margin-top:20px;">➕ Créer utilisateur</button>
           </form>
+        </div>
+      </div>
         </div>
       </div>
 
@@ -124,6 +132,25 @@
         select.required = false;
         select.value = '';
       }
+      updateCreateAccessCheckboxes();
+    }
+
+    function getCreateRole() {
+      const niveau = document.getElementById('niveau').value;
+      const entreprise = document.getElementById('entreprise').value;
+      if (!niveau) return null;
+      if (niveau === 'referent') {
+        if (entreprise === 'cbco') return 'referent_cbco';
+        if (entreprise === 'sylve') return 'referent_sylve';
+        return 'referent';
+      }
+      return niveau;
+    }
+
+    function updateCreateAccessCheckboxes() {
+      const role = getCreateRole();
+      const perms = role ? (Auth.PERMISSIONS[role] || []) : [];
+      renderAccessCheckboxes('createAccessCheckboxes', perms);
     }
 
     function showMessage(message, type) {
@@ -154,8 +181,15 @@
         }
         if (entreprise === 'cbco') role = 'referent_cbco';
         else if (entreprise === 'sylve') role = 'referent_sylve';
-        else role = 'referent'; // GM
+        else role = 'referent';
       }
+
+      // Récupérer les permissions sélectionnées
+      const customPermissions = Array.from(document.querySelectorAll('#createAccessCheckboxes input[type=checkbox]:checked'))
+        .map(cb => cb.value);
+      const defaultPerms = Auth.PERMISSIONS[role] || [];
+      const permsDiffer = customPermissions.length !== defaultPerms.length || customPermissions.some(p => !defaultPerms.includes(p));
+      const finalPermissions = permsDiffer ? customPermissions : null;
 
       const displayName = `${firstName} ${lastName}`;
 
@@ -165,7 +199,7 @@
         if (!adminCode) return;
       }
 
-      const result = Auth.registerUser(username, password, displayName, email, role, adminCode);
+      const result = Auth.registerUser(username, password, displayName, email, role, adminCode, finalPermissions);
 
       if (result.success) {
         showMessage(result.message, 'success');
@@ -247,6 +281,7 @@
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectUsersSecondaryBar();
       loadUsers();
+      renderAccessCheckboxes('createAccessCheckboxes', []);
     }
 
     window.addEventListener('load', init);
@@ -281,25 +316,29 @@
       {
         group: '🏗️ Goudalle Maçonnerie',
         pages: [
-          { key: 'gm',       label: '📋 Consultation' },
-          { key: 'gm_saisie', label: '✏️ Saisie & Paiement' },
-          { key: 'gm_admin',  label: '⚙️ Administration' },
+          { key: 'gm',          label: '📋 Consultation' },
+          { key: 'gm_saisie',   label: '✏️ Saisie' },
+          { key: 'gm_paiement', label: '💳 Paiement' },
+          { key: 'gm_admin',    label: '⚙️ Administration' },
         ]
       },
       {
         group: '🪵 Goudalle Charpente',
         pages: [
-          { key: 'gc',        label: '📋 Consultation' },
-          { key: 'gc_saisie', label: '✏️ Saisie & Paiement' },
-          { key: 'gc_admin',  label: '⚙️ Administration' },
+          { key: 'gc',          label: '📋 Consultation' },
+          { key: 'gc_saisie',   label: '✏️ Saisie' },
+          { key: 'gc_paiement', label: '💳 Paiement' },
+          { key: 'gc_admin',    label: '⚙️ Administration' },
         ]
       },
       {
         group: '🏢 CBCO',
         pages: [
-          { key: 'cbco',        label: '📋 Consultation' },
-          { key: 'cbco_saisie', label: '✏️ Saisie, Commercial & Paiement' },
-          { key: 'cbco_admin',  label: '⚙️ Administration' },
+          { key: 'cbco',             label: '📋 Consultation' },
+          { key: 'cbco_saisie',      label: '✏️ Saisie' },
+          { key: 'cbco_paiement',    label: '💳 Paiement' },
+          { key: 'cbco_commercial',  label: '🤝 Commercial' },
+          { key: 'cbco_admin',       label: '⚙️ Administration' },
         ]
       },
       {
@@ -311,8 +350,22 @@
       },
     ];
 
-    // Liste plate pour compatibilité
     const ALL_PAGES = ALL_PAGES_GROUPS.flatMap(g => g.pages);
+
+    function renderAccessCheckboxes(containerId, currentPerms) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = ALL_PAGES_GROUPS.map(group => `
+        <div style="grid-column: 1 / -1; margin-top: 12px; margin-bottom: 4px;">
+          <strong style="font-size:0.95em; color:#555; border-bottom:2px solid #e0e0e0; display:block; padding-bottom:4px;">${group.group}</strong>
+        </div>
+        ${group.pages.map(p => `
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer; padding:8px; border:1px solid #e0e0e0; border-radius:6px;">
+            <input type="checkbox" value="${p.key}" ${currentPerms.includes(p.key) ? 'checked' : ''}>
+            ${p.label}
+          </label>
+        `).join('')}
+      `).join('');
+    }
 
     let _accessUsername = null;
 
@@ -331,19 +384,7 @@
         currentPerms = Auth.PERMISSIONS[user.role] || [];
       }
 
-      const container = document.getElementById('accessCheckboxes');
-      container.innerHTML = ALL_PAGES_GROUPS.map(group => `
-        <div style="grid-column: 1 / -1; margin-top: 12px; margin-bottom: 4px;">
-          <strong style="font-size:0.95em; color:#555; border-bottom:2px solid #e0e0e0; display:block; padding-bottom:4px;">${group.group}</strong>
-        </div>
-        ${group.pages.map(p => `
-          <label style="display:flex; align-items:center; gap:8px; cursor:pointer; padding:8px; border:1px solid #e0e0e0; border-radius:6px;">
-            <input type="checkbox" value="${p.key}" ${currentPerms.includes(p.key) ? 'checked' : ''}>
-            ${p.label}
-          </label>
-        `).join('')}
-      `).join('');
-
+      renderAccessCheckboxes('accessCheckboxes', currentPerms);
       document.getElementById('accessModal').style.display = 'block';
     }
 

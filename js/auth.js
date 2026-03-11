@@ -23,12 +23,12 @@ const Auth = {
 
   // Permissions par rôle - définit ce que chaque rôle peut faire
   PERMISSIONS: {
-    direction: ['gm', 'users_admin', 'thresholds', 'audit', 'gm_saisie', 'gm_admin', 'gc', 'gc_saisie', 'gc_admin', 'cbco', 'cbco_saisie', 'cbco_admin', 'sylve', 'sylve_saisie'], // Tout
-    referent: ['gm', 'gm_saisie', 'gm_admin', 'thresholds', 'sylve'],  // Gestion + saisie
-    referent_cbco: ['cbco', 'cbco_saisie', 'cbco_admin', 'sylve'],  // CBCO uniquement
-    referent_sylve: ['sylve', 'sylve_saisie'],  // Sylve Support uniquement
-    referent_gc: ['gc', 'gc_saisie'], // Goudalle Charpente uniquement
-    lecture: ['gm', 'sylve']                                // Consultation seule
+    direction: ['gm', 'gm_saisie', 'gm_paiement', 'gm_admin', 'gc', 'gc_saisie', 'gc_paiement', 'gc_admin', 'cbco', 'cbco_saisie', 'cbco_paiement', 'cbco_commercial', 'cbco_admin', 'sylve', 'sylve_saisie', 'users_admin', 'thresholds', 'audit'],
+    referent: ['gm', 'gm_saisie', 'gm_paiement', 'gm_admin', 'thresholds', 'sylve'],
+    referent_cbco: ['cbco', 'cbco_saisie', 'cbco_paiement', 'cbco_commercial', 'cbco_admin', 'sylve'],
+    referent_sylve: ['sylve', 'sylve_saisie'],
+    referent_gc: ['gc', 'gc_saisie', 'gc_paiement'],
+    lecture: ['gm', 'sylve']
   },
 
   // ============ INITIALIZATION ============
@@ -382,7 +382,7 @@ const Auth = {
    * @param {string} adminCode - Code admin requis pour rôles direction/référent
    * @returns {Object} - { success: boolean, message: string, user?: object }
    */
-  registerUser(username, password, displayName, email, role = this.ROLES.LECTURE, adminCode = null) {
+  registerUser(username, password, displayName, email, role = this.ROLES.LECTURE, adminCode = null, customPermissions = null) {
     // ===== ÉTAPE 1 : VALIDATIONS DES DONNÉES =====
     if (!username || username.length < 3) {
       return { success: false, message: '❌ Nom d\'utilisateur : 3 caractères minimum' };
@@ -426,9 +426,13 @@ const Auth = {
       email,
       role,
       createdAt: new Date().toISOString(),
-      createdBy: this.getSession()?.username || 'SYSTEM', // Qui a créé ce compte
-      isActive: true  // Compte actif par défaut
+      createdBy: this.getSession()?.username || 'SYSTEM',
+      isActive: true
     };
+
+    if (customPermissions && Array.isArray(customPermissions)) {
+      newUser.customPermissions = customPermissions;
+    }
 
     // Ajouter à la base de données
     users[username] = newUser;
