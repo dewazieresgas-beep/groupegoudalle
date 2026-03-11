@@ -376,16 +376,23 @@
         const isNew = prevRetard === null;
         const isChanged = !isNew && prevRetard !== c.retard;
         c._clientKey = clientKey;
+        c._selectedTypes = note.selectedTypes || [];
         c._needsReview = !hasNote || isNew || isChanged;
         c._isNew = isNew && !hasNote;
         c._isChanged = isChanged;
       });
 
-      clients.sort((a, b) => {
-        if (a._needsReview && !b._needsReview) return -1;
-        if (!a._needsReview && b._needsReview) return 1;
-        return b.retard - a.retard;
-      });
+      function getTypePriority(c) {
+        const t = c._selectedTypes;
+        if (!t.length || c._isNew) return 0;
+        if (t.includes('sans_raison')) return 1;
+        if (t.includes('avec_reserves')) return 2;
+        if (t.includes('litiges')) return 3;
+        if (t.includes('rg_attente')) return 4;
+        if (t.includes('regle')) return 5;
+        return 6;
+      }
+      clients.sort((a, b) => getTypePriority(a) - getTypePriority(b) || b.retard - a.retard);
 
       const periode = `${MONTHS[imp.mois] || '?'} ${imp.annee}`;
 
