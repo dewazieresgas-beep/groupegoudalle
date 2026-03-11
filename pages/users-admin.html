@@ -140,18 +140,26 @@
       }
     }
 
+    function getRoleLabel(u) {
+      if (u.role === 'direction') return '🗝️ Direction';
+
+      const perms = Array.isArray(u.customPermissions) ? u.customPermissions : (Auth.PERMISSIONS[u.role] || []);
+
+      const saisieMap = [
+        { keys: ['gm_saisie', 'gm_paiement', 'gm_admin'], label: '📊 Référent GM' },
+        { keys: ['gc_saisie', 'gc_paiement', 'gc_admin'], label: '📊 Référent GC' },
+        { keys: ['cbco_saisie', 'cbco_paiement', 'cbco_commercial', 'cbco_admin'], label: '📊 Référent CBCO' },
+        { keys: ['sylve_saisie'], label: '📊 Référent Sylve' },
+      ];
+
+      const entreprises = saisieMap.filter(e => e.keys.some(k => perms.includes(k))).map(e => e.label);
+      if (entreprises.length > 0) return entreprises.join(', ');
+      return '👁️ Consultation';
+    }
+
     function loadUsers() {
       const users = Auth.getUserList();
       const tbody = document.querySelector('#usersTable tbody');
-
-      const roleNames = {
-        'direction': '🗝️ Direction',
-        'referent': '📊 Référent GM',
-        'referent_cbco': '📊 Référent CBCO',
-        'referent_sylve': '📊 Référent Sylve',
-        'lecture': '👁️ Consultation'
-      };
-
 
       tbody.innerHTML = users.map(u => {
         const date = new Date(u.createdAt);
@@ -163,7 +171,7 @@
             <td><strong>${safeUsername}</strong></td>
             <td>${safeName}</td>
             <td>${safeEmail}</td>
-            <td><span class="badge badge-primary">${roleNames[u.role] || escapeHtml(u.role)}</span></td>
+            <td><span class="badge badge-primary">${getRoleLabel(u)}</span></td>
             <td><small>${date.toLocaleDateString('fr-FR')}</small></td>
             <td>
               <span class="badge ${u.isActive ? 'badge-success' : 'badge-danger'}">

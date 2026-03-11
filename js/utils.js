@@ -501,24 +501,19 @@ function injectGMSecondaryBar() {
   const session = Auth.getSession();
   if (!session) return;
 
-  const canEdit = Auth.canEditGM();
-  const isDirection = Auth.isDirection();
   const base = getBasePath();
-
-  // Détecter quelle sous-page GM est active
   const currentPage = getCurrentPage();
 
-  // Construire les items de la barre secondaire
   let secondaryItems = '';
-  
-  // Consultation GM - accessible à tous
+
   const consultationActive = currentPage === 'gm.html' ? ' active' : '';
   secondaryItems += `<a href="${base}pages/gm.html" class="sidebar-item${consultationActive}">📊 Consultation</a>`;
-  
-  // Saisies - référents et direction
-  if (canEdit) {
+
+  if (Auth.hasAccess('gm_saisie')) {
     const saisieActive = currentPage === 'gm-saisie.html' ? ' active' : '';
     secondaryItems += `<a href="${base}pages/gm-saisie.html" class="sidebar-item${saisieActive}">✏️ Saisies indicateurs</a>`;
+  }
+  if (Auth.hasAccess('gm_paiement')) {
     const paiementActive = currentPage === 'gm-paiement.html' ? ' active' : '';
     secondaryItems += `<a href="${base}pages/gm-paiement.html" class="sidebar-item${paiementActive}">💳 Paiements en attente</a>`;
   }
@@ -559,7 +554,6 @@ function injectGCSecondaryBar() {
   const session = Auth.getSession();
   if (!session) return;
 
-  const canEdit = Auth.canEditGM();
   const base = getBasePath();
   const currentPage = getCurrentPage();
 
@@ -567,9 +561,11 @@ function injectGCSecondaryBar() {
   const dashboardActive = currentPage === 'gc.html' ? ' active' : '';
   secondaryItems += `<a href="${base}pages/gc.html" class="sidebar-item${dashboardActive}">📊 Dashboard</a>`;
 
-  if (canEdit) {
+  if (Auth.hasAccess('gc_saisie')) {
     const saisieActive = currentPage === 'gc-saisie.html' ? ' active' : '';
     secondaryItems += `<a href="${base}pages/gc-saisie.html" class="sidebar-item${saisieActive}">✏️ Saisies indicateurs</a>`;
+  }
+  if (Auth.hasAccess('gc_paiement')) {
     const paiementActive = currentPage === 'gc-paiement.html' ? ' active' : '';
     secondaryItems += `<a href="${base}pages/gc-paiement.html" class="sidebar-item${paiementActive}">💳 Paiements en attente</a>`;
   }
@@ -783,25 +779,23 @@ function injectCBCOSecondaryBar() {
   const session = Auth.getSession();
   if (!session) return;
 
-  const canEdit = Auth.canEditCBCO();
   const base = getBasePath();
-
-  // Détecter quelle sous-page CBCO est active
   const currentPage = getCurrentPage();
 
-  // Construire les items de la barre secondaire
   let secondaryItems = '';
-  
-  // Consultation CBCO - accessible à tous
+
   const consultationActive = currentPage === 'cbco.html' ? ' active' : '';
   secondaryItems += `<a href="${base}pages/cbco.html" class="sidebar-item${consultationActive}">📊 Dashboard Indicateur</a>`;
-  
-  // Saisies - référents CBCO et direction
-  if (canEdit) {
+
+  if (Auth.hasAccess('cbco_saisie')) {
     const saisieActive = currentPage === 'cbco-saisie.html' ? ' active' : '';
     secondaryItems += `<a href="${base}pages/cbco-saisie.html" class="sidebar-item${saisieActive}">✏️ Saisie chiffre d'affaires</a>`;
+  }
+  if (Auth.hasAccess('cbco_commercial')) {
     const commercialActive = currentPage === 'cbco-commercial.html' ? ' active' : '';
     secondaryItems += `<a href="${base}pages/cbco-commercial.html" class="sidebar-item${commercialActive}">💼 Saisie indicateurs commercial</a>`;
+  }
+  if (Auth.hasAccess('cbco_paiement')) {
     const paiementActive = currentPage === 'cbco-paiement.html' ? ' active' : '';
     secondaryItems += `<a href="${base}pages/cbco-paiement.html" class="sidebar-item${paiementActive}">💳 Paiements en attente</a>`;
   }
@@ -1145,7 +1139,6 @@ function injectSylveSecondaryBar() {
   const session = Auth.getSession();
   if (!session) return;
 
-  const canEdit = Auth.canEditSylve();
   const base = getBasePath();
   const currentPage = getCurrentPage();
 
@@ -1153,7 +1146,7 @@ function injectSylveSecondaryBar() {
   const consultationActive = currentPage === 'sylve-support.html' ? ' active' : '';
   secondaryItems += `<a href="${base}pages/sylve-support.html" class="sidebar-item${consultationActive}">📊 Dashboard</a>`;
 
-  if (canEdit) {
+  if (Auth.hasAccess('sylve_saisie')) {
     const saisieActive = currentPage === 'sylve-support-saisie.html' ? ' active' : '';
     secondaryItems += `<a href="${base}pages/sylve-support-saisie.html" class="sidebar-item${saisieActive}">✏️ Saisie factures</a>`;
   }
