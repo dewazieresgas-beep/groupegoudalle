@@ -1,3 +1,9 @@
+/* Forcer la même hauteur pour les cartes CBCO graphiques */
+.cbco-equal-height {
+  min-height: 480px;
+  display: flex;
+  flex-direction: column;
+}
 @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=Spectral:wght@400;600&display=swap');
 
 /* ============ VARIABLES GLOBALES - GOUDALLE CHARPENTE ============ */
