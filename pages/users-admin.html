@@ -198,17 +198,17 @@
         const safeUsername = escapeHtml(u.username);
         const safeName = escapeHtml(u.displayName) || '—';
         const safeEmail = escapeHtml(u.email) || '—';
+        const safeRole = roleNames[u.role] || escapeHtml(u.role);
+        const status = u.isActive ? '✅ Actif' : '❌ Inactif';
         return `
           <tr>
             <td><strong>${safeUsername}</strong></td>
             <td>${safeName}</td>
             <td>${safeEmail}</td>
-            <td><span class="badge badge-primary">${roleNames[u.role] || escapeHtml(u.role)}</span></td>
+            <td><span class="badge badge-primary">${safeRole}</span></td>
             <td><small>${date.toLocaleDateString('fr-FR')}</small></td>
             <td>
-              <span class="badge ${u.isActive ? 'badge-success' : 'badge-danger'}">
-                ${u.isActive ? '✅ Actif' : '❌ Inactif'}
-              </span>
+              <span class="badge ${u.isActive ? 'badge-success' : 'badge-danger'}">${status}</span>
             </td>
             <td>
               <button class="btn btn-small btn-secondary" onclick="editUser('${safeUsername}')">✏️ Éditer</button>
@@ -216,18 +216,27 @@
                 ? `<button class="btn btn-small btn-danger" onclick="disableUser('${safeUsername}')">🔒 Désactiver</button>` 
                 : `<button class="btn btn-small btn-success" onclick="enableUser('${safeUsername}')">✅ Réactiver</button>`}
             </td>
-          // Modal d'édition avancée (structure, à compléter côté JS)
-          if (!document.getElementById('editUserModal')) {
-            const modal = document.createElement('div');
-            modal.id = 'editUserModal';
-            modal.style.display = 'none';
-            modal.innerHTML = `
-              <div style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.25);z-index:1000;display:flex;align-items:center;justify-content:center;">
-                <div style="background:#fff;padding:32px 24px;border-radius:8px;min-width:340px;max-width:95vw;box-shadow:0 8px 32px rgba(0,0,0,0.18);position:relative;">
-                  <button onclick="closeEditUserModal()" style="position:absolute;top:10px;right:10px;font-size:18px;background:none;border:none;cursor:pointer;">✖</button>
-                  <h2>Édition utilisateur</h2>
-                  <form id="editUserForm">
-                    <input type="hidden" id="editUserUsername">
+          </tr>`;
+      }).join('');
+      // Modal d'édition avancée (structure, à compléter côté JS)
+      if (!document.getElementById('editUserModal')) {
+        const modal = document.createElement('div');
+        modal.id = 'editUserModal';
+        modal.style.display = 'none';
+        modal.innerHTML = `
+          <div style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.25);z-index:1000;display:flex;align-items:center;justify-content:center;">
+            <div style="background:#fff;padding:32px 24px;border-radius:8px;min-width:340px;max-width:95vw;box-shadow:0 8px 32px rgba(0,0,0,0.18);position:relative;">
+              <button onclick="closeEditUserModal()" style="position:absolute;top:10px;right:10px;font-size:18px;background:none;border:none;cursor:pointer;">✖</button>
+              <h2>Édition utilisateur</h2>
+              <form id="editUserForm">
+                <input type="hidden" id="editUserUsername">
+                <!-- À compléter côté JS -->
+              </form>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modal);
+      }
                     <div class="form-group"><label>Nom complet</label><input type="text" id="editUserDisplayName" required></div>
                     <div class="form-group"><label>Email</label><input type="email" id="editUserEmail" required></div>
                     <div class="form-group"><label>Rôle</label>
