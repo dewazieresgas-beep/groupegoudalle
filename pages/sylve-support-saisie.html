@@ -114,6 +114,17 @@
     </main>
   </div>
 
+  <!-- Modal détails import -->
+  <div id="importDetailModal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.5); align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:8px; max-width:900px; width:95%; max-height:85vh; display:flex; flex-direction:column; box-shadow:0 8px 32px rgba(0,0,0,0.25);">
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid #e0e0e0; background:linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%); border-radius:8px 8px 0 0; color:#fff;">
+        <h3 style="margin:0; font-size:1em;" id="modalTitle">Détails import</h3>
+        <button onclick="closeImportModal()" style="background:none; border:none; color:#fff; font-size:1.4em; cursor:pointer;">&times;</button>
+      </div>
+      <div id="modalBody" style="padding:20px; overflow-y:auto; flex:1;"></div>
+    </div>
+  </div>
+
   <script>
     const ENT_LABELS = { cbco: 'CBCO', gc: 'Goudalle Charpente', gm: 'Goudalle Maçonnerie' };
     const ENT_IDS = ['cbco', 'gc', 'gm'];
@@ -512,6 +523,73 @@
     }
 
     /**
+     * Affiche les détails d'un import dans un modal
+     */
+    function showImportDetails(entrepriseId, importId) {
+      const imports = getSylveImports(entrepriseId);
+      const imp = imports.find(i => i.id === importId);
+      if (!imp) return;
+
+      const label = ENT_LABELS[entrepriseId] || entrepriseId;
+      const moisLabel = MOIS_NOMS[imp.mois] || '?';
+      document.getElementById('modalTitle').textContent = `${label} — ${moisLabel} ${imp.annee}`;
+
+      const clients = imp.clients || [];
+      const totalSolde = clients.reduce((s, c) => s + (c.solde || 0), 0);
+      const totalRetard = clients.reduce((s, c) => s + ((c.j1_30||0) + (c.j31_45||0) + (c.j46_60||0) + (c.j61_plus||0)), 0);
+
+      let html = `<div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:16px;">
+        <div style="background:#f8f9fa; padding:10px 16px; border-radius:6px; font-size:0.9em;"><strong>${clients.length}</strong> clients</div>
+        <div style="background:#f8f9fa; padding:10px 16px; border-radius:6px; font-size:0.9em;">Solde total: <strong>${formatSylveEuros(totalSolde)}</strong></div>
+        <div style="background:#f8f9fa; padding:10px 16px; border-radius:6px; font-size:0.9em;">Retard total: <strong style="color:var(--danger);">${formatSylveEuros(totalRetard)}</strong></div>
+      </div>`;
+
+      html += `<table style="font-size:0.85em; width:100%;">
+        <thead>
+          <tr>
+            <th>Compte</th>
+            <th>Client</th>
+            <th style="text-align:right;">Solde</th>
+            <th style="text-align:right;">Non échu</th>
+            <th style="text-align:right;">1-30j</th>
+            <th style="text-align:right;">31-45j</th>
+            <th style="text-align:right;">46-60j</th>
+            <th style="text-align:right;">+61j</th>
+            <th style="text-align:right;">Total retard</th>
+          </tr>
+        </thead>
+        <tbody>`;
+
+      clients.forEach(c => {
+        const retard = (c.j1_30||0) + (c.j31_45||0) + (c.j46_60||0) + (c.j61_plus||0);
+        html += `<tr${retard > 0 ? ' style="background:rgba(231,76,60,0.04);"' : ''}>
+          <td>${escapeHtml(c.compte || '')}</td>
+          <td><strong>${escapeHtml(c.client || '')}</strong></td>
+          <td style="text-align:right;">${formatSylveEuros(c.solde || 0)}</td>
+          <td style="text-align:right;">${formatSylveEuros(c.nonEchu || 0)}</td>
+          <td style="text-align:right;">${formatSylveEuros(c.j1_30 || 0)}</td>
+          <td style="text-align:right;">${formatSylveEuros(c.j31_45 || 0)}</td>
+          <td style="text-align:right;">${formatSylveEuros(c.j46_60 || 0)}</td>
+          <td style="text-align:right;">${formatSylveEuros(c.j61_plus || 0)}</td>
+          <td style="text-align:right; font-weight:600; color:${retard > 0 ? 'var(--danger)' : 'inherit'};">${formatSylveEuros(retard)}</td>
+        </tr>`;
+      });
+
+      html += '</tbody></table>';
+      document.getElementById('modalBody').innerHTML = html;
+
+      const modal = document.getElementById('importDetailModal');
+      modal.style.display = 'flex';
+      modal.addEventListener('click', function handler(e) {
+        if (e.target === modal) { closeImportModal(); modal.removeEventListener('click', handler); }
+      });
+    }
+
+    function closeImportModal() {
+      document.getElementById('importDetailModal').style.display = 'none';
+    }
+
+    /**
      * Affiche l'historique des imports par entreprise
      */
     function refreshHistory() {
@@ -559,6 +637,7 @@
               <td>${formatSylveEuros(totalSolde)}</td>
               <td style="color:${totalRetard > 0 ? 'var(--danger)' : 'inherit'}; font-weight:600;">${formatSylveEuros(totalRetard)}</td>
               <td style="text-align:center; white-space:nowrap;">
+                <button class="btn btn-small btn-secondary" onclick="showImportDetails('${id}', '${imp.id}')" title="Voir les données">👁️</button>
                 <button class="btn btn-small btn-secondary" onclick="replaceImport('${id}', ${imp.mois}, ${imp.annee})" title="Remplacer ce fichier">🔄</button>
                 <button class="btn btn-small btn-danger" onclick="deleteImport('${id}', '${imp.id}')" title="Supprimer">🗑️</button>
               </td>
