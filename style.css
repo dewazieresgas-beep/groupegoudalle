@@ -1,3 +1,19 @@
+/* Grille principale CBCO pour alignement parfait des 4 cadres */
+.cbco-main-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 10px;
+  align-items: stretch;
+}
+
+@media (max-width: 1024px) {
+  .cbco-main-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
+}
 /* Hauteur stricte identique pour les 4 cadres CBCO */
 .cbco-strict-equal {
   height: 480px;
