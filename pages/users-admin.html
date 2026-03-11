@@ -214,12 +214,14 @@
               </span>
             </td>
             <td>
-              ${u.isActive 
-                ? `<button class="btn btn-small btn-danger" onclick="disableUser('${safeUsername}')">🔒 Désactiver</button>` 
-                : `<button class="btn btn-small btn-success" onclick="enableUser('${safeUsername}')">✅ Réactiver</button>`}
+              ${u.role !== 'direction' 
+                ? `<button class="btn btn-small btn-danger" onclick="deleteUser('${safeUsername}')">🗑️ Supprimer</button>` 
+                : ''}
             </td>
             <td>
-              <button class="btn btn-small btn-secondary" onclick="openAccessModal('${safeUsername}')">Gérer les accès</button>
+              ${u.role !== 'direction' 
+                ? `<button class="btn btn-small btn-secondary" onclick="openAccessModal('${safeUsername}')">Gérer les accès</button>` 
+                : ''}
             </td>
           </tr>
         `;
@@ -230,20 +232,13 @@
       }
     }
 
-    function disableUser(username) {
-      if (confirm(`Désactiver l'utilisateur ${username} ?`)) {
-        const result = Auth.disableUser(username);
+    function deleteUser(username) {
+      if (confirm(`⚠️ Supprimer définitivement l'utilisateur "${username}" ? Cette action est irréversible.`)) {
+        const result = Auth.deleteUser(username);
         if (result.success) {
           loadUsers();
-        }
-      }
-    }
-
-    function enableUser(username) {
-      if (confirm(`Réactiver l'utilisateur ${username} ?`)) {
-        const result = Auth.enableUser(username);
-        if (result.success) {
-          loadUsers();
+        } else {
+          alert(result.message);
         }
       }
     }

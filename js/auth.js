@@ -505,6 +505,33 @@ const Auth = {
   },
 
   /**
+   * Supprime définitivement un compte utilisateur (réservé à la direction)
+   * Les comptes direction ne peuvent pas être supprimés
+   * @param {string} username - Identifiant de l'utilisateur à supprimer
+   * @returns {Object} - { success: boolean, message: string }
+   */
+  deleteUser(username) {
+    if (!this.isDirection()) {
+      return { success: false, message: '❌ Accès refusé' };
+    }
+
+    const users = this.getAllUsers();
+    if (!users[username]) {
+      return { success: false, message: '❌ Utilisateur non trouvé' };
+    }
+
+    if (users[username].role === this.ROLES.DIRECTION) {
+      return { success: false, message: '❌ Impossible de supprimer un compte Direction' };
+    }
+
+    delete users[username];
+    localStorage.setItem(this.STORAGE_KEY_USERS, JSON.stringify(users));
+    this.audit('USER_DELETED', `Suppression définitive : ${username}`);
+
+    return { success: true, message: '✅ Utilisateur supprimé définitivement' };
+  },
+
+  /**
    * Change le mot de passe d'un utilisateur
    * @param {string} username - Identifiant de l'utilisateur
    * @param {string} newPassword - Nouveau mot de passe
