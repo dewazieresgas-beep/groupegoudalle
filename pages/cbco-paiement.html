@@ -282,8 +282,10 @@
         if (!wasOpen) {
           select.classList.add('open');
           const menu = select.querySelector('.pe-select-menu');
-          const rect = menu.getBoundingClientRect();
-          if (rect.bottom > window.innerHeight) {
+          const menuRect = menu.getBoundingClientRect();
+          const card = row.closest('.card');
+          const cardBottom = card ? card.getBoundingClientRect().bottom : window.innerHeight;
+          if (menuRect.bottom > cardBottom) {
             select.classList.add('open-up');
           } else {
             select.classList.remove('open-up');
