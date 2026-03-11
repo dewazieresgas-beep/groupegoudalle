@@ -431,10 +431,6 @@ function getSidebar() {
       <div class="mainbar">
         <div class="brand">
           <img src="${getLogoPath()}" alt="Logo">
-          <div class="brand-text">
-            <div class="brand-title">GOUDALLE</div>
-            <div class="brand-subtitle">Intranet Groupe</div>
-          </div>
         </div>
         <nav class="sidebar-nav">
           ${items}
