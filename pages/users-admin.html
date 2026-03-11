@@ -52,35 +52,15 @@
               <input type="text" id="username" minlength="3" required>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+            <div style="display: grid; grid-template-columns: 1fr; gap: 20px;">
               <div class="form-group">
                 <label for="password">Mot de passe *</label>
                 <input type="password" id="password" minlength="3" required>
-              </div>
-              <div class="form-group">
-                <label for="niveau">Niveau d'accès *</label>
-                <select id="niveau" required onchange="updateEntrepriseVisibility()">
-                  <option value="">-- Sélectionner --</option>
-                  <option value="lecture">👁️ Consultation</option>
-                  <option value="referent">📊 Référent</option>
-                  <option value="referent_gc">📊 Référent Goudalle Charpente</option>
-                  <option value="direction">🗝️ Direction</option>
-                </select>
-              </div>
-              <div class="form-group" id="entrepriseGroup" style="display:none;">
-                <label for="entreprise">Entreprise *</label>
-                <select id="entreprise" onchange="updateCreateAccessCheckboxes()">
-                  <option value="">-- Sélectionner --</option>
-                  <option value="gm">Goudalle Maçonnerie</option>
-                  <option value="cbco">CBCO</option>
-                  <option value="sylve">Sylve Support</option>
-                </select>
               </div>
             </div>
 
             <div class="form-group" style="margin-top: 20px;">
               <label>Accès aux pages</label>
-              <p style="color:#666; font-size:0.9em; margin-bottom:10px;">Pré-rempli selon le rôle. Vous pouvez personnaliser.</p>
               <div id="createAccessCheckboxes" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"></div>
             </div>
 
@@ -120,39 +100,6 @@
   </div>
 
   <script>
-    function updateEntrepriseVisibility() {
-      const niveau = document.getElementById('niveau').value;
-      const groupe = document.getElementById('entrepriseGroup');
-      const select = document.getElementById('entreprise');
-      if (niveau === 'referent') {
-        groupe.style.display = '';
-        select.required = true;
-      } else {
-        groupe.style.display = 'none';
-        select.required = false;
-        select.value = '';
-      }
-      updateCreateAccessCheckboxes();
-    }
-
-    function getCreateRole() {
-      const niveau = document.getElementById('niveau').value;
-      const entreprise = document.getElementById('entreprise').value;
-      if (!niveau) return null;
-      if (niveau === 'referent') {
-        if (entreprise === 'cbco') return 'referent_cbco';
-        if (entreprise === 'sylve') return 'referent_sylve';
-        return 'referent';
-      }
-      return niveau;
-    }
-
-    function updateCreateAccessCheckboxes() {
-      const role = getCreateRole();
-      const perms = role ? (Auth.PERMISSIONS[role] || []) : [];
-      renderAccessCheckboxes('createAccessCheckboxes', perms);
-    }
-
     function showMessage(message, type) {
       const msgDiv = document.getElementById('message');
       msgDiv.textContent = message;
@@ -169,37 +116,15 @@
       const email = document.getElementById('email').value.trim();
       const username = document.getElementById('username').value.trim();
       const password = document.getElementById('password').value;
-      const niveau = document.getElementById('niveau').value;
-      const entreprise = document.getElementById('entreprise').value;
-
-      // Déterminer le rôle final
-      let role = niveau;
-      if (niveau === 'referent') {
-        if (!entreprise) {
-          showMessage('❌ Veuillez sélectionner une entreprise pour le rôle référent.', 'error');
-          return;
-        }
-        if (entreprise === 'cbco') role = 'referent_cbco';
-        else if (entreprise === 'sylve') role = 'referent_sylve';
-        else role = 'referent';
-      }
-
-      // Récupérer les permissions sélectionnées
-      const customPermissions = Array.from(document.querySelectorAll('#createAccessCheckboxes input[type=checkbox]:checked'))
-        .map(cb => cb.value);
-      const defaultPerms = Auth.PERMISSIONS[role] || [];
-      const permsDiffer = customPermissions.length !== defaultPerms.length || customPermissions.some(p => !defaultPerms.includes(p));
-      const finalPermissions = permsDiffer ? customPermissions : null;
-
       const displayName = `${firstName} ${lastName}`;
 
-      let adminCode = null;
-      if (role !== 'lecture') {
-        adminCode = prompt('Entre le code d\'administration pour créer un compte ' + role + ':');
-        if (!adminCode) return;
-      }
+      const customPermissions = Array.from(document.querySelectorAll('#createAccessCheckboxes input[type=checkbox]:checked'))
+        .map(cb => cb.value);
 
-      const result = Auth.registerUser(username, password, displayName, email, role, adminCode, finalPermissions);
+      const adminCode = prompt('Entre le code d\'administration pour créer ce compte :');
+      if (!adminCode) return;
+
+      const result = Auth.registerUser(username, password, displayName, email, 'lecture', adminCode, customPermissions);
 
       if (result.success) {
         showMessage(result.message, 'success');
@@ -208,9 +133,7 @@
         document.getElementById('email').value = '';
         document.getElementById('username').value = '';
         document.getElementById('password').value = '';
-        document.getElementById('niveau').value = '';
-        document.getElementById('entreprise').value = '';
-        updateEntrepriseVisibility();
+        renderAccessCheckboxes('createAccessCheckboxes', []);
         loadUsers();
       } else {
         showMessage(result.message, 'error');
