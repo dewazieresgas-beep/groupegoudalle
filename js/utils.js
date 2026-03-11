@@ -384,13 +384,8 @@ function getSidebar() {
     <a href="${base}index.html" class="sidebar-item${accueilActive}">🏠 Accueil</a>
   `;
 
-  // ===== SECTION GOUDALLE MAÇONNERIE =====
-  if (canView) {
-    // Tous les utilisateurs avec accès : lien direct vers gm.html
-    const gmActive = onGMPage ? ' active' : '';
-    items += `<a href="${base}pages/gm.html" class="sidebar-item${gmActive}">🏭 Goudalle Maçonnerie</a>`;
-
-    // Module Goudalle Charpente (pages vides pour l'instant)
+  // ===== SECTION GOUDALLE CHARPENTE =====
+  if (Auth.hasAccess('gc')) {
     const gcActive = onGCPage ? ' active' : '';
     items += `<a href="${base}pages/gc.html" class="sidebar-item${gcActive}">🪵 Goudalle Charpente</a>`;
   }
@@ -399,6 +394,12 @@ function getSidebar() {
   if (Auth.canViewCBCO()) {
     const cbcoActive = isCBCOPage() ? ' active' : '';
     items += `<a href="${base}pages/cbco.html" class="sidebar-item${cbcoActive}">💼 CBCO</a>`;
+  }
+
+  // ===== SECTION GOUDALLE MAÇONNERIE =====
+  if (canView) {
+    const gmActive = onGMPage ? ' active' : '';
+    items += `<a href="${base}pages/gm.html" class="sidebar-item${gmActive}">🏭 Goudalle Maçonnerie</a>`;
   }
 
   // ===== SECTION SYLVE SUPPORT =====
