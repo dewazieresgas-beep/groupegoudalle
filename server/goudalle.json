@@ -1,0 +1,60 @@
+{
+  "audit": [
+    {
+      "id": 1773324837323,
+      "action": "LOGIN",
+      "details": "Connexion de acgoudalle",
+      "user": "acgoudalle",
+      "timestamp": "2026-03-12T14:13:57.323Z"
+    },
+    {
+      "id": 1773324860734,
+      "action": "KPI_SAVED",
+      "details": "Indicateur S11/2026 - Status: published",
+      "user": "acgoudalle",
+      "timestamp": "2026-03-12T14:14:20.734Z"
+    },
+    {
+      "id": 1773324882795,
+      "action": "KPI_SAVED",
+      "details": "Indicateur S10/2026 - Status: published",
+      "user": "acgoudalle",
+      "timestamp": "2026-03-12T14:14:42.795Z"
+    },
+    {
+      "id": 1773325113715,
+      "action": "LOGIN",
+      "details": "Connexion de acgoudalle",
+      "user": "acgoudalle",
+      "timestamp": "2026-03-12T14:18:33.715Z"
+    }
+  ],
+  "kpis": [
+    {
+      "id": 1773324860733,
+      "year": 2026,
+      "week": 11,
+      "m3": 58,
+      "hours": 280,
+      "comment": "pojhgfr",
+      "status": "published",
+      "createdAt": "2026-03-12T14:14:20.733Z",
+      "createdBy": "acgoudalle",
+      "updatedAt": "2026-03-12T14:14:20.733Z",
+      "updatedBy": "acgoudalle"
+    },
+    {
+      "id": 1773324882795,
+      "year": 2026,
+      "week": 10,
+      "m3": 25,
+      "hours": 200,
+      "comment": "yi-rek-è",
+      "status": "published",
+      "createdAt": "2026-03-12T14:14:42.795Z",
+      "createdBy": "acgoudalle",
+      "updatedAt": "2026-03-12T14:14:42.795Z",
+      "updatedBy": "acgoudalle"
+    }
+  ]
+}
