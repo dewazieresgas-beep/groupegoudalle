@@ -25,11 +25,11 @@ const Auth = {
   // Permissions par rôle - définit ce que chaque rôle peut faire
   PERMISSIONS: {
     direction: ['gm', 'gm_saisie', 'gm_paiement', 'gc', 'gc_saisie', 'gc_paiement', 'cbco', 'cbco_saisie', 'cbco_paiement', 'cbco_commercial', 'sylve', 'sylve_saisie', 'users_admin', 'thresholds'],
-    referent: ['gm', 'gm_saisie', 'gm_paiement', 'thresholds', 'sylve'],
-    referent_cbco: ['cbco', 'cbco_saisie', 'cbco_paiement', 'cbco_commercial', 'sylve'],
+    referent: ['gm', 'gm_saisie', 'gm_paiement', 'thresholds'],
+    referent_cbco: ['cbco', 'cbco_saisie', 'cbco_paiement', 'cbco_commercial'],
     referent_sylve: ['sylve', 'sylve_saisie'],
     referent_gc: ['gc', 'gc_saisie', 'gc_paiement'],
-    lecture: ['gm', 'sylve']
+    lecture: ['gm']
   },
 
   // ============ INITIALIZATION ============
