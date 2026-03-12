@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -5,46 +6,43 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Accueil - Intranet Goudalle</title>
   <link rel="stylesheet" href="./style.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+</head>
+<body>
+  <div class="container" style="max-width: 600px; margin: 40px auto; padding: 32px; background: #fff; border-radius: 12px; box-shadow: 0 2px 16px rgba(0,0,0,0.08);">
+    <h1 style="text-align:center; color: var(--primary, #5a4a3a); margin-bottom: 32px;">Bienvenue sur l'intranet Goudalle</h1>
+    <div style="display: flex; flex-direction: column; gap: 18px;">
+      <button onclick="location.href='pages/gm.html'" class="nav-btn">Goudalle Maçonnerie (GM)</button>
+      <button onclick="location.href='pages/gc.html'" class="nav-btn">Goudalle Charpente (GC)</button>
+      <button onclick="location.href='pages/cbco.html'" class="nav-btn">CBCO (Chiffre d'Affaires)</button>
+      <button onclick="location.href='pages/sylve-support.html'" class="nav-btn">Sylve Support</button>
+      <button onclick="location.href='pages/users-admin.html'" class="nav-btn">Administration des utilisateurs</button>
+      <button onclick="location.href='login.html'" class="nav-btn" style="background: var(--accent, #8ba88a); color: #fff;">Se connecter</button>
+    </div>
+    <p style="text-align:center; margin-top: 32px; color: #888; font-size: 15px;">© 2026 Groupe Goudalle</p>
+  </div>
+
   <style>
-    .dashboard-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      margin-bottom: 20px;
+    .nav-btn {
+      padding: 16px 0;
+      font-size: 1.15rem;
+      border: none;
+      border-radius: 8px;
+      background: var(--secondary, #7a6a5a);
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
     }
-    .dashboard-grid > .card {
-      display: flex;
-      flex-direction: column;
+    .nav-btn:hover {
+      background: var(--accent-dark, #6b8e6f);
     }
-    .dashboard-grid > .card > .card-body {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
+    body {
+      background: var(--light, #f5f1ed);
+      font-family: 'Inter', Arial, sans-serif;
+      margin: 0;
+      min-height: 100vh;
     }
-    .gm-chart-kpi {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 12px;
-      padding-bottom: 0;
-      margin-bottom: 0;
-      position: relative;
-    }
-    .gm-arrow-underline {
-      position: relative;
-      height: 10px;
-      margin-bottom: 0;
-      <!DOCTYPE html>
-      <html lang="fr">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Accueil - Intranet Goudalle</title>
-        <link rel="stylesheet" href="./style.css">
-      </head>
-      <body>
-      </body>
-      </html>
-      font-size: 56px;
+  </style>
+</body>
+</html>
