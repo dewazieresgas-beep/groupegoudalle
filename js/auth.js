@@ -10,6 +10,7 @@ const Auth = {
   STORAGE_KEY_USERS: 'goudalle_users',          // Base de données des utilisateurs
   STORAGE_KEY_ADMIN_CODE: 'goudalle_admin_code', // Code pour créer des comptes direction/référent
   STORAGE_KEY_AUDIT: 'goudalle_audit',          // Journal d'audit des actions
+  SESSION_TIMEOUT: 3600000,                     // Durée de session : 1 heure (en ms)
 
   // Rôles disponibles dans le système (hiérarchie décroissante)
   ROLES: {
@@ -24,11 +25,11 @@ const Auth = {
   // Permissions par rôle - définit ce que chaque rôle peut faire
   PERMISSIONS: {
     direction: ['gm', 'gm_saisie', 'gm_paiement', 'gc', 'gc_saisie', 'gc_paiement', 'cbco', 'cbco_saisie', 'cbco_paiement', 'cbco_commercial', 'sylve', 'sylve_saisie', 'users_admin', 'thresholds'],
-    referent: ['gm', 'gm_saisie', 'gm_paiement', 'thresholds', 'sylve'],
-    referent_cbco: ['cbco', 'cbco_saisie', 'cbco_paiement', 'cbco_commercial', 'sylve'],
+    referent: ['gm', 'gm_saisie', 'gm_paiement', 'thresholds'],
+    referent_cbco: ['cbco', 'cbco_saisie', 'cbco_paiement', 'cbco_commercial'],
     referent_sylve: ['sylve', 'sylve_saisie'],
     referent_gc: ['gc', 'gc_saisie', 'gc_paiement'],
-    lecture: ['gm', 'sylve']
+    lecture: ['gm']
   },
 
   // ============ INITIALIZATION ============
@@ -259,11 +260,43 @@ const Auth = {
   },
 
   /**
-   * Vérifie si un utilisateur est connecté
+   * Vérifie si un utilisateur est connecté ET si sa session n'a pas expiré (1h après login)
    * @returns {boolean}
    */
   isConnected() {
-    return this.getSession() !== null;
+    const session = this.getSession();
+    if (!session) return false;
+
+    // Vérifier si la session a expiré (1h après le login)
+    const loginAt = session.loginAt ? new Date(session.loginAt).getTime() : 0;
+    if (Date.now() - loginAt > this.SESSION_TIMEOUT) {
+      this.logout();
+      return false;
+    }
+    return true;
+  },
+
+  /**
+   * Active le contrôle périodique d'expiration de session (toutes les minutes)
+   */
+  initActivityTracking() {
+    setInterval(() => {
+      if (!this.isConnected()) {
+        const isLoginPage = window.location.pathname.endsWith('login.html') ||
+                            window.location.pathname.endsWith('register.html');
+        if (!isLoginPage) {
+          window.location.href = this._getLoginUrl();
+        }
+      }
+    }, 60000);
+  },
+
+  /**
+   * Retourne l'URL de la page de connexion selon la page courante
+   * @returns {string}
+   */
+  _getLoginUrl() {
+    return window.location.pathname.includes('/pages/') ? '../login.html' : './login.html';
   },
 
   /**
@@ -683,9 +716,10 @@ const Auth = {
    */
   requireAuth() {
     if (!this.isConnected()) {
-      window.location.href = './login.html';
+      window.location.href = this._getLoginUrl();
       return false;
     }
+    this.initActivityTracking();
     return true;
   },
 
@@ -696,11 +730,16 @@ const Auth = {
    * @returns {boolean} - true si autorisé, false sinon
    */
   requirePermission(permission) {
+    if (!this.isConnected()) {
+      window.location.href = this._getLoginUrl();
+      return false;
+    }
     if (!this.hasAccess(permission)) {
       const base = window.location.pathname.includes('/pages/') ? '' : 'pages/';
       window.location.href = `./${base}error-access.html`;
       return false;
     }
+    this.initActivityTracking();
     return true;
   }
 };
