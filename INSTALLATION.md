@@ -45,19 +45,19 @@ Pour que le serveur démarre automatiquement sans intervention :
 
 ## Structure des données
 
-Les données sont stockées dans `server/data/` :
-- `users.json` — Comptes utilisateurs
-- `kpis.json` — Indicateurs Goudalle Maçonnerie
-- `cbco.json` — Chiffre d'affaires CBCO
-- `cbco-commercial.json` — Affaires commerciales CBCO
-- `sylve-balance.json` — Balance âgée Sylve
-- `sylve-ca.json` — CA mensuel Sylve
-- `sylve-paiements.json` — Paiements en attente Sylve
-- `audit.json` — Journal d'audit
-- `reminders-config.json` — Configuration rappels email
-- `reminders-sent.json` — Historique rappels envoyés
-- `thresholds.json` — Seuils KPI
-- `admin-code.json` — Code administrateur
+Toutes les données sont dans **un seul fichier** `server/goudalle.db` (base SQLite).
+
+Pour sauvegarder toutes les données : copier simplement ce fichier.
+
+Les données stockées :
+- Comptes utilisateurs
+- Indicateurs Goudalle Maçonnerie (KPIs)
+- Chiffre d'affaires CBCO + affaires commerciales
+- Balance âgée Sylve, CA mensuel, paiements en attente
+- Journal d'audit
+- Configuration rappels email
+- Seuils KPI
+- Code administrateur
 
 ---
 
