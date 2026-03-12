@@ -216,3 +216,14 @@ const _serverReady = initServerStorage();
 // ─── EXPORT D'UN INDICATEUR DE DISPONIBILITÉ ────────────────────────────────────
 // Les pages peuvent attendre que les données soient chargées avant d'afficher
 window.serverReady = _serverReady;
+
+/**
+ * Lance une fonction après que le serveur ait chargé toutes les données.
+ * Remplace window.addEventListener('load', fn) pour garantir la synchronisation.
+ */
+window.onServerReady = function(fn) {
+  window.addEventListener('load', async () => {
+    await window.serverReady;
+    fn();
+  });
+};

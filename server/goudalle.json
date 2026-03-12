@@ -27,6 +27,13 @@
       "details": "Déconnexion de acgoudalle",
       "user": "acgoudalle",
       "timestamp": "2026-03-12T16:11:24.061Z"
+    },
+    {
+      "id": 1773332030357,
+      "action": "LOGIN",
+      "details": "Connexion de acgoudalle",
+      "user": "acgoudalle",
+      "timestamp": "2026-03-12T16:13:50.357Z"
     }
   ],
   "kpis": [
