@@ -94,7 +94,12 @@ async function loadAllFromServer() {
       const res = await fetch(SERVER_URL + endpoint);
       if (res.ok) {
         const data = await res.json();
-        _cache[key] = data;
+        // Ne pas écraser avec des données vides (ex: users={} au premier démarrage)
+        const isEmpty = (data && typeof data === 'object' && !Array.isArray(data) && Object.keys(data).length === 0)
+                     || (Array.isArray(data) && data.length === 0 && key === 'goudalle_audit');
+        if (!isEmpty || key !== 'goudalle_users') {
+          _cache[key] = data;
+        }
       }
     } catch (e) {
       console.warn(`[API] Impossible de charger ${endpoint}:`, e.message);
