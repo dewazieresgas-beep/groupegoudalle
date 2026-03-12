@@ -8,41 +8,25 @@
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-  <div class="container" style="max-width: 600px; margin: 40px auto; padding: 32px; background: #fff; border-radius: 12px; box-shadow: 0 2px 16px rgba(0,0,0,0.08);">
-    <h1 style="text-align:center; color: var(--primary, #5a4a3a); margin-bottom: 32px;">Bienvenue sur l'intranet Goudalle</h1>
-    <div style="display: flex; flex-direction: column; gap: 18px;">
-      <button onclick="location.href='pages/gm.html'" class="nav-btn">Goudalle Maçonnerie (GM)</button>
-      <button onclick="location.href='pages/gc.html'" class="nav-btn">Goudalle Charpente (GC)</button>
-      <button onclick="location.href='pages/cbco.html'" class="nav-btn">CBCO (Chiffre d'Affaires)</button>
-      <button onclick="location.href='pages/sylve-support.html'" class="nav-btn">Sylve Support</button>
-      <button onclick="location.href='pages/users-admin.html'" class="nav-btn">Administration des utilisateurs</button>
-      <button onclick="location.href='login.html'" class="nav-btn" style="background: var(--accent, #8ba88a); color: #fff;">Se connecter</button>
-    </div>
-    <p style="text-align:center; margin-top: 32px; color: #888; font-size: 15px;">© 2026 Groupe Goudalle</p>
+  <script src="./js/auth.js"></script>
+  <script src="./js/utils.js"></script>
+  <script>
+    Auth.requireAuth();
+  </script>
+
+  <div class="app-container">
+    <div id="sidebar"></div>
+
+    <main class="main-content">
+      <h1>🏠 Accueil</h1>
+      <p style="color: var(--muted, #888); margin-bottom: 32px;">Bienvenue sur l'intranet Groupe Goudalle. Utilisez la navigation à gauche pour accéder aux différentes sections.</p>
+    </main>
   </div>
 
-  <style>
-    .nav-btn {
-      padding: 16px 0;
-      font-size: 1.15rem;
-      border: none;
-      border-radius: 8px;
-      background: var(--secondary, #7a6a5a);
-      color: #fff;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s, box-shadow 0.2s;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-    }
-    .nav-btn:hover {
-      background: var(--accent-dark, #6b8e6f);
-    }
-    body {
-      background: var(--light, #f5f1ed);
-      font-family: 'Inter', Arial, sans-serif;
-      margin: 0;
-      min-height: 100vh;
-    }
-  </style>
+  <script>
+    document.getElementById('sidebar').innerHTML = getSidebar();
+  </script>
+
+  <footer class="site-footer"></footer>
 </body>
 </html>
