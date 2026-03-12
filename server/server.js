@@ -11,45 +11,34 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const Database = require('better-sqlite3');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Fichier de base de données SQLite
-const DB_PATH = path.join(__dirname, 'goudalle.db');
+// Fichier de stockage JSON
+const DB_PATH = path.join(__dirname, 'goudalle.json');
 
-// ─── INITIALISATION DE LA BASE DE DONNÉES ────────────────────────────────────────
+// ─── INITIALISATION DU STOCKAGE ──────────────────────────────────────────────────
 
-const db = new Database(DB_PATH);
+let store = {};
+if (fs.existsSync(DB_PATH)) {
+  try { store = JSON.parse(fs.readFileSync(DB_PATH, 'utf8')); } catch { store = {}; }
+}
 
-// Activer le mode WAL pour de meilleures performances en lecture/écriture simultanée
-db.pragma('journal_mode = WAL');
-
-// Créer les tables si elles n'existent pas encore
-db.exec(`
-  CREATE TABLE IF NOT EXISTS store (
-    key   TEXT PRIMARY KEY,
-    value TEXT NOT NULL,
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-`);
+function saveStore() {
+  fs.writeFileSync(DB_PATH, JSON.stringify(store, null, 2), 'utf8');
+}
 
 // ─── UTILITAIRES ────────────────────────────────────────────────────────────────
 
 function dbGet(key, defaultValue) {
-  const row = db.prepare('SELECT value FROM store WHERE key = ?').get(key);
-  if (!row) return defaultValue;
-  try { return JSON.parse(row.value); } catch { return row.value; }
+  return key in store ? store[key] : defaultValue;
 }
 
 function dbSet(key, value) {
-  const json = typeof value === 'string' ? value : JSON.stringify(value);
-  db.prepare(`
-    INSERT INTO store (key, value, updated_at)
-    VALUES (?, ?, datetime('now'))
-    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
-  `).run(key, json);
+  store[key] = value;
+  saveStore();
 }
 
 // ─── MIDDLEWARES ────────────────────────────────────────────────────────────────
