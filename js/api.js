@@ -128,18 +128,17 @@ async function sendToServer(endpoint, data) {
  * Lit depuis le cache (alimenté par le serveur) ou localStorage pour les clés locales
  */
 function apiGetItem(key) {
-  // Clés d'état UI : toujours localStorage
+  // Clés d'état UI : toujours localStorage natif
   if (LOCAL_ONLY_KEYS.has(key) || key.startsWith('submenu_')) {
-    return localStorage.getItem(key);
+    return _origGet(key);
   }
   // Si on a la donnée en cache, la retourner
   if (key in _cache) {
     const val = _cache[key];
-    // Retourner sous forme de chaîne comme localStorage
     return typeof val === 'string' ? val : JSON.stringify(val);
   }
-  // Fallback sur localStorage si le serveur n'est pas disponible
-  return localStorage.getItem(key);
+  // Fallback sur localStorage natif si le serveur n'est pas disponible
+  return _origGet(key);
 }
 
 /**
@@ -147,9 +146,9 @@ function apiGetItem(key) {
  * Écrit dans le cache ET envoie au serveur (sauf pour les clés locales)
  */
 function apiSetItem(key, value) {
-  // Clés d'état UI : toujours localStorage
+  // Clés d'état UI : toujours localStorage natif
   if (LOCAL_ONLY_KEYS.has(key) || key.startsWith('submenu_')) {
-    localStorage.setItem(key, value);
+    _origSet(key, value);
     return;
   }
 
@@ -166,8 +165,8 @@ function apiSetItem(key, value) {
     sendToServer(endpoint, _cache[key]);
   }
 
-  // Toujours aussi écrire en localStorage (double sécurité / fallback)
-  localStorage.setItem(key, value);
+  // Toujours aussi écrire en localStorage natif (double sécurité / fallback)
+  _origSet(key, value);
 }
 
 /**
@@ -175,11 +174,11 @@ function apiSetItem(key, value) {
  */
 function apiRemoveItem(key) {
   if (LOCAL_ONLY_KEYS.has(key) || key.startsWith('submenu_')) {
-    localStorage.removeItem(key);
+    _origRemove(key);
     return;
   }
   delete _cache[key];
-  localStorage.removeItem(key);
+  _origRemove(key);
 }
 
 // ─── PATCH DU localStorage ───────────────────────────────────────────────────────
