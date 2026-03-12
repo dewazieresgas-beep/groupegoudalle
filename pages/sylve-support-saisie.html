@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sylve Support - Import Balance Âgée - Intranet</title>
+  <link rel="stylesheet" href="../style.css">
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+  <script>
+    window.APP_LOGO = 'sylve';
+  </script>
+  <script>
+    Auth.requirePermission('sylve_saisie');
+  </script>
+
+  <div class="app-container">
+    <div id="sidebar"></div>
+
+    <main class="main-content">
+      <h1>🏗️ Sylve Support — Import Balance Âgée</h1>
+      <p class="subtitle" style="margin-bottom: 24px; color: #666;">Importez l'export Excel Sage « Balance Âgée » pour chaque entreprise, mois par mois</p>
+
+      <div id="message" class="alert" style="display:none;"></div>
+
+      <!-- ZONE D'IMPORT COMMUNE -->
+      <div class="card ss-import-card">
+        <div class="card-title"><h2 style="margin:0;">📥 Nouvel import</h2></div>
+        <div class="card-body">
+          <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:end; margin-bottom:16px;">
+            <div>
+              <label style="font-weight:600; font-size:0.85em; display:block; margin-bottom:4px;">Entreprise</label>
+              <select id="selectEntreprise" class="form-control" style="min-width:200px;">
+                <option value="cbco">CBCO</option>
+                <option value="gc">Goudalle Charpente</option>
+                <option value="gm">Goudalle Maçonnerie</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-weight:600; font-size:0.85em; display:block; margin-bottom:4px;">Mois</label>
+              <select id="selectMois" class="form-control" style="min-width:140px;"></select>
+            </div>
+            <div>
+              <label style="font-weight:600; font-size:0.85em; display:block; margin-bottom:4px;">Année</label>
+              <select id="selectAnnee" class="form-control" style="min-width:100px;"></select>
+            </div>
+          </div>
+          <div class="ss-import-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+            <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none;" onchange="handleFileSelect(this)">
+            <div class="ss-import-icon">📊</div>
+            <p><strong>Glissez-déposez</strong> le fichier Excel ici<br>ou <span style="color:var(--accent-dark); text-decoration:underline;">cliquez pour sélectionner</span></p>
+            <p style="font-size: 0.8em; color: #999;">Format attendu : export Balance Âgée Sage (.xlsx)</p>
+          </div>
+          <div id="preview" style="display:none;"></div>
+        </div>
+      </div>
+
+      <!-- CA DE REFERENCE PAR ENTREPRISE -->
+      <div class="card ss-import-card">
+        <div class="card-title"><h2 style="margin:0;">💰 CA de reference par entreprise (HT)</h2></div>
+        <div class="card-body">
+          <p style="color:#666; font-size:0.88em; margin-bottom:14px;">Reference unique (dernier bilan): saisissez le CA mensuel moyen HT, calcule a partir du bilan annuel / 12.</p>
+          <div style="display:flex; flex-wrap:wrap; gap:16px; align-items:end;">
+            <div>
+              <label style="font-weight:600; font-size:0.85em; display:block; margin-bottom:4px;">Date du dernier bilan</label>
+              <input type="date" id="caBilanDate" class="form-control" style="min-width:180px;">
+            </div>
+            <div>
+              <label style="font-weight:600; font-size:0.85em; display:block; margin-bottom:4px;">CBCO</label>
+              <input type="text" id="caCBCO" class="form-control" placeholder="ex: 400000" style="min-width:150px;">
+            </div>
+            <div>
+              <label style="font-weight:600; font-size:0.85em; display:block; margin-bottom:4px;">Goudalle Charpente</label>
+              <input type="text" id="caGC" class="form-control" placeholder="ex: 1200000" style="min-width:150px;">
+            </div>
+            <div>
+              <label style="font-weight:600; font-size:0.85em; display:block; margin-bottom:4px;">Goudalle Maçonnerie</label>
+              <input type="text" id="caGM" class="form-control" placeholder="ex: 300000" style="min-width:150px;">
+            </div>
+            <button class="btn btn-primary" id="caSaveBtn" onclick="saveCA()">💾 Enregistrer</button>
+            <button class="btn btn-secondary" id="caEditBtn" onclick="editCAReference()" style="display:none;">✏️ Modifier</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- HISTORIQUE PAR ENTREPRISE -->
+      <div class="card ss-import-card" id="historyCBCO">
+        <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <h2 style="margin:0;">📁 CBCO — Historique imports</h2>
+          <span class="badge badge-secondary" id="countCBCO">0 imports</span>
+        </div>
+        <div class="card-body" id="historyBodyCBCO"><p style="color:#999;">Aucun import</p></div>
+      </div>
+
+      <div class="card ss-import-card" id="historyGC">
+        <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <h2 style="margin:0;">📁 Goudalle Charpente — Historique imports</h2>
+          <span class="badge badge-secondary" id="countGC">0 imports</span>
+        </div>
+        <div class="card-body" id="historyBodyGC"><p style="color:#999;">Aucun import</p></div>
+      </div>
+
+      <div class="card ss-import-card" id="historyGM">
+        <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <h2 style="margin:0;">📁 Goudalle Maçonnerie — Historique imports</h2>
+          <span class="badge badge-secondary" id="countGM">0 imports</span>
+        </div>
+        <div class="card-body" id="historyBodyGM"><p style="color:#999;">Aucun import</p></div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Modal détails import -->
+  <div id="importDetailModal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.5); align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:8px; max-width:900px; width:95%; max-height:85vh; display:flex; flex-direction:column; box-shadow:0 8px 32px rgba(0,0,0,0.25);">
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid #e0e0e0; background:linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%); border-radius:8px 8px 0 0; color:#fff;">
+        <h3 style="margin:0; font-size:1em;" id="modalTitle">Détails import</h3>
+        <button onclick="closeImportModal()" style="background:none; border:none; color:#fff; font-size:1.4em; cursor:pointer;">&times;</button>
+      </div>
+      <div id="modalBody" style="padding:20px; overflow-y:auto; flex:1;"></div>
+    </div>
+  </div>
+
+  <script>
+    const ENT_LABELS = { cbco: 'CBCO', gc: 'Goudalle Charpente', gm: 'Goudalle Maçonnerie' };
+    const ENT_IDS = ['cbco', 'gc', 'gm'];
+    const MOIS_NOMS = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                       'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+
+    function showMessage(message, type) {
+      const msgDiv = document.getElementById('message');
+      msgDiv.textContent = message;
+      msgDiv.className = `alert alert-${type}`;
+      msgDiv.style.display = 'block';
+      window.scrollTo(0, 0);
+      if (type === 'success') setTimeout(() => { msgDiv.style.display = 'none'; }, 5000);
+    }
+
+    /**
+     * Initialise les sélecteurs mois/année
+     */
+    function initSelectors() {
+      const selMois = document.getElementById('selectMois');
+      const selAnnee = document.getElementById('selectAnnee');
+      const now = new Date();
+
+      for (let m = 1; m <= 12; m++) {
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = MOIS_NOMS[m];
+        if (m === now.getMonth() + 1) opt.selected = true;
+        selMois.appendChild(opt);
+      }
+
+      for (let y = now.getFullYear(); y >= now.getFullYear() - 3; y--) {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.textContent = y;
+        selAnnee.appendChild(opt);
+      }
+    }
+
+    /**
+     * Parse une cellule Excel en nombre
+     */
+    function parseNumber(val) {
+      if (val === undefined || val === null || val === '') return 0;
+      if (typeof val === 'number') return val;
+      const cleaned = String(val).replace(/\s/g, '').replace(',', '.');
+      const num = parseFloat(cleaned);
+      return isNaN(num) ? 0 : num;
+    }
+
+    /**
+     * Parse le fichier Excel Balance Âgée Sage
+     */
+    function parseBalanceAgeeExcel(workbook) {
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rawData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+      console.log('📊 Balance Âgée — lignes brutes (20 premières) :', rawData.slice(0, 20));
+
+      // 1. Chercher la période dans les premières lignes
+      let periode = '';
+      for (let i = 0; i < Math.min(15, rawData.length); i++) {
+        const rowStr = rawData[i].map(c => String(c)).join(' ');
+        const dates = rowStr.match(/\d{2}\/\d{2}\/\d{2,4}/g);
+        if (dates && dates.length >= 1) {
+          periode = dates.join(' au ');
+          break;
+        }
+      }
+
+      const normalizeCell = (value) => String(value || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      // Colonnes fixes selon le format Sage fourni par l'utilisateur :
+      // C: numéro compte, D: intitulé, G: solde compte, I: non échu, K: 1-30j, N: 31-45j, P: 46-60j, R: +61j
+      const col = {
+        compte: 2,
+        intitule: 3,
+        soldeCompte: 6,
+        nonEchu: 8,
+        j1_30: 10,
+        j31_45: 13,
+        j46_60: 15,
+        j61_plus: 17
+      };
+
+      // 2. Repérer dynamiquement chaque bloc "Clients ..."
+      const sectionStarts = [];
+      for (let i = 0; i < rawData.length; i++) {
+        const marker = normalizeCell(rawData[i][2]); // Colonne C
+        // Certains exports utilisent "Client ..." (singulier) au lieu de "Clients ..."
+        if (/^clients?\b/.test(marker)) {
+          sectionStarts.push(i);
+        }
+      }
+
+      const clients = [];
+      const sectionsInfo = [];
+      const skipPatterns = [
+        /^total/i, /^sous.?total/i, /^s\.?total/i,
+        /^totaux/i, /^c\.?\s?general/i,
+        /^%\s*p[eé]riode/i
+      ];
+
+      sectionStarts.forEach(startRow => {
+        const sectionLabel = String(rawData[startRow][2] || '').trim() || 'Clients';
+        // Fin de section = première ligne contenant "Total C. général" en colonne A
+        let endRow = rawData.length;
+        for (let r = startRow + 1; r < rawData.length; r++) {
+          const colA = normalizeCell(rawData[r][0]);
+          if (colA.includes('total c.') && colA.includes('general')) {
+            endRow = r;
+            break;
+          }
+        }
+
+        let sectionAccepted = 0;
+
+        // Les données commencent juste après la ligne "Clients ..."
+        for (let i = startRow + 1; i < endRow; i++) {
+          const row = rawData[i];
+          const compte = String(row[col.compte] || '').trim();
+          const intitule = String(row[col.intitule] || '').trim();
+          const soldeCompte = parseNumber(row[col.soldeCompte]);
+          const nonEchu = parseNumber(row[col.nonEchu]);
+          const j1_30 = parseNumber(row[col.j1_30]);
+          const j31_45 = parseNumber(row[col.j31_45]);
+          const j46_60 = parseNumber(row[col.j46_60]);
+          const j61_plus = parseNumber(row[col.j61_plus]);
+          const soldeCalc = nonEchu + j1_30 + j31_45 + j46_60 + j61_plus;
+          const solde = soldeCompte !== 0 ? soldeCompte : soldeCalc;
+
+          if (!compte && !intitule) continue;
+          const combined = (compte + ' ' + intitule).trim();
+          if (skipPatterns.some(p => p.test(normalizeCell(combined)))) continue;
+          if (solde === 0 && nonEchu === 0 && j1_30 === 0 && j31_45 === 0 && j46_60 === 0 && j61_plus === 0) continue;
+
+          clients.push({
+            compte,
+            client: intitule || compte,
+            solde,
+            nonEchu,
+            j1_30,
+            j31_45,
+            j46_60,
+            j61_plus,
+            section: sectionLabel
+          });
+          sectionAccepted++;
+        }
+
+        sectionsInfo.push({
+          label: sectionLabel,
+          fromRow: startRow + 2,
+          toRow: Math.max(startRow + 1, endRow),
+          clients: sectionAccepted
+        });
+      });
+
+      // Fallback sécurité : si aucun bloc "Clients" détecté, tenter extraction générique à partir de l'en-tête
+      if (clients.length === 0) {
+        console.warn('⚠️ Aucun bloc "Clients" détecté, fallback parser générique activé.');
+        for (let i = 0; i < rawData.length; i++) {
+          const row = rawData[i];
+          const intitule = String(row[col.intitule] || '').trim();
+          if (!intitule) continue;
+          const soldeCompte = parseNumber(row[col.soldeCompte]);
+          const nonEchu = parseNumber(row[col.nonEchu]);
+          const j1_30 = parseNumber(row[col.j1_30]);
+          const j31_45 = parseNumber(row[col.j31_45]);
+          const j46_60 = parseNumber(row[col.j46_60]);
+          const j61_plus = parseNumber(row[col.j61_plus]);
+          const soldeCalc = nonEchu + j1_30 + j31_45 + j46_60 + j61_plus;
+          const solde = soldeCompte !== 0 ? soldeCompte : soldeCalc;
+          if (solde <= 0) continue;
+          clients.push({
+            compte: String(row[col.compte] || '').trim(),
+            client: intitule,
+            solde,
+            nonEchu,
+            j1_30,
+            j31_45,
+            j46_60,
+            j61_plus
+          });
+        }
+
+        if (clients.length > 0) {
+          sectionsInfo.push({
+            label: 'Fallback générique',
+            fromRow: 1,
+            toRow: rawData.length,
+            clients: clients.length
+          });
+        }
+      }
+
+      console.log('📊 Sections clients détectées:', sectionStarts.length, '| Clients extraits:', clients.length, '| Exemples:', clients.slice(0, 3));
+      return { clients, periode, sectionsInfo };
+    }
+
+    /**
+     * Gestion de la sélection de fichier
+     */
+    function handleFileSelect(input) {
+      const file = input.files[0];
+      if (!file) return;
+
+      const entrepriseId = document.getElementById('selectEntreprise').value;
+      const mois = parseInt(document.getElementById('selectMois').value);
+      const annee = parseInt(document.getElementById('selectAnnee').value);
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const result = parseBalanceAgeeExcel(workbook);
+
+          if (result.clients.length === 0) {
+            showMessage(`❌ Aucune donnée client trouvée dans le fichier pour ${ENT_LABELS[entrepriseId]}. Vérifiez le format.`, 'error');
+            return;
+          }
+
+          showPreview(entrepriseId, result.clients, result.periode, file.name, mois, annee, result.sectionsInfo || []);
+        } catch (err) {
+          showMessage(`❌ Erreur lors de la lecture du fichier : ${err.message}`, 'error');
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    /**
+     * Affiche un aperçu des données parsées avant validation
+     */
+    function showPreview(entrepriseId, clients, periode, fileName, mois, annee, sectionsInfo) {
+      const previewDiv = document.getElementById('preview');
+      const dropZone = document.getElementById('dropZone');
+
+      const totalSolde = clients.reduce((s, c) => s + c.solde, 0);
+      const totalRetard = clients.reduce((s, c) => s + (c.j1_30 + c.j31_45 + c.j46_60 + c.j61_plus), 0);
+
+      // Vérifier si un import existe déjà pour ce mois
+      const existing = getSylveImports(entrepriseId).find(imp => imp.mois === mois && imp.annee === annee);
+
+      const sections = Array.isArray(sectionsInfo) ? sectionsInfo : [];
+      const sectionsHtml = sections.length > 0
+        ? `<div style="margin:8px 0 12px 0; padding:10px; background:#eef7ee; border:1px solid #d3e9d3; border-radius:6px; font-size:0.83em; color:#315a31;">
+            <strong>Blocs detectes :</strong>
+            <div style="margin-top:6px; display:flex; flex-direction:column; gap:4px;">
+              ${sections.map(s => {
+                return `<div>• <strong>${escapeHtml(s.label)}</strong> - Lignes ${s.fromRow} a ${s.toRow} - ${s.clients} client${s.clients > 1 ? 's' : ''}</div>`;
+              }).join('')}
+            </div>
+          </div>`
+        : '';
+
+      let html = `
+        <div style="border: 2px solid var(--accent); border-radius: 8px; padding: 16px; margin-top: 12px; background: #f9fdf9;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+            <div>
+              <strong>📄 ${escapeHtml(fileName)}</strong> — 
+              <strong>${ENT_LABELS[entrepriseId]}</strong> · ${MOIS_NOMS[mois]} ${annee}
+              ${existing ? '<span style="color:var(--danger); margin-left:8px;">⚠️ Remplacera l\'import existant pour ce mois</span>' : ''}
+            </div>
+            <div>
+              <span class="badge badge-primary">${clients.length} clients</span>
+              <span class="badge badge-warning" style="margin-left:5px;">Retard total : ${formatSylveEuros(totalRetard)}</span>
+            </div>
+          </div>
+          ${sectionsHtml}
+          <div style="max-height: 300px; overflow-y: auto; border-radius: 6px;">
+            <table style="font-size: 0.85em;">
+              <thead>
+                <tr>
+                  <th>Compte</th>
+                  <th>Client</th>
+                  <th>Solde</th>
+                  <th>Non échu</th>
+                  <th>1-30j</th>
+                  <th>31-45j</th>
+                  <th>46-60j</th>
+                  <th>+61j</th>
+                </tr>
+              </thead>
+              <tbody>`;
+
+      clients.forEach(c => {
+        html += `
+                <tr>
+                  <td>${escapeHtml(c.compte)}</td>
+                  <td><strong>${escapeHtml(c.client)}</strong></td>
+                  <td>${formatSylveEuros(c.solde)}</td>
+                  <td>${formatSylveEuros(c.nonEchu)}</td>
+                  <td>${c.j1_30 ? formatSylveEuros(c.j1_30) : '—'}</td>
+                  <td>${c.j31_45 ? formatSylveEuros(c.j31_45) : '—'}</td>
+                  <td>${c.j46_60 ? formatSylveEuros(c.j46_60) : '—'}</td>
+                  <td>${c.j61_plus ? formatSylveEuros(c.j61_plus) : '—'}</td>
+                </tr>`;
+      });
+
+      html += `
+              </tbody>
+            </table>
+          </div>
+          <div style="display:flex; gap:10px; margin-top:16px;">
+            <button class="btn btn-primary" onclick="confirmImport()">✅ Valider l'import</button>
+            <button class="btn btn-secondary" onclick="cancelPreview()">❌ Annuler</button>
+          </div>
+        </div>`;
+
+      previewDiv.innerHTML = html;
+      previewDiv.style.display = 'block';
+      dropZone.style.display = 'none';
+
+      window._pendingImport = { entrepriseId, clients, periode, mois, annee };
+    }
+
+    /**
+     * Confirme et sauvegarde l'import
+     */
+    function confirmImport() {
+      const p = window._pendingImport;
+      if (!p) return;
+
+      importSylveBalanceForEntreprise(p.entrepriseId, p.clients, p.periode, p.mois, p.annee);
+      Auth.audit('SYLVE_IMPORT', `Import balance âgée ${ENT_LABELS[p.entrepriseId]} — ${MOIS_NOMS[p.mois]} ${p.annee} — ${p.clients.length} clients`);
+      showMessage(`✅ Import ${ENT_LABELS[p.entrepriseId]} — ${MOIS_NOMS[p.mois]} ${p.annee} : ${p.clients.length} clients importés`, 'success');
+
+      delete window._pendingImport;
+      cancelPreview();
+      refreshHistory();
+    }
+
+    /**
+     * Annule l'aperçu
+     */
+    function cancelPreview() {
+      document.getElementById('preview').style.display = 'none';
+      document.getElementById('preview').innerHTML = '';
+      document.getElementById('dropZone').style.display = '';
+      document.getElementById('fileInput').value = '';
+      delete window._pendingImport;
+    }
+
+    /**
+     * Supprime un import spécifique
+     */
+    function deleteImport(entrepriseId, importId) {
+      const imports = getSylveImports(entrepriseId);
+      const imp = imports.find(i => i.id === importId);
+      if (!imp) return;
+
+      const label = `${ENT_LABELS[entrepriseId]} — ${MOIS_NOMS[imp.mois]} ${imp.annee}`;
+      if (!confirm(`Supprimer l'import ${label} ?`)) return;
+
+      deleteSylveImport(entrepriseId, importId);
+      Auth.audit('SYLVE_IMPORT_DELETED', `Suppression import ${label}`);
+      showMessage(`🗑️ Import ${label} supprimé`, 'success');
+      refreshHistory();
+    }
+
+    /**
+     * Pré-remplit le formulaire pour remplacer un import existant
+     */
+    function replaceImport(entrepriseId, mois, annee) {
+      document.getElementById('selectEntreprise').value = entrepriseId;
+      document.getElementById('selectMois').value = mois;
+      document.getElementById('selectAnnee').value = annee;
+      cancelPreview();
+      document.getElementById('fileInput').click();
+      window.scrollTo(0, 0);
+    }
+
+    /**
+     * Affiche les détails d'un import dans un modal
+     */
+    function showImportDetails(entrepriseId, importId) {
+      const imports = getSylveImports(entrepriseId);
+      const imp = imports.find(i => i.id === importId);
+      if (!imp) return;
+
+      const label = ENT_LABELS[entrepriseId] || entrepriseId;
+      const moisLabel = MOIS_NOMS[imp.mois] || '?';
+      document.getElementById('modalTitle').textContent = `${label} — ${moisLabel} ${imp.annee}`;
+
+      const clients = imp.clients || [];
+      const totalSolde = clients.reduce((s, c) => s + (c.solde || 0), 0);
+      const totalRetard = clients.reduce((s, c) => s + ((c.j1_30||0) + (c.j31_45||0) + (c.j46_60||0) + (c.j61_plus||0)), 0);
+
+      let html = `<div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:16px;">
+        <div style="background:#f8f9fa; padding:10px 16px; border-radius:6px; font-size:0.9em;"><strong>${clients.length}</strong> clients</div>
+        <div style="background:#f8f9fa; padding:10px 16px; border-radius:6px; font-size:0.9em;">Solde total: <strong>${formatSylveEuros(totalSolde)}</strong></div>
+        <div style="background:#f8f9fa; padding:10px 16px; border-radius:6px; font-size:0.9em;">Retard total: <strong style="color:var(--danger);">${formatSylveEuros(totalRetard)}</strong></div>
+      </div>`;
+
+      html += `<table style="font-size:0.85em; width:100%;">
+        <thead>
+          <tr>
+            <th>Compte</th>
+            <th>Client</th>
+            <th style="text-align:right;">Solde</th>
+            <th style="text-align:right;">Non échu</th>
+            <th style="text-align:right;">1-30j</th>
+            <th style="text-align:right;">31-45j</th>
+            <th style="text-align:right;">46-60j</th>
+            <th style="text-align:right;">+61j</th>
+            <th style="text-align:right;">Total retard</th>
+          </tr>
+        </thead>
+        <tbody>`;
+
+      clients.forEach(c => {
+        const retard = (c.j1_30||0) + (c.j31_45||0) + (c.j46_60||0) + (c.j61_plus||0);
+        html += `<tr${retard > 0 ? ' style="background:rgba(231,76,60,0.04);"' : ''}>
+          <td>${escapeHtml(c.compte || '')}</td>
+          <td><strong>${escapeHtml(c.client || '')}</strong></td>
+          <td style="text-align:right;">${formatSylveEuros(c.solde || 0)}</td>
+          <td style="text-align:right;">${formatSylveEuros(c.nonEchu || 0)}</td>
+          <td style="text-align:right;">${formatSylveEuros(c.j1_30 || 0)}</td>
+          <td style="text-align:right;">${formatSylveEuros(c.j31_45 || 0)}</td>
+          <td style="text-align:right;">${formatSylveEuros(c.j46_60 || 0)}</td>
+          <td style="text-align:right;">${formatSylveEuros(c.j61_plus || 0)}</td>
+          <td style="text-align:right; font-weight:600; color:${retard > 0 ? 'var(--danger)' : 'inherit'};">${formatSylveEuros(retard)}</td>
+        </tr>`;
+      });
+
+      html += '</tbody></table>';
+      document.getElementById('modalBody').innerHTML = html;
+
+      const modal = document.getElementById('importDetailModal');
+      modal.style.display = 'flex';
+      modal.addEventListener('click', function handler(e) {
+        if (e.target === modal) { closeImportModal(); modal.removeEventListener('click', handler); }
+      });
+    }
+
+    function closeImportModal() {
+      document.getElementById('importDetailModal').style.display = 'none';
+    }
+
+    /**
+     * Affiche l'historique des imports par entreprise
+     */
+    function refreshHistory() {
+      ENT_IDS.forEach(id => {
+        const key = id.toUpperCase();
+        const imports = getSylveImports(id);
+        const bodyEl = document.getElementById('historyBody' + key);
+        const countEl = document.getElementById('count' + key);
+
+        countEl.textContent = imports.length + ' import' + (imports.length > 1 ? 's' : '');
+        countEl.className = imports.length > 0 ? 'badge badge-success' : 'badge badge-secondary';
+
+        if (imports.length === 0) {
+          bodyEl.innerHTML = '<p style="color:#999; margin:0;">Aucun import pour cette entreprise</p>';
+          return;
+        }
+
+        let html = `<table style="font-size:0.88em;">
+          <thead>
+            <tr>
+              <th>Période</th>
+              <th>Date d'import</th>
+              <th>Clients</th>
+              <th>Solde total</th>
+              <th>Total retard</th>
+              <th style="text-align:center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>`;
+
+        imports.forEach((imp, idx) => {
+          const date = new Date(imp.importDate).toLocaleDateString('fr-FR', {
+            day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+          });
+          const nbClients = imp.clients.length;
+          const totalSolde = imp.clients.reduce((s, c) => s + (c.solde || 0), 0);
+          const totalRetard = imp.clients.reduce((s, c) => s + ((c.j1_30||0) + (c.j31_45||0) + (c.j46_60||0) + (c.j61_plus||0)), 0);
+          const moisLabel = MOIS_NOMS[imp.mois] || '?';
+          const isLatest = idx === 0;
+
+          html += `<tr${isLatest ? ' style="background:rgba(76,175,80,0.06);"' : ''}>
+              <td><strong>${moisLabel} ${imp.annee}</strong>${isLatest ? ' <span class="badge badge-primary" style="font-size:0.7em;">Dernier</span>' : ''}</td>
+              <td>${date}</td>
+              <td>${nbClients}</td>
+              <td>${formatSylveEuros(totalSolde)}</td>
+              <td style="color:${totalRetard > 0 ? 'var(--danger)' : 'inherit'}; font-weight:600;">${formatSylveEuros(totalRetard)}</td>
+              <td style="text-align:center; white-space:nowrap;">
+                <button class="btn btn-small btn-secondary" onclick="showImportDetails('${id}', '${imp.id}')" title="Voir les données">👁️</button>
+                <button class="btn btn-small btn-secondary" onclick="replaceImport('${id}', ${imp.mois}, ${imp.annee})" title="Remplacer ce fichier">🔄</button>
+                <button class="btn btn-small btn-danger" onclick="deleteImport('${id}', '${imp.id}')" title="Supprimer">🗑️</button>
+              </td>
+            </tr>`;
+        });
+
+        html += '</tbody></table>';
+        bodyEl.innerHTML = html;
+      });
+    }
+
+    /**
+     * Drag & Drop sur la zone unique
+     */
+    function setupDragDrop() {
+      const zone = document.getElementById('dropZone');
+      if (!zone) return;
+
+      zone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        zone.classList.add('ss-import-zone-active');
+      });
+      zone.addEventListener('dragleave', () => {
+        zone.classList.remove('ss-import-zone-active');
+      });
+      zone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        zone.classList.remove('ss-import-zone-active');
+        const file = e.dataTransfer.files[0];
+        if (file) {
+          const input = document.getElementById('fileInput');
+          const dt = new DataTransfer();
+          dt.items.add(file);
+          input.files = dt.files;
+          handleFileSelect(input);
+        }
+      });
+    }
+
+    /**
+     * Charge le CA de référence (dernier bilan)
+     */
+    function loadCA() {
+      const ca = getSylveCA();
+      document.getElementById('caBilanDate').value = ca.bilanDate || '';
+      document.getElementById('caCBCO').value = ca.cbco || '';
+      document.getElementById('caGC').value = ca.gc || '';
+      document.getElementById('caGM').value = ca.gm || '';
+
+      const hasReference = !!(ca.bilanDate || ca.cbco || ca.gc || ca.gm);
+      setCAEditable(!hasReference);
+    }
+
+    /**
+     * Active/désactive l'édition du CA de référence
+     */
+    function setCAEditable(editable) {
+      document.getElementById('caBilanDate').disabled = !editable;
+      document.getElementById('caCBCO').disabled = !editable;
+      document.getElementById('caGC').disabled = !editable;
+      document.getElementById('caGM').disabled = !editable;
+
+      document.getElementById('caSaveBtn').style.display = editable ? '' : 'none';
+      document.getElementById('caEditBtn').style.display = editable ? 'none' : '';
+    }
+
+    /**
+     * Déverrouille le formulaire CA pour modification
+     */
+    function editCAReference() {
+      setCAEditable(true);
+    }
+
+    /**
+     * Sauvegarde le CA de référence (dernier bilan)
+     */
+    function saveCA() {
+      const ca = {
+        bilanDate: document.getElementById('caBilanDate').value || '',
+        cbco: parseInputNumber(document.getElementById('caCBCO').value),
+        gc: parseInputNumber(document.getElementById('caGC').value),
+        gm: parseInputNumber(document.getElementById('caGM').value)
+      };
+
+      saveSylveCA(ca);
+      const dateTxt = ca.bilanDate ? new Date(ca.bilanDate).toLocaleDateString('fr-FR') : 'non renseignée';
+      Auth.audit('SYLVE_CA', `CA de référence MAJ — date bilan: ${ca.bilanDate || 'N/A'} — CBCO: ${ca.cbco}, GC: ${ca.gc}, GM: ${ca.gm}`);
+      showMessage(`✅ CA de référence enregistré (bilan du ${dateTxt})`, 'success');
+      setCAEditable(false);
+    }
+
+    function parseInputNumber(val) {
+      if (!val) return 0;
+      const cleaned = String(val).replace(/\s/g, '').replace(',', '.');
+      const num = parseFloat(cleaned);
+      return isNaN(num) ? 0 : num;
+    }
+
+    function init() {
+      document.getElementById('sidebar').innerHTML = getSidebar();
+      injectSylveSecondaryBar();
+      initSelectors();
+      setupDragDrop();
+      loadCA();
+      refreshHistory();
+    }
+
+    window.addEventListener('load', init);
+  </script>
+
+  <footer class="site-footer"></footer>
+</body>
+</html>

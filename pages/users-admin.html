@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestion Utilisateurs - Intranet Goudalle</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+  <script>
+    window.APP_LOGO = 'groupe';
+  </script>
+
+  <script>
+    Auth.requirePermission('users_admin');
+  </script>
+
+  <div class="app-container">
+    <div id="sidebar"></div>
+    
+    <main class="main-content">
+      <h1>Gestion des Utilisateurs</h1>
+
+      <div class="card">
+        <div class="card-title">
+          <h2>Créer un nouvel utilisateur</h2>
+        </div>
+        <div class="card-body">
+          <div id="message" class="alert" style="display:none;"></div>
+
+          <form onsubmit="handleCreateUser(event)">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+              <div class="form-group">
+                <label for="firstName">Prénom *</label>
+                <input type="text" id="firstName" required>
+              </div>
+              <div class="form-group">
+                <label for="lastName">Nom *</label>
+                <input type="text" id="lastName" required>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="email">Email *</label>
+              <input type="email" id="email" required>
+            </div>
+
+            <div class="form-group">
+              <label for="username">Identifiant *</label>
+              <input type="text" id="username" minlength="3" required>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr; gap: 20px;">
+              <div class="form-group">
+                <label for="password">Mot de passe *</label>
+                <input type="password" id="password" minlength="3" required>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 20px;">
+              <label>Accès aux pages</label>
+              <div id="createAccessCheckboxes" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"></div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="margin-top:20px;">➕ Créer utilisateur</button>
+          </form>
+        </div>
+      </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <h2>Liste des utilisateurs</h2>
+        </div>
+        <div class="card-body">
+          <table id="usersTable">
+            <thead>
+              <tr>
+                <th>Identifiant</th>
+                <th>Nom</th>
+                <th>Email</th>
+                <th>Rôle</th>
+                <th>Créé le</th>
+                <th>Statut</th>
+                <th>Actions</th>
+                <th>Accès</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="7" style="text-align:center; padding: 20px;">Chargement...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    function showMessage(message, type) {
+      const msgDiv = document.getElementById('message');
+      msgDiv.textContent = message;
+      msgDiv.className = `alert alert-${type}`;
+      msgDiv.style.display = 'block';
+      window.scrollTo(0, 0);
+    }
+
+    function handleCreateUser(event) {
+      event.preventDefault();
+
+      const firstName = document.getElementById('firstName').value.trim();
+      const lastName = document.getElementById('lastName').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      const displayName = `${firstName} ${lastName}`;
+
+      const customPermissions = Array.from(document.querySelectorAll('#createAccessCheckboxes input[type=checkbox]:checked'))
+        .map(cb => cb.value);
+
+      const adminCode = prompt('Entre le code d\'administration pour créer ce compte :');
+      if (!adminCode) return;
+
+      const result = Auth.registerUser(username, password, displayName, email, 'lecture', adminCode, customPermissions);
+
+      if (result.success) {
+        showMessage(result.message, 'success');
+        document.getElementById('firstName').value = '';
+        document.getElementById('lastName').value = '';
+        document.getElementById('email').value = '';
+        document.getElementById('username').value = '';
+        document.getElementById('password').value = '';
+        renderAccessCheckboxes('createAccessCheckboxes', []);
+        loadUsers();
+      } else {
+        showMessage(result.message, 'error');
+      }
+    }
+
+    function getRoleLabel(u) {
+      if (u.role === 'direction') return '🗝️ Direction';
+
+      const perms = Array.isArray(u.customPermissions) ? u.customPermissions : (Auth.PERMISSIONS[u.role] || []);
+
+      const saisieMap = [
+        { keys: ['gm_saisie', 'gm_paiement'], label: '📊 Référent GM' },
+        { keys: ['gc_saisie', 'gc_paiement'], label: '📊 Référent GC' },
+        { keys: ['cbco_saisie', 'cbco_paiement', 'cbco_commercial'], label: '📊 Référent CBCO' },
+        { keys: ['sylve_saisie'], label: '📊 Référent Sylve' },
+      ];
+
+      const entreprises = saisieMap.filter(e => e.keys.some(k => perms.includes(k))).map(e => e.label);
+      if (entreprises.length > 0) return entreprises.join(', ');
+      return '👁️ Consultation';
+    }
+
+    function loadUsers() {
+      const users = Auth.getUserList();
+      const tbody = document.querySelector('#usersTable tbody');
+
+      tbody.innerHTML = users.map(u => {
+        const date = new Date(u.createdAt);
+        const safeUsername = escapeHtml(u.username);
+        const safeName = escapeHtml(u.displayName) || '—';
+        const safeEmail = escapeHtml(u.email) || '—';
+        return `
+          <tr>
+            <td><strong>${safeUsername}</strong></td>
+            <td>${safeName}</td>
+            <td>${safeEmail}</td>
+            <td><span class="badge badge-primary">${getRoleLabel(u)}</span></td>
+            <td><small>${date.toLocaleDateString('fr-FR')}</small></td>
+            <td>
+              <span class="badge ${u.isActive ? 'badge-success' : 'badge-danger'}">
+                ${u.isActive ? '✅ Actif' : '❌ Inactif'}
+              </span>
+            </td>
+            <td>
+              ${u.role !== 'direction' 
+                ? `<button class="btn btn-small btn-danger" onclick="deleteUser('${safeUsername}')">🗑️ Supprimer</button>` 
+                : ''}
+            </td>
+            <td>
+              ${u.role !== 'direction' 
+                ? `<button class="btn btn-small btn-secondary" onclick="openAccessModal('${safeUsername}')">Gérer les accès</button>` 
+                : ''}
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      if (users.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 20px;">Aucun utilisateur</td></tr>`;
+      }
+    }
+
+    function deleteUser(username) {
+      if (confirm(`⚠️ Supprimer définitivement l'utilisateur "${username}" ? Cette action est irréversible.`)) {
+        const result = Auth.deleteUser(username);
+        if (result.success) {
+          loadUsers();
+        } else {
+          alert(result.message);
+        }
+      }
+    }
+
+    function init() {
+      document.getElementById('sidebar').innerHTML = getSidebar();
+      injectUsersSecondaryBar();
+      loadUsers();
+      renderAccessCheckboxes('createAccessCheckboxes', []);
+    }
+
+    window.addEventListener('load', init);
+  </script>
+
+  <!-- Modale Gérer les accès -->
+  <div id="accessModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; overflow:auto;">
+    <div style="background:#fff; margin:5% auto; padding:30px; border-radius:10px; max-width:600px; position:relative;">
+      <h2 style="margin-top:0;">🔐 Gérer les accès — <span id="accessModalUsername"></span></h2>
+      <p style="color:#666; margin-bottom:20px;">Sélectionnez les pages auxquelles cet utilisateur aura accès. Ces permissions s'appliquent en priorité sur celles du rôle.</p>
+
+      <div id="accessCheckboxes" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;"></div>
+
+      <div style="display:flex; gap:10px; justify-content:flex-end; align-items:center;">
+        <button class="btn btn-secondary" onclick="resetAccessToRole()">🔄 Réinitialiser selon le rôle</button>
+        <button class="btn btn-secondary" onclick="closeAccessModal()">Annuler</button>
+        <button class="btn btn-primary" onclick="saveAccessModal()">💾 Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const ALL_PAGES_GROUPS = [
+      {
+        group: '🏗️ Goudalle Maçonnerie',
+        pages: [
+          { key: 'gm',          label: '📋 Consultation' },
+          { key: 'gm_saisie',   label: '✏️ Saisie' },
+          { key: 'gm_paiement', label: '💳 Paiement' },
+        ]
+      },
+      {
+        group: '🪵 Goudalle Charpente',
+        pages: [
+          { key: 'gc',          label: '📋 Consultation' },
+          { key: 'gc_saisie',   label: '✏️ Saisie' },
+          { key: 'gc_paiement', label: '💳 Paiement' },
+        ]
+      },
+      {
+        group: '🏢 CBCO',
+        pages: [
+          { key: 'cbco',            label: '📋 Consultation' },
+          { key: 'cbco_saisie',     label: '✏️ Saisie' },
+          { key: 'cbco_paiement',   label: '💳 Paiement' },
+          { key: 'cbco_commercial', label: '🤝 Commercial' },
+        ]
+      },
+      {
+        group: '🌲 Sylve Support',
+        pages: [
+          { key: 'sylve',        label: '📋 Consultation' },
+          { key: 'sylve_saisie', label: '✏️ Saisie' },
+        ]
+      },
+    ];
+
+    const ALL_PAGES = ALL_PAGES_GROUPS.flatMap(g => g.pages);
+
+    function renderAccessCheckboxes(containerId, currentPerms) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = ALL_PAGES_GROUPS.map(group => `
+        <div style="grid-column: 1 / -1; margin-top: 12px; margin-bottom: 4px;">
+          <strong style="font-size:0.95em; color:#555; border-bottom:2px solid #e0e0e0; display:block; padding-bottom:4px;">${group.group}</strong>
+        </div>
+        ${group.pages.map(p => `
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer; padding:8px; border:1px solid #e0e0e0; border-radius:6px;">
+            <input type="checkbox" value="${p.key}" ${currentPerms.includes(p.key) ? 'checked' : ''}>
+            ${p.label}
+          </label>
+        `).join('')}
+      `).join('');
+    }
+
+    let _accessUsername = null;
+
+    function openAccessModal(username) {
+      _accessUsername = username;
+      document.getElementById('accessModalUsername').textContent = username;
+
+      const users = Auth.getAllUsers();
+      const user = users[username];
+      if (!user) return;
+
+      let currentPerms;
+      if (Array.isArray(user.customPermissions)) {
+        currentPerms = user.customPermissions;
+      } else {
+        currentPerms = Auth.PERMISSIONS[user.role] || [];
+      }
+
+      renderAccessCheckboxes('accessCheckboxes', currentPerms);
+      document.getElementById('accessModal').style.display = 'block';
+    }
+
+    function closeAccessModal() {
+      document.getElementById('accessModal').style.display = 'none';
+      _accessUsername = null;
+    }
+
+    function resetAccessToRole() {
+      const users = Auth.getAllUsers();
+      const user = users[_accessUsername];
+      if (!user) return;
+      const rolePerms = Auth.PERMISSIONS[user.role] || [];
+      document.querySelectorAll('#accessCheckboxes input[type=checkbox]').forEach(cb => {
+        cb.checked = rolePerms.includes(cb.value);
+      });
+    }
+
+    function saveAccessModal() {
+      const selected = Array.from(document.querySelectorAll('#accessCheckboxes input[type=checkbox]:checked'))
+        .map(cb => cb.value);
+      const result = Auth.updateUserPermissions(_accessUsername, selected);
+      if (result.success) {
+        closeAccessModal();
+        showMessage(`✅ Accès de ${_accessUsername} mis à jour.`, 'success');
+        loadUsers();
+      } else {
+        alert(result.message);
+      }
+    }
+
+    // Fermer la modale en cliquant à l'extérieur
+    document.getElementById('accessModal').addEventListener('click', function(e) {
+      if (e.target === this) closeAccessModal();
+    });
+  </script>
+
+  <footer class="site-footer"></footer>
+</body>
+</html>

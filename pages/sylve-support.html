@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sylve Support - Balance Âgée Clients - Intranet</title>
+  <link rel="stylesheet" href="../style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+  <script>
+    window.APP_LOGO = 'sylve';
+  </script>
+  <script>
+    Auth.requirePermission('sylve');
+  </script>
+
+  <div class="app-container">
+    <div id="sidebar"></div>
+
+    <main class="main-content">
+      <!-- EN-TÊTE -->
+      <div class="ss-header">
+        <h1>🏗️ Sylve Support — Balance Âgée Clients</h1>
+        <p class="subtitle">Suivi des retards de règlements clients par entreprise</p>
+      </div>
+
+      <!-- KPI PRINCIPAUX -->
+      <div class="ss-kpi-row">
+        <div class="ss-kpi-card">
+          <div class="ss-kpi-label">Total solde dû</div>
+          <div class="ss-kpi-value" id="kpiTotalRetard">0 €</div>
+        </div>
+        <div class="ss-kpi-card" style="border-top-color: #3498db;">
+          <div class="ss-kpi-label">CBCO</div>
+          <div class="ss-kpi-value" id="kpiRetardCBCO">0 €</div>
+        </div>
+        <div class="ss-kpi-card" style="border-top-color: #2ecc71;">
+          <div class="ss-kpi-label">Goudalle Charpente</div>
+          <div class="ss-kpi-value" id="kpiRetardGC">0 €</div>
+        </div>
+        <div class="ss-kpi-card" style="border-top-color: #e67e22;">
+          <div class="ss-kpi-label">Goudalle Maçonnerie</div>
+          <div class="ss-kpi-value" id="kpiRetardGM">0 €</div>
+        </div>
+        <div class="ss-kpi-card" style="border-top-color: #9b59b6;">
+          <div class="ss-kpi-label">Nb clients en retard</div>
+          <div class="ss-kpi-value" id="kpiNbImpayees">0</div>
+        </div>
+      </div>
+
+      <!-- GRAPHIQUES CÔTE À CÔTE -->
+      <div class="ss-charts-row">
+        <!-- Graphique 1: Retard règlements clients en M€ -->
+        <div class="card">
+          <div class="card-title">
+            <h2>📈 Retard règlements clients — en M€</h2>
+          </div>
+          <div class="card-body">
+            <div class="ss-chart-container">
+              <canvas id="ssRetardChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Graphique 2: Retard règlements / CA de reference -->
+        <div class="card">
+          <div class="card-title">
+            <h2>📊 Retard reglements clients / CA de reference</h2>
+          </div>
+          <div class="card-body">
+            <div id="caInfoBar" style="font-size:0.82em; color:#666; margin-bottom:8px;"></div>
+            <div class="ss-chart-container">
+              <canvas id="ssRetardCAChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TABLEAU C: Clients avec retard le plus important -->
+      <div class="card">
+        <div class="card-title">
+          <h2>🏆 Clients — Retard le plus important</h2>
+        </div>
+        <div class="card-body" id="ssClientsContainer">
+          <p style="text-align:center; padding: 20px; color:#999;">Chargement...</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    let ssRetardChart, ssRetardCAChart;
+
+    /**
+     * Affiche les KPI principaux
+     */
+    function renderKPIs() {
+      const retards = getSylveTotalRetards();
+      const clientsEnRetard = getSylveClientsEnRetard();
+
+      document.getElementById('kpiTotalRetard').textContent = formatSylveEuros(retards.total);
+      document.getElementById('kpiRetardCBCO').textContent = formatSylveEuros(retards.cbco);
+      document.getElementById('kpiRetardGC').textContent = formatSylveEuros(retards.gc);
+      document.getElementById('kpiRetardGM').textContent = formatSylveEuros(retards.gm);
+      document.getElementById('kpiNbImpayees').textContent = clientsEnRetard.length;
+    }
+
+    /**
+     * Affiche le top 3 clients en retard PAR ENTREPRISE
+     */
+    function renderClientsTable() {
+      const container = document.getElementById('ssClientsContainer');
+      const data = getSylveBalance();
+      const entreprises = [
+        { id: 'gc', label: 'Goudalle Charpente', logo: '../assets/goudalle-charpente.png' },
+        { id: 'cbco', label: 'CBCO', logo: '../assets/cbco.png' },
+        { id: 'gm', label: 'Goudalle Maçonnerie', logo: '../assets/goudalle-maconnerie.png' }
+      ];
+
+      let hasData = false;
+      let html = '';
+
+      entreprises.forEach(ent => {
+        const imp = data[ent.id] && data[ent.id][0];
+        if (!imp || !imp.clients || imp.clients.length === 0) return;
+
+        const clientsRetard = imp.clients.map(c => ({
+          client: c.client,
+          retard: (c.j1_30 || 0) + (c.j31_45 || 0) + (c.j46_60 || 0) + (c.j61_plus || 0)
+        })).filter(c => c.retard > 0);
+
+        if (clientsRetard.length === 0) return;
+        hasData = true;
+
+        const totalRetard = clientsRetard.reduce((s, c) => s + c.retard, 0);
+        const top3 = clientsRetard.sort((a, b) => b.retard - a.retard).slice(0, 3);
+
+        html += `<div style="margin-bottom:20px;">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+            <img src="${ent.logo}" alt="${escapeHtml(ent.label)}" style="height:28px;">
+            <strong style="font-size:1em;">${escapeHtml(ent.label)}</strong>
+          </div>
+          <table style="font-size:0.92em;">
+            <thead>
+              <tr>
+                <th>Client</th>
+                <th style="text-align:right;">Montant HT</th>
+                <th style="text-align:right; width:70px;">%</th>
+              </tr>
+            </thead>
+            <tbody>`;
+
+        top3.forEach(c => {
+          const pct = totalRetard > 0 ? ((c.retard / totalRetard) * 100).toFixed(0) : 0;
+          html += `<tr>
+                <td><strong>${escapeHtml(c.client)}</strong></td>
+                <td style="text-align:right;">${formatSylveEuros(c.retard)}</td>
+                <td style="text-align:right; font-weight:600;">${pct} %</td>
+              </tr>`;
+        });
+
+        html += `</tbody></table></div>`;
+      });
+
+      if (!hasData) {
+        container.innerHTML = '<p style="text-align:center; padding:20px; color:#999;">Aucun client en retard</p>';
+        return;
+      }
+
+      container.innerHTML = html;
+    }
+
+    /**
+     * Graphique 1: Retard règlements clients en M€ (courbes par mois)
+     */
+    function renderRetardChart() {
+      const retardMensuel = getSylveRetardMensuel();
+      if (retardMensuel.length === 0) return;
+
+      const labels = retardMensuel.map(r => r.label);
+
+      const ctx = document.getElementById('ssRetardChart').getContext('2d');
+      if (ssRetardChart) ssRetardChart.destroy();
+
+      ssRetardChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'CBCO',
+              data: retardMensuel.map(r => r.cbco !== null ? r.cbco / 1000 : null),
+              borderColor: '#c4d100',
+              backgroundColor: '#c4d100',
+              borderWidth: 2,
+              tension: 0.3,
+              pointRadius: 4,
+              pointBackgroundColor: '#c4d100',
+              spanGaps: true
+            },
+            {
+              label: 'GC',
+              data: retardMensuel.map(r => r.gc !== null ? r.gc / 1000 : null),
+              borderColor: '#27ae60',
+              backgroundColor: '#27ae60',
+              borderWidth: 2,
+              tension: 0.3,
+              pointRadius: 4,
+              pointBackgroundColor: '#27ae60',
+              spanGaps: true
+            },
+            {
+              label: 'GM',
+              data: retardMensuel.map(r => r.gm !== null ? r.gm / 1000 : null),
+              borderColor: '#e74c3c',
+              backgroundColor: '#e74c3c',
+              borderWidth: 2,
+              tension: 0.3,
+              pointRadius: 4,
+              pointBackgroundColor: '#e74c3c',
+              spanGaps: true
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: true, position: 'bottom' },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)} M€`
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: { display: false },
+              ticks: { callback: (v) => v.toFixed(1) + ' M€' }
+            }
+          }
+        }
+      });
+    }
+
+    /**
+     * Graphique 2: Retard reglements clients / CA de reference (barres groupees par mois)
+     */
+    function renderRetardCAChart() {
+      const retardCA = getSylveRetardCA();
+      const ca = getSylveCA();
+
+      // Afficher le résumé CA
+      const caBar = document.getElementById('caInfoBar');
+      if (ca.cbco || ca.gc || ca.gm) {
+        const dateTxt = ca.bilanDate ? new Date(ca.bilanDate).toLocaleDateString('fr-FR') : 'date non renseignée';
+        caBar.innerHTML = `CA de reference (HT) — bilan du ${dateTxt}: <strong>CBCO</strong> ${formatSylveEuros(ca.cbco)} · <strong>GC</strong> ${formatSylveEuros(ca.gc)} · <strong>GM</strong> ${formatSylveEuros(ca.gm)}`;
+      } else {
+        caBar.innerHTML = '<em>Aucun CA de reference renseigne — <a href="sylve-support-saisie.html">Saisir le CA de reference</a></em>';
+      }
+
+      if (retardCA.length === 0) return;
+
+      const labels = retardCA.map(r => r.label);
+
+      const ctx = document.getElementById('ssRetardCAChart').getContext('2d');
+      if (ssRetardCAChart) ssRetardCAChart.destroy();
+
+      ssRetardCAChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'CBCO',
+              data: retardCA.map(r => r.cbco !== null ? parseFloat(r.cbco.toFixed(1)) : null),
+              backgroundColor: 'rgba(52, 152, 219, 0.8)',
+              borderColor: '#3498db',
+              borderWidth: 1
+            },
+            {
+              label: 'GC',
+              data: retardCA.map(r => r.gc !== null ? parseFloat(r.gc.toFixed(1)) : null),
+              backgroundColor: 'rgba(196, 209, 0, 0.85)',
+              borderColor: '#a0b000',
+              borderWidth: 1
+            },
+            {
+              label: 'GM',
+              data: retardCA.map(r => r.gm !== null ? parseFloat(r.gm.toFixed(1)) : null),
+              backgroundColor: 'rgba(231, 76, 60, 0.8)',
+              borderColor: '#e74c3c',
+              borderWidth: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: true, position: 'top' },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y} mois de CA`
+              }
+            },
+            datalabels: undefined
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'Nbre de mois de retard / CA' },
+              ticks: { callback: (v) => v.toFixed(1) }
+            }
+          }
+        }
+      });
+    }
+
+    /**
+     * Initialise la page Sylve Support
+     */
+    function initSylveSupport() {
+      document.getElementById('sidebar').innerHTML = getSidebar();
+      injectSylveSecondaryBar();
+
+      renderKPIs();
+      renderClientsTable();
+      renderRetardChart();
+      renderRetardCAChart();
+    }
+
+    window.addEventListener('load', initSylveSupport);
+  </script>
+
+  <footer class="site-footer"></footer>
+</body>
+</html>

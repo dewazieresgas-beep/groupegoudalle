@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Saisies CBCO - Mode tableur</title>
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    .sheet-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .sheet-toolbar .form-group {
+      margin-bottom: 0;
+    }
+
+    .sheet-year-input {
+      width: 130px;
+    }
+
+    .sheet-status {
+      padding: 6px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      background: var(--light);
+      color: var(--secondary);
+    }
+
+    .sheet-status.dirty {
+      background: rgba(184, 92, 92, 0.12);
+      color: var(--danger);
+      border-color: rgba(184, 92, 92, 0.3);
+    }
+
+    .sheet-status.saved {
+      background: rgba(123, 173, 117, 0.15);
+      color: #2f5b2c;
+      border-color: rgba(123, 173, 117, 0.35);
+    }
+
+    .sheet-wrapper {
+      overflow-x: auto;
+      border: 1px solid var(--border-light);
+      border-radius: 6px;
+      background: #fff;
+    }
+
+    .sheet-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 920px;
+      margin: 0;
+      box-shadow: none;
+      border-radius: 0;
+    }
+
+    .sheet-table thead {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+      color: #fff;
+    }
+
+    .sheet-table th,
+    .sheet-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border-light);
+      vertical-align: middle;
+      font-size: 13px;
+    }
+
+    .sheet-month {
+      min-width: 120px;
+      font-weight: 700;
+      color: var(--primary);
+      white-space: nowrap;
+    }
+
+    .sheet-input {
+      width: 100%;
+      min-width: 120px;
+      text-align: right;
+      font-family: 'Courier New', monospace;
+      border: 1px solid var(--border-light);
+      border-radius: 4px;
+      padding: 8px 10px;
+      background: #fff;
+    }
+
+    .sheet-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(139, 168, 138, 0.18);
+    }
+
+    .sheet-cell-total,
+    .sheet-cell-cumul {
+      text-align: right;
+      font-family: 'Courier New', monospace;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .sheet-cell-cumul {
+      color: var(--accent-dark);
+    }
+
+    .sheet-row-dirty {
+      background: rgba(212, 165, 116, 0.08);
+    }
+
+    .sheet-hint {
+      font-size: 12px;
+      color: var(--secondary);
+      background: var(--lighter);
+      border: 1px solid var(--border-light);
+      border-radius: 6px;
+      padding: 10px 12px;
+      margin-top: 12px;
+    }
+
+    .sheet-footer-tools {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 12px;
+    }
+
+    .sheet-total-year {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--primary);
+      background: var(--lighter);
+      border: 1px solid var(--border-light);
+      border-radius: 6px;
+      padding: 8px 12px;
+    }
+
+    @media (max-width: 768px) {
+      .sheet-toolbar {
+        align-items: stretch;
+      }
+
+      .sheet-toolbar .btn,
+      .sheet-toolbar .sheet-year-input {
+        width: 100%;
+      }
+
+      .sheet-footer-tools {
+        align-items: stretch;
+      }
+
+      .sheet-total-year {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+  <script>
+    window.APP_LOGO = 'cbco';
+  </script>
+
+  <script>
+    Auth.requirePermission('cbco_saisie');
+  </script>
+
+  <div class="app-container">
+    <div id="sidebar"></div>
+
+    <main class="main-content">
+      <div class="d-flex justify-between items-center mb-3" style="gap: 12px; flex-wrap: wrap;">
+        <h1 class="mb-0">Saisie CBCO - Mode tableur</h1>
+      </div>
+
+      <div class="card">
+        <div class="card-title card-title-row">
+          <h2>Tableau modifiable par mois</h2>
+          <span id="sheetStatus" class="sheet-status">Aucune modification</span>
+        </div>
+
+        <div class="card-body">
+          <div id="message" class="alert" style="display:none;"></div>
+
+          <div class="sheet-toolbar">
+            <div class="form-group">
+              <label for="sheetYear" style="margin-bottom: 4px;">Année</label>
+              <input id="sheetYear" class="sheet-year-input" type="number" min="2020" max="2100">
+            </div>
+            <button class="btn btn-secondary" type="button" onclick="loadYearFromInput()">Charger l'année</button>
+            <button id="undoBtn" class="btn btn-secondary" type="button" onclick="undoChange()" disabled>↶ Revenir</button>
+            <button id="redoBtn" class="btn btn-secondary" type="button" onclick="redoChange()" disabled>↷ Avancer</button>
+            <button id="saveBtn" class="btn btn-primary" type="button" onclick="saveSpreadsheet()" disabled>💾 Sauvegarder</button>
+            <button id="discardBtn" class="btn btn-warning" type="button" onclick="discardChanges()" disabled>Annuler les modifications</button>
+          </div>
+
+          <div class="sheet-wrapper">
+            <table class="sheet-table" id="sheetTable">
+              <thead>
+                <tr>
+                  <th>Mois</th>
+                  <th>Montant chantier estimé en cours (K€)</th>
+                  <th>Montant chantier estimé terminé (K€)</th>
+                  <th>Total mensuel (K€)</th>
+                  <th>Cumul annuel (K€)</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="sheetBody"></tbody>
+            </table>
+          </div>
+
+          <div class="sheet-footer-tools">
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <button class="btn btn-secondary" type="button" onclick="copyFromPreviousYear()">Copier N-1</button>
+              <button class="btn btn-danger" type="button" onclick="clearYear()">Vider l'année</button>
+              <button class="btn btn-secondary" type="button" onclick="exportYearCsv()">Exporter CSV</button>
+              <button class="btn btn-secondary" type="button" onclick="goToCBCO()">Retour dashboard</button>
+            </div>
+            <div id="yearTotal" class="sheet-total-year">Total annuel: 0,00 K€</div>
+          </div>
+
+          <div class="sheet-hint">
+            Astuces: double-cliquez dans une cellule pour éditer, utilisez <strong>Entrée</strong> ou les flèches pour naviguer, puis <strong>Sauvegarder</strong> pour enregistrer les modifications.
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const MONTH_NAMES = [
+      '', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+      'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+    ];
+
+    const sheetState = {
+      year: new Date().getFullYear(),
+      rows: [],
+      savedRows: [],
+      history: [],
+      historyIndex: -1,
+      maxHistory: 100,
+      isDirty: false
+    };
+
+    function showMessage(message, type) {
+      const msgDiv = document.getElementById('message');
+      msgDiv.textContent = message;
+      msgDiv.className = `alert alert-${type}`;
+      msgDiv.style.display = 'block';
+    }
+
+    function hideMessage() {
+      const msgDiv = document.getElementById('message');
+      msgDiv.style.display = 'none';
+    }
+
+    function toKiloeuro(eurValue) {
+      return normalizeNumber(eurValue) / 1000;
+    }
+
+    function fromKiloeuro(kValue) {
+      return normalizeNumber(kValue) * 1000;
+    }
+
+    function formatCurrency(value) {
+      return new Intl.NumberFormat('fr-FR', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(value) + ' K€';
+    }
+
+    function normalizeNumber(value) {
+      if (value === null || value === undefined || value === '') return 0;
+      const sanitized = String(value).replace(',', '.').trim();
+      const parsed = parseFloat(sanitized);
+      return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+    }
+
+    function cloneRows(rows) {
+      return rows.map(row => ({ ...row }));
+    }
+
+    function areRowsEqual(a, b) {
+      return JSON.stringify(a) === JSON.stringify(b);
+    }
+
+    function monthRowsFromStorage(year) {
+      const rows = Array.from({ length: 12 }, (_, idx) => ({
+        month: idx + 1,
+        montantChantiersCours: 0,
+        montantChantiersTermines: 0
+      }));
+
+      const entries = getCBCOData().filter(entry => entry.year === year);
+      entries.forEach(entry => {
+        const row = rows[entry.month - 1];
+        if (!row) return;
+        // Garder les valeurs en EUR (pas de conversion ici)
+        row.montantChantiersCours = normalizeNumber(entry.montantChantiersCours);
+        row.montantChantiersTermines = normalizeNumber(entry.montantChantiersTermines);
+      });
+
+      return rows;
+    }
+
+    function computeRowTotals(rows) {
+      let cumul = 0;
+      const map = {};
+      rows.forEach(row => {
+        const total = normalizeNumber(row.montantChantiersCours) + normalizeNumber(row.montantChantiersTermines);
+        cumul += total;
+        map[row.month] = { total, cumul };
+      });
+      return map;
+    }
+
+    function pushHistorySnapshot() {
+      const snapshot = cloneRows(sheetState.rows);
+      const currentSnapshot = sheetState.history[sheetState.historyIndex];
+      if (currentSnapshot && areRowsEqual(currentSnapshot, snapshot)) {
+        return;
+      }
+
+      const beforeCurrent = sheetState.history.slice(0, sheetState.historyIndex + 1);
+      beforeCurrent.push(snapshot);
+
+      if (beforeCurrent.length > sheetState.maxHistory) {
+        beforeCurrent.shift();
+      }
+
+      sheetState.history = beforeCurrent;
+      sheetState.historyIndex = sheetState.history.length - 1;
+      refreshHistoryButtons();
+    }
+
+    function refreshHistoryButtons() {
+      const undoBtn = document.getElementById('undoBtn');
+      const redoBtn = document.getElementById('redoBtn');
+      undoBtn.disabled = sheetState.historyIndex <= 0;
+      redoBtn.disabled = sheetState.historyIndex >= sheetState.history.length - 1;
+    }
+
+    function refreshDirtyState() {
+      sheetState.isDirty = !areRowsEqual(sheetState.rows, sheetState.savedRows);
+
+      const status = document.getElementById('sheetStatus');
+      status.className = 'sheet-status';
+      if (sheetState.isDirty) {
+        status.textContent = 'Modifications non enregistrées';
+        status.classList.add('dirty');
+      } else {
+        status.textContent = 'Données sauvegardées';
+        status.classList.add('saved');
+      }
+
+      document.getElementById('saveBtn').disabled = !sheetState.isDirty;
+      document.getElementById('discardBtn').disabled = !sheetState.isDirty;
+      paintDirtyRows();
+    }
+
+    function paintDirtyRows() {
+      const tbody = document.getElementById('sheetBody');
+      const savedByMonth = {};
+      sheetState.savedRows.forEach(row => {
+        savedByMonth[row.month] = row;
+      });
+
+      [...tbody.querySelectorAll('tr[data-month]')].forEach(tr => {
+        const month = parseInt(tr.getAttribute('data-month'), 10);
+        const current = sheetState.rows[month - 1];
+        const saved = savedByMonth[month];
+        const changed = !saved ||
+          normalizeNumber(current.montantChantiersCours) !== normalizeNumber(saved.montantChantiersCours) ||
+          normalizeNumber(current.montantChantiersTermines) !== normalizeNumber(saved.montantChantiersTermines);
+
+        tr.classList.toggle('sheet-row-dirty', changed);
+      });
+    }
+
+    function renderTableRows() {
+      const tbody = document.getElementById('sheetBody');
+      tbody.innerHTML = sheetState.rows.map(row => `
+        <tr data-month="${row.month}">
+          <td class="sheet-month">${MONTH_NAMES[row.month]}</td>
+          <td>
+            <input
+              class="sheet-input"
+              type="text"
+              inputmode="decimal"
+              data-month="${row.month}"
+              data-field="montantChantiersCours"
+              value="${row.montantChantiersCours || ''}"
+              placeholder="0"
+            >
+          </td>
+          <td>
+            <input
+              class="sheet-input"
+              type="text"
+              inputmode="decimal"
+              data-month="${row.month}"
+              data-field="montantChantiersTermines"
+              value="${row.montantChantiersTermines || ''}"
+              placeholder="0"
+            >
+          </td>
+          <td id="sheetTotal-${row.month}" class="sheet-cell-total">0 K€</td>
+          <td id="sheetCumul-${row.month}" class="sheet-cell-cumul">0 K€</td>
+          <td>
+            <button class="btn btn-small btn-secondary" type="button" onclick="resetRow(${row.month})">Reset ligne</button>
+          </td>
+        </tr>
+      `).join('');
+
+      bindInputEvents();
+      updateComputedColumns();
+      paintDirtyRows();
+    }
+
+    function updateComputedColumns() {
+      const totals = computeRowTotals(sheetState.rows);
+      let annual = 0;
+
+      Object.keys(totals).forEach(monthKey => {
+        const month = parseInt(monthKey, 10);
+        const info = totals[month];
+        annual = info.cumul;
+
+        const totalCell = document.getElementById(`sheetTotal-${month}`);
+        const cumulCell = document.getElementById(`sheetCumul-${month}`);
+        if (totalCell) totalCell.textContent = formatCurrency(info.total);
+        if (cumulCell) cumulCell.textContent = formatCurrency(info.cumul);
+      });
+
+      document.getElementById('yearTotal').textContent = `Total annuel: ${formatCurrency(annual)}`;
+    }
+
+    function bindInputEvents() {
+      const inputs = document.querySelectorAll('.sheet-input');
+      inputs.forEach(input => {
+        input.addEventListener('input', onCellInput);
+        input.addEventListener('change', onCellCommit);
+        input.addEventListener('blur', onCellBlur);
+        input.addEventListener('keydown', onCellKeyDown);
+      });
+    }
+
+    function onCellInput(event) {
+      const input = event.target;
+      const month = parseInt(input.dataset.month, 10);
+      const field = input.dataset.field;
+      const row = sheetState.rows[month - 1];
+      if (!row) return;
+
+      row[field] = normalizeNumber(input.value);
+      updateComputedColumns();
+      refreshDirtyState();
+    }
+
+    function onCellCommit() {
+      pushHistorySnapshot();
+      refreshDirtyState();
+    }
+
+    function onCellBlur(event) {
+      const input = event.target;
+      const month = parseInt(input.dataset.month, 10);
+      const field = input.dataset.field;
+      const row = sheetState.rows[month - 1];
+      if (!row) return;
+
+      const value = normalizeNumber(row[field]);
+      row[field] = value;
+      input.value = value > 0 ? value : '';
+      pushHistorySnapshot();
+      updateComputedColumns();
+      refreshDirtyState();
+    }
+
+    function onCellKeyDown(event) {
+      const input = event.target;
+      const month = parseInt(input.dataset.month, 10);
+      const field = input.dataset.field;
+
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        focusInput(month - 1, field);
+      } else if (event.key === 'ArrowDown' || event.key === 'Enter') {
+        event.preventDefault();
+        focusInput(month + 1, field);
+      } else if (event.key === 'ArrowLeft' && input.selectionStart === 0) {
+        event.preventDefault();
+        focusInput(month, 'montantChantiersCours');
+      } else if (event.key === 'ArrowRight' && input.selectionStart === input.value.length) {
+        event.preventDefault();
+        focusInput(month, 'montantChantiersTermines');
+      }
+    }
+
+    function focusInput(month, field) {
+      if (month < 1 || month > 12) return;
+      const target = document.querySelector(`.sheet-input[data-month="${month}"][data-field="${field}"]`);
+      if (target) {
+        target.focus();
+        target.select();
+      }
+    }
+
+    function loadYear(year) {
+      hideMessage();
+      sheetState.year = year;
+      document.getElementById('sheetYear').value = year;
+
+      const rows = monthRowsFromStorage(year);
+      sheetState.rows = cloneRows(rows);
+      sheetState.savedRows = cloneRows(rows);
+      sheetState.history = [cloneRows(rows)];
+      sheetState.historyIndex = 0;
+
+      renderTableRows();
+      refreshHistoryButtons();
+      refreshDirtyState();
+    }
+
+    function loadYearFromInput() {
+      const year = parseInt(document.getElementById('sheetYear').value, 10);
+      if (!Number.isFinite(year) || year < 2020 || year > 2100) {
+        showMessage('Veuillez saisir une année valide entre 2020 et 2100.', 'error');
+        return;
+      }
+
+      if (sheetState.isDirty && !confirm('Des modifications non enregistrées existent. Continuer et les perdre ?')) {
+        return;
+      }
+
+      loadYear(year);
+    }
+
+    function applySnapshot(index) {
+      if (index < 0 || index >= sheetState.history.length) return;
+      sheetState.historyIndex = index;
+      sheetState.rows = cloneRows(sheetState.history[index]);
+      renderTableRows();
+      refreshHistoryButtons();
+      refreshDirtyState();
+    }
+
+    function undoChange() {
+      if (sheetState.historyIndex <= 0) return;
+      applySnapshot(sheetState.historyIndex - 1);
+    }
+
+    function redoChange() {
+      if (sheetState.historyIndex >= sheetState.history.length - 1) return;
+      applySnapshot(sheetState.historyIndex + 1);
+    }
+
+    function discardChanges() {
+      if (!sheetState.isDirty) return;
+      if (!confirm('Annuler toutes les modifications non sauvegardées ?')) return;
+
+      sheetState.rows = cloneRows(sheetState.savedRows);
+      sheetState.history = [cloneRows(sheetState.savedRows)];
+      sheetState.historyIndex = 0;
+      renderTableRows();
+      refreshHistoryButtons();
+      refreshDirtyState();
+      showMessage('Modifications annulées.', 'info');
+    }
+
+    function resetRow(month) {
+      const row = sheetState.rows[month - 1];
+      if (!row) return;
+
+      row.montantChantiersCours = 0;
+      row.montantChantiersTermines = 0;
+
+      const coursInput = document.querySelector(`.sheet-input[data-month="${month}"][data-field="montantChantiersCours"]`);
+      const termInput = document.querySelector(`.sheet-input[data-month="${month}"][data-field="montantChantiersTermines"]`);
+      if (coursInput) coursInput.value = '';
+      if (termInput) termInput.value = '';
+
+      pushHistorySnapshot();
+      updateComputedColumns();
+      refreshDirtyState();
+    }
+
+    function copyFromPreviousYear() {
+      if (sheetState.isDirty && !confirm('Des modifications existent. Remplacer par les données de N-1 ?')) {
+        return;
+      }
+
+      const previousRows = monthRowsFromStorage(sheetState.year - 1);
+      const hasData = previousRows.some(row => (row.montantChantiersCours + row.montantChantiersTermines) > 0);
+      if (!hasData) {
+        showMessage(`Aucune donnée trouvée pour ${sheetState.year - 1}.`, 'error');
+        return;
+      }
+
+      sheetState.rows = cloneRows(previousRows);
+      sheetState.history = [cloneRows(sheetState.savedRows), cloneRows(sheetState.rows)];
+      sheetState.historyIndex = 1;
+      renderTableRows();
+      refreshHistoryButtons();
+      refreshDirtyState();
+      showMessage(`Données de ${sheetState.year - 1} copiées dans ${sheetState.year}.`, 'success');
+    }
+
+    function clearYear() {
+      if (!confirm(`Vider toutes les cellules de ${sheetState.year} ?`)) return;
+
+      sheetState.rows = Array.from({ length: 12 }, (_, idx) => ({
+        month: idx + 1,
+        montantChantiersCours: 0,
+        montantChantiersTermines: 0
+      }));
+
+      pushHistorySnapshot();
+      renderTableRows();
+      refreshHistoryButtons();
+      refreshDirtyState();
+      showMessage(`Année ${sheetState.year} vidée. Pensez à sauvegarder.`, 'info');
+    }
+
+    function saveSpreadsheet() {
+      try {
+        const existingForYear = getCBCOData().filter(entry => entry.year === sheetState.year);
+        const existingMonths = new Set(existingForYear.map(entry => entry.month));
+
+        sheetState.rows.forEach(row => {
+          // Les valeurs sont déjà en EUR, pas besoin de conversion
+          const cours = normalizeNumber(row.montantChantiersCours);
+          const termines = normalizeNumber(row.montantChantiersTermines);
+          const total = cours + termines;
+
+          if (total > 0) {
+            saveCBCOEntry(sheetState.year, row.month, cours, termines);
+          } else if (existingMonths.has(row.month)) {
+            deleteCBCOEntry(sheetState.year, row.month);
+          }
+        });
+
+        const reloadedRows = monthRowsFromStorage(sheetState.year);
+        sheetState.rows = cloneRows(reloadedRows);
+        sheetState.savedRows = cloneRows(reloadedRows);
+        sheetState.history = [cloneRows(reloadedRows)];
+        sheetState.historyIndex = 0;
+
+        renderTableRows();
+        refreshHistoryButtons();
+        refreshDirtyState();
+        showMessage(`Données ${sheetState.year} sauvegardées avec succès.`, 'success');
+      } catch (error) {
+        console.error(error);
+        showMessage('Erreur pendant la sauvegarde des données CBCO.', 'error');
+      }
+    }
+
+    function exportYearCsv() {
+      const totals = computeRowTotals(sheetState.rows);
+      const headers = ['Année', 'Mois', 'Montant chantier en cours (K€)', 'Montant chantier terminé (K€)', 'Total mensuel (K€)', 'Cumul annuel (K€)'];
+      const lines = [headers.join(';')];
+
+      sheetState.rows.forEach(row => {
+        const info = totals[row.month];
+        const line = [
+          sheetState.year,
+          MONTH_NAMES[row.month],
+          row.montantChantiersCours.toFixed(2).replace('.', ','),
+          row.montantChantiersTermines.toFixed(2).replace('.', ','),
+          info.total.toFixed(2).replace('.', ','),
+          info.cumul.toFixed(2).replace('.', ',')
+        ];
+        lines.push(line.join(';'));
+      });
+
+      const csv = lines.join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `cbco_${sheetState.year}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function goToCBCO() {
+      const base = getBasePath();
+      window.location.href = `${base}pages/cbco.html`;
+    }
+
+    function initCBCOSaisie() {
+      document.getElementById('sidebar').innerHTML = getSidebar();
+      injectCBCOSecondaryBar();
+      loadYear(new Date().getFullYear());
+
+      window.addEventListener('beforeunload', (event) => {
+        if (!sheetState.isDirty) return;
+        event.preventDefault();
+        event.returnValue = '';
+      });
+    }
+
+    window.addEventListener('load', initCBCOSaisie);
+  </script>
+
+  <footer class="site-footer"></footer>
+</body>
+</html>

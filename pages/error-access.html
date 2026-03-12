@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accès Refusé - Intranet Goudalle</title>
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    body {
+      display: block;
+      min-height: 100vh;
+      background: linear-gradient(180deg, #faf8f5 0%, #f0e9df 100%);
+    }
+    .error-container {
+      background: white;
+      padding: 40px;
+      border-radius: 6px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+      max-width: 500px;
+      margin: 50px auto 60px;
+      border: 1px solid #f0ece6;
+    }
+    .error-icon {
+      font-size: 80px;
+      margin-bottom: 20px;
+    }
+    .error-title {
+      font-size: 24px;
+      color: #b85c5c;
+      margin-bottom: 10px;
+    }
+    .error-message {
+      color: #7f8c8d;
+      margin-bottom: 30px;
+    }
+    .btn-group {
+      display: flex;
+      gap: 10px;
+    }
+    .btn-group button {
+      flex: 1;
+    }
+  </style>
+</head>
+<body>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+  <script>
+    window.APP_LOGO = 'groupe';
+  </script>
+
+  <div class="app-container">
+    <div id="sidebar"></div>
+
+    <main class="main-content">
+      <div class="error-container">
+        <div class="error-icon">🔒</div>
+        <h1 class="error-title">Accès Refusé</h1>
+        <p class="error-message">
+          Vous n'avez pas les permissions nécessaires pour accéder à cette page.<br>
+          Contactez un administrateur si vous pensez qu'il s'agit d'une erreur.
+        </p>
+
+    <div class="btn-group">
+      <button onclick="goHome()" class="btn btn-primary">🏠 Accueil</button>
+      <button onclick="goBack()" class="btn btn-secondary">← Retour</button>
+    </div>
+      </div>
+    </main>
+  </div>
+
+  <footer class="site-footer"></footer>
+
+  <script>
+    /**
+     * Redirige l'utilisateur vers la page d'accueil
+     */
+    function goHome() {
+      window.location.href = '../index.html';
+    }
+
+    /**
+     * Retourne à la page précédente dans l'historique
+     */
+    function goBack() {
+      window.history.back();
+    }
+
+    // ===== VÉRIFICATION DE CONNEXION =====
+    // Si l'utilisateur n'est pas connecté, le rediriger vers la page de connexion
+    if (!Auth.isConnected()) {
+      window.location.href = '../login.html';
+    } else {
+      document.getElementById('sidebar').innerHTML = getSidebar();
+    }
+  </script>
+</body>
+</html>

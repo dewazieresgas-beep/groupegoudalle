@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Indicateurs Commercial CBCO - Intranet</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+  <script>
+    window.APP_LOGO = 'cbco';
+  </script>
+
+  <script>
+    Auth.requirePermission('cbco_commercial');
+  </script>
+
+  <div class="app-container">
+    <div id="sidebar"></div>
+    
+    <main class="main-content">
+      <h1>💼 Indicateurs Commercial CBCO</h1>
+      <p class="subtitle" style="margin-bottom: 24px; color: #666;">Suivi des mémoires techniques envoyés</p>
+
+      <div id="message" class="alert" style="display:none;"></div>
+
+      <!-- FORMULAIRE DE SAISIE -->
+      <div class="card">
+        <div class="card-title">
+          <h2>📝 Nouvelle affaire</h2>
+        </div>
+        <div class="card-body">
+          <form onsubmit="handleAddAffaire(event)">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+              <div class="form-group">
+                <label for="nomAffaire">Nom de l'affaire *</label>
+                <input type="text" id="nomAffaire" placeholder="Ex : Rénovation Mairie de Preures" required>
+              </div>
+              <div class="form-group">
+                <label for="montant">Montant de l'offre / estimatif (€) *</label>
+                <input type="number" id="montant" min="0" step="0.01" placeholder="Ex : 150000" required>
+              </div>
+              <div class="form-group">
+                <label for="dateEnvoi">Date d'envoi du mémoire technique *</label>
+                <input type="date" id="dateEnvoi" required>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary">➕ Ajouter l'affaire</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- TABLEAU RÉCAPITULATIF -->
+      <div class="card">
+        <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+          <h2>📋 Affaires saisies</h2>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <label for="filterYear" style="font-weight: 600; font-size: 14px;">Année :</label>
+            <select id="filterYear" onchange="loadAffaires()" style="width: auto; min-width: 100px;"></select>
+          </div>
+        </div>
+        <div class="card-body">
+          <table id="affairesTable">
+            <thead>
+              <tr>
+                <th>Nom de l'affaire</th>
+                <th>Montant (€)</th>
+                <th>Date d'envoi</th>
+                <th>Date de réponse</th>
+                <th>Résultat</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="6" style="text-align:center; padding: 20px;">Chargement...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- MODALE DE MODIFICATION -->
+  <div id="editModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
+    <div style="background:#fff; border-radius:12px; padding:30px; max-width:500px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+      <h2 style="margin-top:0; margin-bottom:20px;">✏️ Modifier l'affaire</h2>
+      <input type="hidden" id="editId">
+      <div class="form-group">
+        <label for="editNom">Nom de l'affaire *</label>
+        <input type="text" id="editNom" required>
+      </div>
+      <div class="form-group">
+        <label for="editMontant">Montant de l'offre / estimatif (€) *</label>
+        <input type="number" id="editMontant" min="0" step="0.01" required>
+      </div>
+      <div class="form-group">
+        <label for="editDateEnvoi">Date d'envoi du mémoire technique *</label>
+        <input type="date" id="editDateEnvoi" required>
+      </div>
+      <div class="form-group">
+        <label for="editDateReponse">Date de réponse</label>
+        <input type="date" id="editDateReponse">
+      </div>
+      <div class="form-group">
+        <label for="editResultat">Résultat</label>
+        <select id="editResultat">
+          <option value="en_cours">⏳ En cours</option>
+          <option value="gagne">✅ Gagné</option>
+          <option value="perdu">❌ Perdu</option>
+        </select>
+      </div>
+      <div style="display:flex; gap:10px; margin-top:20px;">
+        <button class="btn btn-primary" onclick="saveEdit()">💾 Enregistrer</button>
+        <button class="btn btn-secondary" onclick="closeEditModal()">Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STATUT_LABELS = {
+      'en_cours': { label: '⏳ En cours', badge: 'badge-warning' },
+      'gagne': { label: '✅ Gagné', badge: 'badge-success' },
+      'perdu': { label: '❌ Perdu', badge: 'badge-danger' }
+    };
+
+    function showMessage(message, type) {
+      const msgDiv = document.getElementById('message');
+      msgDiv.textContent = message;
+      msgDiv.className = `alert alert-${type}`;
+      msgDiv.style.display = 'block';
+      window.scrollTo(0, 0);
+      if (type === 'success') setTimeout(() => { msgDiv.style.display = 'none'; }, 4000);
+    }
+
+    function handleAddAffaire(event) {
+      event.preventDefault();
+
+      const nomAffaire = document.getElementById('nomAffaire').value.trim();
+      const montant = document.getElementById('montant').value;
+      const dateEnvoi = document.getElementById('dateEnvoi').value;
+
+      if (!nomAffaire || !montant || !dateEnvoi) {
+        showMessage('❌ Tous les champs sont obligatoires', 'error');
+        return;
+      }
+
+      saveCBCOCommercialEntry({ nomAffaire, montant, dateEnvoi });
+      Auth.audit('CBCO_COMMERCIAL_ADDED', `Affaire ajoutée : ${nomAffaire} – ${parseFloat(montant).toLocaleString('fr-FR')} €`);
+      showMessage('✅ Affaire ajoutée avec succès', 'success');
+
+      document.getElementById('nomAffaire').value = '';
+      document.getElementById('montant').value = '';
+      document.getElementById('dateEnvoi').value = '';
+
+      loadAffaires();
+    }
+
+    function enregistrerReponse(id) {
+      const dateInput = document.getElementById(`dateReponse_${id}`);
+      const resultatInput = document.getElementById(`resultat_${id}`);
+      const dateReponse = dateInput.value;
+      const resultat = resultatInput.value;
+
+      if (!dateReponse) {
+        showMessage('❌ Veuillez saisir la date de réponse', 'error');
+        return;
+      }
+      if (resultat === 'en_cours') {
+        showMessage('❌ Veuillez sélectionner Gagné ou Perdu', 'error');
+        return;
+      }
+
+      if (updateCBCOCommercialEntry(id, { resultat, dateReponse })) {
+        const entry = getCBCOCommercial().find(e => e.id === id);
+        const label = STATUT_LABELS[resultat]?.label || resultat;
+        Auth.audit('CBCO_COMMERCIAL_STATUS', `${entry?.nomAffaire || id} → ${label} (réponse le ${new Date(dateReponse).toLocaleDateString('fr-FR')})`);
+        showMessage('✅ Réponse enregistrée', 'success');
+        loadAffaires();
+      }
+    }
+
+    function reinitialiserStatut(id) {
+      if (!confirm('Remettre cette affaire en cours ?')) return;
+      if (updateCBCOCommercialEntry(id, { resultat: 'en_cours', dateReponse: null })) {
+        const entry = getCBCOCommercial().find(e => e.id === id);
+        Auth.audit('CBCO_COMMERCIAL_STATUS', `${entry?.nomAffaire || id} → Remis en cours`);
+        loadAffaires();
+      }
+    }
+
+    function openEditModal(id) {
+      const entry = getCBCOCommercial().find(e => e.id === id);
+      if (!entry) return;
+      document.getElementById('editId').value = entry.id;
+      document.getElementById('editNom').value = entry.nomAffaire;
+      document.getElementById('editMontant').value = entry.montant;
+      document.getElementById('editDateEnvoi').value = entry.dateEnvoi;
+      document.getElementById('editDateReponse').value = entry.dateReponse || '';
+      document.getElementById('editResultat').value = entry.resultat || 'en_cours';
+      document.getElementById('editModal').style.display = 'flex';
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').style.display = 'none';
+    }
+
+    function saveEdit() {
+      const id = document.getElementById('editId').value;
+      const nomAffaire = document.getElementById('editNom').value.trim();
+      const montant = parseFloat(document.getElementById('editMontant').value);
+      const dateEnvoi = document.getElementById('editDateEnvoi').value;
+      const dateReponse = document.getElementById('editDateReponse').value || null;
+      const resultat = document.getElementById('editResultat').value;
+
+      if (!nomAffaire || !dateEnvoi || isNaN(montant)) {
+        showMessage('❌ Veuillez remplir tous les champs obligatoires', 'error');
+        return;
+      }
+
+      if ((resultat === 'gagne' || resultat === 'perdu') && !dateReponse) {
+        showMessage('❌ Veuillez saisir la date de réponse pour une affaire gagnée ou perdue', 'error');
+        return;
+      }
+
+      const updates = { nomAffaire, montant, dateEnvoi, dateReponse, resultat };
+      if (resultat === 'en_cours') updates.dateReponse = null;
+
+      if (updateCBCOCommercialEntry(id, updates)) {
+        Auth.audit('CBCO_COMMERCIAL_EDITED', `Affaire modifiée : ${nomAffaire}`);
+        showMessage('✅ Affaire modifiée avec succès', 'success');
+        closeEditModal();
+        loadAffaires();
+      }
+    }
+
+    function deleteAffaire(id) {
+      const entry = getCBCOCommercial().find(e => e.id === id);
+      if (!confirm(`Supprimer l'affaire « ${entry?.nomAffaire || ''} » ?`)) return;
+      if (deleteCBCOCommercialEntry(id)) {
+        Auth.audit('CBCO_COMMERCIAL_DELETED', `Affaire supprimée : ${entry?.nomAffaire || id}`);
+        showMessage('🗑️ Affaire supprimée', 'success');
+        loadAffaires();
+      }
+    }
+
+    function initYearFilter() {
+      const entries = getCBCOCommercial();
+      const years = [...new Set(entries.map(e => new Date(e.dateEnvoi).getFullYear()))].sort((a, b) => b - a);
+      const currentYear = new Date().getFullYear();
+      if (!years.includes(currentYear)) years.unshift(currentYear);
+
+      const select = document.getElementById('filterYear');
+      select.innerHTML = years.map(y => `<option value="${y}" ${y === currentYear ? 'selected' : ''}>${y}</option>`).join('');
+    }
+
+    function loadAffaires() {
+      const year = parseInt(document.getElementById('filterYear').value);
+      const entries = getCBCOCommercial()
+        .filter(e => new Date(e.dateEnvoi).getFullYear() === year)
+        .sort((a, b) => new Date(b.dateEnvoi) - new Date(a.dateEnvoi));
+
+      const tbody = document.querySelector('#affairesTable tbody');
+
+      if (entries.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 20px; color: #999;">Aucune affaire pour cette année</td></tr>';
+        return;
+      }
+
+      const formatMontant = (v) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v);
+
+      tbody.innerHTML = entries.map(e => {
+        const s = STATUT_LABELS[e.resultat] || STATUT_LABELS['en_cours'];
+        const dateEnvoiStr = new Date(e.dateEnvoi).toLocaleDateString('fr-FR');
+        const isCloturee = e.resultat === 'gagne' || e.resultat === 'perdu';
+
+        let dateReponseCell;
+        let resultatCell;
+        let actionsCell;
+
+        if (isCloturee) {
+          const dateRepStr = e.dateReponse ? new Date(e.dateReponse).toLocaleDateString('fr-FR') : '—';
+          dateReponseCell = `<td>${dateRepStr}</td>`;
+          resultatCell = `<td><span class="badge ${s.badge}">${s.label}</span></td>`;
+          actionsCell = `
+            <td>
+              <button class="btn btn-small btn-secondary" onclick="openEditModal('${e.id}')" title="Modifier">✏️</button>
+              <button class="btn btn-small btn-secondary" onclick="reinitialiserStatut('${e.id}')" title="Remettre en cours">↩️</button>
+              <button class="btn btn-small btn-danger" onclick="deleteAffaire('${e.id}')" title="Supprimer">🗑️</button>
+            </td>
+          `;
+        } else {
+          dateReponseCell = `<td><input type="date" id="dateReponse_${e.id}" style="padding: 4px 8px; font-size: 13px; width: 140px;"></td>`;
+          resultatCell = `
+            <td>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <select id="resultat_${e.id}" style="width: auto; min-width: 110px; padding: 4px 8px; font-size: 13px;">
+                  <option value="en_cours" selected>⏳ En cours</option>
+                  <option value="gagne">✅ Gagné</option>
+                  <option value="perdu">❌ Perdu</option>
+                </select>
+                <button class="btn btn-small btn-primary" onclick="enregistrerReponse('${e.id}')" title="Enregistrer la réponse">✔️</button>
+              </div>
+            </td>
+          `;
+          actionsCell = `
+            <td>
+              <button class="btn btn-small btn-secondary" onclick="openEditModal('${e.id}')" title="Modifier">✏️</button>
+              <button class="btn btn-small btn-danger" onclick="deleteAffaire('${e.id}')" title="Supprimer">🗑️</button>
+            </td>
+          `;
+        }
+
+        return `
+          <tr>
+            <td><strong>${escapeHtml(e.nomAffaire)}</strong></td>
+            <td>${formatMontant(e.montant)}</td>
+            <td>${dateEnvoiStr}</td>
+            ${dateReponseCell}
+            ${resultatCell}
+            ${actionsCell}
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function init() {
+      document.getElementById('sidebar').innerHTML = getSidebar();
+      injectCBCOSecondaryBar();
+      document.getElementById('dateEnvoi').valueAsDate = new Date();
+      initYearFilter();
+      loadAffaires();
+    }
+
+    window.addEventListener('load', init);
+  </script>
+
+  <footer class="site-footer"></footer>
+</body>
+</html>
