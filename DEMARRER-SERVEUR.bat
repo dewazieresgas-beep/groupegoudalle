@@ -1,4 +1,5 @@
 @echo off
+setlocal
 title Intranet Groupe Goudalle - Serveur
 echo.
 echo  ============================================
@@ -35,6 +36,14 @@ echo  Pour connaitre l'IP du serveur : ouvrir cmd et taper "ipconfig"
 echo.
 echo  NE PAS FERMER CETTE FENETRE (le serveur s'arrete sinon)
 echo.
+:RESTART
+echo [%date% %time%] Demarrage du serveur...
 node server.js
+set EXITCODE=%ERRORLEVEL%
+echo.
+echo [%date% %time%] ATTENTION: serveur arrete (code %EXITCODE%).
+echo Redemarrage automatique dans 5 secondes...
+timeout /t 5 /nobreak >nul
+goto RESTART
 
 pause

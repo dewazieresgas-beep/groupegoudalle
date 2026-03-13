@@ -20,6 +20,7 @@ const SERVER_URL = window.location.origin + '/api';
 // Chaque écriture met à jour le cache ET envoie au serveur.
 const _cache = {};
 let _serverAvailable = null; // null = pas encore testé, true/false après test
+let _refreshInProgress = false;
 
 function createTimeoutSignal(timeoutMs) {
   if (typeof AbortController === 'undefined') return undefined;
@@ -61,7 +62,10 @@ const LOCAL_ONLY_KEYS = new Set([
 async function checkServerAvailable() {
   try {
     const signal = createTimeoutSignal(3000);
-    const res = await fetch(SERVER_URL + '/health', signal ? { method: 'GET', signal } : { method: 'GET' });
+    const res = await fetch(
+      SERVER_URL + '/health',
+      signal ? { method: 'GET', signal, cache: 'no-store' } : { method: 'GET', cache: 'no-store' }
+    );
     _serverAvailable = res.ok;
   } catch {
     _serverAvailable = false;
@@ -99,7 +103,11 @@ async function loadAllFromServer() {
 
   await Promise.all(endpoints.map(async ([endpoint, key]) => {
     try {
-      const res = await fetch(SERVER_URL + endpoint);
+      const signal = createTimeoutSignal(5000);
+      const res = await fetch(
+        SERVER_URL + endpoint,
+        signal ? { method: 'GET', signal, cache: 'no-store' } : { method: 'GET', cache: 'no-store' }
+      );
       if (res.ok) {
         const data = await res.json();
         // Ne pas écraser avec des données vides (ex: users={} au premier démarrage)
@@ -241,6 +249,14 @@ window.onServerReady = function(fn) {
 
 // ─── RAFRAÎCHISSEMENT AUTOMATIQUE TOUTES LES MINUTES ────────────────────────
 setInterval(async () => {
-  await loadAllFromServer();
-  window.dispatchEvent(new CustomEvent('serverDataRefreshed'));
+  if (_refreshInProgress) return;
+  _refreshInProgress = true;
+  try {
+    const loaded = await loadAllFromServer();
+    if (loaded) {
+      window.dispatchEvent(new CustomEvent('serverDataRefreshed'));
+    }
+  } finally {
+    _refreshInProgress = false;
+  }
 }, 60000);
