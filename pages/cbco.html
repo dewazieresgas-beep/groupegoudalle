@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CBCO - Chiffre d'Affaires - Intranet</title>
+  <title>CBCO - Bureau d'étude - Intranet</title>
   <link rel="stylesheet" href="../style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
@@ -26,8 +26,8 @@
     <main class="main-content">
       <!-- SECTION EN-TÊTE -->
       <div class="cbco-header">
-        <h1>Chiffre d'Affaires CBCO</h1>
-        <p class="subtitle">Suivi de la croissance du chiffre d'affaires - Cumul annuel par année</p>
+        <h1>CBCO - Bureau d'étude</h1>
+        <p class="subtitle">Suivi chiffre d'affaires et indicateurs commerciaux</p>
         <div style="margin-top: 15px;">
           <button onclick="downloadCBCOReport()" class="btn btn-secondary">📥 Télécharger le rapport</button>
         </div>
@@ -106,25 +106,6 @@
           </div>
         </section>
       </div>
-
-      <section class="cbco-card-v2" style="margin-top: 20px;">
-        <header class="cbco-card-title-v2">🏭 Productivité usine CBCO — Dernière semaine</header>
-        <div class="cbco-card-content-v2">
-          <div id="prodEmpty" style="display:none; color:#999;">Aucune donnée de productivité importée.</div>
-          <div id="prodContent" style="display:none;">
-            <div style="font-weight:700; margin-bottom:10px; color:var(--primary);" id="prodWeekLabel">—</div>
-            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; margin-bottom:12px;">
-              <div class="cbco-stat-box"><div class="cbco-stat-label">Speedcut</div><div class="cbco-stat-value" id="prodSpeedcut">0 m³</div></div>
-              <div class="cbco-stat-box"><div class="cbco-stat-label">Ultra</div><div class="cbco-stat-value" id="prodUltra">0 m³</div></div>
-              <div class="cbco-stat-box"><div class="cbco-stat-label">Extra</div><div class="cbco-stat-value" id="prodExtra">0 m²</div></div>
-              <div class="cbco-stat-box"><div class="cbco-stat-label">Collage</div><div class="cbco-stat-value" id="prodCollage">0 h/presse</div></div>
-              <div class="cbco-stat-box"><div class="cbco-stat-label">Assemblage</div><div class="cbco-stat-value" id="prodAssemblage">0 h</div></div>
-            </div>
-            <div id="prodHistoryTable"></div>
-          </div>
-        </div>
-      </section>
-
 
     </main>
   </div>
@@ -596,7 +577,6 @@
       renderCBCOChart();
       renderCurrentYearChart();
       renderCommercialDonutCBCO();
-      renderCBCOProductivite();
     }
 
     /**
@@ -644,56 +624,6 @@
       } else {
         commercialDonutCBCO = new Chart(ctx, { type:'doughnut', data:{ labels:['Gagnées','Perdues'], datasets:[{data:[stats.gagnees,stats.perdues],backgroundColor:['#27ae60','#e74c3c'],borderWidth:2,borderColor:'#fff'}] }, options:{ responsive:true, maintainAspectRatio:true, cutout:'70%', plugins:{ legend:{display:true,position:'bottom'}, tooltip:{callbacks:{label:(c)=>`${c.label} : ${c.parsed}`}} } } });
       }
-    }
-
-    function renderCBCOProductivite() {
-      const entries = getCBCOProductiviteData();
-      const empty = document.getElementById('prodEmpty');
-      const content = document.getElementById('prodContent');
-      if (!entries.length) {
-        empty.style.display = '';
-        content.style.display = 'none';
-        return;
-      }
-
-      const latest = entries[0];
-      empty.style.display = 'none';
-      content.style.display = '';
-
-      document.getElementById('prodWeekLabel').textContent = latest.semaineLabel || `S${latest.week} ${latest.year}`;
-      document.getElementById('prodSpeedcut').textContent = `${formatNumber(latest.speedcutM3)} m³`;
-      document.getElementById('prodUltra').textContent = `${formatNumber(latest.ultraM3)} m³`;
-      document.getElementById('prodExtra').textContent = `${formatNumber(latest.extraM2)} m²`;
-      document.getElementById('prodCollage').textContent = latest.collageHeuresParPresse === null ? 'N/A' : `${formatNumber(latest.collageHeuresParPresse)} h/presse`;
-      const ratio = latest.assemblageRatio === null ? '' : ` (${formatNumber(latest.assemblageRatio * 100)} %)`;
-      document.getElementById('prodAssemblage').textContent = `${formatNumber(latest.assemblageEcartHeures)} h${ratio}`;
-
-      const recent = entries.slice(0, 8);
-      document.getElementById('prodHistoryTable').innerHTML = `
-        <table style="font-size:0.88em;">
-          <thead>
-            <tr>
-              <th>Semaine</th>
-              <th>Speedcut (m³)</th>
-              <th>Ultra (m³)</th>
-              <th>Extra (m²)</th>
-              <th>Collage (h/presse)</th>
-              <th>Assemblage écart (h)</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${recent.map(e => `
-              <tr>
-                <td><strong>${escapeHtml(e.semaineLabel || ('S' + e.week + ' ' + e.year))}</strong></td>
-                <td>${formatNumber(e.speedcutM3)}</td>
-                <td>${formatNumber(e.ultraM3)}</td>
-                <td>${formatNumber(e.extraM2)}</td>
-                <td>${e.collageHeuresParPresse === null ? 'N/A' : formatNumber(e.collageHeuresParPresse)}</td>
-                <td>${formatNumber(e.assemblageEcartHeures)}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>`;
     }
 
     window.onServerReady(initCBCO);

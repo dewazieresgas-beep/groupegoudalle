@@ -393,7 +393,7 @@ function getSidebar() {
   // ===== SECTION CBCO =====
   if (Auth.canViewCBCO()) {
     const cbcoActive = isCBCOPage() ? ' active' : '';
-    items += `<a href="${base}pages/cbco.html" class="sidebar-item${cbcoActive}">💼 CBCO</a>`;
+    items += `<a href="${base}pages/cbco-usine.html" class="sidebar-item${cbcoActive}">💼 CBCO</a>`;
   }
 
   // ===== SECTION GOUDALLE MAÇONNERIE =====
@@ -781,8 +781,10 @@ function injectCBCOSecondaryBar() {
 
   let secondaryItems = '';
 
+  const usineActive = currentPage === 'cbco-usine.html' ? ' active' : '';
+  secondaryItems += `<a href="${base}pages/cbco-usine.html" class="sidebar-item${usineActive}">🏭 Dashboard usine</a>`;
   const consultationActive = currentPage === 'cbco.html' ? ' active' : '';
-  secondaryItems += `<a href="${base}pages/cbco.html" class="sidebar-item${consultationActive}">📊 Dashboard Indicateur</a>`;
+  secondaryItems += `<a href="${base}pages/cbco.html" class="sidebar-item${consultationActive}">🏢 Dashboard bureau d'étude</a>`;
 
   if (Auth.hasAccess('cbco_saisie')) {
     const saisieActive = currentPage === 'cbco-saisie.html' ? ' active' : '';
@@ -833,7 +835,7 @@ function injectCBCOSecondaryBar() {
  */
 function isCBCOPage() {
   const page = getCurrentPage();
-  return page === 'cbco.html' || page === 'cbco-saisie.html' || page === 'cbco-commercial.html' || page === 'cbco-paiement.html' || page === 'cbco-productivite-saisie.html';
+  return page === 'cbco.html' || page === 'cbco-usine.html' || page === 'cbco-saisie.html' || page === 'cbco-commercial.html' || page === 'cbco-paiement.html' || page === 'cbco-productivite-saisie.html';
 }
 
 /**

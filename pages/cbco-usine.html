@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CBCO - Usine - Intranet</title>
+  <link rel="stylesheet" href="../style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <script src="../js/api.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+  <script>
+    window.APP_LOGO = 'cbco';
+    Auth.requirePermission('cbco');
+  </script>
+
+  <div class="app-container">
+    <div id="sidebar"></div>
+    <main class="main-content">
+      <div class="cbco-header">
+        <h1>CBCO - Usine</h1>
+        <p class="subtitle">Productivité Speedcut (m3/h)</p>
+      </div>
+
+      <section class="cbco-card-v2" style="margin-bottom: 16px;">
+        <header class="cbco-card-title-v2">Filtres d'affichage</header>
+        <div class="cbco-card-content-v2" style="display:flex; gap:12px; align-items:end; flex-wrap:wrap;">
+          <div class="form-group" style="margin-bottom:0;">
+            <label for="rangeSelect">Période</label>
+            <select id="rangeSelect" onchange="renderUsineChart()" style="min-width:220px;">
+              <option value="4">Dernier mois</option>
+              <option value="8">2 derniers mois</option>
+              <option value="12">3 derniers mois</option>
+              <option value="24">6 derniers mois</option>
+              <option value="52">12 derniers mois</option>
+              <option value="9999">Tout l'historique</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <section class="cbco-card-v2">
+        <header class="cbco-card-title-v2">📈 Productivité SC (m3/h)</header>
+        <div class="cbco-card-content-v2">
+          <div id="usineEmpty" style="display:none; color:#999;">Aucune donnée de productivité Speedcut disponible.</div>
+          <div id="usineContent" style="display:none;">
+            <div style="height:360px;">
+              <canvas id="speedcutChart"></canvas>
+            </div>
+            <div id="currentWeekLabel" style="margin-top:10px; text-align:center; color:#c62828; font-weight:700;"></div>
+            <div style="display:flex; gap:16px; align-items:center; justify-content:center; margin-top:16px; flex-wrap:wrap;">
+              <img id="moodImg" src="../assets/smiley rouge usine cbco.png" alt="smiley état performance" style="width:64px; height:64px;">
+              <div style="display:flex; flex-direction:column; gap:4px;">
+                <div><strong>Productivité semaine en cours :</strong> <span id="latestProd">0,00</span> m3/h</div>
+                <div><strong>Cible semaine en cours :</strong> <span id="latestTarget">0,00</span> m3/h</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    let speedcutChart;
+
+    function renderUsineChart() {
+      const empty = document.getElementById('usineEmpty');
+      const content = document.getElementById('usineContent');
+      const allDesc = getCBCOProductiviteData();
+      const allAsc = [...allDesc].sort((a, b) => {
+        if (a.year !== b.year) return a.year - b.year;
+        return a.week - b.week;
+      });
+
+      const allWithSpeedcut = allAsc.filter(e => Number(e.speedcutProductivite) > 0 || Number(e.speedcutM3) > 0);
+      if (allWithSpeedcut.length === 0) {
+        empty.style.display = '';
+        content.style.display = 'none';
+        if (speedcutChart) speedcutChart.destroy();
+        return;
+      }
+
+      const range = parseInt(document.getElementById('rangeSelect').value, 10) || 4;
+      const entries = allWithSpeedcut.slice(-range);
+      const labels = entries.map(e => e.semaineLabel || `S${e.week} ${e.year}`);
+      const latestLabel = labels[labels.length - 1];
+
+      const dataProd = entries.map(e => {
+        if (Number(e.speedcutProductivite) > 0) return e.speedcutProductivite;
+        return Number(e.speedcutHeuresUtiles) > 0 ? (Number(e.speedcutM3) / Number(e.speedcutHeuresUtiles)) : null;
+      });
+      const dataTarget = entries.map(e => Number(e.speedcutCibleProductivite) > 0 ? e.speedcutCibleProductivite : null);
+
+      const latest = entries[entries.length - 1];
+      const latestProd = dataProd[dataProd.length - 1] || 0;
+      const latestTarget = dataTarget[dataTarget.length - 1] || 0;
+      const aboveTarget = latestTarget > 0 && latestProd >= latestTarget;
+
+      document.getElementById('latestProd').textContent = formatNumber(latestProd);
+      document.getElementById('latestTarget').textContent = formatNumber(latestTarget);
+      document.getElementById('currentWeekLabel').textContent = `Semaine en cours : ${latest.semaineLabel || (`S${latest.week} ${latest.year}`)}`;
+      document.getElementById('moodImg').src = aboveTarget
+        ? '../assets/smiley vert usine cbco.png'
+        : '../assets/smiley rouge usine cbco.png';
+
+      const ctx = document.getElementById('speedcutChart').getContext('2d');
+      if (speedcutChart) speedcutChart.destroy();
+      speedcutChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Productivité SC (m3/h)',
+              data: dataProd,
+              borderColor: '#5c6bc0',
+              backgroundColor: '#5c6bc0',
+              pointBackgroundColor: '#5c6bc0',
+              pointRadius: 4,
+              borderWidth: 2,
+              tension: 0
+            },
+            {
+              label: 'Cible de productivité',
+              data: dataTarget,
+              borderColor: '#c2185b',
+              backgroundColor: '#c2185b',
+              pointRadius: 0,
+              borderWidth: 2,
+              borderDash: [8, 4],
+              tension: 0,
+              spanGaps: true
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: true, position: 'top' },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${ctx.dataset.label}: ${formatNumber(ctx.parsed.y)} m3/h`
+              }
+            }
+          },
+          scales: {
+            x: {
+              ticks: {
+                color: (tickCtx) => labels[tickCtx.index] === latestLabel ? '#c62828' : '#666',
+                font: (tickCtx) => ({ weight: labels[tickCtx.index] === latestLabel ? '700' : '400' })
+              }
+            },
+            y: {
+              beginAtZero: false,
+              ticks: {
+                callback: (v) => formatNumber(v)
+              }
+            }
+          }
+        }
+      });
+
+      empty.style.display = 'none';
+      content.style.display = '';
+    }
+
+    function init() {
+      document.getElementById('sidebar').innerHTML = getSidebar();
+      injectCBCOSecondaryBar();
+      renderUsineChart();
+    }
+
+    window.onServerReady(init);
+  </script>
+
+  <footer class="site-footer"></footer>
+</body>
+</html>
