@@ -1040,6 +1040,7 @@ function restoreSubMenuStates() {
 // ============ CBCO COMMERCIAL (MÉMOIRES TECHNIQUES) ============
 
 const CBCO_PRODUCTIVITE_KEY = 'goudalle_cbco_productivite';
+const CBCO_SECURITE_KEY = 'goudalle_cbco_securite';
 const CBCO_COMMERCIAL_KEY = 'goudalle_cbco_commercial';
 
 function normalizeCBCOProductiviteNumber(value) {
@@ -1147,6 +1148,40 @@ function deleteCBCOProductiviteEntry(id) {
 function getCBCOProductiviteLatest() {
   const data = getCBCOProductiviteData();
   return data.length > 0 ? data[0] : null;
+}
+
+function normalizeCBCOSecuriteData(entry) {
+  const data = entry && typeof entry === 'object' ? entry : {};
+  const toNum = (v) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const year = toNum(data.anneeReference) || new Date().getFullYear();
+  return {
+    joursSansAccident: toNum(data.joursSansAccident),
+    nombreAnnuelAccidents: toNum(data.nombreAnnuelAccidents),
+    recordJoursSansAccident: toNum(data.recordJoursSansAccident),
+    anneeReference: year,
+    lastAccidentDate: data.lastAccidentDate ? String(data.lastAccidentDate) : '',
+    lastAccidentPerson: data.lastAccidentPerson ? String(data.lastAccidentPerson) : '',
+    importDate: data.importDate || new Date().toISOString()
+  };
+}
+
+function getCBCOSecuriteData() {
+  const raw = localStorage.getItem(CBCO_SECURITE_KEY);
+  if (!raw) return normalizeCBCOSecuriteData({});
+  try {
+    return normalizeCBCOSecuriteData(JSON.parse(raw));
+  } catch {
+    return normalizeCBCOSecuriteData({});
+  }
+}
+
+function replaceCBCOSecuriteData(entry) {
+  const normalized = normalizeCBCOSecuriteData(entry);
+  localStorage.setItem(CBCO_SECURITE_KEY, JSON.stringify(normalized));
+  return normalized;
 }
 
 /**

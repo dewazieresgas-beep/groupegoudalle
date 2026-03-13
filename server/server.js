@@ -126,6 +126,15 @@ app.put('/api/cbco-productivite', (req, res) => {
   res.json({ success: true });
 });
 
+app.get('/api/cbco-securite', (req, res) => {
+  res.json(dbGet('cbco_securite', {}));
+});
+
+app.put('/api/cbco-securite', (req, res) => {
+  dbSet('cbco_securite', req.body);
+  res.json({ success: true });
+});
+
 // ─── ROUTES : CBCO COMMERCIAL ───────────────────────────────────────────────────
 
 app.get('/api/cbco-commercial', (req, res) => {

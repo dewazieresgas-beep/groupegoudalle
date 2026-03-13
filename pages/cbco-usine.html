@@ -27,6 +27,31 @@
         </div>
       </div>
 
+      <div class="card" style="margin-bottom:18px;">
+        <div class="card-body" style="padding:10px 14px;">
+          <table style="width:100%; border-collapse:collapse; margin:0; font-size:1.05em;">
+            <tbody>
+              <tr>
+                <td style="padding:6px 8px; border:1px solid var(--border-light); text-align:center;">
+                  Nombre de jours sans accident: <strong id="secDaysNoAccident">0</strong>
+                </td>
+                <td style="padding:6px 8px; border:1px solid var(--border-light); text-align:center;">
+                  Nombre annuel d'accidents: <strong id="secYearAccidents">0</strong>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:6px 8px; border:1px solid var(--border-light); text-align:center;">
+                  Record: <strong id="secRecordDays">0</strong> jours
+                </td>
+                <td style="padding:6px 8px; border:1px solid var(--border-light); text-align:center;">
+                  Année: <strong id="secYearRef">—</strong>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <div class="gm-header" style="margin-top:12px;">
         <h1>Productivité Speedcut semaine <span id="weekNumberSC">—</span></h1>
       </div>
@@ -320,6 +345,14 @@
       return Number.isFinite(n) ? n : null;
     }
 
+    function renderSecuriteHeader() {
+      const s = getCBCOSecuriteData();
+      document.getElementById('secDaysNoAccident').textContent = formatNumber(s.joursSansAccident || 0);
+      document.getElementById('secYearAccidents').textContent = formatNumber(s.nombreAnnuelAccidents || 0);
+      document.getElementById('secRecordDays').textContent = formatNumber(s.recordJoursSansAccident || 0);
+      document.getElementById('secYearRef').textContent = s.anneeReference || '—';
+    }
+
     function getMachineConfig(machine) {
       if (machine === 'ultra') {
         return {
@@ -605,6 +638,7 @@
     function init() {
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectCBCOSecondaryBar();
+      renderSecuriteHeader();
       renderMachineSection('sc');
       renderMachineSection('ultra');
       renderMachineSection('extra');

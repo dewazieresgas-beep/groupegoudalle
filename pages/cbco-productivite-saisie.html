@@ -414,6 +414,45 @@
       return Object.values(merged).sort((a, b) => a.year !== b.year ? a.year - b.year : a.week - b.week);
     }
 
+    function parseSecuriteExcel(workbook) {
+      const normalizeName = (name) => String(name || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, '');
+      const sheetName = workbook.SheetNames.find(name => normalizeName(name) === 'securite');
+      const sheet = sheetName ? workbook.Sheets[sheetName] : null;
+      if (!sheet) return null;
+
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+      const entries = [];
+      for (let r = 1; r < rows.length; r++) {
+        const row = rows[r] || [];
+        const date = hasCellValue(row[0]) ? String(row[0]).trim() : '';
+        const accident = hasCellValue(row[1]) ? String(row[1]).trim() : '';
+        const jours = parseNumber(row[2]);
+        const annee = parseNumber(row[3]);
+        if (jours === null) continue;
+        entries.push({
+          date,
+          accident,
+          joursDepuisDernierAccident: Math.round(jours),
+          annee: annee !== null ? Math.round(annee) : null
+        });
+      }
+      if (!entries.length) return null;
+
+      const currentYear = entries[0].annee || new Date().getFullYear();
+      return {
+        joursSansAccident: entries[0].joursDepuisDernierAccident,
+        nombreAnnuelAccidents: entries.filter(e => e.annee === currentYear).length,
+        recordJoursSansAccident: Math.max(...entries.map(e => e.joursDepuisDernierAccident)),
+        anneeReference: currentYear,
+        lastAccidentDate: entries[0].date,
+        lastAccidentPerson: entries[0].accident
+      };
+    }
+
     function handleFileSelect(input) {
       const file = input.files[0];
       if (!file) return;
@@ -424,7 +463,8 @@
           const data = new Uint8Array(e.target.result);
           const workbook = XLSX.read(data, { type: 'array' });
           const entries = parseProductiviteExcel(workbook);
-          showPreview(file.name, entries);
+          const securite = parseSecuriteExcel(workbook);
+          showPreview(file.name, entries, securite);
         } catch (error) {
           showMessage('❌ ' + error.message, 'error');
         }
@@ -432,7 +472,7 @@
       reader.readAsArrayBuffer(file);
     }
 
-    function showPreview(fileName, entries) {
+    function showPreview(fileName, entries, securite) {
       const preview = document.getElementById('preview');
       const first = entries[0];
       const last = entries[entries.length - 1];
@@ -445,6 +485,7 @@
             <div><span class="badge badge-primary">Aperçu avant validation</span></div>
           </div>
           <p style="margin:0 0 10px 0;">Période: <strong>${escapeHtml(first.semaineLabel)}</strong> à <strong>${escapeHtml(last.semaineLabel)}</strong></p>
+          ${securite ? `<p style="margin:0 0 10px 0;">Sécurité: <strong>${formatNumber(securite.joursSansAccident)}</strong> jours sans accident, <strong>${formatNumber(securite.nombreAnnuelAccidents)}</strong> accident(s) en ${formatNumber(securite.anneeReference)}.</p>` : ''}
           <p style="margin:0 0 14px 0; color:var(--danger);">⚠️ La validation remplacera tout l'historique actuel (${existingCount} semaine${existingCount > 1 ? 's' : ''}).</p>
           <table style="font-size:0.9em;">
             <thead>
@@ -476,13 +517,14 @@
 
       preview.style.display = 'block';
       document.getElementById('dropZone').style.display = 'none';
-      window._pendingProductivite = { entries };
+      window._pendingProductivite = { entries, securite };
     }
 
     function confirmImport() {
       const p = window._pendingProductivite;
       if (!p) return;
       const saved = replaceCBCOProductiviteData(p.entries);
+      if (p.securite) replaceCBCOSecuriteData(p.securite);
       Auth.audit('CBCO_PRODUCTIVITE_IMPORT', `Import productivité usine: ${saved.length} semaines (remplacement complet)`);
       showMessage(`✅ Import validé: ${saved.length} semaines enregistrées (historique remplacé).`, 'success');
       cancelPreview();
