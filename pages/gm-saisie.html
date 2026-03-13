@@ -232,7 +232,7 @@
                 ${k.status === 'published' ? '✅ Publié' : '📝 Brouillon'}
               </span>
             </td>
-            <td><small>${k.comment}</small></td>
+            <td><small style="white-space:pre-wrap;">${escapeHtml(k.comment)}</small></td>
             <td>
               <button class="btn btn-small btn-secondary" onclick="editKPI(${k.id})">✏️ Éditer</button>
               ${k.status !== 'published' ? `<button class="btn btn-small btn-success" onclick="handlePublishKPI(${k.year}, ${k.week})">📤 Publier</button>` : ''}

@@ -429,7 +429,7 @@
                 ${ratio !== null ? ratio.toFixed(2) : '—'}
               </span>
             </td>
-            <td><small>${escapeHtml(k.comment)}</small></td>
+            <td><small style="white-space:pre-wrap;">${escapeHtml(k.comment)}</small></td>
           </tr>
         `;
       }).join('');
