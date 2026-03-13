@@ -220,10 +220,18 @@ window.serverReady = _serverReady;
 /**
  * Lance une fonction après que le serveur ait chargé toutes les données.
  * Remplace window.addEventListener('load', fn) pour garantir la synchronisation.
+ * La fonction est aussi relancée automatiquement à chaque rafraîchissement automatique.
  */
 window.onServerReady = function(fn) {
   window.addEventListener('load', async () => {
     await window.serverReady;
     fn();
   });
+  window.addEventListener('serverDataRefreshed', () => fn());
 };
+
+// ─── RAFRAÎCHISSEMENT AUTOMATIQUE TOUTES LES MINUTES ────────────────────────
+setInterval(async () => {
+  await loadAllFromServer();
+  window.dispatchEvent(new CustomEvent('serverDataRefreshed'));
+}, 60000);
