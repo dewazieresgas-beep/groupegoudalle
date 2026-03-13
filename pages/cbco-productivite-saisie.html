@@ -22,7 +22,7 @@
     <div id="sidebar"></div>
     <main class="main-content">
       <h1>🏭 CBCO - Productivité usine</h1>
-      <p class="subtitle" style="margin-bottom: 24px; color: #666;">Import Excel complet Speedcut + Ultra + Extra - remplace l'historique précédent</p>
+      <p class="subtitle" style="margin-bottom: 24px; color: #666;">Import Excel complet Speedcut + Ultra + Extra + Collage - remplace l'historique précédent</p>
       <div id="message" class="alert" style="display:none;"></div>
 
       <div class="card">
@@ -32,7 +32,7 @@
             <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none;" onchange="handleFileSelect(this)">
             <div class="ss-import-icon">📊</div>
             <p><strong>Glissez-déposez</strong> le fichier Excel ici<br>ou <span style="color:var(--accent-dark); text-decoration:underline;">cliquez pour sélectionner</span></p>
-            <p style="font-size:0.82em; color:#999;">Sources utilisées: feuilles SC, ULTRA et EXTRA (ligne 4+).</p>
+            <p style="font-size:0.82em; color:#999;">Sources utilisées: feuilles SC, ULTRA, EXTRA et COLLAGE (ligne 4+).</p>
           </div>
           <div id="preview" style="display:none;"></div>
         </div>
@@ -47,6 +47,7 @@
               <option value="speedcut">Speedcut</option>
               <option value="ultra">Ultra</option>
               <option value="extra">Extra</option>
+              <option value="collage">Collage</option>
             </select>
             <span class="badge badge-secondary" id="countImports">0 semaine</span>
           </div>
@@ -151,13 +152,19 @@
         const heuresOnaya = parseDurationHours(row[config.COL.D]);
         const heuresPerdues = parseDurationHours(row[config.COL.E]);
         const cubage = parseNumber(row[config.COL.F]);
-        const productiviteCell = parseNumber(row[config.COL.G]);
+        const productiviteCell = config.productiviteAsDuration
+          ? parseDurationHours(row[config.COL.G])
+          : parseNumber(row[config.COL.G]);
         const remarques = hasCellValue(row[config.COL.H]) ? String(row[config.COL.H]).trim() : null;
-        const cibleProductivite = parseNumber(row[config.COL.J]);
+        const cibleProductivite = config.targetAsDuration
+          ? parseDurationHours(row[config.COL.J])
+          : parseNumber(row[config.COL.J]);
         const trs = parseRatio(row[config.COL.TRS]);
         const tempsUtilisationMachine = parseDurationHours(row[config.COL.TEMPS]);
         const productiviteHeuresMachines = config.COL.PRODHM === undefined ? null : parseNumber(row[config.COL.PRODHM]);
         const volume = config.COL.VOLUME === undefined ? null : parseNumber(row[config.COL.VOLUME]);
+        const nombrePressees = config.COL.PRESSES === undefined ? null : parseNumber(row[config.COL.PRESSES]);
+        const nombreCaissons = config.COL.CAISSONS === undefined ? null : parseNumber(row[config.COL.CAISSONS]);
 
         if (semaineCumulee === null && semaineAnnuelle === null) continue;
         if (cubage === null && heuresOnaya === null && heuresPerdues === null && productiviteCell === null) continue;
@@ -193,7 +200,9 @@
           trs,
           tempsUtilisationMachine,
           productiviteHeuresMachines,
-          volume
+          volume,
+          nombrePressees,
+          nombreCaissons
         };
       }
 
@@ -216,9 +225,16 @@
         usefulStart: 5, usefulEnd: 12,
         COL: { B: 1, C: 2, D: 3, E: 4, F: 5, G: 6, H: 7, J: 9, TRS: 11, TEMPS: 8, PRODHM: 10, VOLUME: 12 }
       });
+      const collageEntries = parseMachineSheet(workbook, {
+        sheetKey: 'collage',
+        usefulStart: 3, usefulEnd: 9,
+        productiviteAsDuration: true,
+        targetAsDuration: true,
+        COL: { B: 1, C: 2, D: 3, E: 4, F: 5, G: 6, H: 7, J: 9, TEMPS: 3, PRESSES: 5, CAISSONS: 8 }
+      });
 
-      if (!scEntries.length && !ultraEntries.length && !extraEntries.length) {
-        throw new Error('Aucune donnée exploitable trouvée dans les feuilles SC/ULTRA/EXTRA.');
+      if (!scEntries.length && !ultraEntries.length && !extraEntries.length && !collageEntries.length) {
+        throw new Error('Aucune donnée exploitable trouvée dans les feuilles SC/ULTRA/EXTRA/COLLAGE.');
       }
 
       const merged = {};
@@ -249,7 +265,10 @@
             extraM2: null, extraHeuresOnaya: null, extraHeuresPerdues: null, extraHeuresUtiles: null,
             extraProductivite: null, extraCibleProductivite: null, extraTRS: null, extraTempsUtilisation: null, extraRemarques: null,
             extraProductiviteHeuresMachines: null, extraVolume: null,
-            collageHeures: null, collagePresses: null, assemblageTempsRealise: null, assemblageTempsTheorique: null
+            collage_semaine_annuelle: null, collage_semaine_cumulee: null, collage_heures_onaya: null, collage_heures_perdues: null,
+            collage_nombre_pressees: null, collage_temps_pressee: null, collage_commentaire: null, collage_nombre_caissons: null, collage_cible_temps_pressee: null,
+            collageHeures: null, collagePresses: null, collageTempsPressee: null, collageCommentaire: null, collageNombreCaissons: null, collageCibleTempsPressee: null,
+            assemblageTempsRealise: null, assemblageTempsTheorique: null
           };
         }
         return merged[key];
@@ -326,6 +345,25 @@
         row.extraRemarques = e.remarques;
         row.extraProductiviteHeuresMachines = e.productiviteHeuresMachines;
         row.extraVolume = e.volume;
+      });
+
+      collageEntries.forEach(e => {
+        const row = ensureWeekBase(e.week, e.year);
+        row.collage_semaine_annuelle = e.semaineAnnuelle;
+        row.collage_semaine_cumulee = e.semaineCumulee;
+        row.collage_heures_onaya = e.heuresOnaya;
+        row.collage_heures_perdues = e.heuresPerdues;
+        row.collage_nombre_pressees = e.nombrePressees;
+        row.collage_temps_pressee = e.productivite;
+        row.collage_commentaire = e.remarques;
+        row.collage_nombre_caissons = e.nombreCaissons;
+        row.collage_cible_temps_pressee = e.cibleProductivite;
+        row.collageHeures = e.heuresOnaya;
+        row.collagePresses = e.nombrePressees;
+        row.collageTempsPressee = e.productivite;
+        row.collageCommentaire = e.remarques;
+        row.collageNombreCaissons = e.nombreCaissons;
+        row.collageCibleTempsPressee = e.cibleProductivite;
       });
 
       return Object.values(merged).sort((a, b) => a.year !== b.year ? a.year - b.year : a.week - b.week);
@@ -471,6 +509,23 @@
             trsCol: 'TRS (L)',
             tempsCol: 'Tps usinage (I)'
           }
+        : machine === 'collage'
+        ? {
+            label: 'Collage',
+            hOnaya: 'collage_heures_onaya',
+            hPerdues: 'collage_heures_perdues',
+            cubage: 'collage_nombre_pressees',
+            prod: 'collage_temps_pressee',
+            remarques: 'collage_commentaire',
+            cible: 'collage_cible_temps_pressee',
+            trs: null,
+            temps: null,
+            prodHm: 'collage_nombre_caissons',
+            volume: null,
+            cubageCol: 'Nb pressées (F)',
+            trsCol: '',
+            tempsCol: ''
+          }
         : {
             label: 'Speedcut',
             hOnaya: 'heures_onaya',
@@ -499,9 +554,9 @@
             <th>Prod (G)</th>
             <th>Remarques (H)</th>
             <th>Cible (J)</th>
-            ${cfg.prodHm ? '<th>Prod h machines (K)</th>' : ''}
-            <th>${cfg.trsCol}</th>
-            <th>${cfg.tempsCol}</th>
+            ${machine === 'collage' ? '<th>Nb caissons (I)</th>' : (cfg.prodHm ? '<th>Prod h machines (K)</th>' : '')}
+            ${cfg.trs ? `<th>${cfg.trsCol}</th>` : ''}
+            ${cfg.temps ? `<th>${cfg.tempsCol}</th>` : ''}
             ${cfg.volume ? '<th>Volume (M)</th>' : ''}
             <th style="text-align:center;">Actions</th>
           </tr>
@@ -517,9 +572,9 @@
               <td>${e[cfg.prod] === null || e[cfg.prod] === undefined ? '—' : formatNumber(e[cfg.prod])}</td>
               <td>${e[cfg.remarques] ? escapeHtml(e[cfg.remarques]) : '—'}</td>
               <td>${e[cfg.cible] === null || e[cfg.cible] === undefined ? '—' : formatNumber(e[cfg.cible])}</td>
-              ${cfg.prodHm ? `<td>${e[cfg.prodHm] === null || e[cfg.prodHm] === undefined ? '—' : formatNumber(e[cfg.prodHm])}</td>` : ''}
-              <td>${e[cfg.trs] === null || e[cfg.trs] === undefined ? '—' : formatNumber(e[cfg.trs])}</td>
-              <td>${e[cfg.temps] === null || e[cfg.temps] === undefined ? '—' : formatNumber(e[cfg.temps])}</td>
+              ${machine === 'collage' ? `<td>${e[cfg.prodHm] === null || e[cfg.prodHm] === undefined ? '—' : formatNumber(e[cfg.prodHm])}</td>` : (cfg.prodHm ? `<td>${e[cfg.prodHm] === null || e[cfg.prodHm] === undefined ? '—' : formatNumber(e[cfg.prodHm])}</td>` : '')}
+              ${cfg.trs ? `<td>${e[cfg.trs] === null || e[cfg.trs] === undefined ? '—' : formatNumber(e[cfg.trs])}</td>` : ''}
+              ${cfg.temps ? `<td>${e[cfg.temps] === null || e[cfg.temps] === undefined ? '—' : formatNumber(e[cfg.temps])}</td>` : ''}
               ${cfg.volume ? `<td>${e[cfg.volume] === null || e[cfg.volume] === undefined ? '—' : formatNumber(e[cfg.volume])}</td>` : ''}
               <td style="text-align:center;"><button class="btn btn-small btn-danger" onclick="deleteImport('${e.id}')">🗑️</button></td>
             </tr>

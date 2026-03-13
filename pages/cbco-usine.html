@@ -176,6 +176,56 @@
           </div>
         </div>
       </div>
+
+      <div class="gm-header" style="margin-top:20px;">
+        <h1>Collage - Temps par pressée semaine <span id="weekNumberCOLLAGE">—</span></h1>
+      </div>
+      <div class="gm-main-section">
+        <div id="usineEmptyCOLLAGE" style="display:none; color:#999;">Aucune donnée de collage disponible.</div>
+        <div id="usineContentCOLLAGE" style="display:none;">
+          <div class="gm-main-container">
+            <div class="gm-kpi-column">
+              <div class="gm-kpi-card gm-kpi-m3">
+                <div class="gm-kpi-label">Nb pressées</div>
+                <div class="gm-kpi-value" id="cubageCOLLAGE">0.00</div>
+              </div>
+              <div class="gm-kpi-card gm-kpi-hours">
+                <div class="gm-kpi-label">Heures théoriques</div>
+                <div class="gm-kpi-value" id="hoursCOLLAGE">0.00</div>
+              </div>
+              <div class="gm-kpi-card gm-kpi-ratio">
+                <div class="gm-kpi-label">Temps/pressée (h)</div>
+                <div class="gm-kpi-value" id="prodCOLLAGE">—</div>
+              </div>
+            </div>
+            <div class="gm-chart-column">
+              <div class="gm-chart-section">
+                <div class="gm-chart-header">
+                  <h2>Tendance temps par pressée (h)</h2>
+                  <select id="rangeSelectCOLLAGE" class="gm-range-select" onchange="renderMachineSection('collage')">
+                    <option value="4">1 mois</option>
+                    <option value="8">2 mois</option>
+                    <option value="52">1 an</option>
+                    <option value="104">2 ans</option>
+                  </select>
+                </div>
+                <div class="gm-chart-container">
+                  <canvas id="chartCOLLAGE"></canvas>
+                </div>
+              </div>
+            </div>
+            <div class="gm-indicator-column">
+              <div class="gm-indicator-card" id="indicatorCOLLAGE">
+                <img id="moodCOLLAGE" src="../assets/smiley rouge usine cbco.png" alt="smiley collage" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
+              </div>
+            </div>
+          </div>
+          <div class="gm-comment-section" style="margin-top: 16px;">
+            <h2>Commentaire de la semaine</h2>
+            <textarea id="commentCOLLAGE" class="gm-comment-input" rows="1" wrap="off" readonly placeholder="Aucun commentaire"></textarea>
+          </div>
+        </div>
+      </div>
     </main>
   </div>
 
@@ -183,6 +233,7 @@
     let chartSC;
     let chartULTRA;
     let chartEXTRA;
+    let chartCOLLAGE;
 
     function getCssVar(name, fallback) {
       const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -222,6 +273,21 @@
           moodRed: '../assets/smiley rouge usine cbco.png'
         };
       }
+      if (machine === 'collage') {
+        return {
+          suffix: 'COLLAGE',
+          m3Field: 'collagePresses',
+          hoursField: 'collageHeures',
+          usefulField: null,
+          prodField: 'collageTempsPressee',
+          targetField: 'collageCibleTempsPressee',
+          remarkField: 'collageCommentaire',
+          unit: 'h/pressée',
+          goodWhenLower: true,
+          moodGreen: '../assets/smiley vert usine cbco.png',
+          moodRed: '../assets/smiley rouge usine cbco.png'
+        };
+      }
       return {
         suffix: 'SC',
         m3Field: 'speedcutM3',
@@ -249,6 +315,7 @@
         content.style.display = 'none';
         if (machine === 'ultra' && chartULTRA) chartULTRA.destroy();
         if (machine === 'extra' && chartEXTRA) chartEXTRA.destroy();
+        if (machine === 'collage' && chartCOLLAGE) chartCOLLAGE.destroy();
         if (machine === 'sc' && chartSC) chartSC.destroy();
         return;
       }
@@ -257,12 +324,20 @@
       const entries = withData.slice(-range);
       const labels = entries.map(e => e.semaineLabel || `S${e.week} ${e.year}`);
       const latestLabel = labels[labels.length - 1];
-      const dataProd = entries.map(e => Number(e[cfg.prodField]) > 0 ? e[cfg.prodField] : (Number(e[cfg.usefulField]) > 0 ? Number(e[cfg.m3Field]) / Number(e[cfg.usefulField]) : null));
+      const dataProd = entries.map(e => {
+        if (Number(e[cfg.prodField]) > 0) return e[cfg.prodField];
+        if (machine === 'collage') {
+          return (Number(e.collageHeures) > 0 && Number(e.collagePresses) > 0) ? (Number(e.collageHeures) / Number(e.collagePresses)) : null;
+        }
+        return Number(e[cfg.usefulField]) > 0 ? Number(e[cfg.m3Field]) / Number(e[cfg.usefulField]) : null;
+      });
       const dataTarget = entries.map(e => Number(e[cfg.targetField]) > 0 ? e[cfg.targetField] : null);
       const latest = entries[entries.length - 1];
       const latestProd = dataProd[dataProd.length - 1] || 0;
       const latestTarget = dataTarget[dataTarget.length - 1] || 0;
-      const aboveTarget = latestTarget > 0 && latestProd >= latestTarget;
+      const aboveTarget = latestTarget > 0
+        ? (cfg.goodWhenLower ? latestProd <= latestTarget : latestProd >= latestTarget)
+        : false;
 
       document.getElementById(`weekNumber${cfg.suffix}`).textContent = latest.semaineLabel || `S${latest.week} ${latest.year}`;
       document.getElementById(`cubage${cfg.suffix}`).textContent = formatNumber(Number(latest[cfg.m3Field]) || 0);
@@ -275,6 +350,7 @@
       const ctx = document.getElementById(`chart${cfg.suffix}`).getContext('2d');
       if (machine === 'ultra' && chartULTRA) chartULTRA.destroy();
       if (machine === 'extra' && chartEXTRA) chartEXTRA.destroy();
+      if (machine === 'collage' && chartCOLLAGE) chartCOLLAGE.destroy();
       if (machine === 'sc' && chartSC) chartSC.destroy();
 
       const newChart = new Chart(ctx, {
@@ -331,6 +407,7 @@
 
       if (machine === 'ultra') chartULTRA = newChart;
       else if (machine === 'extra') chartEXTRA = newChart;
+      else if (machine === 'collage') chartCOLLAGE = newChart;
       else chartSC = newChart;
       empty.style.display = 'none';
       content.style.display = '';
@@ -342,6 +419,7 @@
       renderMachineSection('sc');
       renderMachineSection('ultra');
       renderMachineSection('extra');
+      renderMachineSection('collage');
     }
 
     function downloadUsineAsImage() {
