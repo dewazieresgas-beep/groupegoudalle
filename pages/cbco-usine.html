@@ -122,12 +122,63 @@
           </div>
         </div>
       </div>
+
+      <div class="gm-header" style="margin-top:20px;">
+        <h1>Productivité Extra semaine <span id="weekNumberEXTRA">—</span></h1>
+      </div>
+      <div class="gm-main-section">
+        <div id="usineEmptyEXTRA" style="display:none; color:#999;">Aucune donnée de productivité Extra disponible.</div>
+        <div id="usineContentEXTRA" style="display:none;">
+          <div class="gm-main-container">
+            <div class="gm-kpi-column">
+              <div class="gm-kpi-card gm-kpi-m3">
+                <div class="gm-kpi-label">Surface Extra (m²)</div>
+                <div class="gm-kpi-value" id="cubageEXTRA">0.00</div>
+              </div>
+              <div class="gm-kpi-card gm-kpi-hours">
+                <div class="gm-kpi-label">Heures théoriques</div>
+                <div class="gm-kpi-value" id="hoursEXTRA">0.00</div>
+              </div>
+              <div class="gm-kpi-card gm-kpi-ratio">
+                <div class="gm-kpi-label">Productivité m²/h</div>
+                <div class="gm-kpi-value" id="prodEXTRA">—</div>
+              </div>
+            </div>
+            <div class="gm-chart-column">
+              <div class="gm-chart-section">
+                <div class="gm-chart-header">
+                  <h2>Tendance Extra m²/h</h2>
+                  <select id="rangeSelectEXTRA" class="gm-range-select" onchange="renderMachineSection('extra')">
+                    <option value="4">1 mois</option>
+                    <option value="8">2 mois</option>
+                    <option value="52">1 an</option>
+                    <option value="104">2 ans</option>
+                  </select>
+                </div>
+                <div class="gm-chart-container">
+                  <canvas id="chartEXTRA"></canvas>
+                </div>
+              </div>
+            </div>
+            <div class="gm-indicator-column">
+              <div class="gm-indicator-card" id="indicatorEXTRA">
+                <img id="moodEXTRA" src="../assets/smiley rouge usine cbco.png" alt="smiley extra" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
+              </div>
+            </div>
+          </div>
+          <div class="gm-comment-section" style="margin-top: 16px;">
+            <h2>Commentaire de la semaine</h2>
+            <textarea id="commentEXTRA" class="gm-comment-input" rows="1" wrap="off" readonly placeholder="Aucun commentaire"></textarea>
+          </div>
+        </div>
+      </div>
     </main>
   </div>
 
   <script>
     let chartSC;
     let chartULTRA;
+    let chartEXTRA;
 
     function getCssVar(name, fallback) {
       const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -148,6 +199,21 @@
           prodField: 'ultraProductivite',
           targetField: 'ultraCibleProductivite',
           remarkField: 'ultraRemarques',
+          unit: 'm3/h',
+          moodGreen: '../assets/smiley vert usine cbco.png',
+          moodRed: '../assets/smiley rouge usine cbco.png'
+        };
+      }
+      if (machine === 'extra') {
+        return {
+          suffix: 'EXTRA',
+          m3Field: 'extraM2',
+          hoursField: 'extraHeuresOnaya',
+          usefulField: 'extraHeuresUtiles',
+          prodField: 'extraProductivite',
+          targetField: 'extraCibleProductivite',
+          remarkField: 'extraRemarques',
+          unit: 'm²/h',
           moodGreen: '../assets/smiley vert usine cbco.png',
           moodRed: '../assets/smiley rouge usine cbco.png'
         };
@@ -160,6 +226,7 @@
         prodField: 'speedcutProductivite',
         targetField: 'speedcutCibleProductivite',
         remarkField: 'speedcutRemarques',
+        unit: 'm3/h',
         moodGreen: '../assets/smiley vert usine cbco.png',
         moodRed: '../assets/smiley rouge usine cbco.png'
       };
@@ -177,6 +244,7 @@
         empty.style.display = '';
         content.style.display = 'none';
         if (machine === 'ultra' && chartULTRA) chartULTRA.destroy();
+        if (machine === 'extra' && chartEXTRA) chartEXTRA.destroy();
         if (machine === 'sc' && chartSC) chartSC.destroy();
         return;
       }
@@ -202,6 +270,7 @@
 
       const ctx = document.getElementById(`chart${cfg.suffix}`).getContext('2d');
       if (machine === 'ultra' && chartULTRA) chartULTRA.destroy();
+      if (machine === 'extra' && chartEXTRA) chartEXTRA.destroy();
       if (machine === 'sc' && chartSC) chartSC.destroy();
 
       const newChart = new Chart(ctx, {
@@ -210,7 +279,7 @@
           labels,
           datasets: [
             {
-              label: 'Productivité (m3/h)',
+              label: `Productivité (${cfg.unit})`,
               data: dataProd,
               borderColor: getCssVar('--accent-dark', '#6b8e6f'),
               backgroundColor: 'rgba(107, 142, 111, 0.12)',
@@ -222,7 +291,7 @@
               fill: true
             },
             {
-              label: 'Cible (m3/h)',
+              label: `Cible (${cfg.unit})`,
               data: dataTarget,
               borderColor: '#e74c3c',
               pointRadius: 0,
@@ -238,7 +307,7 @@
           interaction: { mode: 'index', intersect: false },
           plugins: {
             legend: { display: true, position: 'top' },
-            tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${formatNumber(ctx.parsed.y)} m3/h` } }
+            tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${formatNumber(ctx.parsed.y)} ${cfg.unit}` } }
           },
           scales: {
             x: {
@@ -249,7 +318,7 @@
             },
             y: {
               beginAtZero: true,
-              title: { display: true, text: 'm3/h' },
+              title: { display: true, text: cfg.unit },
               ticks: { callback: (v) => formatNumber(v) }
             }
           }
@@ -257,6 +326,7 @@
       });
 
       if (machine === 'ultra') chartULTRA = newChart;
+      else if (machine === 'extra') chartEXTRA = newChart;
       else chartSC = newChart;
       empty.style.display = 'none';
       content.style.display = '';
@@ -267,6 +337,7 @@
       injectCBCOSecondaryBar();
       renderMachineSection('sc');
       renderMachineSection('ultra');
+      renderMachineSection('extra');
     }
 
     window.onServerReady(init);
