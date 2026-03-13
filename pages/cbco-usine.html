@@ -295,6 +295,11 @@
       return String(text || '').replace(/\r?\n+/g, ' / ').replace(/\s+/g, ' ').trim();
     }
 
+    function toFiniteNumber(value) {
+      const n = Number(value);
+      return Number.isFinite(n) ? n : null;
+    }
+
     function getMachineConfig(machine) {
       if (machine === 'ultra') {
         return {
@@ -375,8 +380,11 @@
       const allDesc = getCBCOProductiviteData();
       const allAsc = [...allDesc].sort((a, b) => a.year !== b.year ? a.year - b.year : a.week - b.week);
       const withData = allAsc.filter(e => {
-        const hasTarget = cfg.targetField ? Number(e[cfg.targetField]) > 0 : false;
-        return Number(e[cfg.prodField]) > 0 || Number(e[cfg.m3Field]) > 0 || hasTarget;
+        const prodVal = toFiniteNumber(e[cfg.prodField]);
+        const mainVal = toFiniteNumber(e[cfg.m3Field]);
+        const targetVal = cfg.targetField ? toFiniteNumber(e[cfg.targetField]) : null;
+        const validTarget = targetVal !== null && targetVal > 0;
+        return prodVal !== null || mainVal !== null || validTarget;
       });
 
       if (!withData.length) {
@@ -395,15 +403,24 @@
       const labels = entries.map(e => e.semaineLabel || `S${e.week} ${e.year}`);
       const latestLabel = labels[labels.length - 1];
       const dataProd = entries.map(e => {
-        if (Number(e[cfg.prodField]) > 0) return e[cfg.prodField];
+        const direct = toFiniteNumber(e[cfg.prodField]);
+        if (direct !== null) return direct;
         if (machine === 'collage') {
-          return (Number(e.collageHeures) > 0 && Number(e.collagePresses) > 0) ? (Number(e.collageHeures) / Number(e.collagePresses)) : null;
+          const h = toFiniteNumber(e.collageHeures);
+          const p = toFiniteNumber(e.collagePresses);
+          return (h !== null && p !== null && p > 0) ? (h / p) : null;
         }
-        return Number(e[cfg.usefulField]) > 0 ? Number(e[cfg.m3Field]) / Number(e[cfg.usefulField]) : null;
+        const useful = cfg.usefulField ? toFiniteNumber(e[cfg.usefulField]) : null;
+        const main = toFiniteNumber(e[cfg.m3Field]);
+        return (useful !== null && useful > 0 && main !== null) ? (main / useful) : null;
       });
       const dataTarget = machine === 'assemblage'
         ? entries.map(() => 0)
-        : entries.map(e => (cfg.targetField && Number(e[cfg.targetField]) > 0) ? e[cfg.targetField] : null);
+        : entries.map(e => {
+            if (!cfg.targetField) return null;
+            const t = toFiniteNumber(e[cfg.targetField]);
+            return t !== null && t > 0 ? t : null;
+          });
       const latest = entries[entries.length - 1];
       const latestProd = dataProd[dataProd.length - 1] || 0;
       const latestTarget = dataTarget[dataTarget.length - 1] || 0;
@@ -427,6 +444,13 @@
       if (machine === 'collage' && chartCOLLAGE) chartCOLLAGE.destroy();
       if (machine === 'assemblage' && chartASSEMBLAGE) chartASSEMBLAGE.destroy();
       if (machine === 'sc' && chartSC) chartSC.destroy();
+
+      const yValues = [...dataProd, ...dataTarget].filter(v => Number.isFinite(v));
+      const yMinRaw = yValues.length ? Math.min(...yValues, 0) : -1;
+      const yMaxRaw = yValues.length ? Math.max(...yValues, 0) : 1;
+      const yPadding = Math.max((yMaxRaw - yMinRaw) * 0.12, cfg.unit === '%' ? 5 : 0.2);
+      const yMin = yMinRaw - yPadding;
+      const yMax = yMaxRaw + yPadding;
 
       const newChart = new Chart(ctx, {
         type: 'line',
@@ -472,7 +496,9 @@
               }
             },
             y: {
-              beginAtZero: true,
+              beginAtZero: false,
+              min: yMin,
+              max: yMax,
               title: { display: true, text: cfg.unit },
               ticks: { callback: (v) => formatNumber(v) }
             }
