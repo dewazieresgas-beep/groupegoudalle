@@ -21,6 +21,13 @@ const SERVER_URL = window.location.origin + '/api';
 const _cache = {};
 let _serverAvailable = null; // null = pas encore testé, true/false après test
 
+function createTimeoutSignal(timeoutMs) {
+  if (typeof AbortController === 'undefined') return undefined;
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), timeoutMs);
+  return controller.signal;
+}
+
 // ─── CORRESPONDANCE CLÉ localStorage → ENDPOINT API ────────────────────────────
 const KEY_TO_ENDPOINT = {
   'goudalle_users':                  '/users',
@@ -53,7 +60,8 @@ const LOCAL_ONLY_KEYS = new Set([
 
 async function checkServerAvailable() {
   try {
-    const res = await fetch(SERVER_URL + '/health', { method: 'GET', signal: AbortSignal.timeout(3000) });
+    const signal = createTimeoutSignal(3000);
+    const res = await fetch(SERVER_URL + '/health', signal ? { method: 'GET', signal } : { method: 'GET' });
     _serverAvailable = res.ok;
   } catch {
     _serverAvailable = false;
@@ -115,11 +123,12 @@ async function loadAllFromServer() {
 async function sendToServer(endpoint, data) {
   if (!_serverAvailable) return;
   try {
+    const signal = createTimeoutSignal(5000);
     await fetch(SERVER_URL + endpoint, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
-      signal: AbortSignal.timeout(5000)
+      ...(signal ? { signal } : {})
     });
   } catch (e) {
     console.warn(`[API] Erreur envoi ${endpoint}:`, e.message);
