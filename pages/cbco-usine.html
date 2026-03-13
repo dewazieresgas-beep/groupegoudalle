@@ -540,12 +540,26 @@
       return result;
     }
 
+    function getCurrentIsoWeekYear() {
+      const d = new Date();
+      const utc = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+      const dayNum = utc.getUTCDay() || 7;
+      utc.setUTCDate(utc.getUTCDate() + 4 - dayNum);
+      const year = utc.getUTCFullYear();
+      const yearStart = new Date(Date.UTC(year, 0, 1));
+      const week = Math.ceil((((utc - yearStart) / 86400000) + 1) / 7);
+      return { week, year };
+    }
+
     function renderMachineSection(machine) {
       const cfg = getMachineConfig(machine);
       const empty = document.getElementById(`usineEmpty${cfg.suffix}`);
       const content = document.getElementById(`usineContent${cfg.suffix}`);
       const allDesc = getCBCOProductiviteData();
-      const allAsc = [...allDesc].sort((a, b) => a.year !== b.year ? a.year - b.year : a.week - b.week);
+      const nowIso = getCurrentIsoWeekYear();
+      const allAsc = [...allDesc]
+        .filter(e => (e.year < nowIso.year) || (e.year === nowIso.year && e.week <= nowIso.week))
+        .sort((a, b) => a.year !== b.year ? a.year - b.year : a.week - b.week);
       const withData = allAsc.filter(e => {
         const prodVal = toFiniteNumber(e[cfg.prodField]);
         const mainVal = toFiniteNumber(e[cfg.m3Field]);
