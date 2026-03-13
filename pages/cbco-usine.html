@@ -52,12 +52,12 @@
               <div class="gm-chart-section">
                 <div class="gm-chart-header">
                   <h2>Tendance Speedcut m3/h</h2>
-                  <select id="rangeSelectSC" class="gm-range-select" onchange="renderMachineSection('sc')">
-                    <option value="4">1 mois</option>
-                    <option value="8">2 mois</option>
-                    <option value="52">1 an</option>
-                    <option value="104">2 ans</option>
-                  </select>
+                  <div style="display:flex; gap:8px; align-items:center;">
+                    <span>De</span>
+                    <select id="startWeekSC" class="gm-range-select" onchange="renderMachineSection('sc')"></select>
+                    <span>à</span>
+                    <select id="endWeekSC" class="gm-range-select" onchange="renderMachineSection('sc')"></select>
+                  </div>
                 </div>
                 <div class="gm-chart-container">
                   <canvas id="chartSC"></canvas>
@@ -102,12 +102,12 @@
               <div class="gm-chart-section">
                 <div class="gm-chart-header">
                   <h2>Tendance Ultra m3/h</h2>
-                  <select id="rangeSelectULTRA" class="gm-range-select" onchange="renderMachineSection('ultra')">
-                    <option value="4">1 mois</option>
-                    <option value="8">2 mois</option>
-                    <option value="52">1 an</option>
-                    <option value="104">2 ans</option>
-                  </select>
+                  <div style="display:flex; gap:8px; align-items:center;">
+                    <span>De</span>
+                    <select id="startWeekULTRA" class="gm-range-select" onchange="renderMachineSection('ultra')"></select>
+                    <span>à</span>
+                    <select id="endWeekULTRA" class="gm-range-select" onchange="renderMachineSection('ultra')"></select>
+                  </div>
                 </div>
                 <div class="gm-chart-container">
                   <canvas id="chartULTRA"></canvas>
@@ -152,12 +152,12 @@
               <div class="gm-chart-section">
                 <div class="gm-chart-header">
                   <h2>Tendance Extra m²/h</h2>
-                  <select id="rangeSelectEXTRA" class="gm-range-select" onchange="renderMachineSection('extra')">
-                    <option value="4">1 mois</option>
-                    <option value="8">2 mois</option>
-                    <option value="52">1 an</option>
-                    <option value="104">2 ans</option>
-                  </select>
+                  <div style="display:flex; gap:8px; align-items:center;">
+                    <span>De</span>
+                    <select id="startWeekEXTRA" class="gm-range-select" onchange="renderMachineSection('extra')"></select>
+                    <span>à</span>
+                    <select id="endWeekEXTRA" class="gm-range-select" onchange="renderMachineSection('extra')"></select>
+                  </div>
                 </div>
                 <div class="gm-chart-container">
                   <canvas id="chartEXTRA"></canvas>
@@ -202,12 +202,12 @@
               <div class="gm-chart-section">
                 <div class="gm-chart-header">
                   <h2>Tendance temps par pressée (h)</h2>
-                  <select id="rangeSelectCOLLAGE" class="gm-range-select" onchange="renderMachineSection('collage')">
-                    <option value="4">1 mois</option>
-                    <option value="8">2 mois</option>
-                    <option value="52">1 an</option>
-                    <option value="104">2 ans</option>
-                  </select>
+                  <div style="display:flex; gap:8px; align-items:center;">
+                    <span>De</span>
+                    <select id="startWeekCOLLAGE" class="gm-range-select" onchange="renderMachineSection('collage')"></select>
+                    <span>à</span>
+                    <select id="endWeekCOLLAGE" class="gm-range-select" onchange="renderMachineSection('collage')"></select>
+                  </div>
                 </div>
                 <div class="gm-chart-container">
                   <canvas id="chartCOLLAGE"></canvas>
@@ -252,12 +252,12 @@
               <div class="gm-chart-section">
                 <div class="gm-chart-header">
                   <h2>Différence temps réalisé / théorique (%)</h2>
-                  <select id="rangeSelectASSEMBLAGE" class="gm-range-select" onchange="renderMachineSection('assemblage')">
-                    <option value="4">1 mois</option>
-                    <option value="8">2 mois</option>
-                    <option value="52">1 an</option>
-                    <option value="104">2 ans</option>
-                  </select>
+                  <div style="display:flex; gap:8px; align-items:center;">
+                    <span>De</span>
+                    <select id="startWeekASSEMBLAGE" class="gm-range-select" onchange="renderMachineSection('assemblage')"></select>
+                    <span>à</span>
+                    <select id="endWeekASSEMBLAGE" class="gm-range-select" onchange="renderMachineSection('assemblage')"></select>
+                  </div>
                 </div>
                 <div class="gm-chart-container">
                   <canvas id="chartASSEMBLAGE"></canvas>
@@ -373,6 +373,43 @@
       };
     }
 
+    function getSelectedEntries(withData, suffix) {
+      const startSelect = document.getElementById(`startWeek${suffix}`);
+      const endSelect = document.getElementById(`endWeek${suffix}`);
+      if (!startSelect || !endSelect) return withData.slice(-4);
+
+      const previousStart = startSelect.value;
+      const previousEnd = endSelect.value;
+      const optionsHtml = withData.map((e, i) => {
+        const label = e.semaineLabel || `S${e.week} ${e.year}`;
+        return `<option value="${i}">${label}</option>`;
+      }).join('');
+      startSelect.innerHTML = optionsHtml;
+      endSelect.innerHTML = optionsHtml;
+
+      const defaultEnd = withData.length - 1;
+      const defaultStart = Math.max(0, defaultEnd - 3);
+      startSelect.value = previousStart !== '' && Number(previousStart) >= 0 && Number(previousStart) < withData.length
+        ? previousStart
+        : String(defaultStart);
+      endSelect.value = previousEnd !== '' && Number(previousEnd) >= 0 && Number(previousEnd) < withData.length
+        ? previousEnd
+        : String(defaultEnd);
+
+      let startIndex = Number(startSelect.value);
+      let endIndex = Number(endSelect.value);
+      if (startIndex > endIndex) {
+        if (document.activeElement === startSelect) {
+          endIndex = startIndex;
+          endSelect.value = String(endIndex);
+        } else {
+          startIndex = endIndex;
+          startSelect.value = String(startIndex);
+        }
+      }
+      return withData.slice(startIndex, endIndex + 1);
+    }
+
     function renderMachineSection(machine) {
       const cfg = getMachineConfig(machine);
       const empty = document.getElementById(`usineEmpty${cfg.suffix}`);
@@ -398,11 +435,10 @@
         return;
       }
 
-      const range = parseInt(document.getElementById(`rangeSelect${cfg.suffix}`).value, 10) || 4;
-      const entries = withData.slice(-range);
-      const labels = entries.map(e => e.semaineLabel || `S${e.week} ${e.year}`);
+      const chartEntries = getSelectedEntries(withData, cfg.suffix);
+      const labels = chartEntries.map(e => e.semaineLabel || `S${e.week} ${e.year}`);
       const latestLabel = labels[labels.length - 1];
-      const dataProd = entries.map(e => {
+      const dataProd = chartEntries.map(e => {
         const direct = toFiniteNumber(e[cfg.prodField]);
         if (direct !== null) return direct;
         if (machine === 'collage') {
@@ -415,15 +451,32 @@
         return (useful !== null && useful > 0 && main !== null) ? (main / useful) : null;
       });
       const dataTarget = machine === 'assemblage'
-        ? entries.map(() => 0)
-        : entries.map(e => {
+        ? chartEntries.map(() => 0)
+        : chartEntries.map(e => {
             if (!cfg.targetField) return null;
             const t = toFiniteNumber(e[cfg.targetField]);
             return t !== null && t > 0 ? t : null;
           });
-      const latest = entries[entries.length - 1];
-      const latestProd = dataProd[dataProd.length - 1] || 0;
-      const latestTarget = dataTarget[dataTarget.length - 1] || 0;
+      const latest = withData[withData.length - 1];
+      const latestProd = (() => {
+        const direct = toFiniteNumber(latest[cfg.prodField]);
+        if (direct !== null) return direct;
+        if (machine === 'collage') {
+          const h = toFiniteNumber(latest.collageHeures);
+          const p = toFiniteNumber(latest.collagePresses);
+          return (h !== null && p !== null && p > 0) ? (h / p) : 0;
+        }
+        const useful = cfg.usefulField ? toFiniteNumber(latest[cfg.usefulField]) : null;
+        const main = toFiniteNumber(latest[cfg.m3Field]);
+        return (useful !== null && useful > 0 && main !== null) ? (main / useful) : 0;
+      })();
+      const latestTarget = machine === 'assemblage'
+        ? 0
+        : (() => {
+            if (!cfg.targetField) return 0;
+            const t = toFiniteNumber(latest[cfg.targetField]);
+            return t !== null && t > 0 ? t : 0;
+          })();
       const aboveTarget = machine === 'assemblage'
         ? (latestProd <= 0)
         : (latestTarget > 0
@@ -446,7 +499,9 @@
       if (machine === 'sc' && chartSC) chartSC.destroy();
 
       const yValues = [...dataProd, ...dataTarget].filter(v => Number.isFinite(v));
-      const yMinRaw = yValues.length ? Math.min(...yValues, 0) : -1;
+      const yMinRaw = machine === 'assemblage'
+        ? (yValues.length ? Math.min(...yValues, 0) : -1)
+        : 0;
       const yMaxRaw = yValues.length ? Math.max(...yValues, 0) : 1;
       const yPadding = Math.max((yMaxRaw - yMinRaw) * 0.12, cfg.unit === '%' ? 5 : 0.2);
       const yMin = yMinRaw - yPadding;
@@ -496,7 +551,7 @@
               }
             },
             y: {
-              beginAtZero: false,
+              beginAtZero: machine !== 'assemblage',
               min: yMin,
               max: yMax,
               title: { display: true, text: cfg.unit },

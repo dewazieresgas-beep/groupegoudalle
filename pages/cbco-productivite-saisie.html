@@ -139,8 +139,7 @@
 
       for (let r = 3; r < rows.length; r++) {
         const row = rows[r] || [];
-        const usefulRange = row.slice(config.usefulStart, config.usefulEnd + 1);
-        const hasUsefulData = usefulRange.some(hasCellValue);
+        const hasUsefulData = hasCellValue(row[config.COL.F]);
         if (!hasUsefulData) {
           emptyUsefulStreak++;
           if (emptyUsefulStreak >= 50) break;
@@ -168,7 +167,21 @@
         const nombreCaissons = config.COL.CAISSONS === undefined ? null : parseNumber(row[config.COL.CAISSONS]);
 
         if (semaineCumulee === null && semaineAnnuelle === null) continue;
-        if (cubage === null && heuresOnaya === null && heuresPerdues === null && productiviteCell === null) continue;
+        const valueByField = {
+          heuresOnaya,
+          heuresPerdues,
+          cubage,
+          productiviteCell,
+          trs,
+          tempsUtilisationMachine,
+          productiviteHeuresMachines,
+          volume,
+          nombrePressees,
+          nombreCaissons
+        };
+        const requiredFields = config.requiredFields || ['heuresOnaya', 'heuresPerdues', 'cubage', 'productiviteCell'];
+        const hasAllRequired = requiredFields.every(field => valueByField[field] !== null);
+        if (!hasAllRequired) continue;
 
         let week = null;
         let year = null;
@@ -213,29 +226,29 @@
     function parseProductiviteExcel(workbook) {
       const scEntries = parseMachineSheet(workbook, {
         sheetKey: 'sc',
-        usefulStart: 5, usefulEnd: 13,
+        requiredFields: ['heuresOnaya', 'heuresPerdues', 'cubage', 'productiviteCell'],
         COL: { B: 1, C: 2, D: 3, E: 4, F: 5, G: 6, H: 7, J: 9, TRS: 11, TEMPS: 13 }
       });
       const ultraEntries = parseMachineSheet(workbook, {
         sheetKey: 'ultra',
-        usefulStart: 5, usefulEnd: 10,
+        requiredFields: ['heuresOnaya', 'heuresPerdues', 'cubage', 'productiviteCell'],
         COL: { B: 1, C: 2, D: 3, E: 4, F: 5, G: 6, H: 7, J: 9, TRS: 10, TEMPS: 8 }
       });
       const extraEntries = parseMachineSheet(workbook, {
         sheetKey: 'extra',
-        usefulStart: 5, usefulEnd: 12,
+        requiredFields: ['heuresOnaya', 'heuresPerdues', 'cubage', 'productiviteCell'],
         COL: { B: 1, C: 2, D: 3, E: 4, F: 5, G: 6, H: 7, J: 9, TRS: 11, TEMPS: 8, PRODHM: 10, VOLUME: 12 }
       });
       const collageEntries = parseMachineSheet(workbook, {
         sheetKey: 'collage',
-        usefulStart: 5, usefulEnd: 5,
+        requiredFields: ['heuresOnaya', 'heuresPerdues', 'cubage', 'productiviteCell'],
         productiviteAsDuration: true,
         targetAsDuration: true,
         COL: { B: 1, C: 2, D: 3, E: 4, F: 5, G: 6, H: 7, J: 9, TEMPS: 3, PRESSES: 5, CAISSONS: 8 }
       });
       const assemblageEntries = parseMachineSheet(workbook, {
         sheetKey: 'assemblage',
-        usefulStart: 3, usefulEnd: 8,
+        requiredFields: ['heuresOnaya', 'heuresPerdues', 'cubage', 'productiviteCell'],
         COL: { B: 1, C: 2, D: 3, E: 4, F: 5, G: 6, H: 7, TEMPS: 8, VOLUME: 8 }
       });
 
