@@ -83,6 +83,7 @@
       if (!hasCellValue(value)) return null;
       if (typeof value === 'number') return Number.isFinite(value) ? value : null;
       const raw = String(value).trim();
+      if (raw.startsWith('#')) return null;
       const isPercent = raw.includes('%');
       const cleaned = raw.replace(/\s/g, '').replace('%', '').replace(',', '.');
       const match = cleaned.match(/-?\d+(\.\d+)?/);
@@ -180,7 +181,7 @@
           nombrePressees,
           nombreCaissons
         };
-        const requiredFields = config.requiredFields || ['heuresOnaya', 'heuresPerdues', 'cubage'];
+        const requiredFields = config.requiredFields || ['heuresOnaya', 'cubage'];
         const hasAllRequired = requiredFields.every(field => valueByField[field] !== null);
         if (!hasAllRequired) continue;
 
@@ -227,22 +228,22 @@
     function parseProductiviteExcel(workbook) {
       const scEntries = parseMachineSheet(workbook, {
         sheetKey: 'sc',
-        requiredFields: ['heuresOnaya', 'heuresPerdues', 'cubage'],
+        requiredFields: ['heuresOnaya', 'cubage'],
         COL: { B: 1, C: 2, D: 3, E: 4, F: 5, G: 6, H: 7, J: 9, TRS: 11, TEMPS: 13 }
       });
       const ultraEntries = parseMachineSheet(workbook, {
         sheetKey: 'ultra',
-        requiredFields: ['heuresOnaya', 'heuresPerdues', 'cubage'],
+        requiredFields: ['heuresOnaya', 'cubage'],
         COL: { B: 1, C: 2, D: 3, E: 4, F: 5, G: 6, H: 7, J: 9, TRS: 10, TEMPS: 8 }
       });
       const extraEntries = parseMachineSheet(workbook, {
         sheetKey: 'extra',
-        requiredFields: ['heuresOnaya', 'heuresPerdues', 'cubage'],
+        requiredFields: ['heuresOnaya', 'cubage'],
         COL: { B: 1, C: 2, D: 3, E: 4, F: 5, G: 6, H: 7, J: 9, TRS: 11, TEMPS: 8, PRODHM: 10, VOLUME: 12 }
       });
       const collageEntries = parseMachineSheet(workbook, {
         sheetKey: 'collage',
-        requiredFields: ['heuresOnaya', 'heuresPerdues', 'cubage'],
+        requiredFields: ['heuresOnaya', 'cubage'],
         productiviteAsDuration: true,
         targetAsDuration: true,
         COL: { B: 1, C: 2, D: 3, E: 4, F: 5, G: 6, H: 7, J: 9, TEMPS: 3, PRESSES: 5, CAISSONS: 8 }
@@ -511,10 +512,9 @@
       const body = document.getElementById('historyBody');
       const count = document.getElementById('countImports');
       const machine = document.getElementById('machineViewSelect')?.value || 'speedcut';
-      count.textContent = `${entries.length} semaine${entries.length > 1 ? 's' : ''}`;
-      count.className = entries.length > 0 ? 'badge badge-success' : 'badge badge-secondary';
-
       if (entries.length === 0) {
+        count.textContent = '0 semaine';
+        count.className = 'badge badge-secondary';
         body.innerHTML = '<p style="color:#999; margin:0;">Aucune semaine importée</p>';
         return;
       }
@@ -604,6 +604,18 @@
             tempsCol: 'Tps utilisation (N)'
           };
 
+      const filteredEntries = entries.filter(e => {
+        const hasF = e[cfg.cubage] !== null && e[cfg.cubage] !== undefined;
+        const hasHours = e[cfg.hOnaya] !== null && e[cfg.hOnaya] !== undefined;
+        return hasF && hasHours;
+      });
+      count.textContent = `${filteredEntries.length} semaine${filteredEntries.length > 1 ? 's' : ''}`;
+      count.className = filteredEntries.length > 0 ? 'badge badge-success' : 'badge badge-secondary';
+      if (filteredEntries.length === 0) {
+        body.innerHTML = `<p style="color:#999; margin:0;">Aucune donnée ${cfg.label} trouvée</p>`;
+        return;
+      }
+
       body.innerHTML = `<table style="font-size:0.88em;">
         <thead>
           <tr>
@@ -623,7 +635,7 @@
           </tr>
         </thead>
         <tbody>
-          ${entries.map(e => `
+          ${filteredEntries.map(e => `
             <tr>
               <td><strong>${escapeHtml(e.semaineLabel || ('S' + e.week + ' ' + e.year))}</strong></td>
               <td>${cfg.label}</td>
