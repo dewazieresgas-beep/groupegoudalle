@@ -99,7 +99,7 @@
               </div>
               <div style="width:240px;">
                 <h2 style="font-size:14px; margin:0 0 6px 0;">Commentaire de la semaine</h2>
-                <textarea id="commentSC" class="gm-comment-input" rows="2" wrap="off" readonly placeholder="Aucun commentaire" style="min-height:56px; height:56px; padding:8px 10px; font-size:12px; resize:none;"></textarea>
+                <textarea id="commentSC" class="gm-comment-input" rows="2" readonly placeholder="Aucun commentaire" style="min-height:56px; height:56px; padding:8px 10px; font-size:12px; resize:none; overflow-x:hidden;"></textarea>
               </div>
             </div>
           </div>
@@ -153,7 +153,7 @@
               </div>
               <div style="width:240px;">
                 <h2 style="font-size:14px; margin:0 0 6px 0;">Commentaire de la semaine</h2>
-                <textarea id="commentULTRA" class="gm-comment-input" rows="2" wrap="off" readonly placeholder="Aucun commentaire" style="min-height:56px; height:56px; padding:8px 10px; font-size:12px; resize:none;"></textarea>
+                <textarea id="commentULTRA" class="gm-comment-input" rows="2" readonly placeholder="Aucun commentaire" style="min-height:56px; height:56px; padding:8px 10px; font-size:12px; resize:none; overflow-x:hidden;"></textarea>
               </div>
             </div>
           </div>
@@ -207,7 +207,7 @@
               </div>
               <div style="width:240px;">
                 <h2 style="font-size:14px; margin:0 0 6px 0;">Commentaire de la semaine</h2>
-                <textarea id="commentEXTRA" class="gm-comment-input" rows="2" wrap="off" readonly placeholder="Aucun commentaire" style="min-height:56px; height:56px; padding:8px 10px; font-size:12px; resize:none;"></textarea>
+                <textarea id="commentEXTRA" class="gm-comment-input" rows="2" readonly placeholder="Aucun commentaire" style="min-height:56px; height:56px; padding:8px 10px; font-size:12px; resize:none; overflow-x:hidden;"></textarea>
               </div>
             </div>
           </div>
@@ -261,7 +261,7 @@
               </div>
               <div style="width:240px;">
                 <h2 style="font-size:14px; margin:0 0 6px 0;">Commentaire de la semaine</h2>
-                <textarea id="commentCOLLAGE" class="gm-comment-input" rows="2" wrap="off" readonly placeholder="Aucun commentaire" style="min-height:56px; height:56px; padding:8px 10px; font-size:12px; resize:none;"></textarea>
+                <textarea id="commentCOLLAGE" class="gm-comment-input" rows="2" readonly placeholder="Aucun commentaire" style="min-height:56px; height:56px; padding:8px 10px; font-size:12px; resize:none; overflow-x:hidden;"></textarea>
               </div>
             </div>
           </div>
@@ -315,7 +315,7 @@
               </div>
               <div style="width:240px;">
                 <h2 style="font-size:14px; margin:0 0 6px 0;">Commentaire de la semaine</h2>
-                <textarea id="commentASSEMBLAGE" class="gm-comment-input" rows="2" wrap="off" readonly placeholder="Aucun commentaire" style="min-height:56px; height:56px; padding:8px 10px; font-size:12px; resize:none;"></textarea>
+                <textarea id="commentASSEMBLAGE" class="gm-comment-input" rows="2" readonly placeholder="Aucun commentaire" style="min-height:56px; height:56px; padding:8px 10px; font-size:12px; resize:none; overflow-x:hidden;"></textarea>
               </div>
             </div>
           </div>
@@ -337,7 +337,7 @@
     }
 
     function sanitizeComment(text) {
-      return String(text || '').replace(/\r?\n+/g, ' / ').replace(/\s+/g, ' ').trim();
+      return String(text || '').replace(/\r\n/g, '\n').trim();
     }
 
     function toFiniteNumber(value) {
@@ -400,7 +400,7 @@
       if (machine === 'assemblage') {
         return {
           suffix: 'ASSEMBLAGE',
-          m3Field: 'assemblageNombreCaissons',
+          m3Field: 'assemblageTempsRealise',
           hoursField: 'assemblageTempsTheorique',
           usefulField: null,
           prodField: 'assemblageVariation',
