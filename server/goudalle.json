@@ -804,6 +804,13 @@
       "details": "Import productivité usine: 98 semaines (remplacement complet)",
       "user": "acgoudalle",
       "timestamp": "2026-03-13T14:23:49.914Z"
+    },
+    {
+      "id": 1773417146619,
+      "action": "LOGIN",
+      "details": "Connexion de acgoudalle",
+      "user": "acgoudalle",
+      "timestamp": "2026-03-13T15:52:26.619Z"
     }
   ],
   "kpis": [

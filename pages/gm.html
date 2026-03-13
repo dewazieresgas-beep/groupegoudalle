@@ -456,7 +456,25 @@
         scale: 2, // Qualité de l'image (2x pour meilleure résolution)
         backgroundColor: '#ffffff',
         logging: false,
-        useCORS: true
+        useCORS: true,
+        onclone: (doc) => {
+          doc.querySelectorAll('textarea.gm-comment-input').forEach((ta) => {
+            const div = doc.createElement('div');
+            div.textContent = ta.value || '';
+            div.style.width = ta.offsetWidth + 'px';
+            div.style.minHeight = ta.offsetHeight + 'px';
+            div.style.padding = '12px';
+            div.style.border = '2px solid #000';
+            div.style.borderRadius = '6px';
+            div.style.background = '#fff';
+            div.style.whiteSpace = 'pre-wrap';
+            div.style.wordBreak = 'break-word';
+            div.style.fontFamily = 'inherit';
+            div.style.fontSize = '13px';
+            div.style.color = '#000';
+            ta.parentNode.replaceChild(div, ta);
+          });
+        }
       }).then(canvas => {
         // Convertir le canvas en blob JPEG
         canvas.toBlob((blob) => {
