@@ -28,32 +28,32 @@
       </div>
 
       <div class="card" style="margin-bottom:18px;">
-        <div class="card-body" style="padding:10px 14px;">
-          <table style="width:100%; border-collapse:collapse; margin:0; font-size:1.05em;">
-            <tbody>
-              <tr>
-                <td style="padding:6px 8px; border:1px solid var(--border-light); text-align:center;">
-                  Nombre de jours sans accident: <strong id="secDaysNoAccident">0</strong>
-                </td>
-                <td style="padding:6px 8px; border:1px solid var(--border-light); text-align:center;">
-                  Nombre annuel d'accidents: <strong id="secYearAccidents">0</strong>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding:6px 8px; border:1px solid var(--border-light); text-align:center;">
-                  Record: <strong id="secRecordDays">0</strong> jours
-                </td>
-                <td style="padding:6px 8px; border:1px solid var(--border-light); text-align:center;">
-                  Année: <strong id="secYearRef">—</strong>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="card-body" style="padding:12px 14px;">
+          <h2 style="margin:0 0 10px 0;">Sécurité</h2>
+          <div style="display:grid; grid-template-columns:repeat(4, minmax(180px, 1fr)); gap:10px;">
+            <div style="background:#f3faf3; border:1px solid #b6d7b9; border-radius:10px; padding:10px;">
+              <div style="font-size:0.85em; color:#48664c;">Jours sans accident</div>
+              <div id="secDaysNoAccident" style="font-size:2em; font-weight:700; color:#2f4f34;">0</div>
+            </div>
+            <div style="background:#fff5f5; border:1px solid #e3b2b2; border-radius:10px; padding:10px;">
+              <div style="font-size:0.85em; color:#7f3b3b;">Accidents annuels</div>
+              <div id="secYearAccidents" style="font-size:2em; font-weight:700; color:#7f2d2d;">0</div>
+            </div>
+            <div style="background:#f5f8ff; border:1px solid #b8c5eb; border-radius:10px; padding:10px;">
+              <div style="font-size:0.85em; color:#455483;">Record</div>
+              <div><span id="secRecordDays" style="font-size:2em; font-weight:700; color:#31406a;">0</span> jours</div>
+            </div>
+            <div style="background:#fffdf4; border:1px solid #eadfa6; border-radius:10px; padding:10px;">
+              <div style="font-size:0.85em; color:#7a6b2e;">Dernier accident</div>
+              <div id="secLastDate" style="font-size:1.1em; font-weight:700; color:#6f6229;">—</div>
+              <div style="font-size:0.82em;">Année <strong id="secYearRef">—</strong></div>
+            </div>
+          </div>
         </div>
       </div>
 
       <div class="card" style="margin-bottom:18px;">
-        <div class="card-body" style="padding:10px 14px;">
+        <div class="card-body" style="padding:12px 14px;">
           <div style="display:grid; grid-template-columns: 360px 1fr; gap:12px;">
             <table style="width:100%; border-collapse:collapse; margin:0;">
               <tbody>
@@ -66,9 +66,15 @@
             <div style="border:1px solid var(--border-light); padding:8px 12px;">
               <h2 style="margin:0 0 8px 0; font-size:1.6em; text-align:center;">Qualité</h2>
               <div id="qualDetail" style="font-size:0.95em; min-height:54px; white-space:pre-wrap;">Pas de contrôle</div>
-              <div style="display:grid; grid-template-columns:1fr; gap:8px; margin-top:8px;">
-                <div style="font-size:1.1em; text-align:right;">Total annuel de non-conformités : <strong id="qualAnnualNc">0</strong></div>
-                <div style="font-size:1.1em; text-align:right;">Total annuel de réclamations client: <strong id="qualAnnualClaims">0</strong></div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">
+                <div style="background:#fff5f5; border:1px solid #e3b2b2; border-radius:8px; padding:8px;">
+                  <div style="font-size:0.85em;">Total annuel non-conformités</div>
+                  <div id="qualAnnualNc" style="font-size:1.5em; font-weight:700;">0</div>
+                </div>
+                <div style="background:#fff9ef; border:1px solid #ead5aa; border-radius:8px; padding:8px;">
+                  <div style="font-size:0.85em;">Total annuel réclamations client</div>
+                  <div id="qualAnnualClaims" style="font-size:1.5em; font-weight:700;">0</div>
+                </div>
               </div>
             </div>
           </div>
@@ -370,9 +376,31 @@
 
     function renderSecuriteHeader() {
       const s = getCBCOSecuriteData();
-      document.getElementById('secDaysNoAccident').textContent = formatNumber(s.joursSansAccident || 0);
+      const toDate = (raw) => {
+        const v = String(raw || '').trim();
+        const fr = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        if (fr) return new Date(Number(fr[3]), Number(fr[2]) - 1, Number(fr[1]));
+        const serial = Number(v.replace(',', '.'));
+        if (Number.isFinite(serial) && serial > 1000) {
+          const ms = Math.round((serial - 25569) * 86400 * 1000);
+          return new Date(ms);
+        }
+        const iso = new Date(v);
+        return Number.isNaN(iso.getTime()) ? null : iso;
+      };
+      const lastDate = toDate(s.lastAccidentDate);
+      let daysNoAccident = Number(s.joursSansAccident) || 0;
+      if (lastDate) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const d = new Date(lastDate);
+        d.setHours(0, 0, 0, 0);
+        daysNoAccident = Math.max(0, Math.floor((today - d) / 86400000));
+      }
+      document.getElementById('secDaysNoAccident').textContent = formatNumber(daysNoAccident);
       document.getElementById('secYearAccidents').textContent = formatNumber(s.nombreAnnuelAccidents || 0);
       document.getElementById('secRecordDays').textContent = formatNumber(s.recordJoursSansAccident || 0);
+      document.getElementById('secLastDate').textContent = s.lastAccidentDate || '—';
       document.getElementById('secYearRef').textContent = s.anneeReference || '—';
     }
 
