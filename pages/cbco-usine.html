@@ -19,9 +19,8 @@
   <div class="app-container">
     <div id="sidebar"></div>
     <main class="main-content">
-      <div class="cbco-header">
-        <h1>CBCO - Usine</h1>
-        <p class="subtitle">Productivité Speedcut (m3/h)</p>
+      <div class="gm-header">
+        <h1 id="usineMainTitle">Productivité Speedcut semaine <span id="weekNumber">—</span></h1>
       </div>
 
       <div class="gm-main-section">
@@ -34,7 +33,7 @@
                 <div class="gm-kpi-value" id="scCubage">0.00</div>
               </div>
               <div class="gm-kpi-card gm-kpi-hours">
-                <div class="gm-kpi-label">Heures utiles</div>
+                <div class="gm-kpi-label">Heures Onaya</div>
                 <div class="gm-kpi-value" id="scHeures">0.00</div>
               </div>
               <div class="gm-kpi-card gm-kpi-ratio">
@@ -63,9 +62,8 @@
 
             <div class="gm-indicator-column">
               <div class="gm-indicator-card" id="mainIndicator">
-                <img id="moodImg" src="../assets/smiley rouge usine cbco.png" alt="smiley état performance" style="width:200px; height:200px;">
+                <img id="moodImg" src="../assets/smiley rouge usine cbco.png" alt="smiley état performance" style="width:200px; height:200px; object-fit:contain;">
               </div>
-              <div style="margin-top:10px; text-align:center; font-weight:600;">Cible: <span id="latestTarget">0,00</span> m3/h</div>
             </div>
           </div>
         </div>
@@ -113,10 +111,10 @@
       const latestTarget = dataTarget[dataTarget.length - 1] || 0;
       const aboveTarget = latestTarget > 0 && latestProd >= latestTarget;
 
+      document.getElementById('weekNumber').textContent = `${latest.semaineLabel || (`S${latest.week} ${latest.year}`)}`;
       document.getElementById('scCubage').textContent = formatNumber(Number(latest.speedcutM3) || 0);
-      document.getElementById('scHeures').textContent = formatNumber(Number(latest.speedcutHeuresUtiles) || 0);
+      document.getElementById('scHeures').textContent = formatNumber(Number(latest.speedcutHeuresOnaya) || 0);
       document.getElementById('latestProd').textContent = formatNumber(latestProd);
-      document.getElementById('latestTarget').textContent = formatNumber(latestTarget);
       document.getElementById('currentWeekLabel').textContent = `Semaine en cours : ${latest.semaineLabel || (`S${latest.week} ${latest.year}`)}`;
       document.getElementById('mainIndicator').className = `gm-indicator-card ${aboveTarget ? 'vert' : 'rouge'}`;
       document.getElementById('moodImg').src = aboveTarget
