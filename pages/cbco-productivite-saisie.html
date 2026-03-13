@@ -49,6 +49,8 @@
               <option value="extra">Extra</option>
               <option value="collage">Collage</option>
               <option value="assemblage">Assemblage</option>
+              <option value="qualite">Qualité</option>
+              <option value="securite">Sécurité</option>
             </select>
             <span class="badge badge-secondary" id="countImports">0 semaine</span>
           </div>
@@ -432,7 +434,18 @@
         row.qualiteAnnee = e.annee;
       });
 
-      return Object.values(merged).sort((a, b) => a.year !== b.year ? a.year - b.year : a.week - b.week);
+      const entries = Object.values(merged).sort((a, b) => a.year !== b.year ? a.year - b.year : a.week - b.week);
+      return {
+        entries,
+        stats: {
+          sc: scEntries.length,
+          ultra: ultraEntries.length,
+          extra: extraEntries.length,
+          collage: collageEntries.length,
+          assemblage: assemblageEntries.length,
+          qualite: qualiteEntries.length
+        }
+      };
     }
 
     function parseQualiteSheet(workbook) {
@@ -532,7 +545,8 @@
         recordJoursSansAccident: Math.max(...entries.map(e => e.joursDepuisDernierAccident)),
         anneeReference: currentYear,
         lastAccidentDate: entries[0].date,
-        lastAccidentPerson: entries[0].accident
+        lastAccidentPerson: entries[0].accident,
+        lignesRecuperees: entries.length
       };
     }
 
@@ -545,9 +559,9 @@
         try {
           const data = new Uint8Array(e.target.result);
           const workbook = XLSX.read(data, { type: 'array' });
-          const entries = parseProductiviteExcel(workbook);
+          const parsed = parseProductiviteExcel(workbook);
           const securite = parseSecuriteExcel(workbook);
-          showPreview(file.name, entries, securite);
+          showPreview(file.name, parsed, securite);
         } catch (error) {
           showMessage('❌ ' + error.message, 'error');
         }
@@ -555,11 +569,14 @@
       reader.readAsArrayBuffer(file);
     }
 
-    function showPreview(fileName, entries, securite) {
+    function showPreview(fileName, parsed, securite) {
+      const entries = parsed.entries || [];
+      const stats = parsed.stats || {};
       const preview = document.getElementById('preview');
       const first = entries[0];
       const last = entries[entries.length - 1];
       const existingCount = getCBCOProductiviteData().length;
+      const securiteCount = securite?.lignesRecuperees || 0;
 
       preview.innerHTML = `
         <div style="border:2px solid var(--accent); border-radius:8px; padding:16px; margin-top:12px; background:#f9fdf9;">
@@ -568,28 +585,22 @@
             <div><span class="badge badge-primary">Aperçu avant validation</span></div>
           </div>
           <p style="margin:0 0 10px 0;">Période: <strong>${escapeHtml(first.semaineLabel)}</strong> à <strong>${escapeHtml(last.semaineLabel)}</strong></p>
-          ${securite ? `<p style="margin:0 0 10px 0;">Sécurité: <strong>${formatNumber(securite.joursSansAccident)}</strong> jours sans accident, <strong>${formatNumber(securite.nombreAnnuelAccidents)}</strong> accident(s) en ${formatNumber(securite.anneeReference)}.</p>` : ''}
           <p style="margin:0 0 14px 0; color:var(--danger);">⚠️ La validation remplacera tout l'historique actuel (${existingCount} semaine${existingCount > 1 ? 's' : ''}).</p>
-          <table style="font-size:0.9em;">
+          <table style="font-size:0.9em; max-width:520px;">
             <thead>
               <tr>
-                <th>Semaine</th>
-                <th>SC m³</th>
-                <th>Heures utiles</th>
-                <th>Prod SC (m3/h)</th>
-                <th>Cible</th>
+                <th>Feuille</th>
+                <th>Lignes récupérées</th>
               </tr>
             </thead>
             <tbody>
-              ${entries.slice(-8).map(e => `
-                <tr>
-                  <td><strong>${escapeHtml(e.semaineLabel)}</strong></td>
-                  <td>${formatNumber(e.speedcutM3)}</td>
-                  <td>${formatNumber(e.speedcutHeuresUtiles)}</td>
-                  <td>${formatNumber(e.speedcutProductivite)}</td>
-                  <td>${formatNumber(e.speedcutCibleProductivite)}</td>
-                </tr>
-              `).join('')}
+              <tr><td>SC</td><td>${formatNumber(stats.sc || 0)}</td></tr>
+              <tr><td>Ultra</td><td>${formatNumber(stats.ultra || 0)}</td></tr>
+              <tr><td>Extra</td><td>${formatNumber(stats.extra || 0)}</td></tr>
+              <tr><td>Collage</td><td>${formatNumber(stats.collage || 0)}</td></tr>
+              <tr><td>Assemblage</td><td>${formatNumber(stats.assemblage || 0)}</td></tr>
+              <tr><td>Qualité</td><td>${formatNumber(stats.qualite || 0)}</td></tr>
+              <tr><td>Sécurité</td><td>${formatNumber(securiteCount)}</td></tr>
             </tbody>
           </table>
           <div style="display:flex; gap:10px; margin-top:14px;">
@@ -637,6 +648,50 @@
       const body = document.getElementById('historyBody');
       const count = document.getElementById('countImports');
       const machine = document.getElementById('machineViewSelect')?.value || 'speedcut';
+      if (machine === 'securite') {
+        const s = getCBCOSecuriteData();
+        count.textContent = '1 fiche';
+        count.className = 'badge badge-success';
+        body.innerHTML = `<table style="font-size:0.9em;">
+          <thead><tr><th>Jours sans accident</th><th>Accidents annuels</th><th>Record</th><th>Dernier accident</th><th>Personne</th><th>Année</th></tr></thead>
+          <tbody><tr>
+            <td>${formatNumber(s.joursSansAccident || 0)}</td>
+            <td>${formatNumber(s.nombreAnnuelAccidents || 0)}</td>
+            <td>${formatNumber(s.recordJoursSansAccident || 0)}</td>
+            <td>${s.lastAccidentDate ? escapeHtml(s.lastAccidentDate) : '—'}</td>
+            <td>${s.lastAccidentPerson ? escapeHtml(s.lastAccidentPerson) : '—'}</td>
+            <td>${formatNumber(s.anneeReference || 0)}</td>
+          </tr></tbody>
+        </table>`;
+        return;
+      }
+
+      if (machine === 'qualite') {
+        const qualEntries = entries.filter(e =>
+          e.qualiteTests !== null || e.qualiteNonConformites !== null || e.qualiteReclamationsClients !== null || (e.qualiteDetail && String(e.qualiteDetail).trim() !== '')
+        );
+        count.textContent = `${qualEntries.length} semaine${qualEntries.length > 1 ? 's' : ''}`;
+        count.className = qualEntries.length > 0 ? 'badge badge-success' : 'badge badge-secondary';
+        if (qualEntries.length === 0) {
+          body.innerHTML = '<p style="color:#999; margin:0;">Aucune donnée Qualité trouvée</p>';
+          return;
+        }
+        body.innerHTML = `<table style="font-size:0.9em;">
+          <thead><tr><th>Semaine</th><th>Tests (D)</th><th>Non conformités (E)</th><th>Réclamations clients (G)</th><th>Détail (F)</th><th>Année (H)</th></tr></thead>
+          <tbody>
+            ${qualEntries.map(e => `<tr>
+              <td><strong>${escapeHtml(e.semaineLabel || ('S' + e.week + ' ' + e.year))}</strong></td>
+              <td>${formatNumber(e.qualiteTests || 0)}</td>
+              <td>${formatNumber(e.qualiteNonConformites || 0)}</td>
+              <td>${formatNumber(e.qualiteReclamationsClients || 0)}</td>
+              <td>${e.qualiteDetail ? escapeHtml(e.qualiteDetail) : '—'}</td>
+              <td>${formatNumber(e.qualiteAnnee || e.year || 0)}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>`;
+        return;
+      }
+
       if (entries.length === 0) {
         count.textContent = '0 semaine';
         count.className = 'badge badge-secondary';
