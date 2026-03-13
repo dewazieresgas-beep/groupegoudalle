@@ -149,7 +149,7 @@
       const saisieMap = [
         { keys: ['gm_saisie', 'gm_paiement'], label: '📊 Référent GM' },
         { keys: ['gc_saisie', 'gc_paiement'], label: '📊 Référent GC' },
-        { keys: ['cbco_saisie', 'cbco_paiement', 'cbco_commercial'], label: '📊 Référent CBCO' },
+        { keys: ['cbco_saisie', 'cbco_productivite_saisie', 'cbco_paiement', 'cbco_commercial', 'cbco_usine'], label: '📊 Référent CBCO' },
         { keys: ['sylve_saisie'], label: '📊 Référent Sylve' },
       ];
 
@@ -256,8 +256,10 @@
       {
         group: '🏢 CBCO',
         pages: [
-          { key: 'cbco',            label: '📋 Consultation' },
-          { key: 'cbco_saisie',     label: '✏️ Saisie' },
+          { key: 'cbco',                    label: '📋 Dashboard bureau d’étude' },
+          { key: 'cbco_usine',              label: '🏭 Dashboard usine' },
+          { key: 'cbco_saisie',             label: '✏️ Saisie chiffre d’affaires' },
+          { key: 'cbco_productivite_saisie',label: '🏭 Saisie productivité usine' },
           { key: 'cbco_paiement',   label: '💳 Paiement' },
           { key: 'cbco_commercial', label: '🤝 Commercial' },
         ]

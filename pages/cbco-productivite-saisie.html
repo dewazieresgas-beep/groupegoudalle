@@ -15,7 +15,7 @@
     window.APP_LOGO = 'cbco';
   </script>
   <script>
-    Auth.requirePermission('cbco_saisie');
+    Auth.requirePermission('cbco_productivite_saisie');
   </script>
 
   <div class="app-container">
@@ -142,7 +142,7 @@
       for (let r = 3; r < rows.length; r++) {
         const row = rows[r] || [];
         const cubageSearch = parseNumber(row[config.COL.F]);
-        const hasUsefulData = cubageSearch !== null && Math.abs(cubageSearch) > 0;
+        const hasUsefulData = cubageSearch !== null;
         if (!hasUsefulData) {
           emptyUsefulStreak++;
           if (emptyUsefulStreak >= 50) break;
@@ -254,9 +254,10 @@
         requiredFields: ['heuresOnaya', 'heuresPerdues', 'cubage'],
         COL: { B: 1, C: 2, D: 3, E: 4, F: 5, G: 6, H: 7, TEMPS: 8, VOLUME: 8 }
       });
+      const qualiteEntries = parseQualiteSheet(workbook);
 
-      if (!scEntries.length && !ultraEntries.length && !extraEntries.length && !collageEntries.length && !assemblageEntries.length) {
-        throw new Error('Aucune donnée exploitable trouvée dans les feuilles SC/ULTRA/EXTRA/COLLAGE/ASSEMBLAGE.');
+      if (!scEntries.length && !ultraEntries.length && !extraEntries.length && !collageEntries.length && !assemblageEntries.length && !qualiteEntries.length) {
+        throw new Error('Aucune donnée exploitable trouvée dans les feuilles SC/ULTRA/EXTRA/COLLAGE/ASSEMBLAGE/QUALITÉ.');
       }
 
       const merged = {};
@@ -293,7 +294,10 @@
             assemblage_temps_realise: null, assemblage_temps_theorique: null, assemblage_nombre_caissons: null,
             assemblage_variation: null, assemblage_commentaire: null, assemblage_surface: null,
             assemblageTempsRealise: null, assemblageTempsTheorique: null, assemblageNombreCaissons: null,
-            assemblageVariation: null, assemblageCommentaire: null, assemblageSurface: null
+            assemblageVariation: null, assemblageCommentaire: null, assemblageSurface: null,
+            qualite_semaine_annuelle: null, qualite_semaine_cumulee: null, qualite_tests: null, qualite_non_conformites: null,
+            qualite_detail: null, qualite_reclamations_clients: null, qualite_annee: null,
+            qualiteTests: null, qualiteNonConformites: null, qualiteDetail: null, qualiteReclamationsClients: null, qualiteAnnee: null
           };
         }
         return merged[key];
@@ -412,7 +416,85 @@
         row.assemblageSurface = e.volume;
       });
 
+      qualiteEntries.forEach(e => {
+        const row = ensureWeekBase(e.week, e.year);
+        row.qualite_semaine_annuelle = e.semaineAnnuelle;
+        row.qualite_semaine_cumulee = e.semaineCumulee;
+        row.qualite_tests = e.tests;
+        row.qualite_non_conformites = e.nonConformites;
+        row.qualite_detail = e.detail;
+        row.qualite_reclamations_clients = e.reclamationsClients;
+        row.qualite_annee = e.annee;
+        row.qualiteTests = e.tests;
+        row.qualiteNonConformites = e.nonConformites;
+        row.qualiteDetail = e.detail;
+        row.qualiteReclamationsClients = e.reclamationsClients;
+        row.qualiteAnnee = e.annee;
+      });
+
       return Object.values(merged).sort((a, b) => a.year !== b.year ? a.year - b.year : a.week - b.week);
+    }
+
+    function parseQualiteSheet(workbook) {
+      const normalizeName = (name) => String(name || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, '');
+      const sheetName = workbook.SheetNames.find(name => normalizeName(name) === 'qualite');
+      const sheet = sheetName ? workbook.Sheets[sheetName] : null;
+      if (!sheet) return [];
+
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+      const byWeek = {};
+      let emptyStreak = 0;
+
+      for (let r = 3; r < rows.length; r++) {
+        const row = rows[r] || [];
+        const hasUsefulData = hasCellValue(row[2]) || hasCellValue(row[3]) || hasCellValue(row[4]) || hasCellValue(row[5]) || hasCellValue(row[6]);
+        if (!hasUsefulData) {
+          emptyStreak++;
+          if (emptyStreak >= 50) break;
+          continue;
+        }
+        emptyStreak = 0;
+
+        const semaineAnnuelle = parseNumber(row[1]);
+        const semaineCumulee = parseNumber(row[2]);
+        const tests = parseNumber(row[3]);
+        const nonConformites = parseNumber(row[4]);
+        const detail = hasCellValue(row[5]) ? String(row[5]).trim() : null;
+        const reclamationsClients = parseNumber(row[6]);
+        const anneeCol = parseNumber(row[7]);
+
+        if (semaineCumulee === null && semaineAnnuelle === null) continue;
+
+        let week = null;
+        let year = null;
+        if (anneeCol !== null && semaineAnnuelle !== null && semaineAnnuelle > 0) {
+          week = Math.round(semaineAnnuelle);
+          year = Math.round(anneeCol);
+        } else if (semaineCumulee !== null && semaineCumulee > 0) {
+          const c = Math.round(semaineCumulee);
+          year = 2023 + Math.floor((c - 1) / 52);
+          week = ((c - 1) % 52) + 1;
+        }
+        if (!week || !year) continue;
+
+        const key = `${year}-${String(week).padStart(2, '0')}`;
+        byWeek[key] = {
+          week,
+          year,
+          semaineAnnuelle,
+          semaineCumulee,
+          tests,
+          nonConformites,
+          detail,
+          reclamationsClients,
+          annee: anneeCol !== null ? Math.round(anneeCol) : year
+        };
+      }
+      return Object.values(byWeek);
     }
 
     function parseSecuriteExcel(workbook) {

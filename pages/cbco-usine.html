@@ -14,7 +14,7 @@
   <script src="../js/utils.js"></script>
   <script>
     window.APP_LOGO = 'cbco';
-    Auth.requirePermission('cbco');
+    Auth.requirePermission('cbco_usine');
   </script>
 
   <div class="app-container">
@@ -49,6 +49,29 @@
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:18px;">
+        <div class="card-body" style="padding:10px 14px;">
+          <div style="display:grid; grid-template-columns: 360px 1fr; gap:12px;">
+            <table style="width:100%; border-collapse:collapse; margin:0;">
+              <tbody>
+                <tr><td style="border:1px solid var(--border-light); padding:4px 8px;"><strong>Tests</strong></td><td style="border:1px solid var(--border-light); padding:4px 8px; text-align:center;"><strong id="qualTests">0</strong></td></tr>
+                <tr><td style="border:1px solid var(--border-light); padding:4px 8px;">Objectif</td><td style="border:1px solid var(--border-light); padding:4px 8px; text-align:center;">50</td></tr>
+                <tr><td style="border:1px solid var(--border-light); padding:4px 8px;">Non conformités</td><td style="border:1px solid var(--border-light); padding:4px 8px; text-align:center;" id="qualNonConfs">0</td></tr>
+                <tr><td style="border:1px solid var(--border-light); padding:4px 8px;">Réclamations Clients</td><td style="border:1px solid var(--border-light); padding:4px 8px; text-align:center;" id="qualClaims">0</td></tr>
+              </tbody>
+            </table>
+            <div style="border:1px solid var(--border-light); padding:8px 12px;">
+              <h2 style="margin:0 0 8px 0; font-size:1.6em; text-align:center;">Qualité</h2>
+              <div id="qualDetail" style="font-size:0.95em; min-height:54px; white-space:pre-wrap;">Pas de contrôle</div>
+              <div style="display:grid; grid-template-columns:1fr; gap:8px; margin-top:8px;">
+                <div style="font-size:1.1em; text-align:right;">Total annuel de non-conformités : <strong id="qualAnnualNc">0</strong></div>
+                <div style="font-size:1.1em; text-align:right;">Total annuel de réclamations client: <strong id="qualAnnualClaims">0</strong></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -93,7 +116,7 @@
                 </div>
               </div>
             </div>
-            <div class="gm-indicator-column" style="flex-direction:column; justify-content:flex-start; gap:12px; padding-top:8px;">
+            <div class="gm-indicator-column" style="flex-direction:column; justify-content:space-between; height:380px;">
               <div class="gm-indicator-card" id="indicatorSC" style="width:190px; height:190px;">
                 <img id="moodSC" src="../assets/smiley rouge usine cbco.png" alt="smiley speedcut" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
               </div>
@@ -147,7 +170,7 @@
                 </div>
               </div>
             </div>
-            <div class="gm-indicator-column" style="flex-direction:column; justify-content:flex-start; gap:12px; padding-top:8px;">
+            <div class="gm-indicator-column" style="flex-direction:column; justify-content:space-between; height:380px;">
               <div class="gm-indicator-card" id="indicatorULTRA" style="width:190px; height:190px;">
                 <img id="moodULTRA" src="../assets/smiley rouge usine cbco.png" alt="smiley ultra" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
               </div>
@@ -201,7 +224,7 @@
                 </div>
               </div>
             </div>
-            <div class="gm-indicator-column" style="flex-direction:column; justify-content:flex-start; gap:12px; padding-top:8px;">
+            <div class="gm-indicator-column" style="flex-direction:column; justify-content:space-between; height:380px;">
               <div class="gm-indicator-card" id="indicatorEXTRA" style="width:190px; height:190px;">
                 <img id="moodEXTRA" src="../assets/smiley rouge usine cbco.png" alt="smiley extra" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
               </div>
@@ -255,7 +278,7 @@
                 </div>
               </div>
             </div>
-            <div class="gm-indicator-column" style="flex-direction:column; justify-content:flex-start; gap:12px; padding-top:8px;">
+            <div class="gm-indicator-column" style="flex-direction:column; justify-content:space-between; height:380px;">
               <div class="gm-indicator-card" id="indicatorCOLLAGE" style="width:190px; height:190px;">
                 <img id="moodCOLLAGE" src="../assets/smiley rouge usine cbco.png" alt="smiley collage" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
               </div>
@@ -309,7 +332,7 @@
                 </div>
               </div>
             </div>
-            <div class="gm-indicator-column" style="flex-direction:column; justify-content:flex-start; gap:12px; padding-top:8px;">
+            <div class="gm-indicator-column" style="flex-direction:column; justify-content:space-between; height:380px;">
               <div class="gm-indicator-card" id="indicatorASSEMBLAGE" style="width:190px; height:190px;">
                 <img id="moodASSEMBLAGE" src="../assets/smiley rouge usine cbco.png" alt="smiley assemblage" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
               </div>
@@ -351,6 +374,23 @@
       document.getElementById('secYearAccidents').textContent = formatNumber(s.nombreAnnuelAccidents || 0);
       document.getElementById('secRecordDays').textContent = formatNumber(s.recordJoursSansAccident || 0);
       document.getElementById('secYearRef').textContent = s.anneeReference || '—';
+    }
+
+    function renderQualiteHeader() {
+      const data = getCBCOProductiviteData();
+      const qual = data.filter(e =>
+        e.qualiteTests !== null || e.qualiteNonConformites !== null || e.qualiteReclamationsClients !== null || (e.qualiteDetail && String(e.qualiteDetail).trim() !== '')
+      );
+      const latest = qual[0] || {};
+      const yearRef = Number(latest.qualiteAnnee || latest.year || new Date().getFullYear());
+      const annual = qual.filter(e => Number(e.qualiteAnnee || e.year) === yearRef);
+      const sum = (arr, key) => arr.reduce((acc, e) => acc + (toFiniteNumber(e[key]) || 0), 0);
+      document.getElementById('qualTests').textContent = formatNumber(toFiniteNumber(latest.qualiteTests) || 0);
+      document.getElementById('qualNonConfs').textContent = formatNumber(toFiniteNumber(latest.qualiteNonConformites) || 0);
+      document.getElementById('qualClaims').textContent = formatNumber(toFiniteNumber(latest.qualiteReclamationsClients) || 0);
+      document.getElementById('qualDetail').textContent = String(latest.qualiteDetail || 'Pas de contrôle');
+      document.getElementById('qualAnnualNc').textContent = formatNumber(sum(annual, 'qualiteNonConformites'));
+      document.getElementById('qualAnnualClaims').textContent = formatNumber(sum(annual, 'qualiteReclamationsClients'));
     }
 
     function getMachineConfig(machine) {
@@ -639,6 +679,7 @@
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectCBCOSecondaryBar();
       renderSecuriteHeader();
+      renderQualiteHeader();
       renderMachineSection('sc');
       renderMachineSection('ultra');
       renderMachineSection('extra');

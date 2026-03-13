@@ -24,9 +24,9 @@ const Auth = {
 
   // Permissions par rôle - définit ce que chaque rôle peut faire
   PERMISSIONS: {
-    direction: ['gm', 'gm_saisie', 'gm_paiement', 'gc', 'gc_saisie', 'gc_paiement', 'cbco', 'cbco_saisie', 'cbco_paiement', 'cbco_commercial', 'sylve', 'sylve_saisie', 'users_admin', 'thresholds'],
+    direction: ['gm', 'gm_saisie', 'gm_paiement', 'gc', 'gc_saisie', 'gc_paiement', 'cbco', 'cbco_usine', 'cbco_saisie', 'cbco_productivite_saisie', 'cbco_paiement', 'cbco_commercial', 'sylve', 'sylve_saisie', 'users_admin', 'thresholds'],
     referent: ['gm', 'gm_saisie', 'gm_paiement', 'thresholds'],
-    referent_cbco: ['cbco', 'cbco_saisie', 'cbco_paiement', 'cbco_commercial'],
+    referent_cbco: ['cbco', 'cbco_usine', 'cbco_saisie', 'cbco_productivite_saisie', 'cbco_paiement', 'cbco_commercial'],
     referent_sylve: ['sylve', 'sylve_saisie'],
     referent_gc: ['gc', 'gc_saisie', 'gc_paiement'],
     lecture: ['gm']
@@ -327,14 +327,23 @@ const Auth = {
     // même si une permission n'a pas encore été ajoutée dans la liste.
     if (effectiveRole === this.ROLES.DIRECTION) return true;
 
+    const aliasMap = {
+      cbco_usine: ['cbco'],
+      cbco_productivite_saisie: ['cbco_saisie']
+    };
+
     // Si l'utilisateur a des permissions personnalisées, les utiliser
     if (currentUser && Array.isArray(currentUser.customPermissions)) {
-      return currentUser.customPermissions.includes(permission);
+      if (currentUser.customPermissions.includes(permission)) return true;
+      const aliases = aliasMap[permission] || [];
+      return aliases.some(a => currentUser.customPermissions.includes(a));
     }
 
     // Récupérer la liste des permissions pour ce rôle
     const userPermissions = this.PERMISSIONS[effectiveRole] || [];
-    return userPermissions.includes(permission);
+    if (userPermissions.includes(permission)) return true;
+    const aliases = aliasMap[permission] || [];
+    return aliases.some(a => userPermissions.includes(a));
   },
 
   /**
