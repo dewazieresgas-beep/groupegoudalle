@@ -461,10 +461,17 @@
       const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
       const byWeek = {};
       let emptyStreak = 0;
+      const COL = { B: 1, C: 2, D: 3, E: 4, F: 5, G: 6, H: 7 };
 
       for (let r = 3; r < rows.length; r++) {
         const row = rows[r] || [];
-        const hasUsefulData = hasCellValue(row[2]) || hasCellValue(row[3]) || hasCellValue(row[4]) || hasCellValue(row[5]) || hasCellValue(row[6]);
+        // Qualité: D=tests, E=non-conformités, F=détail, G=réclamations client, H=année
+        const hasUsefulData =
+          hasCellValue(row[COL.D]) ||
+          hasCellValue(row[COL.E]) ||
+          hasCellValue(row[COL.F]) ||
+          hasCellValue(row[COL.G]) ||
+          hasCellValue(row[COL.H]);
         if (!hasUsefulData) {
           emptyStreak++;
           if (emptyStreak >= 50) break;
@@ -472,13 +479,13 @@
         }
         emptyStreak = 0;
 
-        const semaineAnnuelle = parseNumber(row[1]);
-        const semaineCumulee = parseNumber(row[2]);
-        const tests = parseNumber(row[3]);
-        const nonConformites = parseNumber(row[4]);
-        const detail = hasCellValue(row[5]) ? String(row[5]).trim() : null;
-        const reclamationsClients = parseNumber(row[6]);
-        const anneeCol = parseNumber(row[7]);
+        const semaineAnnuelle = parseNumber(row[COL.B]);
+        const semaineCumulee = parseNumber(row[COL.C]);
+        const tests = parseNumber(row[COL.D]);
+        const nonConformites = parseNumber(row[COL.E]);
+        const detail = hasCellValue(row[COL.F]) ? String(row[COL.F]).trim() : null;
+        const reclamationsClients = parseNumber(row[COL.G]);
+        const anneeCol = parseNumber(row[COL.H]);
 
         if (semaineCumulee === null && semaineAnnuelle === null) continue;
 
