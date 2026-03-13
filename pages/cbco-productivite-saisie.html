@@ -58,13 +58,41 @@
       if (type === 'success') setTimeout(() => { msgDiv.style.display = 'none'; }, 5000);
     }
 
+    /**
+     * Retourne true si la cellule contient une vraie donnée.
+     */
+    function hasCellValue(value) {
+      return value !== null && value !== undefined && String(value).trim() !== '';
+    }
+
+    /**
+     * Parse nombre générique (gère texte/virgule/pourcentage)
+     * Retourne null si vide/non parsable.
+     */
     function parseNumber(value) {
-      if (value === null || value === undefined || value === '') return 0;
+      if (!hasCellValue(value)) return null;
+      if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+      const raw = String(value).trim();
+      const isPercent = raw.includes('%');
+      const cleaned = raw.replace(/\s/g, '').replace('%', '').replace(',', '.');
+      const match = cleaned.match(/-?\d+(\.\d+)?/);
+      const parsed = match ? parseFloat(match[0]) : NaN;
+      if (!Number.isFinite(parsed)) return null;
+      return isPercent ? (parsed / 100) : parsed;
+    }
+
+    /**
+     * Parse une durée Excel en heures décimales.
+     * Accepte:
+     * - HH:MM ou HH:MM:SS (texte)
+     * - fraction de jour Excel (nombre < 2 en général)
+     * - nombre déjà en heures
+     */
+    function parseDurationHours(value) {
+      if (!hasCellValue(value)) return null;
       if (typeof value === 'number') {
-        if (!Number.isFinite(value)) return 0;
-        // Excel peut stocker les heures en fraction de jour (ex: 0.5 = 12:00:00)
-        if (value > 0 && value < 2) return value * 24;
-        return value;
+        if (!Number.isFinite(value)) return null;
+        return (value >= 0 && value < 2) ? (value * 24) : value;
       }
       const raw = String(value).trim();
       const hms = raw.match(/^(\d{1,3}):(\d{1,2})(?::(\d{1,2}))?$/);
@@ -74,83 +102,126 @@
         const s = parseInt(hms[3] || '0', 10) || 0;
         return h + (m / 60) + (s / 3600);
       }
-      const cleaned = raw.replace(/\s/g, '').replace(',', '.');
-      const match = cleaned.match(/-?\d+(\.\d+)?/);
-      const parsed = match ? parseFloat(match[0]) : NaN;
-      return Number.isFinite(parsed) ? parsed : 0;
+      return parseNumber(value);
+    }
+
+    /**
+     * Parse un ratio pourcentage:
+     * - "85%" => 0.85
+     * - 85 => 0.85
+     * - 0.85 => 0.85
+     */
+    function parseRatio(value) {
+      const n = parseNumber(value);
+      if (n === null) return null;
+      return n > 1 ? (n / 100) : n;
     }
 
     function parseProductiviteExcel(workbook) {
+      const COL = {
+        B: 1,  // semaine annuelle
+        C: 2,  // semaine cumulée
+        D: 3,  // heures onaya
+        E: 4,  // heures perdues
+        F: 5,  // cubage
+        G: 6,  // productivité
+        H: 7,  // remarques
+        J: 9,  // cible productivité
+        L: 11, // TRS
+        N: 13  // temps utilisation machine
+      };
+
       const scSheetName = workbook.SheetNames.find(name => String(name || '').trim().toLowerCase() === 'sc');
       const scSheet = scSheetName ? workbook.Sheets[scSheetName] : null;
-      if (!scSheet) {
-        throw new Error('Feuille SC introuvable dans le fichier.');
-      }
+      if (!scSheet) throw new Error('Feuille SC introuvable dans le fichier.');
 
       const scRows = XLSX.utils.sheet_to_json(scSheet, { header: 1, defval: '' });
       const byWeek = {};
-      let emptyFCount = 0;
-      let startedData = false;
+      let emptyUsefulStreak = 0;
 
+      // Démarre à la ligne 4 (index JS = 3)
       for (let r = 3; r < scRows.length; r++) {
         const row = scRows[r] || [];
-        const semaineB = parseNumber(row[1]); // B
-        const semaineC = parseNumber(row[2]); // C cumul depuis 2023
-        const heuresOnaya = parseNumber(row[3]); // D
-        const heuresPerdues = parseNumber(row[4]); // E
-        const cubage = parseNumber(row[5]); // F
-        const remarques = String(row[7] || '').trim(); // H
-        const cibleProd = parseNumber(row[9]); // J
-        const trs = parseNumber(row[11]); // L
-        const tempsUtilisation = parseNumber(row[13]); // N
+        const usefulRange = row.slice(COL.F, COL.N + 1);
+        const hasUsefulData = usefulRange.some(hasCellValue);
 
-        const rowLooksData = !!(semaineB || semaineC || cubage || heuresOnaya || heuresPerdues || cibleProd || trs || tempsUtilisation);
-        if (rowLooksData) startedData = true;
-        if (startedData) {
-          if (!cubage) emptyFCount++;
-          else emptyFCount = 0;
-          if (emptyFCount >= 50) break;
+        if (!hasUsefulData) {
+          emptyUsefulStreak++;
+          if (emptyUsefulStreak >= 50) break;
+          continue;
         }
+        emptyUsefulStreak = 0;
 
-        if (!semaineB && !semaineC && !cubage && !heuresOnaya && !heuresPerdues && !cibleProd) continue;
+        const semaineAnnuelle = parseNumber(row[COL.B]);
+        const semaineCumulee = parseNumber(row[COL.C]);
+        const heuresOnaya = parseDurationHours(row[COL.D]);
+        const heuresPerdues = parseDurationHours(row[COL.E]);
+        const cubage = parseNumber(row[COL.F]);
+        const productiviteCell = parseNumber(row[COL.G]);
+        const remarques = hasCellValue(row[COL.H]) ? String(row[COL.H]).trim() : null;
+        const cibleProductivite = parseNumber(row[COL.J]);
+        const trs = parseRatio(row[COL.L]);
+        const tempsUtilisationMachine = parseDurationHours(row[COL.N]);
 
-        let year = null;
+        // Ligne incomplète: sans semaine exploitable ou sans cubage ni heures
+        if (semaineCumulee === null && semaineAnnuelle === null) continue;
+        if (cubage === null && heuresOnaya === null && heuresPerdues === null) continue;
+
         let week = null;
-        if (semaineC > 0) {
-          const c = Math.round(semaineC);
+        let year = null;
+        if (semaineCumulee !== null && semaineCumulee > 0) {
+          const c = Math.round(semaineCumulee);
           year = 2023 + Math.floor((c - 1) / 52);
           week = ((c - 1) % 52) + 1;
-        } else if (semaineB > 0) {
-          week = Math.round(semaineB);
+        } else if (semaineAnnuelle !== null && semaineAnnuelle > 0) {
+          week = Math.round(semaineAnnuelle);
           year = 2023;
         }
-
         if (!week || !year) continue;
 
-        const heuresUtiles = Math.max(0, heuresOnaya - heuresPerdues);
-        const productivite = heuresUtiles > 0 ? (cubage / heuresUtiles) : (heuresOnaya > 0 ? cubage / heuresOnaya : 0);
-        const key = `${year}-${String(week).padStart(2, '0')}`;
+        const heuresUtiles = (heuresOnaya !== null && heuresPerdues !== null)
+          ? Math.max(0, heuresOnaya - heuresPerdues)
+          : null;
 
+        const productiviteRecalculee = (cubage !== null && heuresUtiles !== null && heuresUtiles > 0)
+          ? (cubage / heuresUtiles)
+          : null;
+
+        const productivite = productiviteRecalculee !== null
+          ? productiviteRecalculee
+          : productiviteCell;
+
+        const key = `${year}-${String(week).padStart(2, '0')}`;
         byWeek[key] = {
           id: `sc-${key}`,
           week,
           year,
           semaineLabel: `S${week} ${year}`,
+          semaine_annuelle: semaineAnnuelle,
+          semaine_cumulee: semaineCumulee,
+          heures_onaya: heuresOnaya,
+          heures_perdues: heuresPerdues,
+          cubage: cubage,
+          productivite: productivite,
+          remarques: remarques,
+          cible_productivite: cibleProductivite,
+          trs: trs,
+          temps_utilisation_machine: tempsUtilisationMachine,
           speedcutM3: cubage,
           speedcutHeuresOnaya: heuresOnaya,
           speedcutHeuresPerdues: heuresPerdues,
           speedcutHeuresUtiles: heuresUtiles,
           speedcutProductivite: productivite,
-          speedcutCibleProductivite: cibleProd,
+          speedcutCibleProductivite: cibleProductivite,
           speedcutTRS: trs,
-          speedcutTempsUtilisation: tempsUtilisation,
+          speedcutTempsUtilisation: tempsUtilisationMachine,
           speedcutRemarques: remarques,
-          ultraM3: 0,
-          extraM2: 0,
-          collageHeures: 0,
-          collagePresses: 0,
-          assemblageTempsRealise: 0,
-          assemblageTempsTheorique: 0,
+          ultraM3: null,
+          extraM2: null,
+          collageHeures: null,
+          collagePresses: null,
+          assemblageTempsRealise: null,
+          assemblageTempsTheorique: null,
           importDate: new Date().toISOString(),
           updatedBy: Auth.getSession()?.username || 'system'
         };
