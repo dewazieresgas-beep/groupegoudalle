@@ -24,36 +24,52 @@
         <p class="subtitle">Productivité Speedcut (m3/h)</p>
       </div>
 
-      <section class="cbco-card-v2">
-        <header class="cbco-card-title-v2">📈 Productivité SC (m3/h)</header>
-        <div class="cbco-card-content-v2">
-          <div id="usineEmpty" style="display:none; color:#999;">Aucune donnée de productivité Speedcut disponible.</div>
-          <div id="usineContent" style="display:none;">
-            <div class="gm-chart-section">
-              <div class="gm-chart-header">
-                <h2>Tendance m3/h</h2>
-                <select id="rangeSelect" class="gm-range-select" onchange="renderUsineChart()">
-                  <option value="4">1 mois</option>
-                  <option value="8">2 mois</option>
-                  <option value="52">1 an</option>
-                  <option value="104">2 ans</option>
-                </select>
+      <div class="gm-main-section">
+        <div id="usineEmpty" style="display:none; color:#999;">Aucune donnée de productivité Speedcut disponible.</div>
+        <div id="usineContent" style="display:none;">
+          <div class="gm-main-container">
+            <div class="gm-kpi-column">
+              <div class="gm-kpi-card gm-kpi-m3">
+                <div class="gm-kpi-label">Cubage SC (m³)</div>
+                <div class="gm-kpi-value" id="scCubage">0.00</div>
               </div>
-              <div class="gm-chart-container">
-                <canvas id="speedcutChart"></canvas>
+              <div class="gm-kpi-card gm-kpi-hours">
+                <div class="gm-kpi-label">Heures utiles</div>
+                <div class="gm-kpi-value" id="scHeures">0.00</div>
+              </div>
+              <div class="gm-kpi-card gm-kpi-ratio">
+                <div class="gm-kpi-label">Productivité m3/h</div>
+                <div class="gm-kpi-value" id="latestProd">—</div>
               </div>
             </div>
-            <div id="currentWeekLabel" style="margin-top:10px; text-align:center; color:#c62828; font-weight:700;"></div>
-            <div style="display:flex; gap:16px; align-items:center; justify-content:center; margin-top:16px; flex-wrap:wrap;">
-              <img id="moodImg" src="../assets/smiley rouge usine cbco.png" alt="smiley état performance" style="width:64px; height:64px;">
-              <div style="display:flex; flex-direction:column; gap:4px;">
-                <div><strong>Productivité semaine en cours :</strong> <span id="latestProd">0,00</span> m3/h</div>
-                <div><strong>Cible semaine en cours :</strong> <span id="latestTarget">0,00</span> m3/h</div>
+
+            <div class="gm-chart-column">
+              <div class="gm-chart-section">
+                <div class="gm-chart-header">
+                  <h2>Tendance m3/h</h2>
+                  <select id="rangeSelect" class="gm-range-select" onchange="renderUsineChart()">
+                    <option value="4">1 mois</option>
+                    <option value="8">2 mois</option>
+                    <option value="52">1 an</option>
+                    <option value="104">2 ans</option>
+                  </select>
+                </div>
+                <div class="gm-chart-container">
+                  <canvas id="speedcutChart"></canvas>
+                </div>
               </div>
+              <div id="currentWeekLabel" style="margin-top:10px; text-align:center; color:#c62828; font-weight:700;"></div>
+            </div>
+
+            <div class="gm-indicator-column">
+              <div class="gm-indicator-card" id="mainIndicator">
+                <img id="moodImg" src="../assets/smiley rouge usine cbco.png" alt="smiley état performance" style="width:200px; height:200px;">
+              </div>
+              <div style="margin-top:10px; text-align:center; font-weight:600;">Cible: <span id="latestTarget">0,00</span> m3/h</div>
             </div>
           </div>
         </div>
-      </section>
+      </div>
     </main>
   </div>
 
@@ -97,9 +113,12 @@
       const latestTarget = dataTarget[dataTarget.length - 1] || 0;
       const aboveTarget = latestTarget > 0 && latestProd >= latestTarget;
 
+      document.getElementById('scCubage').textContent = formatNumber(Number(latest.speedcutM3) || 0);
+      document.getElementById('scHeures').textContent = formatNumber(Number(latest.speedcutHeuresUtiles) || 0);
       document.getElementById('latestProd').textContent = formatNumber(latestProd);
       document.getElementById('latestTarget').textContent = formatNumber(latestTarget);
       document.getElementById('currentWeekLabel').textContent = `Semaine en cours : ${latest.semaineLabel || (`S${latest.week} ${latest.year}`)}`;
+      document.getElementById('mainIndicator').className = `gm-indicator-card ${aboveTarget ? 'vert' : 'rouge'}`;
       document.getElementById('moodImg').src = aboveTarget
         ? '../assets/smiley vert usine cbco.png'
         : '../assets/smiley rouge usine cbco.png';
