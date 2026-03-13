@@ -504,7 +504,7 @@
         : 0;
       const yMaxRaw = yValues.length ? Math.max(...yValues, 0) : 1;
       const yPadding = Math.max((yMaxRaw - yMinRaw) * 0.12, cfg.unit === '%' ? 5 : 0.2);
-      const yMin = yMinRaw - yPadding;
+      const yMin = machine === 'assemblage' ? (yMinRaw - yPadding) : 0;
       const yMax = yMaxRaw + yPadding;
 
       const newChart = new Chart(ctx, {
