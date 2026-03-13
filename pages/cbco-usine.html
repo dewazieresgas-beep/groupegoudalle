@@ -24,30 +24,24 @@
         <p class="subtitle">Productivité Speedcut (m3/h)</p>
       </div>
 
-      <section class="cbco-card-v2" style="margin-bottom: 16px;">
-        <header class="cbco-card-title-v2">Filtres d'affichage</header>
-        <div class="cbco-card-content-v2" style="display:flex; gap:12px; align-items:end; flex-wrap:wrap;">
-          <div class="form-group" style="margin-bottom:0;">
-            <label for="rangeSelect">Période</label>
-            <select id="rangeSelect" onchange="renderUsineChart()" style="min-width:220px;">
-              <option value="4">Dernier mois</option>
-              <option value="8">2 derniers mois</option>
-              <option value="12">3 derniers mois</option>
-              <option value="24">6 derniers mois</option>
-              <option value="52">12 derniers mois</option>
-              <option value="9999">Tout l'historique</option>
-            </select>
-          </div>
-        </div>
-      </section>
-
       <section class="cbco-card-v2">
         <header class="cbco-card-title-v2">📈 Productivité SC (m3/h)</header>
         <div class="cbco-card-content-v2">
           <div id="usineEmpty" style="display:none; color:#999;">Aucune donnée de productivité Speedcut disponible.</div>
           <div id="usineContent" style="display:none;">
-            <div style="height:360px;">
-              <canvas id="speedcutChart"></canvas>
+            <div class="gm-chart-section">
+              <div class="gm-chart-header">
+                <h2>Tendance m3/h</h2>
+                <select id="rangeSelect" class="gm-range-select" onchange="renderUsineChart()">
+                  <option value="4">1 mois</option>
+                  <option value="8">2 mois</option>
+                  <option value="52">1 an</option>
+                  <option value="104">2 ans</option>
+                </select>
+              </div>
+              <div class="gm-chart-container">
+                <canvas id="speedcutChart"></canvas>
+              </div>
             </div>
             <div id="currentWeekLabel" style="margin-top:10px; text-align:center; color:#c62828; font-weight:700;"></div>
             <div style="display:flex; gap:16px; align-items:center; justify-content:center; margin-top:16px; flex-wrap:wrap;">
@@ -65,6 +59,10 @@
 
   <script>
     let speedcutChart;
+    function getCssVar(name, fallback) {
+      const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      return value || fallback;
+    }
 
     function renderUsineChart() {
       const empty = document.getElementById('usineEmpty');
@@ -116,23 +114,23 @@
             {
               label: 'Productivité SC (m3/h)',
               data: dataProd,
-              borderColor: '#5c6bc0',
-              backgroundColor: '#5c6bc0',
-              pointBackgroundColor: '#5c6bc0',
-              pointRadius: 4,
+              borderColor: getCssVar('--accent-dark', '#6b8e6f'),
+              backgroundColor: 'rgba(107, 142, 111, 0.12)',
+              pointRadius: 3,
+              pointHoverRadius: 5,
               borderWidth: 2,
-              tension: 0
+              tension: 0,
+              spanGaps: false,
+              fill: true
             },
             {
-              label: 'Cible de productivité',
+              label: 'Cible (m3/h)',
               data: dataTarget,
-              borderColor: '#c2185b',
-              backgroundColor: '#c2185b',
+              borderColor: '#e74c3c',
               pointRadius: 0,
               borderWidth: 2,
-              borderDash: [8, 4],
-              tension: 0,
-              spanGaps: true
+              borderDash: [5, 5],
+              fill: false
             }
           ]
         },
@@ -156,7 +154,8 @@
               }
             },
             y: {
-              beginAtZero: false,
+              beginAtZero: true,
+              title: { display: true, text: 'm3/h' },
               ticks: {
                 callback: (v) => formatNumber(v)
               }
