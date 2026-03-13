@@ -787,6 +787,8 @@ function injectCBCOSecondaryBar() {
   if (Auth.hasAccess('cbco_saisie')) {
     const saisieActive = currentPage === 'cbco-saisie.html' ? ' active' : '';
     secondaryItems += `<a href="${base}pages/cbco-saisie.html" class="sidebar-item${saisieActive}">✏️ Saisie chiffre d'affaires</a>`;
+    const prodActive = currentPage === 'cbco-productivite-saisie.html' ? ' active' : '';
+    secondaryItems += `<a href="${base}pages/cbco-productivite-saisie.html" class="sidebar-item${prodActive}">🏭 Saisie productivité usine</a>`;
   }
   if (Auth.hasAccess('cbco_commercial')) {
     const commercialActive = currentPage === 'cbco-commercial.html' ? ' active' : '';
@@ -831,7 +833,7 @@ function injectCBCOSecondaryBar() {
  */
 function isCBCOPage() {
   const page = getCurrentPage();
-  return page === 'cbco.html' || page === 'cbco-saisie.html' || page === 'cbco-commercial.html' || page === 'cbco-paiement.html';
+  return page === 'cbco.html' || page === 'cbco-saisie.html' || page === 'cbco-commercial.html' || page === 'cbco-paiement.html' || page === 'cbco-productivite-saisie.html';
 }
 
 /**
@@ -1035,7 +1037,101 @@ function restoreSubMenuStates() {
 
 // ============ CBCO COMMERCIAL (MÉMOIRES TECHNIQUES) ============
 
+const CBCO_PRODUCTIVITE_KEY = 'goudalle_cbco_productivite';
 const CBCO_COMMERCIAL_KEY = 'goudalle_cbco_commercial';
+
+function normalizeCBCOProductiviteNumber(value) {
+  if (value === null || value === undefined || value === '') return 0;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  const cleaned = String(value).replace(/\s/g, '').replace(',', '.');
+  const parsed = parseFloat(cleaned);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function getCBCOProductiviteData() {
+  const raw = localStorage.getItem(CBCO_PRODUCTIVITE_KEY);
+  const entries = raw ? JSON.parse(raw) : [];
+  return entries
+    .map(entry => computeCBCOProductiviteMetrics(entry))
+    .sort((a, b) => {
+      if ((b.year || 0) !== (a.year || 0)) return (b.year || 0) - (a.year || 0);
+      return (b.week || 0) - (a.week || 0);
+    });
+}
+
+function computeCBCOProductiviteMetrics(entry) {
+  const speedcutM3 = normalizeCBCOProductiviteNumber(entry.speedcutM3);
+  const ultraM3 = normalizeCBCOProductiviteNumber(entry.ultraM3);
+  const extraM2 = normalizeCBCOProductiviteNumber(entry.extraM2);
+  const collageHeures = normalizeCBCOProductiviteNumber(entry.collageHeures);
+  const collagePresses = normalizeCBCOProductiviteNumber(entry.collagePresses);
+  const assemblageTempsRealise = normalizeCBCOProductiviteNumber(entry.assemblageTempsRealise);
+  const assemblageTempsTheorique = normalizeCBCOProductiviteNumber(entry.assemblageTempsTheorique);
+  const collageHeuresParPresse = collagePresses > 0 ? collageHeures / collagePresses : null;
+  const assemblageRatio = assemblageTempsTheorique > 0 ? assemblageTempsRealise / assemblageTempsTheorique : null;
+  const assemblageEcartHeures = assemblageTempsRealise - assemblageTempsTheorique;
+
+  return {
+    ...entry,
+    speedcutM3,
+    ultraM3,
+    extraM2,
+    collageHeures,
+    collagePresses,
+    assemblageTempsRealise,
+    assemblageTempsTheorique,
+    collageHeuresParPresse,
+    assemblageRatio,
+    assemblageEcartHeures
+  };
+}
+
+function saveCBCOProductiviteEntry(entry) {
+  const data = getCBCOProductiviteData();
+  const week = parseInt(entry.week, 10);
+  const year = parseInt(entry.year, 10);
+  const existingIdx = data.findIndex(e => e.week === week && e.year === year);
+  const normalized = computeCBCOProductiviteMetrics({
+    id: existingIdx >= 0 ? data[existingIdx].id : Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    week,
+    year,
+    semaineLabel: entry.semaineLabel || `S${week} ${year}`,
+    speedcutM3: entry.speedcutM3,
+    ultraM3: entry.ultraM3,
+    extraM2: entry.extraM2,
+    collageHeures: entry.collageHeures,
+    collagePresses: entry.collagePresses,
+    assemblageTempsRealise: entry.assemblageTempsRealise,
+    assemblageTempsTheorique: entry.assemblageTempsTheorique,
+    importDate: new Date().toISOString(),
+    updatedBy: Auth.getSession()?.username || 'system'
+  });
+
+  if (existingIdx >= 0) {
+    data[existingIdx] = normalized;
+  } else {
+    data.push(normalized);
+  }
+
+  data.sort((a, b) => {
+    if ((b.year || 0) !== (a.year || 0)) return (b.year || 0) - (a.year || 0);
+    return (b.week || 0) - (a.week || 0);
+  });
+  localStorage.setItem(CBCO_PRODUCTIVITE_KEY, JSON.stringify(data));
+  return normalized;
+}
+
+function deleteCBCOProductiviteEntry(id) {
+  const data = getCBCOProductiviteData();
+  const filtered = data.filter(e => e.id !== id);
+  localStorage.setItem(CBCO_PRODUCTIVITE_KEY, JSON.stringify(filtered));
+  return filtered.length !== data.length;
+}
+
+function getCBCOProductiviteLatest() {
+  const data = getCBCOProductiviteData();
+  return data.length > 0 ? data[0] : null;
+}
 
 /**
  * Récupère toutes les affaires commerciales CBCO

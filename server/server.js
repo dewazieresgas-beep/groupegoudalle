@@ -115,6 +115,17 @@ app.put('/api/cbco', (req, res) => {
   res.json({ success: true });
 });
 
+// ─── ROUTES : CBCO PRODUCTIVITÉ USINE ────────────────────────────────────────────
+
+app.get('/api/cbco-productivite', (req, res) => {
+  res.json(dbGet('cbco_productivite', []));
+});
+
+app.put('/api/cbco-productivite', (req, res) => {
+  dbSet('cbco_productivite', req.body);
+  res.json({ success: true });
+});
+
 // ─── ROUTES : CBCO COMMERCIAL ───────────────────────────────────────────────────
 
 app.get('/api/cbco-commercial', (req, res) => {
