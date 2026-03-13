@@ -1123,6 +1123,20 @@ function saveCBCOProductiviteEntry(entry) {
   return normalized;
 }
 
+function replaceCBCOProductiviteData(entries) {
+  const normalized = (Array.isArray(entries) ? entries : [])
+    .map(entry => computeCBCOProductiviteMetrics(entry))
+    .filter(entry => Number(entry.week) > 0 && Number(entry.year) > 0);
+
+  normalized.sort((a, b) => {
+    if ((b.year || 0) !== (a.year || 0)) return (b.year || 0) - (a.year || 0);
+    return (b.week || 0) - (a.week || 0);
+  });
+
+  localStorage.setItem(CBCO_PRODUCTIVITE_KEY, JSON.stringify(normalized));
+  return normalized;
+}
+
 function deleteCBCOProductiviteEntry(id) {
   const data = getCBCOProductiviteData();
   const filtered = data.filter(e => e.id !== id);
