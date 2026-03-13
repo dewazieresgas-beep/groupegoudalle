@@ -139,7 +139,8 @@
 
       for (let r = 3; r < rows.length; r++) {
         const row = rows[r] || [];
-        const hasUsefulData = hasCellValue(row[config.COL.F]);
+        const cubageSearch = parseNumber(row[config.COL.F]);
+        const hasUsefulData = cubageSearch !== null && Math.abs(cubageSearch) > 0;
         if (!hasUsefulData) {
           emptyUsefulStreak++;
           if (emptyUsefulStreak >= 50) break;
@@ -151,7 +152,7 @@
         const semaineCumulee = parseNumber(row[config.COL.C]);
         const heuresOnaya = parseDurationHours(row[config.COL.D]);
         const heuresPerdues = parseDurationHours(row[config.COL.E]);
-        const cubage = parseNumber(row[config.COL.F]);
+        const cubage = cubageSearch;
         const productiviteCell = config.productiviteAsDuration
           ? parseDurationHours(row[config.COL.G])
           : parseNumber(row[config.COL.G]);
