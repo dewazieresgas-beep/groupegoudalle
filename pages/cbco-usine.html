@@ -226,6 +226,56 @@
           </div>
         </div>
       </div>
+
+      <div class="gm-header" style="margin-top:20px;">
+        <h1>Assemblage - Variation temps semaine <span id="weekNumberASSEMBLAGE">—</span></h1>
+      </div>
+      <div class="gm-main-section">
+        <div id="usineEmptyASSEMBLAGE" style="display:none; color:#999;">Aucune donnée d'assemblage disponible.</div>
+        <div id="usineContentASSEMBLAGE" style="display:none;">
+          <div class="gm-main-container">
+            <div class="gm-kpi-column">
+              <div class="gm-kpi-card gm-kpi-m3">
+                <div class="gm-kpi-label">Temps réalisé (h)</div>
+                <div class="gm-kpi-value" id="cubageASSEMBLAGE">0.00</div>
+              </div>
+              <div class="gm-kpi-card gm-kpi-hours">
+                <div class="gm-kpi-label">Temps théorique (h)</div>
+                <div class="gm-kpi-value" id="hoursASSEMBLAGE">0.00</div>
+              </div>
+              <div class="gm-kpi-card gm-kpi-ratio">
+                <div class="gm-kpi-label">Variation (%)</div>
+                <div class="gm-kpi-value" id="prodASSEMBLAGE">—</div>
+              </div>
+            </div>
+            <div class="gm-chart-column">
+              <div class="gm-chart-section">
+                <div class="gm-chart-header">
+                  <h2>Différence temps réalisé / théorique (%)</h2>
+                  <select id="rangeSelectASSEMBLAGE" class="gm-range-select" onchange="renderMachineSection('assemblage')">
+                    <option value="4">1 mois</option>
+                    <option value="8">2 mois</option>
+                    <option value="52">1 an</option>
+                    <option value="104">2 ans</option>
+                  </select>
+                </div>
+                <div class="gm-chart-container">
+                  <canvas id="chartASSEMBLAGE"></canvas>
+                </div>
+              </div>
+            </div>
+            <div class="gm-indicator-column">
+              <div class="gm-indicator-card" id="indicatorASSEMBLAGE">
+                <img id="moodASSEMBLAGE" src="../assets/smiley rouge usine cbco.png" alt="smiley assemblage" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
+              </div>
+            </div>
+          </div>
+          <div class="gm-comment-section" style="margin-top: 16px;">
+            <h2>Commentaire de la semaine</h2>
+            <textarea id="commentASSEMBLAGE" class="gm-comment-input" rows="1" wrap="off" readonly placeholder="Aucun commentaire"></textarea>
+          </div>
+        </div>
+      </div>
     </main>
   </div>
 
@@ -234,6 +284,7 @@
     let chartULTRA;
     let chartEXTRA;
     let chartCOLLAGE;
+    let chartASSEMBLAGE;
 
     function getCssVar(name, fallback) {
       const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -288,6 +339,21 @@
           moodRed: '../assets/smiley rouge usine cbco.png'
         };
       }
+      if (machine === 'assemblage') {
+        return {
+          suffix: 'ASSEMBLAGE',
+          m3Field: 'assemblageNombreCaissons',
+          hoursField: 'assemblageTempsTheorique',
+          usefulField: null,
+          prodField: 'assemblageVariation',
+          targetField: null,
+          remarkField: 'assemblageCommentaire',
+          unit: '%',
+          goodWhenLower: true,
+          moodGreen: '../assets/smiley vert usine cbco.png',
+          moodRed: '../assets/smiley rouge usine cbco.png'
+        };
+      }
       return {
         suffix: 'SC',
         m3Field: 'speedcutM3',
@@ -308,7 +374,10 @@
       const content = document.getElementById(`usineContent${cfg.suffix}`);
       const allDesc = getCBCOProductiviteData();
       const allAsc = [...allDesc].sort((a, b) => a.year !== b.year ? a.year - b.year : a.week - b.week);
-      const withData = allAsc.filter(e => Number(e[cfg.prodField]) > 0 || Number(e[cfg.m3Field]) > 0 || Number(e[cfg.targetField]) > 0);
+      const withData = allAsc.filter(e => {
+        const hasTarget = cfg.targetField ? Number(e[cfg.targetField]) > 0 : false;
+        return Number(e[cfg.prodField]) > 0 || Number(e[cfg.m3Field]) > 0 || hasTarget;
+      });
 
       if (!withData.length) {
         empty.style.display = '';
@@ -316,6 +385,7 @@
         if (machine === 'ultra' && chartULTRA) chartULTRA.destroy();
         if (machine === 'extra' && chartEXTRA) chartEXTRA.destroy();
         if (machine === 'collage' && chartCOLLAGE) chartCOLLAGE.destroy();
+        if (machine === 'assemblage' && chartASSEMBLAGE) chartASSEMBLAGE.destroy();
         if (machine === 'sc' && chartSC) chartSC.destroy();
         return;
       }
@@ -331,13 +401,17 @@
         }
         return Number(e[cfg.usefulField]) > 0 ? Number(e[cfg.m3Field]) / Number(e[cfg.usefulField]) : null;
       });
-      const dataTarget = entries.map(e => Number(e[cfg.targetField]) > 0 ? e[cfg.targetField] : null);
+      const dataTarget = machine === 'assemblage'
+        ? entries.map(() => 0)
+        : entries.map(e => (cfg.targetField && Number(e[cfg.targetField]) > 0) ? e[cfg.targetField] : null);
       const latest = entries[entries.length - 1];
       const latestProd = dataProd[dataProd.length - 1] || 0;
       const latestTarget = dataTarget[dataTarget.length - 1] || 0;
-      const aboveTarget = latestTarget > 0
-        ? (cfg.goodWhenLower ? latestProd <= latestTarget : latestProd >= latestTarget)
-        : false;
+      const aboveTarget = machine === 'assemblage'
+        ? (latestProd <= 0)
+        : (latestTarget > 0
+          ? (cfg.goodWhenLower ? latestProd <= latestTarget : latestProd >= latestTarget)
+          : false);
 
       document.getElementById(`weekNumber${cfg.suffix}`).textContent = latest.semaineLabel || `S${latest.week} ${latest.year}`;
       document.getElementById(`cubage${cfg.suffix}`).textContent = formatNumber(Number(latest[cfg.m3Field]) || 0);
@@ -351,6 +425,7 @@
       if (machine === 'ultra' && chartULTRA) chartULTRA.destroy();
       if (machine === 'extra' && chartEXTRA) chartEXTRA.destroy();
       if (machine === 'collage' && chartCOLLAGE) chartCOLLAGE.destroy();
+      if (machine === 'assemblage' && chartASSEMBLAGE) chartASSEMBLAGE.destroy();
       if (machine === 'sc' && chartSC) chartSC.destroy();
 
       const newChart = new Chart(ctx, {
@@ -407,6 +482,7 @@
 
       if (machine === 'ultra') chartULTRA = newChart;
       else if (machine === 'extra') chartEXTRA = newChart;
+      else if (machine === 'assemblage') chartASSEMBLAGE = newChart;
       else if (machine === 'collage') chartCOLLAGE = newChart;
       else chartSC = newChart;
       empty.style.display = 'none';
@@ -420,6 +496,7 @@
       renderMachineSection('ultra');
       renderMachineSection('extra');
       renderMachineSection('collage');
+      renderMachineSection('assemblage');
     }
 
     function downloadUsineAsImage() {
