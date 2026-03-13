@@ -60,14 +60,29 @@
 
     function parseNumber(value) {
       if (value === null || value === undefined || value === '') return 0;
-      if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
-      const cleaned = String(value).replace(/\s/g, '').replace(',', '.');
-      const parsed = parseFloat(cleaned);
+      if (typeof value === 'number') {
+        if (!Number.isFinite(value)) return 0;
+        // Excel peut stocker les heures en fraction de jour (ex: 0.5 = 12:00:00)
+        if (value > 0 && value < 2) return value * 24;
+        return value;
+      }
+      const raw = String(value).trim();
+      const hms = raw.match(/^(\d{1,3}):(\d{1,2})(?::(\d{1,2}))?$/);
+      if (hms) {
+        const h = parseInt(hms[1], 10) || 0;
+        const m = parseInt(hms[2], 10) || 0;
+        const s = parseInt(hms[3] || '0', 10) || 0;
+        return h + (m / 60) + (s / 3600);
+      }
+      const cleaned = raw.replace(/\s/g, '').replace(',', '.');
+      const match = cleaned.match(/-?\d+(\.\d+)?/);
+      const parsed = match ? parseFloat(match[0]) : NaN;
       return Number.isFinite(parsed) ? parsed : 0;
     }
 
     function parseProductiviteExcel(workbook) {
-      const scSheet = workbook.Sheets['SC'] || workbook.Sheets['Sc'] || workbook.Sheets['sc'];
+      const scSheetName = workbook.SheetNames.find(name => String(name || '').trim().toLowerCase() === 'sc');
+      const scSheet = scSheetName ? workbook.Sheets[scSheetName] : null;
       if (!scSheet) {
         throw new Error('Feuille SC introuvable dans le fichier.');
       }
@@ -75,6 +90,7 @@
       const scRows = XLSX.utils.sheet_to_json(scSheet, { header: 1, defval: '' });
       const byWeek = {};
       let emptyFCount = 0;
+      let startedData = false;
 
       for (let r = 3; r < scRows.length; r++) {
         const row = scRows[r] || [];
@@ -88,9 +104,13 @@
         const trs = parseNumber(row[11]); // L
         const tempsUtilisation = parseNumber(row[13]); // N
 
-        if (!cubage) emptyFCount++;
-        else emptyFCount = 0;
-        if (emptyFCount >= 50) break;
+        const rowLooksData = !!(semaineB || semaineC || cubage || heuresOnaya || heuresPerdues || cibleProd || trs || tempsUtilisation);
+        if (rowLooksData) startedData = true;
+        if (startedData) {
+          if (!cubage) emptyFCount++;
+          else emptyFCount = 0;
+          if (emptyFCount >= 50) break;
+        }
 
         if (!semaineB && !semaineC && !cubage && !heuresOnaya && !heuresPerdues && !cibleProd) continue;
 
