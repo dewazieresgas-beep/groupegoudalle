@@ -6,6 +6,7 @@
   <title>CBCO - Usine - Intranet</title>
   <link rel="stylesheet" href="../style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
   <script src="../js/api.js"></script>
@@ -21,6 +22,9 @@
     <main class="main-content">
       <div class="gm-header">
         <h1>Dashboard Usine CBCO</h1>
+        <div style="margin-top: 12px;">
+          <button class="btn btn-secondary" onclick="downloadUsineAsImage()">📥 Télécharger le dashboard usine</button>
+        </div>
       </div>
 
       <div class="gm-header" style="margin-top:12px;">
@@ -338,6 +342,24 @@
       renderMachineSection('sc');
       renderMachineSection('ultra');
       renderMachineSection('extra');
+    }
+
+    function downloadUsineAsImage() {
+      const element = document.querySelector('.main-content');
+      html2canvas(element, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+        logging: false,
+        useCORS: true
+      }).then(canvas => {
+        const link = document.createElement('a');
+        const date = new Date().toISOString().split('T')[0];
+        link.download = `cbco_usine_dashboard_${date}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      }).catch(() => {
+        alert('❌ Erreur lors de la génération de l’image.');
+      });
     }
 
     window.onServerReady(init);
