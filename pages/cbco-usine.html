@@ -20,37 +20,35 @@
     <div id="sidebar"></div>
     <main class="main-content">
       <div class="gm-header">
-        <h1 id="usineMainTitle">Productivité <span id="machineTitle">Speedcut</span> semaine <span id="weekNumber">—</span></h1>
+        <h1>Dashboard Usine CBCO</h1>
       </div>
 
+      <div class="gm-header" style="margin-top:12px;">
+        <h1>Productivité Speedcut semaine <span id="weekNumberSC">—</span></h1>
+      </div>
       <div class="gm-main-section">
-        <div id="usineEmpty" style="display:none; color:#999;">Aucune donnée de productivité Speedcut disponible.</div>
-        <div id="usineContent" style="display:none;">
+        <div id="usineEmptySC" style="display:none; color:#999;">Aucune donnée de productivité Speedcut disponible.</div>
+        <div id="usineContentSC" style="display:none;">
           <div class="gm-main-container">
             <div class="gm-kpi-column">
               <div class="gm-kpi-card gm-kpi-m3">
-                <div class="gm-kpi-label" id="cubageLabel">Cubage SC (m³)</div>
-                <div class="gm-kpi-value" id="scCubage">0.00</div>
+                <div class="gm-kpi-label">Cubage SC (m³)</div>
+                <div class="gm-kpi-value" id="cubageSC">0.00</div>
               </div>
               <div class="gm-kpi-card gm-kpi-hours">
-                <div class="gm-kpi-label" id="hoursLabel">Heures Onaya</div>
-                <div class="gm-kpi-value" id="scHeures">0.00</div>
+                <div class="gm-kpi-label">Heures Onaya</div>
+                <div class="gm-kpi-value" id="hoursSC">0.00</div>
               </div>
               <div class="gm-kpi-card gm-kpi-ratio">
-                <div class="gm-kpi-label" id="prodLabel">Productivité m3/h</div>
-                <div class="gm-kpi-value" id="latestProd">—</div>
+                <div class="gm-kpi-label">Productivité m3/h</div>
+                <div class="gm-kpi-value" id="prodSC">—</div>
               </div>
             </div>
-
             <div class="gm-chart-column">
               <div class="gm-chart-section">
                 <div class="gm-chart-header">
-                  <h2 id="trendTitle">Tendance Speedcut m3/h</h2>
-                  <select id="machineSelect" class="gm-range-select" onchange="renderUsineChart()" style="max-width:160px;">
-                    <option value="speedcut">Speedcut</option>
-                    <option value="ultra">Ultra</option>
-                  </select>
-                  <select id="rangeSelect" class="gm-range-select" onchange="renderUsineChart()">
+                  <h2>Tendance Speedcut m3/h</h2>
+                  <select id="rangeSelectSC" class="gm-range-select" onchange="renderMachineSection('sc')">
                     <option value="4">1 mois</option>
                     <option value="8">2 mois</option>
                     <option value="52">1 an</option>
@@ -58,20 +56,69 @@
                   </select>
                 </div>
                 <div class="gm-chart-container">
-                  <canvas id="speedcutChart"></canvas>
+                  <canvas id="chartSC"></canvas>
                 </div>
               </div>
             </div>
-
             <div class="gm-indicator-column">
-              <div class="gm-indicator-card" id="mainIndicator">
-                <img id="moodImg" src="../assets/smiley rouge usine cbco.png" alt="smiley état performance" style="width:100%; height:100%; object-fit:contain;">
+              <div class="gm-indicator-card" id="indicatorSC">
+                <img id="moodSC" src="../assets/smiley rouge usine cbco.png" alt="smiley speedcut" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
               </div>
             </div>
           </div>
           <div class="gm-comment-section" style="margin-top: 16px;">
             <h2>Commentaire de la semaine</h2>
-            <textarea id="weekComment" class="gm-comment-input" rows="3" readonly placeholder="Aucun commentaire"></textarea>
+            <textarea id="commentSC" class="gm-comment-input" rows="1" wrap="off" readonly placeholder="Aucun commentaire"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="gm-header" style="margin-top:20px;">
+        <h1>Productivité Ultra semaine <span id="weekNumberULTRA">—</span></h1>
+      </div>
+      <div class="gm-main-section">
+        <div id="usineEmptyULTRA" style="display:none; color:#999;">Aucune donnée de productivité Ultra disponible.</div>
+        <div id="usineContentULTRA" style="display:none;">
+          <div class="gm-main-container">
+            <div class="gm-kpi-column">
+              <div class="gm-kpi-card gm-kpi-m3">
+                <div class="gm-kpi-label">Cubage Ultra (m³)</div>
+                <div class="gm-kpi-value" id="cubageULTRA">0.00</div>
+              </div>
+              <div class="gm-kpi-card gm-kpi-hours">
+                <div class="gm-kpi-label">Heures théoriques</div>
+                <div class="gm-kpi-value" id="hoursULTRA">0.00</div>
+              </div>
+              <div class="gm-kpi-card gm-kpi-ratio">
+                <div class="gm-kpi-label">Productivité m3/h</div>
+                <div class="gm-kpi-value" id="prodULTRA">—</div>
+              </div>
+            </div>
+            <div class="gm-chart-column">
+              <div class="gm-chart-section">
+                <div class="gm-chart-header">
+                  <h2>Tendance Ultra m3/h</h2>
+                  <select id="rangeSelectULTRA" class="gm-range-select" onchange="renderMachineSection('ultra')">
+                    <option value="4">1 mois</option>
+                    <option value="8">2 mois</option>
+                    <option value="52">1 an</option>
+                    <option value="104">2 ans</option>
+                  </select>
+                </div>
+                <div class="gm-chart-container">
+                  <canvas id="chartULTRA"></canvas>
+                </div>
+              </div>
+            </div>
+            <div class="gm-indicator-column">
+              <div class="gm-indicator-card" id="indicatorULTRA">
+                <img id="moodULTRA" src="../assets/smiley rouge usine cbco.png" alt="smiley ultra" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
+              </div>
+            </div>
+          </div>
+          <div class="gm-comment-section" style="margin-top: 16px;">
+            <h2>Commentaire de la semaine</h2>
+            <textarea id="commentULTRA" class="gm-comment-input" rows="1" wrap="off" readonly placeholder="Aucun commentaire"></textarea>
           </div>
         </div>
       </div>
@@ -79,78 +126,91 @@
   </div>
 
   <script>
-    let speedcutChart;
+    let chartSC;
+    let chartULTRA;
+
     function getCssVar(name, fallback) {
       const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
       return value || fallback;
     }
 
-    function renderUsineChart() {
-      const empty = document.getElementById('usineEmpty');
-      const content = document.getElementById('usineContent');
-      const machine = document.getElementById('machineSelect')?.value || 'speedcut';
-      const isUltra = machine === 'ultra';
-      const machineLabel = isUltra ? 'Ultra' : 'Speedcut';
-      const m3Field = isUltra ? 'ultraM3' : 'speedcutM3';
-      const onayaField = isUltra ? 'ultraHeuresOnaya' : 'speedcutHeuresOnaya';
-      const utilesField = isUltra ? 'ultraHeuresUtiles' : 'speedcutHeuresUtiles';
-      const prodField = isUltra ? 'ultraProductivite' : 'speedcutProductivite';
-      const cibleField = isUltra ? 'ultraCibleProductivite' : 'speedcutCibleProductivite';
-      const remarqueField = isUltra ? 'ultraRemarques' : 'speedcutRemarques';
-      const allDesc = getCBCOProductiviteData();
-      const allAsc = [...allDesc].sort((a, b) => {
-        if (a.year !== b.year) return a.year - b.year;
-        return a.week - b.week;
-      });
+    function sanitizeComment(text) {
+      return String(text || '').replace(/\r?\n+/g, ' / ').replace(/\s+/g, ' ').trim();
+    }
 
-      const allWithSpeedcut = allAsc.filter(e => Number(e[prodField]) > 0 || Number(e[m3Field]) > 0 || Number(e[cibleField]) > 0);
-      if (allWithSpeedcut.length === 0) {
+    function getMachineConfig(machine) {
+      if (machine === 'ultra') {
+        return {
+          suffix: 'ULTRA',
+          m3Field: 'ultraM3',
+          hoursField: 'ultraHeuresOnaya',
+          usefulField: 'ultraHeuresUtiles',
+          prodField: 'ultraProductivite',
+          targetField: 'ultraCibleProductivite',
+          remarkField: 'ultraRemarques',
+          moodGreen: '../assets/smiley vert usine cbco.png',
+          moodRed: '../assets/smiley rouge usine cbco.png'
+        };
+      }
+      return {
+        suffix: 'SC',
+        m3Field: 'speedcutM3',
+        hoursField: 'speedcutHeuresOnaya',
+        usefulField: 'speedcutHeuresUtiles',
+        prodField: 'speedcutProductivite',
+        targetField: 'speedcutCibleProductivite',
+        remarkField: 'speedcutRemarques',
+        moodGreen: '../assets/smiley vert usine cbco.png',
+        moodRed: '../assets/smiley rouge usine cbco.png'
+      };
+    }
+
+    function renderMachineSection(machine) {
+      const cfg = getMachineConfig(machine);
+      const empty = document.getElementById(`usineEmpty${cfg.suffix}`);
+      const content = document.getElementById(`usineContent${cfg.suffix}`);
+      const allDesc = getCBCOProductiviteData();
+      const allAsc = [...allDesc].sort((a, b) => a.year !== b.year ? a.year - b.year : a.week - b.week);
+      const withData = allAsc.filter(e => Number(e[cfg.prodField]) > 0 || Number(e[cfg.m3Field]) > 0 || Number(e[cfg.targetField]) > 0);
+
+      if (!withData.length) {
         empty.style.display = '';
         content.style.display = 'none';
-        if (speedcutChart) speedcutChart.destroy();
+        if (machine === 'ultra' && chartULTRA) chartULTRA.destroy();
+        if (machine === 'sc' && chartSC) chartSC.destroy();
         return;
       }
 
-      const range = parseInt(document.getElementById('rangeSelect').value, 10) || 4;
-      const entries = allWithSpeedcut.slice(-range);
+      const range = parseInt(document.getElementById(`rangeSelect${cfg.suffix}`).value, 10) || 4;
+      const entries = withData.slice(-range);
       const labels = entries.map(e => e.semaineLabel || `S${e.week} ${e.year}`);
       const latestLabel = labels[labels.length - 1];
-
-      const dataProd = entries.map(e => {
-        if (Number(e[prodField]) > 0) return e[prodField];
-        return Number(e[utilesField]) > 0 ? (Number(e[m3Field]) / Number(e[utilesField])) : null;
-      });
-      const dataTarget = entries.map(e => Number(e[cibleField]) > 0 ? e[cibleField] : null);
-
+      const dataProd = entries.map(e => Number(e[cfg.prodField]) > 0 ? e[cfg.prodField] : (Number(e[cfg.usefulField]) > 0 ? Number(e[cfg.m3Field]) / Number(e[cfg.usefulField]) : null));
+      const dataTarget = entries.map(e => Number(e[cfg.targetField]) > 0 ? e[cfg.targetField] : null);
       const latest = entries[entries.length - 1];
       const latestProd = dataProd[dataProd.length - 1] || 0;
       const latestTarget = dataTarget[dataTarget.length - 1] || 0;
       const aboveTarget = latestTarget > 0 && latestProd >= latestTarget;
 
-      document.getElementById('machineTitle').textContent = machineLabel;
-      document.getElementById('trendTitle').textContent = `Tendance ${machineLabel} m3/h`;
-      document.getElementById('cubageLabel').textContent = `Cubage ${isUltra ? 'Ultra' : 'SC'} (m³)`;
-      document.getElementById('hoursLabel').textContent = `Heures ${isUltra ? 'théoriques' : 'Onaya'}`;
-      document.getElementById('prodLabel').textContent = `Productivité ${machineLabel} m3/h`;
-      document.getElementById('weekNumber').textContent = `${latest.semaineLabel || (`S${latest.week} ${latest.year}`)}`;
-      document.getElementById('scCubage').textContent = formatNumber(Number(latest[m3Field]) || 0);
-      document.getElementById('scHeures').textContent = formatNumber(Number(latest[onayaField]) || 0);
-      document.getElementById('latestProd').textContent = formatNumber(latestProd);
-      document.getElementById('weekComment').value = latest[remarqueField] || '';
-      document.getElementById('mainIndicator').className = `gm-indicator-card ${aboveTarget ? 'vert' : 'rouge'}`;
-      document.getElementById('moodImg').src = aboveTarget
-        ? '../assets/smiley vert usine cbco.png'
-        : '../assets/smiley rouge usine cbco.png';
+      document.getElementById(`weekNumber${cfg.suffix}`).textContent = latest.semaineLabel || `S${latest.week} ${latest.year}`;
+      document.getElementById(`cubage${cfg.suffix}`).textContent = formatNumber(Number(latest[cfg.m3Field]) || 0);
+      document.getElementById(`hours${cfg.suffix}`).textContent = formatNumber(Number(latest[cfg.hoursField]) || 0);
+      document.getElementById(`prod${cfg.suffix}`).textContent = formatNumber(latestProd);
+      document.getElementById(`comment${cfg.suffix}`).value = sanitizeComment(latest[cfg.remarkField]);
+      document.getElementById(`indicator${cfg.suffix}`).className = `gm-indicator-card ${aboveTarget ? 'vert' : 'rouge'}`;
+      document.getElementById(`mood${cfg.suffix}`).src = aboveTarget ? cfg.moodGreen : cfg.moodRed;
 
-      const ctx = document.getElementById('speedcutChart').getContext('2d');
-      if (speedcutChart) speedcutChart.destroy();
-      speedcutChart = new Chart(ctx, {
+      const ctx = document.getElementById(`chart${cfg.suffix}`).getContext('2d');
+      if (machine === 'ultra' && chartULTRA) chartULTRA.destroy();
+      if (machine === 'sc' && chartSC) chartSC.destroy();
+
+      const newChart = new Chart(ctx, {
         type: 'line',
         data: {
           labels,
           datasets: [
             {
-              label: `Productivité ${machineLabel} (m3/h)`,
+              label: 'Productivité (m3/h)',
               data: dataProd,
               borderColor: getCssVar('--accent-dark', '#6b8e6f'),
               backgroundColor: 'rgba(107, 142, 111, 0.12)',
@@ -178,11 +238,7 @@
           interaction: { mode: 'index', intersect: false },
           plugins: {
             legend: { display: true, position: 'top' },
-            tooltip: {
-              callbacks: {
-                label: (ctx) => `${ctx.dataset.label}: ${formatNumber(ctx.parsed.y)} m3/h`
-              }
-            }
+            tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${formatNumber(ctx.parsed.y)} m3/h` } }
           },
           scales: {
             x: {
@@ -194,14 +250,14 @@
             y: {
               beginAtZero: true,
               title: { display: true, text: 'm3/h' },
-              ticks: {
-                callback: (v) => formatNumber(v)
-              }
+              ticks: { callback: (v) => formatNumber(v) }
             }
           }
         }
       });
 
+      if (machine === 'ultra') chartULTRA = newChart;
+      else chartSC = newChart;
       empty.style.display = 'none';
       content.style.display = '';
     }
@@ -209,7 +265,8 @@
     function init() {
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectCBCOSecondaryBar();
-      renderUsineChart();
+      renderMachineSection('sc');
+      renderMachineSection('ultra');
     }
 
     window.onServerReady(init);
