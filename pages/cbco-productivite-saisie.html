@@ -180,7 +180,7 @@
           nombrePressees,
           nombreCaissons
         };
-        const requiredFields = config.requiredFields || ['heuresOnaya', 'heuresPerdues', 'cubage', 'productiviteCell'];
+        const requiredFields = config.requiredFields || ['heuresOnaya', 'heuresPerdues', 'cubage'];
         const hasAllRequired = requiredFields.every(field => valueByField[field] !== null);
         if (!hasAllRequired) continue;
 
@@ -227,29 +227,29 @@
     function parseProductiviteExcel(workbook) {
       const scEntries = parseMachineSheet(workbook, {
         sheetKey: 'sc',
-        requiredFields: ['heuresOnaya', 'heuresPerdues', 'cubage', 'productiviteCell'],
+        requiredFields: ['heuresOnaya', 'heuresPerdues', 'cubage'],
         COL: { B: 1, C: 2, D: 3, E: 4, F: 5, G: 6, H: 7, J: 9, TRS: 11, TEMPS: 13 }
       });
       const ultraEntries = parseMachineSheet(workbook, {
         sheetKey: 'ultra',
-        requiredFields: ['heuresOnaya', 'heuresPerdues', 'cubage', 'productiviteCell'],
+        requiredFields: ['heuresOnaya', 'heuresPerdues', 'cubage'],
         COL: { B: 1, C: 2, D: 3, E: 4, F: 5, G: 6, H: 7, J: 9, TRS: 10, TEMPS: 8 }
       });
       const extraEntries = parseMachineSheet(workbook, {
         sheetKey: 'extra',
-        requiredFields: ['heuresOnaya', 'heuresPerdues', 'cubage', 'productiviteCell'],
+        requiredFields: ['heuresOnaya', 'heuresPerdues', 'cubage'],
         COL: { B: 1, C: 2, D: 3, E: 4, F: 5, G: 6, H: 7, J: 9, TRS: 11, TEMPS: 8, PRODHM: 10, VOLUME: 12 }
       });
       const collageEntries = parseMachineSheet(workbook, {
         sheetKey: 'collage',
-        requiredFields: ['heuresOnaya', 'heuresPerdues', 'cubage', 'productiviteCell'],
+        requiredFields: ['heuresOnaya', 'heuresPerdues', 'cubage'],
         productiviteAsDuration: true,
         targetAsDuration: true,
         COL: { B: 1, C: 2, D: 3, E: 4, F: 5, G: 6, H: 7, J: 9, TEMPS: 3, PRESSES: 5, CAISSONS: 8 }
       });
       const assemblageEntries = parseMachineSheet(workbook, {
         sheetKey: 'assemblage',
-        requiredFields: ['heuresOnaya', 'heuresPerdues', 'cubage', 'productiviteCell'],
+        requiredFields: ['heuresOnaya', 'heuresPerdues', 'cubage'],
         COL: { B: 1, C: 2, D: 3, E: 4, F: 5, G: 6, H: 7, TEMPS: 8, VOLUME: 8 }
       });
 
