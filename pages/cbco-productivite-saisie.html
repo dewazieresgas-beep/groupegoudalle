@@ -343,18 +343,34 @@
       body.innerHTML = `<table style="font-size:0.88em;">
         <thead>
           <tr>
-            <th>Semaine</th><th>SC (m³)</th><th>H utiles</th><th>Prod SC (m3/h)</th><th>Cible</th><th>TRS</th><th style="text-align:center;">Actions</th>
+            <th>Semaine</th>
+            <th>S. annuelle (B)</th>
+            <th>S. cumulée (C)</th>
+            <th>H Onaya (D)</th>
+            <th>H perdues (E)</th>
+            <th>Cubage (F)</th>
+            <th>Prod (G)</th>
+            <th>Remarques (H)</th>
+            <th>Cible (J)</th>
+            <th>TRS (L)</th>
+            <th>Tps utilisation (N)</th>
+            <th style="text-align:center;">Actions</th>
           </tr>
         </thead>
         <tbody>
           ${entries.map(e => `
             <tr>
               <td><strong>${escapeHtml(e.semaineLabel || ('S' + e.week + ' ' + e.year))}</strong></td>
-              <td>${formatNumber(e.speedcutM3)}</td>
-              <td>${formatNumber(e.speedcutHeuresUtiles || 0)}</td>
-              <td>${formatNumber(e.speedcutProductivite || 0)}</td>
-              <td>${formatNumber(e.speedcutCibleProductivite || 0)}</td>
-              <td>${formatNumber(e.speedcutTRS || 0)}</td>
+              <td>${e.semaine_annuelle === null || e.semaine_annuelle === undefined ? '—' : formatNumber(e.semaine_annuelle)}</td>
+              <td>${e.semaine_cumulee === null || e.semaine_cumulee === undefined ? '—' : formatNumber(e.semaine_cumulee)}</td>
+              <td>${e.heures_onaya === null || e.heures_onaya === undefined ? '—' : formatNumber(e.heures_onaya)}</td>
+              <td>${e.heures_perdues === null || e.heures_perdues === undefined ? '—' : formatNumber(e.heures_perdues)}</td>
+              <td>${e.cubage === null || e.cubage === undefined ? '—' : formatNumber(e.cubage)}</td>
+              <td>${e.productivite === null || e.productivite === undefined ? '—' : formatNumber(e.productivite)}</td>
+              <td>${e.remarques ? escapeHtml(e.remarques) : '—'}</td>
+              <td>${e.cible_productivite === null || e.cible_productivite === undefined ? '—' : formatNumber(e.cible_productivite)}</td>
+              <td>${e.trs === null || e.trs === undefined ? '—' : formatNumber(e.trs)}</td>
+              <td>${e.temps_utilisation_machine === null || e.temps_utilisation_machine === undefined ? '—' : formatNumber(e.temps_utilisation_machine)}</td>
               <td style="text-align:center;"><button class="btn btn-small btn-danger" onclick="deleteImport('${e.id}')">🗑️</button></td>
             </tr>
           `).join('')}
