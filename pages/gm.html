@@ -69,7 +69,7 @@
 
           <!-- COLONNE 3 : INDICATEUR EMOJI -->
           <div class="gm-indicator-column">
-            <div class="gm-indicator-card" id="mainIndicator">🙂</div>
+            <div class="gm-indicator-card" id="mainIndicator"></div>
           </div>
         </div>
 
@@ -349,7 +349,7 @@
         const indicatorEl = document.getElementById('mainIndicator');
         const base = getBasePath();
         const imageSrc = smiley === 'vert' ? `${base}assets/smiley%20vert.png` : `${base}assets/smiley%20rouge.png`;
-        indicatorEl.innerHTML = `<img src="${imageSrc}" alt="Smiley ${smiley}" style="width:200px; height:200px;">`;
+        indicatorEl.innerHTML = `<img src="${imageSrc}" alt="Smiley ${smiley}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
         indicatorEl.className = `gm-indicator-card ${smiley}`;
 
         // Charger le commentaire de la semaine (désactivé = readonly)
@@ -366,7 +366,7 @@
         
         const indicatorEl = document.getElementById('mainIndicator');
         const base = getBasePath();
-        indicatorEl.innerHTML = `<img src="${base}assets/smiley%20vert.png" alt="Smiley vert" style="width:200px; height:200px;">`;
+        indicatorEl.innerHTML = `<img src="${base}assets/smiley%20vert.png" alt="Smiley vert" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
         indicatorEl.className = 'gm-indicator-card vert';
       }
 

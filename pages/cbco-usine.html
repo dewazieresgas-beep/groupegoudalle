@@ -410,6 +410,27 @@
       return withData.slice(startIndex, endIndex + 1);
     }
 
+    function expandWithMissingWeeks(entries) {
+      if (!entries.length) return [];
+      const byKey = new Map(entries.map(e => [`${e.year}-${String(e.week).padStart(2, '0')}`, e]));
+      const result = [];
+      let week = entries[0].week;
+      let year = entries[0].year;
+      const lastWeek = entries[entries.length - 1].week;
+      const lastYear = entries[entries.length - 1].year;
+
+      while (year < lastYear || (year === lastYear && week <= lastWeek)) {
+        const key = `${year}-${String(week).padStart(2, '0')}`;
+        result.push(byKey.get(key) || { week, year, semaineLabel: `S${week} ${year}`, isMissing: true });
+        week++;
+        if (week > 52) {
+          week = 1;
+          year++;
+        }
+      }
+      return result;
+    }
+
     function renderMachineSection(machine) {
       const cfg = getMachineConfig(machine);
       const empty = document.getElementById(`usineEmpty${cfg.suffix}`);
@@ -435,10 +456,12 @@
         return;
       }
 
-      const chartEntries = getSelectedEntries(withData, cfg.suffix);
+      const selectedEntries = getSelectedEntries(withData, cfg.suffix);
+      const chartEntries = expandWithMissingWeeks(selectedEntries);
       const labels = chartEntries.map(e => e.semaineLabel || `S${e.week} ${e.year}`);
       const latestLabel = labels[labels.length - 1];
       const dataProd = chartEntries.map(e => {
+        if (e.isMissing) return null;
         const direct = toFiniteNumber(e[cfg.prodField]);
         if (direct !== null) return direct;
         if (machine === 'collage') {
@@ -453,6 +476,7 @@
       const dataTarget = machine === 'assemblage'
         ? chartEntries.map(() => 0)
         : chartEntries.map(e => {
+            if (e.isMissing) return null;
             if (!cfg.targetField) return null;
             const t = toFiniteNumber(e[cfg.targetField]);
             return t !== null && t > 0 ? t : null;
