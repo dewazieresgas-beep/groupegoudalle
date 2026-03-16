@@ -369,6 +369,29 @@
       return String(text || '').replace(/\r\n/g, '\n').trim();
     }
 
+    function wrapTooltipText(text, maxChars = 38, maxLines = 4) {
+      const raw = String(text || '').replace(/\s+/g, ' ').trim();
+      if (!raw) return ['—'];
+      const words = raw.split(' ');
+      const lines = [];
+      let current = '';
+      for (const word of words) {
+        const candidate = current ? `${current} ${word}` : word;
+        if (candidate.length <= maxChars) {
+          current = candidate;
+          continue;
+        }
+        if (current) lines.push(current);
+        current = word;
+        if (lines.length >= maxLines) break;
+      }
+      if (lines.length < maxLines && current) lines.push(current);
+      if (lines.length > maxLines) lines.length = maxLines;
+      const hasMore = words.join(' ').length > lines.join(' ').length;
+      if (hasMore && lines.length) lines[lines.length - 1] = `${lines[lines.length - 1]}...`;
+      return lines;
+    }
+
     function toFiniteNumber(value) {
       const n = Number(value);
       return Number.isFinite(n) ? n : null;
@@ -730,9 +753,11 @@
             legend: { display: true, position: 'top' },
             tooltip: {
               filter: (ctx) => ctx.datasetIndex === 0,
+              padding: 10,
+              bodySpacing: 2,
               callbacks: {
                 label: (ctx) => `Productivité (${cfg.unit}): ${formatNumber(ctx.parsed.y)} ${cfg.unit}`,
-                afterLabel: (ctx) => `Commentaire: ${dataComments[ctx.dataIndex] || '—'}`
+                afterLabel: (ctx) => ['Commentaire:', ...wrapTooltipText(dataComments[ctx.dataIndex], 38, 4)]
               }
             }
           },
@@ -805,6 +830,12 @@
             img.style.setProperty('max-width', '100%', 'important');
             img.style.setProperty('max-height', '100%', 'important');
             img.style.setProperty('object-fit', 'contain', 'important');
+          });
+          root.querySelectorAll('.gm-comment-input').forEach((ta) => {
+            ta.setAttribute('wrap', 'soft');
+            ta.style.setProperty('white-space', 'pre-wrap', 'important');
+            ta.style.setProperty('overflow-wrap', 'anywhere', 'important');
+            ta.style.setProperty('word-break', 'break-word', 'important');
           });
           const nodes = root.querySelectorAll('*');
           nodes.forEach((el) => {
