@@ -82,10 +82,16 @@
         <!-- CAMEMBERT RÉPARTITION DU TEMPS -->
         <div id="timeDistributionSection" class="gm-comment-section" style="display:none;">
           <h2>Répartition du temps de travail</h2>
-          <div style="display:grid; grid-template-columns: auto 1fr; gap:24px; align-items:center;">
+          <div style="display:grid; grid-template-columns: auto 320px 1fr; gap:24px; align-items:start;">
             <div id="timeDistributionLegend" style="display:flex; flex-direction:column; gap:8px;"></div>
-            <div style="max-width:320px; margin:0 auto;">
+            <div style="padding:20px;">
               <canvas id="timeDistributionChart"></canvas>
+            </div>
+            <div style="min-height:280px;">
+              <h3 style="margin:0 0 10px 0; font-size:14px; color:var(--primary);">Évolution par semaine</h3>
+              <div style="height:260px;">
+                <canvas id="timeEvolutionChart"></canvas>
+              </div>
             </div>
           </div>
         </div>
@@ -433,8 +439,112 @@
                   }
                 }
               }
-            }
+            },
+            plugins: [{
+              id: 'pieLabels',
+              afterDraw(chart) {
+                const ctx2 = chart.ctx;
+                const ds = chart.data.datasets[0].data;
+                const labels = chart.data.labels;
+                ds.forEach((val, i) => {
+                  if (val <= 0) return;
+                  const meta = chart.getDatasetMeta(0).data[i];
+                  const pct = ((val / total) * 100).toFixed(0);
+                  // Position au centre de la part pour le pourcentage
+                  const { x, y } = meta.tooltipPosition();
+                  ctx2.save();
+                  ctx2.font = 'bold 13px sans-serif';
+                  ctx2.fillStyle = '#fff';
+                  ctx2.textAlign = 'center';
+                  ctx2.textBaseline = 'middle';
+                  ctx2.fillText(pct + '%', x, y);
+                  ctx2.restore();
+
+                  // Label extérieur avec ligne
+                  const centerX = (chart.chartArea.left + chart.chartArea.right) / 2;
+                  const centerY = (chart.chartArea.top + chart.chartArea.bottom) / 2;
+                  const angle = (meta.startAngle + meta.endAngle) / 2;
+                  const outerRadius = meta.outerRadius;
+                  const midX = centerX + Math.cos(angle) * (outerRadius + 14);
+                  const midY = centerY + Math.sin(angle) * (outerRadius + 14);
+                  const endX = centerX + Math.cos(angle) * (outerRadius + 40);
+                  const endY = centerY + Math.sin(angle) * (outerRadius + 40);
+
+                  ctx2.save();
+                  ctx2.beginPath();
+                  ctx2.moveTo(centerX + Math.cos(angle) * outerRadius, centerY + Math.sin(angle) * outerRadius);
+                  ctx2.lineTo(midX, midY);
+                  ctx2.lineTo(endX, endY);
+                  ctx2.strokeStyle = '#666';
+                  ctx2.lineWidth = 1;
+                  ctx2.stroke();
+
+                  ctx2.font = '12px sans-serif';
+                  ctx2.fillStyle = '#333';
+                  ctx2.textBaseline = 'middle';
+                  ctx2.textAlign = Math.cos(angle) >= 0 ? 'left' : 'right';
+                  const textX = endX + (Math.cos(angle) >= 0 ? 4 : -4);
+                  ctx2.fillText(labels[i], textX, endY);
+                  ctx2.restore();
+                });
+              }
+            }]
           });
+
+          // Graphique d'évolution empilé
+          const weeksForEvolution = published
+            .filter(k => k.tempsBeton != null || k.tempsAciers != null || k.tempsChargement != null || k.tempsCentrale != null)
+            .slice(0, initialWeeks)
+            .reverse();
+
+          if (weeksForEvolution.length > 0) {
+            const evoLabels = weeksForEvolution.map(k => `S${String(k.week).padStart(2, '0')}/${k.year}`);
+            const evoCtx = document.getElementById('timeEvolutionChart').getContext('2d');
+            new Chart(evoCtx, {
+              type: 'bar',
+              data: {
+                labels: evoLabels,
+                datasets: [
+                  {
+                    label: 'Béton',
+                    data: weeksForEvolution.map(k => parseFloat(k.tempsBeton) || 0),
+                    backgroundColor: '#4472C4'
+                  },
+                  {
+                    label: 'Aciers',
+                    data: weeksForEvolution.map(k => parseFloat(k.tempsAciers) || 0),
+                    backgroundColor: '#ED7D31'
+                  },
+                  {
+                    label: 'Chargement',
+                    data: weeksForEvolution.map(k => parseFloat(k.tempsChargement) || 0),
+                    backgroundColor: '#A5A5A5'
+                  },
+                  {
+                    label: 'Centrale',
+                    data: weeksForEvolution.map(k => parseFloat(k.tempsCentrale) || 0),
+                    backgroundColor: '#FFC000'
+                  }
+                ]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
+                  tooltip: {
+                    callbacks: {
+                      label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y} h`
+                    }
+                  }
+                },
+                scales: {
+                  x: { stacked: true },
+                  y: { stacked: true, beginAtZero: true, title: { display: true, text: 'Heures' } }
+                }
+              }
+            });
+          }
         }
       }
 
