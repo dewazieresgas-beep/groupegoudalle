@@ -752,7 +752,7 @@ a:hover {
 .gm-kpi-column {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 12px;
   height: 380px;
   justify-content: space-between;
 }
@@ -767,14 +767,14 @@ a:hover {
 .gm-kpi-card {
   background: white;
   border-radius: 8px;
-  padding: 20px;
+  padding: 14px 20px;
   box-shadow: var(--shadow);
   border-top: 4px solid var(--border);
   transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  height: 110px;
+  flex: 1;
 }
 
 .gm-kpi-card:hover {
@@ -794,6 +794,10 @@ a:hover {
   border-top-color: #7bad75;
 }
 
+.gm-kpi-acier {
+  border-top-color: #9b7bb5;
+}
+
 .gm-kpi-label {
   color: var(--secondary);
   font-size: 12px;
@@ -804,7 +808,7 @@ a:hover {
 }
 
 .gm-kpi-value {
-  font-size: 36px;
+  font-size: 30px;
   font-weight: 700;
   color: var(--primary);
   line-height: 1;

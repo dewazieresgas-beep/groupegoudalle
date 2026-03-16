@@ -47,6 +47,10 @@
               <div class="gm-kpi-label">h/m³</div>
               <div class="gm-kpi-value" id="mainRatio">5.27</div>
             </div>
+            <div class="gm-kpi-card gm-kpi-acier">
+              <div class="gm-kpi-label">Acier façonné (T)</div>
+              <div class="gm-kpi-value" id="mainAcier">—</div>
+            </div>
           </div>
 
           <!-- COLONNE 2 : GRAPHIQUE -->
@@ -361,6 +365,7 @@
         document.getElementById('mainM3').textContent = last.m3.toFixed(2);
         document.getElementById('mainHours').textContent = Math.round(last.hours);
         document.getElementById('mainRatio').textContent = ratio !== null ? ratio.toFixed(2) : '—';
+        document.getElementById('mainAcier').textContent = last.qtAcierFaconne != null ? last.qtAcierFaconne : '—';
         
         // Mettre à jour le smiley avec couleur (image + fond dégradé)
         const indicatorEl = document.getElementById('mainIndicator');
