@@ -644,6 +644,7 @@
         return dataProd.length - 1;
       })();
       const latestLabel = labels[latestProdIdx];
+      const dataComments = chartEntries.map(e => e.isMissing ? '' : sanitizeComment(e[cfg.remarkField]));
       const dataTarget = machine === 'assemblage'
         ? chartEntries.map(() => 0)
         : chartEntries.map(e => {
@@ -709,7 +710,9 @@
               fill: true
             },
             {
-              label: `Cible (${cfg.unit})`,
+              label: machine === 'assemblage'
+                ? `Cible (${cfg.unit}): 0 ${cfg.unit}`
+                : `Cible (${cfg.unit})${latestTarget > 0 ? `: ${formatNumber(latestTarget)} ${cfg.unit}` : ''}`,
               data: dataTarget,
               borderColor: '#e74c3c',
               pointRadius: 0,
@@ -725,7 +728,13 @@
           interaction: { mode: 'index', intersect: false },
           plugins: {
             legend: { display: true, position: 'top' },
-            tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${formatNumber(ctx.parsed.y)} ${cfg.unit}` } }
+            tooltip: {
+              filter: (ctx) => ctx.datasetIndex === 0,
+              callbacks: {
+                label: (ctx) => `Productivité (${cfg.unit}): ${formatNumber(ctx.parsed.y)} ${cfg.unit}`,
+                afterLabel: (ctx) => `Commentaire: ${dataComments[ctx.dataIndex] || '—'}`
+              }
+            }
           },
           scales: {
             x: {
