@@ -80,14 +80,12 @@
         </div>
 
         <!-- CAMEMBERT RÉPARTITION DU TEMPS -->
-        <div id="timeDistributionSection" style="display:none; margin-top:20px;">
-          <div style="background:#fff; border-radius:8px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-            <h2 style="margin:0 0 15px 0; text-align:center;">Répartition du temps de travail</h2>
-            <div style="display:grid; grid-template-columns: 200px 1fr; gap:20px; align-items:center;">
-              <div id="timeDistributionLegend" style="font-size:14px; line-height:2;"></div>
-              <div style="max-width:350px; margin:0 auto;">
-                <canvas id="timeDistributionChart"></canvas>
-              </div>
+        <div id="timeDistributionSection" class="gm-comment-section" style="display:none;">
+          <h2>Répartition du temps de travail</h2>
+          <div style="display:grid; grid-template-columns: auto 1fr; gap:24px; align-items:center;">
+            <div id="timeDistributionLegend" style="display:flex; flex-direction:column; gap:8px;"></div>
+            <div style="max-width:320px; margin:0 auto;">
+              <canvas id="timeDistributionChart"></canvas>
             </div>
           </div>
         </div>
@@ -398,13 +396,17 @@
         if (total > 0) {
           document.getElementById('timeDistributionSection').style.display = 'block';
           const legendEl = document.getElementById('timeDistributionLegend');
-          legendEl.innerHTML = `
-            <div><strong>Temps</strong> ${last.hours} h</div>
-            <div>Béton: <strong>${beton} h</strong></div>
-            <div>Aciers: <strong>${aciers} h</strong></div>
-            <div>Chargement: <strong>${chargement} h</strong></div>
-            <div>Centrale: <strong>${centrale} h</strong></div>
-          `;
+          const makeCard = (label, value, color) => `
+            <div style="background:white; border-radius:8px; padding:12px 16px; box-shadow:var(--shadow); border-left:4px solid ${color}; display:flex; justify-content:space-between; align-items:center; gap:12px; min-width:180px;">
+              <span style="color:var(--secondary); font-size:12px; font-weight:600; letter-spacing:0.5px;">${label}</span>
+              <span style="font-size:22px; font-weight:700; color:var(--primary);">${value} h</span>
+            </div>`;
+          legendEl.innerHTML =
+            makeCard('Temps total', last.hours, 'var(--accent)') +
+            makeCard('Béton', beton, '#4472C4') +
+            makeCard('Aciers', aciers, '#ED7D31') +
+            makeCard('Chargement', chargement, '#A5A5A5') +
+            makeCard('Centrale', centrale, '#FFC000');
 
           const pieCtx = document.getElementById('timeDistributionChart').getContext('2d');
           new Chart(pieCtx, {
@@ -421,7 +423,7 @@
             options: {
               responsive: true,
               plugins: {
-                legend: { display: true, position: 'bottom' },
+                legend: { display: false },
                 tooltip: {
                   callbacks: {
                     label: (ctx) => {
