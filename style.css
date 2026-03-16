@@ -752,7 +752,7 @@ a:hover {
 .gm-kpi-column {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 15px;
   height: 380px;
   justify-content: space-between;
 }
@@ -808,7 +808,7 @@ a:hover {
 }
 
 .gm-kpi-value {
-  font-size: 30px;
+  font-size: 36px;
   font-weight: 700;
   color: var(--primary);
   line-height: 1;

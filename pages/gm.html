@@ -47,10 +47,6 @@
               <div class="gm-kpi-label">h/m³</div>
               <div class="gm-kpi-value" id="mainRatio">5.27</div>
             </div>
-            <div class="gm-kpi-card gm-kpi-acier">
-              <div class="gm-kpi-label">Acier façonné (T)</div>
-              <div class="gm-kpi-value" id="mainAcier">—</div>
-            </div>
           </div>
 
           <!-- COLONNE 2 : GRAPHIQUE -->
@@ -77,10 +73,16 @@
           </div>
         </div>
 
-        <!-- COMMENTAIRE -->
-        <div class="gm-comment-section">
-          <h2>Commentaire de la semaine</h2>
-          <textarea id="weekComment" class="gm-comment-input" placeholder="Ajouter un commentaire..." rows="4" readonly></textarea>
+        <!-- COMMENTAIRE + ACIER -->
+        <div class="gm-comment-section" style="display:grid; grid-template-columns:1fr auto; gap:20px; align-items:stretch;">
+          <div>
+            <h2>Commentaire de la semaine</h2>
+            <textarea id="weekComment" class="gm-comment-input" placeholder="Ajouter un commentaire..." rows="4" readonly></textarea>
+          </div>
+          <div class="gm-kpi-card gm-kpi-acier" style="min-width:160px; margin:0; box-shadow:none; flex:none;">
+            <div class="gm-kpi-label">Acier façonné (T)</div>
+            <div class="gm-kpi-value" id="mainAcier" style="font-size:36px;">—</div>
+          </div>
         </div>
       </div>
 
