@@ -873,7 +873,12 @@
         const a3Ctx = a3Canvas.getContext('2d');
         a3Ctx.fillStyle = '#ffffff';
         a3Ctx.fillRect(0, 0, a3Canvas.width, a3Canvas.height);
-        a3Ctx.drawImage(canvas, 0, 0, a3Canvas.width, a3Canvas.height);
+        const scale = Math.min(a3Canvas.width / canvas.width, a3Canvas.height / canvas.height);
+        const drawWidth = Math.round(canvas.width * scale);
+        const drawHeight = Math.round(canvas.height * scale);
+        const offsetX = Math.floor((a3Canvas.width - drawWidth) / 2);
+        const offsetY = Math.floor((a3Canvas.height - drawHeight) / 2);
+        a3Ctx.drawImage(canvas, offsetX, offsetY, drawWidth, drawHeight);
         const link = document.createElement('a');
         const date = new Date().toISOString().split('T')[0];
         link.download = `cbco_usine_dashboard_${date}.png`;
