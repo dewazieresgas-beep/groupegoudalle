@@ -799,6 +799,13 @@
             headerSlot.appendChild(period);
           }
           root.querySelectorAll('button').forEach((btn) => { btn.style.display = 'none'; });
+          root.querySelectorAll('.gm-indicator-card img').forEach((img) => {
+            img.style.setProperty('width', 'auto', 'important');
+            img.style.setProperty('height', 'auto', 'important');
+            img.style.setProperty('max-width', '100%', 'important');
+            img.style.setProperty('max-height', '100%', 'important');
+            img.style.setProperty('object-fit', 'contain', 'important');
+          });
           const nodes = root.querySelectorAll('*');
           nodes.forEach((el) => {
             if (el.tagName === 'CANVAS' || el.tagName === 'IMG' || el.tagName === 'SVG') return;
