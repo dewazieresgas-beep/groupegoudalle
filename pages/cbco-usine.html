@@ -869,7 +869,7 @@
               wrapper.style.borderRadius = '10px';
               wrapper.style.padding = '12px 14px';
               wrapper.style.background = '#fff';
-              wrapper.style.overflow = 'hidden';
+              wrapper.style.overflow = 'visible';
 
               // Titre machine (move, pas clone, pour préserver canvas)
               pair.header.style.marginTop = '0';
@@ -883,7 +883,6 @@
 
               // Section machine (move pour préserver les canvas Chart.js)
               pair.section.style.marginBottom = '0';
-              pair.section.style.overflow = 'hidden';
 
               const container = pair.section.querySelector('.gm-main-container');
               if (container) {
@@ -892,7 +891,6 @@
                 container.style.gap = '10px';
                 container.style.marginBottom = '0';
                 container.style.alignItems = 'stretch';
-                container.style.overflow = 'hidden';
               }
 
               // KPIs compacts
@@ -908,17 +906,16 @@
                 kpiCol.querySelectorAll('.gm-kpi-label').forEach(l => { l.style.fontSize = '10px'; l.style.marginBottom = '2px'; });
               }
 
-              // Graphique avec overflow hidden pour éviter de superposer les titres
+              // Graphique
               const chartSection = pair.section.querySelector('.gm-chart-section');
               if (chartSection) {
-                chartSection.style.height = '260px';
+                chartSection.style.height = '300px';
                 chartSection.style.padding = '8px 10px';
-                chartSection.style.overflow = 'hidden';
               }
               const chartContainer = pair.section.querySelector('.gm-chart-container');
               if (chartContainer) {
-                chartContainer.style.overflow = 'hidden';
-                chartContainer.style.maxHeight = '220px';
+                chartContainer.style.flex = '1';
+                chartContainer.style.minHeight = '0';
               }
 
               // Smiley + commentaire compacts
