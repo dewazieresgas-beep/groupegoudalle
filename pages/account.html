@@ -111,6 +111,10 @@
             <form onsubmit="handleEditProfile(event)">
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                 <div class="form-group">
+                  <label for="editUsername">Identifiant *</label>
+                  <input type="text" id="editUsername" minlength="3" required>
+                </div>
+                <div class="form-group">
                   <label for="editDisplayName">Nom complet *</label>
                   <input type="text" id="editDisplayName" required>
                 </div>
@@ -323,7 +327,7 @@
       const session = Auth.getSession();
       const user = Auth.getCurrentUser();
 
-      // Pré-remplir les champs du formulaire
+      document.getElementById('editUsername').value = session.username || '';
       document.getElementById('editDisplayName').value = user.displayName || '';
       document.getElementById('editEmail').value = user.email || '';
 
@@ -351,11 +355,11 @@
       event.preventDefault();
 
       const session = Auth.getSession();
+      const newUsername = document.getElementById('editUsername').value.trim();
       const newDisplayName = document.getElementById('editDisplayName').value.trim();
       const newEmail = document.getElementById('editEmail').value.trim();
 
-      // Appeler la fonction de mise à jour du profil
-      const result = Auth.updateUserProfile(session.username, newDisplayName, newEmail);
+      const result = Auth.updateUserProfile(session.username, newDisplayName, newEmail, newUsername);
 
       const editMessage = document.getElementById('editMessage');
       editMessage.textContent = result.message;

@@ -181,7 +181,8 @@
             </td>
             <td>
               ${u.role !== 'direction' 
-                ? `<button class="btn btn-small btn-danger" onclick="deleteUser('${safeUsername}')">🗑️ Supprimer</button>` 
+                ? `<button class="btn btn-small btn-accent" onclick="openEditModal('${safeUsername}')">✏️ Modifier</button>
+                   <button class="btn btn-small btn-danger" onclick="deleteUser('${safeUsername}')">🗑️ Supprimer</button>` 
                 : ''}
             </td>
             <td>
@@ -231,6 +232,36 @@
         <button class="btn btn-secondary" onclick="resetAccessToRole()">🔄 Réinitialiser selon le rôle</button>
         <button class="btn btn-secondary" onclick="closeAccessModal()">Annuler</button>
         <button class="btn btn-primary" onclick="saveAccessModal()">💾 Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modale Modifier un utilisateur -->
+  <div id="editModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; overflow:auto;">
+    <div style="background:#fff; margin:5% auto; padding:30px; border-radius:10px; max-width:500px; position:relative;">
+      <h2 style="margin-top:0;">✏️ Modifier — <span id="editModalUsername"></span></h2>
+      <div id="editModalMessage" class="alert" style="display:none; margin-bottom:16px;"></div>
+
+      <div class="form-group">
+        <label for="editModalNewUsername">Identifiant *</label>
+        <input type="text" id="editModalNewUsername" minlength="3" required>
+      </div>
+      <div class="form-group">
+        <label for="editModalDisplayName">Nom complet *</label>
+        <input type="text" id="editModalDisplayName" required>
+      </div>
+      <div class="form-group">
+        <label for="editModalEmail">Email *</label>
+        <input type="email" id="editModalEmail" required>
+      </div>
+      <div class="form-group">
+        <label for="editModalPassword">Nouveau mot de passe <small style="color:#999;">(laisser vide pour ne pas changer)</small></label>
+        <input type="password" id="editModalPassword" minlength="3">
+      </div>
+
+      <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
+        <button class="btn btn-secondary" onclick="closeEditModal()">Annuler</button>
+        <button class="btn btn-primary" onclick="saveEditModal()">💾 Enregistrer</button>
       </div>
     </div>
   </div>
@@ -342,6 +373,66 @@
     // Fermer la modale en cliquant à l'extérieur
     document.getElementById('accessModal').addEventListener('click', function(e) {
       if (e.target === this) closeAccessModal();
+    });
+
+    // ===== MODALE MODIFIER UTILISATEUR =====
+    let _editUsername = null;
+
+    function openEditModal(username) {
+      _editUsername = username;
+      document.getElementById('editModalUsername').textContent = username;
+      document.getElementById('editModalMessage').style.display = 'none';
+
+      const users = Auth.getAllUsers();
+      const user = users[username];
+      if (!user) return;
+
+      document.getElementById('editModalNewUsername').value = username;
+      document.getElementById('editModalDisplayName').value = user.displayName || '';
+      document.getElementById('editModalEmail').value = user.email || '';
+      document.getElementById('editModalPassword').value = '';
+      document.getElementById('editModal').style.display = 'block';
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').style.display = 'none';
+      _editUsername = null;
+    }
+
+    function saveEditModal() {
+      const newUsername = document.getElementById('editModalNewUsername').value.trim();
+      const newName = document.getElementById('editModalDisplayName').value.trim();
+      const newEmail = document.getElementById('editModalEmail').value.trim();
+      const newPassword = document.getElementById('editModalPassword').value;
+
+      const result = Auth.updateUserProfile(_editUsername, newName, newEmail, newUsername);
+      if (!result.success) {
+        const msg = document.getElementById('editModalMessage');
+        msg.textContent = result.message;
+        msg.className = 'alert alert-error';
+        msg.style.display = 'block';
+        return;
+      }
+
+      if (newPassword.length > 0) {
+        const effectiveUser = (newUsername && newUsername !== _editUsername) ? newUsername : _editUsername;
+        const pwResult = Auth.changePassword(effectiveUser, newPassword);
+        if (!pwResult.success) {
+          const msg = document.getElementById('editModalMessage');
+          msg.textContent = pwResult.message;
+          msg.className = 'alert alert-error';
+          msg.style.display = 'block';
+          return;
+        }
+      }
+
+      closeEditModal();
+      showMessage(`✅ Informations de ${_editUsername} mises à jour.`, 'success');
+      loadUsers();
+    }
+
+    document.getElementById('editModal').addEventListener('click', function(e) {
+      if (e.target === this) closeEditModal();
     });
   </script>
 

@@ -188,7 +188,9 @@ const Auth = {
    */
   login(username, password) {
     const users = this.getAllUsers();
-    const user = users[username];
+    // Recherche insensible à la casse
+    const matchedKey = Object.keys(users).find(k => k.toLowerCase() === username.toLowerCase());
+    const user = matchedKey ? users[matchedKey] : null;
 
     // Vérification 1 : L'utilisateur existe-t-il ?
     if (!user) {
@@ -327,10 +329,7 @@ const Auth = {
     // même si une permission n'a pas encore été ajoutée dans la liste.
     if (effectiveRole === this.ROLES.DIRECTION) return true;
 
-    const aliasMap = {
-      cbco_usine: ['cbco'],
-      cbco_productivite_saisie: ['cbco_saisie']
-    };
+    const aliasMap = {};
 
     // Si l'utilisateur a des permissions personnalisées, les utiliser
     if (currentUser && Array.isArray(currentUser.customPermissions)) {
@@ -612,14 +611,14 @@ const Auth = {
    * @param {string} username - Identifiant de l'utilisateur
    * @param {string} newDisplayName - Nouveau nom complet
    * @param {string} newEmail - Nouvelle adresse email
+   * @param {string|null} newUsername - Nouvel identifiant (optionnel)
    * @returns {Object} - { success: boolean, message: string }
    */
-  updateUserProfile(username, newDisplayName, newEmail) {
+  updateUserProfile(username, newDisplayName, newEmail, newUsername) {
     if (!this.isConnected()) {
       return { success: false, message: '❌ Non connecté' };
     }
 
-    // Validation des données
     if (!newDisplayName || newDisplayName.length < 3) {
       return { success: false, message: '❌ Nom complet : 3 caractères minimum' };
     }
@@ -633,9 +632,26 @@ const Auth = {
       return { success: false, message: '❌ Utilisateur non trouvé' };
     }
 
+    // Changement d'identifiant
+    const effectiveNewUsername = (newUsername && newUsername.trim().length >= 3) ? newUsername.trim() : null;
+    if (effectiveNewUsername && effectiveNewUsername.toLowerCase() !== username.toLowerCase()) {
+      const conflict = Object.keys(users).find(k => k.toLowerCase() === effectiveNewUsername.toLowerCase());
+      if (conflict) {
+        return { success: false, message: '❌ Cet identifiant est déjà utilisé' };
+      }
+    }
+
     // Mettre à jour les informations
     users[username].displayName = newDisplayName;
     users[username].email = newEmail;
+
+    if (effectiveNewUsername && effectiveNewUsername !== username) {
+      const userData = users[username];
+      userData.username = effectiveNewUsername;
+      delete users[username];
+      users[effectiveNewUsername] = userData;
+    }
+
     localStorage.setItem(this.STORAGE_KEY_USERS, JSON.stringify(users));
 
     // Mettre à jour la session si c'est l'utilisateur connecté
@@ -643,10 +659,13 @@ const Auth = {
     if (session && session.username === username) {
       session.displayName = newDisplayName;
       session.email = newEmail;
+      if (effectiveNewUsername && effectiveNewUsername !== username) {
+        session.username = effectiveNewUsername;
+      }
       localStorage.setItem(this.STORAGE_KEY_SESSION, JSON.stringify(session));
     }
 
-    this.audit('PROFILE_UPDATED', `Mise à jour profil : ${username}`);
+    this.audit('PROFILE_UPDATED', `Mise à jour profil : ${username}${effectiveNewUsername && effectiveNewUsername !== username ? ' → ' + effectiveNewUsername : ''}`);
 
     return { success: true, message: '✅ Profil mis à jour' };
   },
