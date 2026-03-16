@@ -876,7 +876,7 @@
               pair.header.style.paddingBottom = '6px';
               pair.header.style.borderBottom = '2px solid #8ba88a';
               pair.header.querySelectorAll('h1').forEach(t => {
-                t.style.fontSize = '18px'; t.style.margin = '0';
+                t.style.fontSize = '22px'; t.style.margin = '0';
                 t.style.borderBottom = 'none'; t.style.paddingBottom = '0';
               });
               wrapper.appendChild(pair.header);
@@ -893,17 +893,17 @@
                 container.style.alignItems = 'stretch';
               }
 
-              // KPIs compacts
+              // KPIs agrandis
               const kpiCol = pair.section.querySelector('.gm-kpi-column');
               if (kpiCol) {
                 kpiCol.style.height = 'auto';
                 kpiCol.style.gap = '6px';
                 kpiCol.querySelectorAll('.gm-kpi-card').forEach(card => {
                   card.style.height = 'auto';
-                  card.style.padding = '6px 10px';
+                  card.style.padding = '8px 12px';
                 });
-                kpiCol.querySelectorAll('.gm-kpi-value').forEach(v => { v.style.fontSize = '22px'; });
-                kpiCol.querySelectorAll('.gm-kpi-label').forEach(l => { l.style.fontSize = '10px'; l.style.marginBottom = '2px'; });
+                kpiCol.querySelectorAll('.gm-kpi-value').forEach(v => { v.style.fontSize = '28px'; });
+                kpiCol.querySelectorAll('.gm-kpi-label').forEach(l => { l.style.fontSize = '12px'; l.style.marginBottom = '3px'; });
               }
 
               // Graphique
