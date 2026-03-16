@@ -26,6 +26,10 @@ if not exist "node_modules" (
     echo Installation des dependances en cours...
     npm install
     echo.
+) else if not exist "node_modules\xlsx" (
+    echo Installation de nouvelles dependances...
+    npm install
+    echo.
 )
 
 :: Lance le serveur

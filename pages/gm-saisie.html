@@ -24,7 +24,10 @@
     <main class="main-content">
       <div class="d-flex justify-between items-center mb-3" style="gap: 12px; flex-wrap: wrap;">
         <h1 class="mb-0">Saisies indicateurs - Goudalle Maçonnerie</h1>
-        <button type="button" class="btn btn-secondary" onclick="downloadGMIndicators()">📥 Télécharger indicateurs de la semaine</button>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="btn btn-success" onclick="syncFromExcel()">📊 Synchroniser depuis Excel</button>
+          <button type="button" class="btn btn-secondary" onclick="downloadGMIndicators()">📥 Télécharger indicateurs de la semaine</button>
+        </div>
       </div>
 
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;">
@@ -456,6 +459,86 @@
         previewMessage.innerHTML = `<span style="color: var(--success);">✅ Excellent ! Vous êtes en dessous du seuil de ${threshold} h/m³</span>`;
       } else {
         previewMessage.innerHTML = `<span style="color: var(--danger);">⚠️ Attention : vous dépassez le seuil de ${threshold} h/m³</span>`;
+      }
+    }
+
+    /**
+     * Synchronise les indicateurs depuis le fichier Excel sur le serveur.
+     * Importe toutes les semaines présentes dans l'Excel et met à jour
+     * (ou crée) les entrées correspondantes dans la base de données.
+     */
+    async function syncFromExcel() {
+      const btn = document.querySelector('button[onclick="syncFromExcel()"]');
+      const originalText = btn.textContent;
+      btn.textContent = '⏳ Synchronisation...';
+      btn.disabled = true;
+
+      try {
+        const response = await API.get('/api/gm-import-excel');
+
+        if (!response.success) {
+          showMessage(`❌ ${response.error}`, 'error');
+          return;
+        }
+
+        const excelRows = response.data;
+        if (!excelRows || excelRows.length === 0) {
+          showMessage('⚠️ Aucune donnée trouvée dans le fichier Excel.', 'error');
+          return;
+        }
+
+        // Charger les KPIs existants
+        const existing = getKPIs();
+        let added = 0, updated = 0;
+
+        for (const row of excelRows) {
+          const idx = existing.findIndex(k => k.year === row.year && k.week === row.week);
+
+          if (idx >= 0) {
+            // Mise à jour de l'entrée existante
+            existing[idx] = {
+              ...existing[idx],
+              m3:              row.m3    !== null ? row.m3    : existing[idx].m3,
+              hours:           row.hours !== null ? row.hours : existing[idx].hours,
+              tempsBeton:      row.tempsBeton,
+              tempsAciers:     row.tempsAciers,
+              tempsChargement: row.tempsChargement,
+              tempsCentrale:   row.tempsCentrale,
+              comment:         row.comment || existing[idx].comment
+            };
+            updated++;
+          } else {
+            // Nouvelle entrée
+            const maxId = existing.reduce((max, k) => Math.max(max, k.id || 0), 0);
+            existing.push({
+              id:              maxId + 1 + added,
+              year:            row.year,
+              week:            row.week,
+              m3:              row.m3    !== null ? row.m3    : 0,
+              hours:           row.hours !== null ? row.hours : 0,
+              tempsBeton:      row.tempsBeton,
+              tempsAciers:     row.tempsAciers,
+              tempsChargement: row.tempsChargement,
+              tempsCentrale:   row.tempsCentrale,
+              comment:         row.comment || '(importé depuis Excel)',
+              status:          'published'
+            });
+            added++;
+          }
+        }
+
+        // Sauvegarder via l'API
+        await API.put('/api/kpis', existing);
+        Auth.audit('GM_EXCEL_SYNC', `Sync Excel: ${added} ajoutés, ${updated} mis à jour (source: ${response.source})`);
+
+        showMessage(`✅ Synchronisation réussie depuis "${response.source}" — ${added} ajouté(s), ${updated} mis à jour`, 'success');
+        loadKPIs();
+
+      } catch (err) {
+        showMessage(`❌ Erreur lors de la synchronisation : ${err.message}`, 'error');
+      } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
       }
     }
 

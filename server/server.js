@@ -12,6 +12,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const XLSX = require('xlsx');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -203,7 +204,86 @@ app.put('/api/reminders-sent', (req, res) => {
   res.json({ success: true });
 });
 
-// ─── ROUTE : SANTÉ DU SERVEUR ───────────────────────────────────────────────────
+// ─── ROUTE : IMPORT EXCEL GOUDALLE MAÇONNERIE ───────────────────────────────────
+
+const GM_EXCEL_FOLDER = 'Z:\\03-BE\\Projet en cours\\Gaspard';
+const GM_EXCEL_NAMES  = [
+  'INDICATEURS Goudalle Maçonnerie.xlsx',
+  'INDICATEURS Goudalle Maconnerie.xlsx',
+  'INDICATEURS Goudalle Maçonnerie.xls',
+  'INDICATEURS Goudalle Maconnerie.xls'
+];
+
+app.get('/api/gm-import-excel', (req, res) => {
+  // Chercher le fichier Excel (plusieurs variantes de nom acceptées)
+  let excelPath = null;
+  for (const name of GM_EXCEL_NAMES) {
+    const candidate = path.join(GM_EXCEL_FOLDER, name);
+    if (fs.existsSync(candidate)) { excelPath = candidate; break; }
+  }
+
+  if (!excelPath) {
+    return res.status(404).json({
+      success: false,
+      error: `Fichier Excel introuvable dans "${GM_EXCEL_FOLDER}". Vérifiez que le lecteur Z: est bien connecté.`
+    });
+  }
+
+  try {
+    const workbook = XLSX.readFile(excelPath);
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
+
+    const data = [];
+    // Ligne 0 = en-têtes, on commence à 1
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      const yearRaw   = row[0]; // Colonne A : Année
+      const weekRaw   = row[1]; // Colonne B : Semaine (ex: "S40")
+      const m3Raw     = row[2]; // Colonne C : m³ béton coulé
+      const hoursRaw  = row[3]; // Colonne D : Heures MO
+      const betonRaw  = row[4]; // Colonne E : Heures béton
+      const aciersRaw = row[5]; // Colonne F : Heures acier
+      const chargeRaw = row[6]; // Colonne G : Heures Chargement
+      const centrRaw  = row[7]; // Colonne H : Heures Centrale à béton
+      const commentRaw= row[8]; // Colonne I : Commentaire de la semaine
+
+      // Ignorer les lignes sans année ou semaine
+      if (!yearRaw || !weekRaw) continue;
+
+      // Extraire le numéro de semaine depuis "S40" -> 40
+      const weekMatch = String(weekRaw).match(/(\d+)/);
+      if (!weekMatch) continue;
+      const week = parseInt(weekMatch[1]);
+      const year = parseInt(yearRaw);
+      if (isNaN(year) || isNaN(week)) continue;
+
+      // Ignorer les lignes entièrement vides (semaines futures)
+      if (m3Raw === null && hoursRaw === null) continue;
+
+      const m3    = m3Raw    !== null ? parseFloat(m3Raw)    : null;
+      const hours = hoursRaw !== null ? parseFloat(hoursRaw) : null;
+
+      data.push({
+        year,
+        week,
+        m3:              isNaN(m3)    ? null : m3,
+        hours:           isNaN(hours) ? null : hours,
+        tempsBeton:      betonRaw  !== null ? parseFloat(betonRaw)  || null : null,
+        tempsAciers:     aciersRaw !== null ? parseFloat(aciersRaw) || null : null,
+        tempsChargement: chargeRaw !== null ? parseFloat(chargeRaw) || null : null,
+        tempsCentrale:   centrRaw  !== null ? parseFloat(centrRaw)  || null : null,
+        comment:         commentRaw ? String(commentRaw).trim() : ''
+      });
+    }
+
+    res.json({ success: true, data, source: path.basename(excelPath) });
+  } catch (err) {
+    res.status(500).json({ success: false, error: `Erreur lecture Excel : ${err.message}` });
+  }
+});
+
+
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
