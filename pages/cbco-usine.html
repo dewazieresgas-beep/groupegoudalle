@@ -805,12 +805,19 @@
       const weekRangeLabel = getExportWeekRangeLabel();
       html2canvas(element, {
         scale: 2,
+        windowWidth: 2480,
         backgroundColor: '#ffffff',
         logging: false,
         useCORS: true,
         onclone: (doc) => {
           const root = doc.querySelector('.main-content');
           if (!root) return;
+          root.style.setProperty('width', '2480px', 'important');
+          root.style.setProperty('max-width', 'none', 'important');
+          root.style.setProperty('min-width', '2480px', 'important');
+          root.style.setProperty('padding', '20px 30px', 'important');
+
+          // En-tête : titre + période
           const headerSlot = root.querySelector('#exportHeaderSlot');
           if (headerSlot) {
             headerSlot.innerHTML = '';
@@ -824,6 +831,97 @@
             headerSlot.appendChild(period);
           }
           root.querySelectorAll('button').forEach((btn) => { btn.style.display = 'none'; });
+          root.querySelectorAll('select').forEach((s) => { s.style.display = 'none'; });
+
+          // Collecter les paires header+section machine (skip le premier gm-header = titre page)
+          const allHeaders = Array.from(root.querySelectorAll(':scope > .gm-header'));
+          const machineHeaders = allHeaders.slice(1); // skip titre page
+          const machineSections = Array.from(root.querySelectorAll(':scope > .gm-main-section'));
+          const pairs = [];
+          machineHeaders.forEach((h, i) => {
+            if (machineSections[i]) pairs.push({ header: h, section: machineSections[i] });
+          });
+
+          if (pairs.length >= 2) {
+            // Créer la grille 2 colonnes
+            const grid = doc.createElement('div');
+            grid.style.display = 'grid';
+            grid.style.gridTemplateColumns = '1fr 1fr';
+            grid.style.gap = '16px';
+            grid.style.marginTop = '16px';
+
+            pairs.forEach((pair) => {
+              const wrapper = doc.createElement('div');
+              wrapper.style.border = '2px solid #d4ccc3';
+              wrapper.style.borderRadius = '10px';
+              wrapper.style.padding = '12px 14px';
+              wrapper.style.background = '#fff';
+
+              // Titre machine (move, pas clone, pour préserver canvas)
+              pair.header.style.marginTop = '0';
+              pair.header.style.paddingBottom = '6px';
+              pair.header.style.borderBottom = '2px solid #8ba88a';
+              pair.header.querySelectorAll('h1').forEach(t => {
+                t.style.fontSize = '18px'; t.style.margin = '0';
+                t.style.borderBottom = 'none'; t.style.paddingBottom = '0';
+              });
+              wrapper.appendChild(pair.header);
+
+              // Section machine (move pour préserver les canvas Chart.js)
+              pair.section.style.marginBottom = '0';
+
+              const container = pair.section.querySelector('.gm-main-container');
+              if (container) {
+                container.style.display = 'grid';
+                container.style.gridTemplateColumns = '1fr 2fr auto';
+                container.style.gap = '10px';
+                container.style.marginBottom = '0';
+                container.style.alignItems = 'stretch';
+              }
+
+              // KPIs compacts
+              const kpiCol = pair.section.querySelector('.gm-kpi-column');
+              if (kpiCol) {
+                kpiCol.style.height = 'auto';
+                kpiCol.style.gap = '6px';
+                kpiCol.querySelectorAll('.gm-kpi-card').forEach(card => {
+                  card.style.height = 'auto';
+                  card.style.padding = '6px 10px';
+                });
+                kpiCol.querySelectorAll('.gm-kpi-value').forEach(v => { v.style.fontSize = '22px'; });
+                kpiCol.querySelectorAll('.gm-kpi-label').forEach(l => { l.style.fontSize = '10px'; l.style.marginBottom = '2px'; });
+              }
+
+              // Graphique réduit en hauteur
+              const chartSection = pair.section.querySelector('.gm-chart-section');
+              if (chartSection) {
+                chartSection.style.height = '260px';
+                chartSection.style.padding = '8px 10px';
+              }
+
+              // Smiley + commentaire compacts
+              const indicatorCol = pair.section.querySelector('.gm-indicator-column');
+              if (indicatorCol) {
+                indicatorCol.style.height = 'auto';
+                indicatorCol.style.gap = '6px';
+              }
+              const indicatorCard = pair.section.querySelector('.gm-indicator-card');
+              if (indicatorCard) {
+                indicatorCard.style.width = '130px';
+                indicatorCard.style.height = '130px';
+              }
+
+              wrapper.appendChild(pair.section);
+              grid.appendChild(wrapper);
+            });
+
+            // Insérer grille après les cards sécurité/qualité
+            const lastCard = root.querySelectorAll(':scope > .card');
+            const insertAfter = lastCard.length > 0 ? lastCard[lastCard.length - 1] : root.firstChild;
+            insertAfter.parentNode.insertBefore(grid, insertAfter.nextSibling);
+          }
+
+          // Smileys proportionnés
           root.querySelectorAll('.gm-indicator-card img').forEach((img) => {
             img.style.setProperty('width', 'auto', 'important');
             img.style.setProperty('height', 'auto', 'important');
@@ -831,25 +929,29 @@
             img.style.setProperty('max-height', '100%', 'important');
             img.style.setProperty('object-fit', 'contain', 'important');
           });
+
+          // Commentaires en blocs texte
           root.querySelectorAll('.gm-comment-input').forEach((ta) => {
             const cs = doc.defaultView.getComputedStyle(ta);
             const box = doc.createElement('div');
             box.textContent = ta.value || ta.textContent || '';
-            box.style.width = cs.width;
-            box.style.minHeight = cs.height;
-            box.style.padding = cs.padding;
-            box.style.border = cs.border;
-            box.style.borderRadius = cs.borderRadius;
-            box.style.background = cs.backgroundColor || '#fff';
+            box.style.width = '100%';
+            box.style.minHeight = '60px';
+            box.style.padding = '6px 8px';
+            box.style.border = '1px solid #e0e0e0';
+            box.style.borderRadius = '6px';
+            box.style.background = '#fafafa';
             box.style.fontFamily = cs.fontFamily;
-            box.style.fontSize = cs.fontSize;
-            box.style.lineHeight = cs.lineHeight;
+            box.style.fontSize = '12px';
+            box.style.lineHeight = '1.4';
             box.style.whiteSpace = 'pre-wrap';
             box.style.overflowWrap = 'anywhere';
             box.style.wordBreak = 'break-word';
             box.style.color = '#000';
             ta.replaceWith(box);
           });
+
+          // Forcer texte noir partout
           const nodes = root.querySelectorAll('*');
           nodes.forEach((el) => {
             if (el.tagName === 'CANVAS' || el.tagName === 'IMG' || el.tagName === 'SVG') return;
@@ -863,21 +965,19 @@
           });
         }
       }).then(canvas => {
-        const a3Portrait = { width: 2480, height: 3508 };
-        const a3Landscape = { width: 3508, height: 2480 };
-        const isLandscape = canvas.width >= canvas.height;
-        const target = isLandscape ? a3Landscape : a3Portrait;
+        const A3_W = 4961;
+        const A3_H = 3508;
         const a3Canvas = document.createElement('canvas');
-        a3Canvas.width = target.width;
-        a3Canvas.height = target.height;
+        a3Canvas.width = A3_W;
+        a3Canvas.height = A3_H;
         const a3Ctx = a3Canvas.getContext('2d');
         a3Ctx.fillStyle = '#ffffff';
-        a3Ctx.fillRect(0, 0, a3Canvas.width, a3Canvas.height);
-        const scale = Math.min(a3Canvas.width / canvas.width, a3Canvas.height / canvas.height);
+        a3Ctx.fillRect(0, 0, A3_W, A3_H);
+        const scale = Math.min(A3_W / canvas.width, A3_H / canvas.height);
         const drawWidth = Math.round(canvas.width * scale);
         const drawHeight = Math.round(canvas.height * scale);
-        const offsetX = Math.floor((a3Canvas.width - drawWidth) / 2);
-        const offsetY = Math.floor((a3Canvas.height - drawHeight) / 2);
+        const offsetX = Math.floor((A3_W - drawWidth) / 2);
+        const offsetY = Math.floor((A3_H - drawHeight) / 2);
         a3Ctx.drawImage(canvas, offsetX, offsetY, drawWidth, drawHeight);
         const link = document.createElement('a');
         const date = new Date().toISOString().split('T')[0];
