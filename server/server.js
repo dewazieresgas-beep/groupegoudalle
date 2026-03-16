@@ -247,23 +247,41 @@ function parseGMExcel(cfg) {
 }
 
 // Fusionne les données Excel dans le store KPIs
+// Les lignes supprimées de l'Excel sont aussi supprimées du site
 function applyExcelDataToKpis(data) {
   const existing = dbGet('kpis', []);
   const now = new Date().toISOString();
-  let added = 0, updated = 0;
+  let added = 0, updated = 0, removed = 0;
+
+  // Construire un Set des clés présentes dans l'Excel (année+semaine)
+  const excelKeys = new Set(data.map(r => `${r.year}_${r.week}`));
+
+  // Supprimer du store les entrées Excel qui n'existent plus dans le fichier
+  // (on ne touche pas aux entrées créées manuellement, i.e. createdBy !== 'excel-auto')
+  const kept = existing.filter(k => {
+    const key = `${k.year}_${k.week}`;
+    if (k.createdBy === 'excel-auto' && !excelKeys.has(key)) {
+      removed++;
+      return false;
+    }
+    return true;
+  });
+
+  // Ajouter ou mettre à jour les entrées Excel
   for (const row of data) {
-    const idx = existing.findIndex(k => k.year === row.year && k.week === row.week);
+    const idx = kept.findIndex(k => k.year === row.year && k.week === row.week);
     if (idx >= 0) {
-      existing[idx] = { ...existing[idx], ...row, updatedAt: now, updatedBy: 'excel-auto' };
+      kept[idx] = { ...kept[idx], ...row, updatedAt: now, updatedBy: 'excel-auto' };
       updated++;
     } else {
-      const maxId = existing.reduce((max, k) => Math.max(max, k.id || 0), 0);
-      existing.push({ id: maxId + 1, ...row, status: 'published', createdAt: now, createdBy: 'excel-auto', updatedAt: now, updatedBy: 'excel-auto' });
+      const maxId = kept.reduce((max, k) => Math.max(max, k.id || 0), 0);
+      kept.push({ id: maxId + 1, ...row, status: 'published', createdAt: now, createdBy: 'excel-auto', updatedAt: now, updatedBy: 'excel-auto' });
       added++;
     }
   }
-  dbSet('kpis', existing);
-  return { added, updated };
+
+  dbSet('kpis', kept);
+  return { added, updated, removed };
 }
 
 // Gestionnaire du watcher (référence pour pouvoir l'arrêter)
