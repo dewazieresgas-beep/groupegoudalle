@@ -78,23 +78,6 @@
           <h2>Commentaire de la semaine</h2>
           <textarea id="weekComment" class="gm-comment-input" placeholder="Ajouter un commentaire..." rows="4" readonly></textarea>
         </div>
-
-        <!-- CAMEMBERT RÉPARTITION DU TEMPS -->
-        <div id="timeDistributionSection" class="gm-comment-section" style="display:none;">
-          <h2>Répartition du temps de travail</h2>
-          <div style="display:grid; grid-template-columns: auto 320px 1fr; gap:24px; align-items:start;">
-            <div id="timeDistributionLegend" style="display:flex; flex-direction:column; gap:8px;"></div>
-            <div style="padding:20px;">
-              <canvas id="timeDistributionChart"></canvas>
-            </div>
-            <div style="min-height:280px;">
-              <h3 style="margin:0 0 10px 0; font-size:14px; color:var(--primary);">Évolution par semaine</h3>
-              <div style="height:260px;">
-                <canvas id="timeEvolutionChart"></canvas>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
       <!-- SECTION SECONDAIRE - HISTORIQUE -->
@@ -122,6 +105,23 @@
             <div class="gm-history-summary-value" id="historyMonthAvg">— h/m³</div>
             <div class="gm-history-indicator" id="historyMonthIndicator"></div>
           </aside>
+        </div>
+      </div>
+
+      <!-- CAMEMBERT RÉPARTITION DU TEMPS -->
+      <div id="timeDistributionSection" class="gm-comment-section" style="display:none;">
+        <h2>Répartition du temps de travail</h2>
+        <div style="display:grid; grid-template-columns: auto 320px 1fr; gap:24px; align-items:start;">
+          <div id="timeDistributionLegend" style="display:flex; flex-direction:column; gap:8px;"></div>
+          <div style="padding:20px;">
+            <canvas id="timeDistributionChart"></canvas>
+          </div>
+          <div style="min-height:280px;">
+            <h3 style="margin:0 0 10px 0; font-size:14px; color:var(--primary);">Évolution par semaine</h3>
+            <div style="height:260px;">
+              <canvas id="timeEvolutionChart"></canvas>
+            </div>
+          </div>
         </div>
       </div>
     </main>
