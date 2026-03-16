@@ -3,10 +3,246 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Saisies indicateurs - Intranet Goudalle</title>
+  <title>Synchronisation Excel - Intranet Goudalle</title>
   <link rel="stylesheet" href="../style.css">
 </head>
 <body>
+  <script src="../js/api.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+  <script> window.APP_LOGO = 'maconnerie'; </script>
+  <script> Auth.requirePermission('gm_saisie'); </script>
+
+  <div class="app-container">
+    <div id="sidebar"></div>
+
+    <main class="main-content">
+      <div class="d-flex justify-between items-center mb-3" style="gap:12px; flex-wrap:wrap;">
+        <h1 class="mb-0">Synchronisation Excel - Goudalle Maçonnerie</h1>
+        <button type="button" class="btn btn-secondary" onclick="downloadGMIndicators()">📥 Télécharger indicateurs</button>
+      </div>
+
+      <div id="pageMessage" class="alert" style="display:none;"></div>
+
+      <!-- ═══ BLOC : PAS DE CONFIG ═══ -->
+      <div id="blockNoConfig" class="card" style="display:none;">
+        <div class="card-title"><h2>🔗 Connecter un fichier Excel</h2></div>
+        <div class="card-body">
+          <p style="color:var(--text-light); margin-bottom:20px;">
+            Renseignez les informations du fichier Excel. Une fois connecté, les données se mettront à jour
+            automatiquement dès qu'une modification est enregistrée dans le fichier.
+          </p>
+          <form onsubmit="handleConnect(event)">
+            <div class="form-group">
+              <label for="cfgFolder">📁 Chemin du dossier</label>
+              <input type="text" id="cfgFolder" placeholder="ex: Z:\03-BE\Projet en cours\Gaspard" required>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+              <div class="form-group">
+                <label for="cfgFilename">📄 Nom du fichier</label>
+                <input type="text" id="cfgFilename" placeholder="ex: INDICATEURS Goudalle Maçonnerie.xlsx" required>
+              </div>
+              <div class="form-group">
+                <label for="cfgSheet">📋 Nom de la feuille</label>
+                <input type="text" id="cfgSheet" placeholder="ex: Données indicateurs" required>
+              </div>
+            </div>
+            <button type="submit" id="btnConnect" class="btn btn-success" style="width:100%; padding:14px; font-size:15px;">
+              🔗 Connecter et synchroniser
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- ═══ BLOC : CONFIG ACTIVE ═══ -->
+      <div id="blockConfig" class="card" style="display:none;">
+        <div class="card-title"><h2>✅ Synchronisation active</h2></div>
+        <div class="card-body">
+          <div style="display:grid; grid-template-columns:1fr auto; gap:16px; align-items:center;">
+            <div>
+              <div style="font-size:14px; color:var(--text-light);">Fichier surveillé :</div>
+              <div style="font-weight:600; margin:4px 0;" id="cfgDisplayPath"></div>
+              <div style="font-size:13px; color:var(--text-light);">Feuille : <strong id="cfgDisplaySheet"></strong></div>
+              <div style="font-size:13px; color:var(--text-light); margin-top:6px;">
+                Dernière sync : <strong id="cfgDisplayLastSync">—</strong>
+              </div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <button class="btn btn-primary" onclick="handleForceSync()">🔄 Synchroniser maintenant</button>
+              <button class="btn btn-danger" onclick="handleDesync()">🔌 Désynchroniser</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ TABLEAU DES INDICATEURS ═══ -->
+      <div class="card" style="margin-top:20px;">
+        <div class="card-title"><h2>Indicateurs importés - Goudalle Maçonnerie</h2></div>
+        <div class="card-body">
+          <table id="kpiTable">
+            <thead>
+              <tr>
+                <th>Semaine</th>
+                <th>m³</th>
+                <th>Heures MO</th>
+                <th>h/m³</th>
+                <th>Béton</th>
+                <th>Aciers</th>
+                <th>Chargement</th>
+                <th>Centrale</th>
+                <th>Commentaire</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="10" style="text-align:center; padding:20px;">Chargement...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    function showMessage(msg, type) {
+      const d = document.getElementById('pageMessage');
+      d.innerHTML = msg;
+      d.className = `alert alert-${type}`;
+      d.style.display = 'block';
+      window.scrollTo(0, 0);
+    }
+
+    function loadKPIs() {
+      const kpis = getKPIs().sort(compareByYearWeekDesc);
+      const tbody = document.querySelector('#kpiTable tbody');
+      tbody.innerHTML = kpis.map(k => {
+        const ratio = calculateRatio(k.hours, k.m3);
+        const smiley = getSmiley(ratio);
+        return `<tr>
+          <td><strong>S${String(k.week).padStart(2,'0')}/${k.year}</strong></td>
+          <td>${k.m3 != null ? parseFloat(k.m3).toFixed(2) : '—'}</td>
+          <td>${k.hours != null ? parseFloat(k.hours).toFixed(2) : '—'}</td>
+          <td><span class="badge badge-${smiley}">${ratio !== null ? ratio.toFixed(2) : '—'} ${getSmileyEmoji(smiley)}</span></td>
+          <td>${k.tempsBeton != null ? k.tempsBeton : '—'}</td>
+          <td>${k.tempsAciers != null ? k.tempsAciers : '—'}</td>
+          <td>${k.tempsChargement != null ? k.tempsChargement : '—'}</td>
+          <td>${k.tempsCentrale != null ? k.tempsCentrale : '—'}</td>
+          <td><small style="white-space:pre-wrap;">${escapeHtml(k.comment || '')}</small></td>
+          <td><button class="btn btn-small btn-danger" onclick="handleDeleteKPI(${k.year},${k.week})">🗑️</button></td>
+        </tr>`;
+      }).join('');
+      if (kpis.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:20px;">Aucun indicateur — connectez un fichier Excel ci-dessus</td></tr>`;
+      }
+    }
+
+    function handleDeleteKPI(year, week) {
+      if (confirm(`Supprimer S${String(week).padStart(2,'0')}/${year} ?`)) {
+        const result = window.deleteKPI(year, week);
+        showMessage(result.message, result.success ? 'success' : 'error');
+        loadKPIs();
+      }
+    }
+
+    function downloadGMIndicators() {
+      window.open(`${getBasePath()}pages/gm.html?download=1`, '_blank');
+    }
+
+    // ── Affiche le bon bloc selon si une config existe ──
+    function renderConfigState(cfg) {
+      const noConfig = document.getElementById('blockNoConfig');
+      const hasConfig = document.getElementById('blockConfig');
+      if (!cfg || !cfg.active) {
+        noConfig.style.display = 'block';
+        hasConfig.style.display = 'none';
+      } else {
+        noConfig.style.display = 'none';
+        hasConfig.style.display = 'block';
+        document.getElementById('cfgDisplayPath').textContent = `${cfg.folder}\\${cfg.filename}`;
+        document.getElementById('cfgDisplaySheet').textContent = cfg.sheet;
+        document.getElementById('cfgDisplayLastSync').textContent = cfg.lastSync
+          ? new Date(cfg.lastSync).toLocaleString('fr-FR') : '—';
+      }
+    }
+
+    // ── Charger la config depuis le serveur ──
+    async function loadConfig() {
+      try {
+        const res = await fetch(SERVER_URL + '/gm-excel-config', { cache: 'no-store' });
+        const cfg = await res.json();
+        renderConfigState(cfg);
+      } catch {
+        renderConfigState(null);
+      }
+    }
+
+    // ── Connecter et faire le premier import ──
+    async function handleConnect(event) {
+      event.preventDefault();
+      const btn = document.getElementById('btnConnect');
+      btn.textContent = '⏳ Connexion...'; btn.disabled = true;
+      const body = {
+        folder:   document.getElementById('cfgFolder').value.trim(),
+        filename: document.getElementById('cfgFilename').value.trim(),
+        sheet:    document.getElementById('cfgSheet').value.trim()
+      };
+      try {
+        const res = await fetch(SERVER_URL + '/gm-excel-config', {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const result = await res.json();
+        if (!result.success) { showMessage(`❌ ${result.error}`, 'error'); return; }
+        showMessage(`✅ Connexion réussie ! ${result.result.added} semaine(s) ajoutée(s), ${result.result.updated} mise(s) à jour. La synchronisation est maintenant automatique.`, 'success');
+        await loadConfig();
+        loadKPIs();
+      } catch (e) {
+        showMessage(`❌ Erreur : ${e.message}`, 'error');
+      } finally {
+        btn.textContent = '🔗 Connecter et synchroniser'; btn.disabled = false;
+      }
+    }
+
+    // ── Forcer une synchronisation immédiate ──
+    async function handleForceSync() {
+      try {
+        const res = await fetch(SERVER_URL + '/gm-import-excel', { method: 'POST' });
+        const result = await res.json();
+        if (!result.success) { showMessage(`❌ ${result.error}`, 'error'); return; }
+        showMessage(`✅ Synchronisation effectuée — ${result.result.added} ajouté(s), ${result.result.updated} mis à jour.`, 'success');
+        await loadConfig();
+        loadKPIs();
+      } catch (e) {
+        showMessage(`❌ Erreur : ${e.message}`, 'error');
+      }
+    }
+
+    // ── Désynchroniser ──
+    async function handleDesync() {
+      if (!confirm('Désynchroniser le fichier Excel ? Les données déjà importées sont conservées.')) return;
+      try {
+        await fetch(SERVER_URL + '/gm-excel-config', { method: 'DELETE' });
+        showMessage('🔌 Désynchronisé. Vous pouvez connecter un nouveau fichier.', 'success');
+        renderConfigState(null);
+      } catch (e) {
+        showMessage(`❌ Erreur : ${e.message}`, 'error');
+      }
+    }
+
+    function init() {
+      document.getElementById('sidebar').innerHTML = getSidebar();
+      injectGMSecondaryBar();
+      loadConfig();
+      loadKPIs();
+    }
+
+    window.onServerReady(init);
+  </script>
+
+  <footer class="site-footer"></footer>
+</body>
+</html>
+
   <script src="../js/api.js"></script>
   <script src="../js/auth.js"></script>
   <script src="../js/utils.js"></script>
@@ -23,130 +259,33 @@
     
     <main class="main-content">
       <div class="d-flex justify-between items-center mb-3" style="gap: 12px; flex-wrap: wrap;">
-        <h1 class="mb-0">Saisies indicateurs - Goudalle Maçonnerie</h1>
+        <h1 class="mb-0">Import Excel - Goudalle Maçonnerie</h1>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <button type="button" class="btn btn-success" onclick="syncFromExcel()">📊 Synchroniser depuis Excel</button>
           <button type="button" class="btn btn-secondary" onclick="downloadGMIndicators()">📥 Télécharger indicateurs de la semaine</button>
         </div>
       </div>
 
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;">
+      <div id="syncMessage" class="alert" style="display:none;"></div>
 
       <div class="card">
         <div class="card-title">
-          <h2>Nouvel indicateur</h2>
+          <h2>Source de données</h2>
         </div>
         <div class="card-body">
-          <div id="message" class="alert" style="display:none;"></div>
-
-          <form onsubmit="handleSaveKPI(event)">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-              <div class="form-group">
-                <label for="year">Année *</label>
-                <input type="number" id="year" value="2026" required>
-              </div>
-              <div class="form-group">
-                <label for="week">Semaine (1-52) *</label>
-                <input type="number" id="week" min="1" max="52" value="" required>
-              </div>
-            </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-              <div class="form-group">
-                <label for="m3">m³ coulés *</label>
-                <input type="number" id="m3" step="0.01" placeholder="0.00" required oninput="updateRealtimePreview()">
-              </div>
-              <div class="form-group">
-                <label for="hours">Heures travaillées *</label>
-                <input type="number" id="hours" step="0.01" placeholder="0.00" required oninput="updateRealtimePreview()">
-              </div>
-            </div>
-
-            <!-- Aperçu temps réel du résultat -->
-            <div id="realtimePreview" style="display: none; margin: 20px 0; padding: 20px; background: var(--lighter); border-radius: 8px; text-align: center;">
-              <div style="font-size: 14px; color: var(--text-light); margin-bottom: 8px;">Aperçu du résultat :</div>
-              <div style="display: flex; align-items: center; justify-content: center; gap: 15px;">
-                <div style="font-size: 24px; font-weight: bold;" id="previewRatio">—</div>
-                <div id="previewSmiley" style="font-size: 48px;"></div>
-              </div>
-              <div id="previewMessage" style="margin-top: 10px; font-size: 14px; font-weight: 500;"></div>
-            </div>
-
-            <div class="form-group">
-              <label for="comment">Commentaire obligatoire *</label>
-              <textarea id="comment" placeholder="Décrivez les conditions de travail, les notes importantes, etc." required></textarea>
-            </div>
-
-            <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e0e0e0;">
-              <label style="font-weight:600; font-size:14px; margin-bottom:10px; display:block;">⏱️ Répartition du temps de travail (en heures)</label>
-              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px;">
-                <div class="form-group" style="margin:0;">
-                  <label for="tempsBeton">Béton</label>
-                  <input type="number" id="tempsBeton" step="0.01" placeholder="0" min="0">
-                </div>
-                <div class="form-group" style="margin:0;">
-                  <label for="tempsAciers">Aciers</label>
-                  <input type="number" id="tempsAciers" step="0.01" placeholder="0" min="0">
-                </div>
-                <div class="form-group" style="margin:0;">
-                  <label for="tempsChargement">Chargement</label>
-                  <input type="number" id="tempsChargement" step="0.01" placeholder="0" min="0">
-                </div>
-                <div class="form-group" style="margin:0;">
-                  <label for="tempsCentrale">Centrale à béton</label>
-                  <input type="number" id="tempsCentrale" step="0.01" placeholder="0" min="0">
-                </div>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label>
-                <input type="checkbox" id="publish"> ✅ Publier immédiatement
-              </label>
-              <small style="color: #7f8c8d; display: block; margin-top: 5px;">
-                Si coché, l'indicateur sera directement publié. Sinon, il restera en brouillon.
-              </small>
-            </div>
-
-            <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
-          </form>
+          <div class="alert alert-info">
+            <strong>📁 Fichier Excel :</strong> <code>Z:\03-BE\Projet en cours\Gaspard\INDICATEURS Goudalle Maçonnerie.xlsx</code><br><br>
+            Cliquez sur <strong>📊 Synchroniser depuis Excel</strong> pour importer les données. Les semaines existantes seront mises à jour, les nouvelles semaines ajoutées automatiquement.
+          </div>
+          <button type="button" class="btn btn-success btn-large" onclick="syncFromExcel()" style="width:100%; font-size:16px; padding:15px;">
+            📊 Synchroniser depuis Excel
+          </button>
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" style="margin-top: 20px;">
         <div class="card-title">
-          <h2>Seuil de performance (h/m³)</h2>
-        </div>
-        <div class="card-body">
-          <div id="thresholdMessage" class="alert" style="display:none;"></div>
-
-          <form onsubmit="handleSaveThresholds(event)">
-            <div class="form-group">
-              <label for="ratioThreshold">
-                Seuil (h/m³)
-                <small style="color: #7f8c8d; display: block;">h/m³ ≤ seuil = 🟢 Vert / au-dessus = 🔴 Rouge</small>
-              </label>
-              <input type="number" id="ratioThreshold" step="0.1" value="5" required>
-            </div>
-
-            <div class="alert alert-info">
-              <strong>ℹ️ Règles :</strong>
-              <ul style="margin: 10px 0 0 20px;">
-                <li>h/m³ ≤ seuil = 🟢 Vert</li>
-                <li>h/m³ &gt; seuil = 🔴 Rouge</li>
-              </ul>
-            </div>
-
-            <button type="submit" class="btn btn-primary">💾 Enregistrer les seuils</button>
-          </form>
-        </div>
-      </div>
-
-      </div>
-
-      <div class="card">
-        <div class="card-title">
-          <h2>Mes indicateurs - Goudalle Maçonnerie</h2>
+          <h2>Indicateurs importés - Goudalle Maçonnerie</h2>
         </div>
         <div class="card-body">
           <table id="kpiTable">
@@ -154,7 +293,7 @@
               <tr>
                 <th>Semaine</th>
                 <th>m³</th>
-                <th>Heures</th>
+                <th>Heures MO</th>
                 <th>h/m³</th>
                 <th>Béton</th>
                 <th>Aciers</th>
@@ -177,90 +316,30 @@
   <script>
     /**
      * Affiche un message de feedback
-     * @param {string} message - Message à afficher
-     * @param {string} type - Type : 'success' ou 'error'
      */
     function showMessage(message, type) {
-      const msgDiv = document.getElementById('message');
-      msgDiv.textContent = message;
+      const msgDiv = document.getElementById('syncMessage');
+      msgDiv.innerHTML = message;
       msgDiv.className = `alert alert-${type}`;
       msgDiv.style.display = 'block';
-    }
-
-    /**
-     * Gestion de la soumission du formulaire de saisie indicateur
-     * @param {Event} event - Événement de soumission
-     */
-    function handleSaveKPI(event) {
-      event.preventDefault();
-
-      // ===== RÉCUPÉRATION DES DONNÉES =====
-      const year = parseInt(document.getElementById('year').value);
-      const week = parseInt(document.getElementById('week').value);
-      const m3 = parseFloat(document.getElementById('m3').value);
-      const hours = parseFloat(document.getElementById('hours').value);
-      const comment = document.getElementById('comment').value.trim();
-      const publish = document.getElementById('publish').checked;  // Publier ou brouillon ?
-
-      // ===== VALIDATIONS =====
-      if (!comment) {
-        showMessage('❌ Le commentaire est obligatoire', 'error');
-        return;
-      }
-
-      if (m3 < 0 || hours < 0) {
-        showMessage('❌ Les valeurs doivent être positives (0 autorisé)', 'error');
-        return;
-      }
-
-      // ===== ENREGISTREMENT =====
-      const status = publish ? 'published' : 'draft';
-      const timeDistribution = {
-        beton: parseFloat(document.getElementById('tempsBeton').value) || null,
-        aciers: parseFloat(document.getElementById('tempsAciers').value) || null,
-        chargement: parseFloat(document.getElementById('tempsChargement').value) || null,
-        centrale: parseFloat(document.getElementById('tempsCentrale').value) || null
-      };
-      const kpi = saveKPI(year, week, m3, hours, comment, status, timeDistribution);
-
-      showMessage(`✅ Indicateur S${String(week).padStart(2, '0')}/${year} ${status === 'published' ? 'publié' : 'enregistré en brouillon'}`, 'success');
-
-      // ===== RÉINITIALISATION DU FORMULAIRE =====
-      document.getElementById('year').value = getCurrentYear();
-      document.getElementById('week').value = '';
-      document.getElementById('m3').value = '';
-      document.getElementById('hours').value = '';
-      document.getElementById('comment').value = '';
-      document.getElementById('publish').checked = false;
-      document.getElementById('tempsBeton').value = '';
-      document.getElementById('tempsAciers').value = '';
-      document.getElementById('tempsChargement').value = '';
-      document.getElementById('tempsCentrale').value = '';
-      
-      // Cacher l'aperçu temps réel
-      document.getElementById('realtimePreview').style.display = 'none';
-
-      // Rafraîchir la liste des indicateurs
-      loadKPIs();
+      window.scrollTo(0, 0);
     }
 
     /**
      * Charge et affiche la liste de tous les indicateurs
-     * Triés du plus récent au plus ancien
      */
     function loadKPIs() {
-      const kpis = getKPIs().sort(compareByYearWeekDesc);  // Tri décroissant
+      const kpis = getKPIs().sort(compareByYearWeekDesc);
       const tbody = document.querySelector('#kpiTable tbody');
 
-      // Générer les lignes du tableau
       tbody.innerHTML = kpis.map(k => {
         const ratio = calculateRatio(k.hours, k.m3);
         const smiley = getSmiley(ratio);
         return `
           <tr>
             <td><strong>S${String(k.week).padStart(2, '0')}/${k.year}</strong></td>
-            <td>${k.m3.toFixed(2)}</td>
-            <td>${k.hours.toFixed(2)}</td>
+            <td>${k.m3 != null ? parseFloat(k.m3).toFixed(2) : '—'}</td>
+            <td>${k.hours != null ? parseFloat(k.hours).toFixed(2) : '—'}</td>
             <td>
               <span class="badge badge-${smiley}">
                 ${ratio !== null ? ratio.toFixed(2) : '—'} ${getSmileyEmoji(smiley)}
@@ -275,145 +354,42 @@
                 ${k.status === 'published' ? '✅ Publié' : '📝 Brouillon'}
               </span>
             </td>
-            <td><small style="white-space:pre-wrap;">${escapeHtml(k.comment)}</small></td>
+            <td><small style="white-space:pre-wrap;">${escapeHtml(k.comment || '')}</small></td>
             <td>
-              <button class="btn btn-small btn-secondary" onclick="editKPI(${k.id})">✏️ Éditer</button>
-              ${k.status !== 'published' ? `<button class="btn btn-small btn-success" onclick="handlePublishKPI(${k.year}, ${k.week})">📤 Publier</button>` : ''}
-              <button class="btn btn-small btn-danger" onclick="handleDeleteKPI(${k.year}, ${k.week})">🗑️ Supprimer</button>
+              ${k.status !== 'published'
+                ? `<button class="btn btn-small btn-success" onclick="handlePublishKPI(${k.year}, ${k.week})">📤 Publier</button>`
+                : ''}
+              <button class="btn btn-small btn-danger" onclick="handleDeleteKPI(${k.year}, ${k.week})">🗑️</button>
             </td>
           </tr>
         `;
       }).join('');
 
-      // Message si aucun indicateur
       if (kpis.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding: 20px;">Aucun indicateur créé</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding: 20px;">Aucun indicateur — cliquez sur "Synchroniser depuis Excel"</td></tr>`;
       }
     }
 
     /**
-     * Charge un indicateur dans le formulaire pour édition
-     * @param {number} id - ID de l'indicateur à éditer
-     */
-    function editKPI(id) {
-      const kpi = getKPIs().find(k => k.id === id);
-      if (kpi) {
-        // Préremplir le formulaire avec les données existantes
-        document.getElementById('year').value = kpi.year;
-        document.getElementById('week').value = kpi.week;
-        document.getElementById('m3').value = kpi.m3;
-        document.getElementById('hours').value = kpi.hours;
-        document.getElementById('comment').value = kpi.comment;
-        document.getElementById('publish').checked = kpi.status === 'published';
-        document.getElementById('tempsBeton').value = kpi.tempsBeton || '';
-        document.getElementById('tempsAciers').value = kpi.tempsAciers || '';
-        document.getElementById('tempsChargement').value = kpi.tempsChargement || '';
-        document.getElementById('tempsCentrale').value = kpi.tempsCentrale || '';
-        
-        // Mettre à jour l'aperçu temps réel avec les valeurs chargées
-        updateRealtimePreview();
-        
-        window.scrollTo(0, 0);  // Remonter en haut pour voir le formulaire
-      }
-    }
-
-    /**
-     * Publie un indicateur en brouillon après confirmation
-     * @param {number} year - Année de l'indicateur
-     * @param {number} week - Semaine de l'indicateur
+     * Publie un indicateur en brouillon
      */
     function handlePublishKPI(year, week) {
       if (confirm(`Publier l'indicateur S${String(week).padStart(2, '0')}/${year} ?`)) {
-        const result = window.publishKPI(year, week);  // Appel à la fonction utils.js
+        const result = window.publishKPI(year, week);
         showMessage(result.message, result.success ? 'success' : 'error');
-        loadKPIs();  // Rafraîchir la liste
+        loadKPIs();
       }
     }
 
     /**
-     * Supprime un indicateur après confirmation
-     * @param {number} year - Année de l'indicateur
-     * @param {number} week - Semaine de l'indicateur
+     * Supprime un indicateur
      */
     function handleDeleteKPI(year, week) {
       if (confirm(`Supprimer l'indicateur S${String(week).padStart(2, '0')}/${year} ? Cette action est irréversible.`)) {
-        const result = window.deleteKPI(year, week);  // Appel à la fonction utils.js
+        const result = window.deleteKPI(year, week);
         showMessage(result.message, result.success ? 'success' : 'error');
-        loadKPIs();  // Rafraîchir la liste
+        loadKPIs();
       }
-    }
-
-    // ===== GESTION DES SEUILS DE PERFORMANCE =====
-    
-    const THRESHOLDS_KEY = 'goudalle_thresholds';
-    let thresholds = {
-      ratioThreshold: 5  // Valeur par défaut : 5 h/m³
-    };
-
-    /**
-     * Charge les seuils depuis localStorage et met à jour l'interface
-     * Supporte plusieurs formats pour compatibilité avec anciennes versions
-     */
-    function loadThresholds() {
-      const stored = localStorage.getItem(THRESHOLDS_KEY);
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          if (parsed && typeof parsed.ratioThreshold === 'number') {
-            thresholds.ratioThreshold = parsed.ratioThreshold;
-          } else if (parsed && typeof parsed.orangeMax === 'number') {
-            // Ancien format (vert/orange/rouge) : réinitialiser à la valeur par défaut
-            thresholds.ratioThreshold = 5;
-          }
-        } catch {
-          // Essayer de parser comme nombre simple
-          const asNum = parseFloat(stored);
-          if (Number.isFinite(asNum)) thresholds.ratioThreshold = asNum;
-        }
-      }
-      // Préremplir le champ avec la valeur actuelle
-      if (document.getElementById('ratioThreshold')) {
-        document.getElementById('ratioThreshold').value = thresholds.ratioThreshold;
-      }
-    }
-
-    /**
-     * Affiche un message dans la section seuils
-     * @param {string} message - Message à afficher
-     * @param {string} type - Type : 'success' ou 'error'
-     */
-    function showThresholdMessage(message, type) {
-      const msgDiv = document.getElementById('thresholdMessage');
-      msgDiv.textContent = message;
-      msgDiv.className = `alert alert-${type}`;
-      msgDiv.style.display = 'block';
-      // Masquer après 3 secondes
-      setTimeout(() => {
-        msgDiv.style.display = 'none';
-      }, 3000);
-    }
-
-    /**
-     * Gestion de la sauvegarde des seuils de performance
-     * @param {Event} event - Événement de soumission du formulaire
-     */
-    function handleSaveThresholds(event) {
-      event.preventDefault();
-
-      // Récupérer et valider la valeur saisie
-      const ratioThreshold = parseFloat(document.getElementById('ratioThreshold').value);
-      if (!Number.isFinite(ratioThreshold) || ratioThreshold <= 0) {
-        showThresholdMessage('❌ Seuil invalide', 'error');
-        return;
-      }
-
-      // Sauvegarder les nouveaux seuils
-      thresholds = { ratioThreshold };
-      localStorage.setItem(THRESHOLDS_KEY, JSON.stringify(thresholds));
-      Auth.audit('THRESHOLDS_UPDATED', `Seuil mis à jour: ${ratioThreshold} h/m³`);
-
-      showThresholdMessage('✅ Seuils enregistrés avec succès', 'success');
-      loadKPIs();  // Rafraîchir pour voir les nouvelles couleurs
     }
 
     /**
@@ -425,63 +401,24 @@
     }
 
     /**
-     * Met à jour l'aperçu temps réel du ratio h/m³ et du smiley
-     */
-    function updateRealtimePreview() {
-      const m3Input = document.getElementById('m3');
-      const hoursInput = document.getElementById('hours');
-      const previewDiv = document.getElementById('realtimePreview');
-      const previewRatio = document.getElementById('previewRatio');
-      const previewSmiley = document.getElementById('previewSmiley');
-      const previewMessage = document.getElementById('previewMessage');
-
-      const m3 = parseFloat(m3Input.value);
-      const hours = parseFloat(hoursInput.value);
-
-      // Afficher l'aperçu seulement si les deux champs sont remplis
-      if (!m3 || !hours || m3 <= 0 || hours <= 0) {
-        previewDiv.style.display = 'none';
-        return;
-      }
-
-      // Calculer le ratio
-      const ratio = calculateRatio(hours, m3);
-      const smiley = getSmiley(ratio);
-      const threshold = getKpiRatioThreshold();
-
-      // Afficher le résultat
-      previewDiv.style.display = 'block';
-      previewRatio.textContent = ratio !== null ? `${ratio.toFixed(2)} h/m³` : '—';
-      previewSmiley.innerHTML = getSmileyEmoji(smiley);
-
-      // Message de feedback
-      if (smiley === 'vert') {
-        previewMessage.innerHTML = `<span style="color: var(--success);">✅ Excellent ! Vous êtes en dessous du seuil de ${threshold} h/m³</span>`;
-      } else {
-        previewMessage.innerHTML = `<span style="color: var(--danger);">⚠️ Attention : vous dépassez le seuil de ${threshold} h/m³</span>`;
-      }
-    }
-
-    /**
      * Synchronise les indicateurs depuis le fichier Excel sur le serveur.
-     * Importe toutes les semaines présentes dans l'Excel et met à jour
-     * (ou crée) les entrées correspondantes dans la base de données.
+     * Utilise fetch() vers /api/gm-import-excel puis écrit en localStorage
+     * (qui est patché par api.js pour synchroniser avec le serveur).
      */
     async function syncFromExcel() {
-      const btn = document.querySelector('button[onclick="syncFromExcel()"]');
-      const originalText = btn.textContent;
-      btn.textContent = '⏳ Synchronisation...';
-      btn.disabled = true;
+      const btns = document.querySelectorAll('button[onclick="syncFromExcel()"]');
+      btns.forEach(b => { b.textContent = '⏳ Synchronisation...'; b.disabled = true; });
 
       try {
-        const response = await API.get('/api/gm-import-excel');
+        const response = await fetch(SERVER_URL + '/gm-import-excel', { cache: 'no-store' });
+        const result = await response.json();
 
-        if (!response.success) {
-          showMessage(`❌ ${response.error}`, 'error');
+        if (!result.success) {
+          showMessage(`❌ ${result.error}`, 'error');
           return;
         }
 
-        const excelRows = response.data;
+        const excelRows = result.data;
         if (!excelRows || excelRows.length === 0) {
           showMessage('⚠️ Aucune donnée trouvée dans le fichier Excel.', 'error');
           return;
@@ -490,12 +427,14 @@
         // Charger les KPIs existants
         const existing = getKPIs();
         let added = 0, updated = 0;
+        const session = Auth.getSession();
+        const now = new Date().toISOString();
 
         for (const row of excelRows) {
           const idx = existing.findIndex(k => k.year === row.year && k.week === row.week);
 
           if (idx >= 0) {
-            // Mise à jour de l'entrée existante
+            // Mise à jour de l'entrée existante (ne pas écraser le commentaire si vide dans Excel)
             existing[idx] = {
               ...existing[idx],
               m3:              row.m3    !== null ? row.m3    : existing[idx].m3,
@@ -504,14 +443,17 @@
               tempsAciers:     row.tempsAciers,
               tempsChargement: row.tempsChargement,
               tempsCentrale:   row.tempsCentrale,
-              comment:         row.comment || existing[idx].comment
+              qtAcierFaconne:  row.qtAcierFaconne,
+              comment:         row.comment || existing[idx].comment || '',
+              updatedAt:       now,
+              updatedBy:       session?.username || 'excel'
             };
             updated++;
           } else {
             // Nouvelle entrée
             const maxId = existing.reduce((max, k) => Math.max(max, k.id || 0), 0);
             existing.push({
-              id:              maxId + 1 + added,
+              id:              maxId + added + 1,
               year:            row.year,
               week:            row.week,
               m3:              row.m3    !== null ? row.m3    : 0,
@@ -520,47 +462,41 @@
               tempsAciers:     row.tempsAciers,
               tempsChargement: row.tempsChargement,
               tempsCentrale:   row.tempsCentrale,
-              comment:         row.comment || '(importé depuis Excel)',
-              status:          'published'
+              qtAcierFaconne:  row.qtAcierFaconne,
+              comment:         row.comment || '',
+              status:          'published',
+              createdAt:       now,
+              createdBy:       session?.username || 'excel',
+              updatedAt:       now,
+              updatedBy:       session?.username || 'excel'
             });
             added++;
           }
         }
 
-        // Sauvegarder via l'API
-        await API.put('/api/kpis', existing);
-        Auth.audit('GM_EXCEL_SYNC', `Sync Excel: ${added} ajoutés, ${updated} mis à jour (source: ${response.source})`);
+        // Sauvegarder (localStorage patché → synchronise avec le serveur)
+        localStorage.setItem('goudalle_kpis', JSON.stringify(existing));
+        Auth.audit('GM_EXCEL_SYNC', `Sync Excel: ${added} ajouté(s), ${updated} mis à jour — source: ${result.source}`);
 
-        showMessage(`✅ Synchronisation réussie depuis "${response.source}" — ${added} ajouté(s), ${updated} mis à jour`, 'success');
+        showMessage(`✅ Synchronisation réussie depuis <strong>${result.source}</strong><br>${added} semaine(s) ajoutée(s), ${updated} mise(s) à jour.`, 'success');
         loadKPIs();
 
       } catch (err) {
-        showMessage(`❌ Erreur lors de la synchronisation : ${err.message}`, 'error');
+        showMessage(`❌ Erreur de connexion au serveur : ${err.message}<br><small>Vérifiez que le serveur est bien lancé.</small>`, 'error');
       } finally {
-        btn.textContent = originalText;
-        btn.disabled = false;
+        btns.forEach(b => { b.textContent = '📊 Synchroniser depuis Excel'; b.disabled = false; });
       }
     }
 
     /**
      * Initialise la page
-     * - Injecte la sidebar principale
-     * - Injecte la sidebar secondaire GM
-     * - Préremplit année et semaine courantes
-     * - Charge les seuils de performance
-     * - Charge la liste des indicateurs
      */
     function init() {
       document.getElementById('sidebar').innerHTML = getSidebar();
-      injectGMSecondaryBar();  // Injecter la sidebar secondaire GM
-      // Préremplir avec l'année et la semaine actuelles
-      document.getElementById('year').value = getCurrentYear();
-      document.getElementById('week').value = getCurrentWeek();
-      loadThresholds();
+      injectGMSecondaryBar();
       loadKPIs();
     }
 
-    // ===== INITIALISATION =====
     window.onServerReady(init);
   </script>
 
