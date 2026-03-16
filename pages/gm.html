@@ -396,13 +396,12 @@
         if (total > 0) {
           document.getElementById('timeDistributionSection').style.display = 'block';
           const legendEl = document.getElementById('timeDistributionLegend');
-          const makeCard = (label, value, color) => `
-            <div style="background:white; border-radius:8px; padding:12px 16px; box-shadow:var(--shadow); border-left:4px solid ${color}; display:flex; justify-content:space-between; align-items:center; gap:12px; min-width:180px;">
-              <span style="color:var(--secondary); font-size:12px; font-weight:600; letter-spacing:0.5px;">${label}</span>
-              <span style="font-size:22px; font-weight:700; color:var(--primary);">${value} h</span>
+          const makeCard = (label, value, colorClass) => `
+            <div class="gm-kpi-card" style="border-top:4px solid ${colorClass}; height:auto; padding:12px 16px;">
+              <div class="gm-kpi-label">${label}</div>
+              <div class="gm-kpi-value" style="font-size:28px;">${value} h</div>
             </div>`;
           legendEl.innerHTML =
-            makeCard('Temps total', last.hours, 'var(--accent)') +
             makeCard('Béton', beton, '#4472C4') +
             makeCard('Aciers', aciers, '#ED7D31') +
             makeCard('Chargement', chargement, '#A5A5A5') +
