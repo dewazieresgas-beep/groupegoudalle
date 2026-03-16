@@ -400,7 +400,9 @@
       document.getElementById('secDaysNoAccident').textContent = formatNumber(daysNoAccident);
       document.getElementById('secYearAccidents').textContent = formatNumber(s.nombreAnnuelAccidents || 0);
       document.getElementById('secRecordDays').textContent = formatNumber(s.recordJoursSansAccident || 0);
-      document.getElementById('secLastDate').textContent = s.lastAccidentDate || '—';
+      document.getElementById('secLastDate').textContent = lastDate
+        ? lastDate.toLocaleDateString('fr-FR')
+        : (s.lastAccidentDate || '—');
       document.getElementById('secYearRef').textContent = s.anneeReference || '—';
     }
 
@@ -551,6 +553,19 @@
       return { week, year };
     }
 
+    function getMachineProdValue(entry, machine, cfg) {
+      const direct = toFiniteNumber(entry[cfg.prodField]);
+      if (direct !== null) return direct;
+      if (machine === 'collage') {
+        const h = toFiniteNumber(entry.collageHeures);
+        const p = toFiniteNumber(entry.collagePresses);
+        return (h !== null && p !== null && p > 0) ? (h / p) : null;
+      }
+      const useful = cfg.usefulField ? toFiniteNumber(entry[cfg.usefulField]) : null;
+      const main = toFiniteNumber(entry[cfg.m3Field]);
+      return (useful !== null && useful > 0 && main !== null) ? (main / useful) : null;
+    }
+
     function renderMachineSection(machine) {
       const cfg = getMachineConfig(machine);
       const empty = document.getElementById(`usineEmpty${cfg.suffix}`);
@@ -582,20 +597,17 @@
       const selectedEntries = getSelectedEntries(withData, cfg.suffix);
       const chartEntries = expandWithMissingWeeks(selectedEntries);
       const labels = chartEntries.map(e => e.semaineLabel || `S${e.week} ${e.year}`);
-      const latestLabel = labels[labels.length - 1];
       const dataProd = chartEntries.map(e => {
         if (e.isMissing) return null;
-        const direct = toFiniteNumber(e[cfg.prodField]);
-        if (direct !== null) return direct;
-        if (machine === 'collage') {
-          const h = toFiniteNumber(e.collageHeures);
-          const p = toFiniteNumber(e.collagePresses);
-          return (h !== null && p !== null && p > 0) ? (h / p) : null;
-        }
-        const useful = cfg.usefulField ? toFiniteNumber(e[cfg.usefulField]) : null;
-        const main = toFiniteNumber(e[cfg.m3Field]);
-        return (useful !== null && useful > 0 && main !== null) ? (main / useful) : null;
+        return getMachineProdValue(e, machine, cfg);
       });
+      const latestProdIdx = (() => {
+        for (let i = dataProd.length - 1; i >= 0; i--) {
+          if (Number.isFinite(dataProd[i])) return i;
+        }
+        return dataProd.length - 1;
+      })();
+      const latestLabel = labels[latestProdIdx];
       const dataTarget = machine === 'assemblage'
         ? chartEntries.map(() => 0)
         : chartEntries.map(e => {
@@ -604,19 +616,14 @@
             const t = toFiniteNumber(e[cfg.targetField]);
             return t !== null && t > 0 ? t : null;
           });
-      const latest = withData[withData.length - 1];
-      const latestProd = (() => {
-        const direct = toFiniteNumber(latest[cfg.prodField]);
-        if (direct !== null) return direct;
-        if (machine === 'collage') {
-          const h = toFiniteNumber(latest.collageHeures);
-          const p = toFiniteNumber(latest.collagePresses);
-          return (h !== null && p !== null && p > 0) ? (h / p) : 0;
+      let latest = withData[withData.length - 1];
+      for (let i = withData.length - 1; i >= 0; i--) {
+        if (getMachineProdValue(withData[i], machine, cfg) !== null) {
+          latest = withData[i];
+          break;
         }
-        const useful = cfg.usefulField ? toFiniteNumber(latest[cfg.usefulField]) : null;
-        const main = toFiniteNumber(latest[cfg.m3Field]);
-        return (useful !== null && useful > 0 && main !== null) ? (main / useful) : 0;
-      })();
+      }
+      const latestProd = getMachineProdValue(latest, machine, cfg) ?? 0;
       const latestTarget = machine === 'assemblage'
         ? 0
         : (() => {
