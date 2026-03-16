@@ -429,6 +429,8 @@
           suffix: 'ULTRA',
           m3Field: 'ultraM3',
           hoursField: 'ultraHeuresOnaya',
+          rawMainField: 'ultra_cubage',
+          rawHoursField: 'ultra_heures_onaya',
           usefulField: 'ultraHeuresUtiles',
           prodField: 'ultraProductivite',
           targetField: 'ultraCibleProductivite',
@@ -443,6 +445,8 @@
           suffix: 'EXTRA',
           m3Field: 'extraM2',
           hoursField: 'extraHeuresOnaya',
+          rawMainField: 'extra_surface',
+          rawHoursField: 'extra_heures_onaya',
           usefulField: 'extraHeuresUtiles',
           prodField: 'extraProductivite',
           targetField: 'extraCibleProductivite',
@@ -457,6 +461,8 @@
           suffix: 'COLLAGE',
           m3Field: 'collagePresses',
           hoursField: 'collageHeures',
+          rawMainField: 'collage_nombre_pressees',
+          rawHoursField: 'collage_heures_onaya',
           usefulField: null,
           prodField: 'collageTempsPressee',
           targetField: 'collageCibleTempsPressee',
@@ -472,6 +478,8 @@
           suffix: 'ASSEMBLAGE',
           m3Field: 'assemblageTempsRealise',
           hoursField: 'assemblageTempsTheorique',
+          rawMainField: 'assemblage_temps_realise',
+          rawHoursField: 'assemblage_temps_theorique',
           usefulField: null,
           prodField: 'assemblageVariation',
           targetField: null,
@@ -486,6 +494,8 @@
         suffix: 'SC',
         m3Field: 'speedcutM3',
         hoursField: 'speedcutHeuresOnaya',
+        rawMainField: 'cubage',
+        rawHoursField: 'heures_onaya',
         usefulField: 'speedcutHeuresUtiles',
         prodField: 'speedcutProductivite',
         targetField: 'speedcutCibleProductivite',
@@ -566,6 +576,12 @@
       return (useful !== null && useful > 0 && main !== null) ? (main / useful) : null;
     }
 
+    function hasMachineSourceData(entry, cfg) {
+      const rawMain = toFiniteNumber(entry[cfg.rawMainField]);
+      const rawHours = toFiniteNumber(entry[cfg.rawHoursField]);
+      return (rawMain !== null && rawMain > 0) || (rawHours !== null && rawHours > 0);
+    }
+
     function renderMachineSection(machine) {
       const cfg = getMachineConfig(machine);
       const empty = document.getElementById(`usineEmpty${cfg.suffix}`);
@@ -575,13 +591,7 @@
       const allAsc = [...allDesc]
         .filter(e => (e.year < nowIso.year) || (e.year === nowIso.year && e.week <= nowIso.week))
         .sort((a, b) => a.year !== b.year ? a.year - b.year : a.week - b.week);
-      const withData = allAsc.filter(e => {
-        const prodVal = toFiniteNumber(e[cfg.prodField]);
-        const mainVal = toFiniteNumber(e[cfg.m3Field]);
-        const targetVal = cfg.targetField ? toFiniteNumber(e[cfg.targetField]) : null;
-        const validTarget = targetVal !== null && targetVal > 0;
-        return prodVal !== null || mainVal !== null || validTarget;
-      });
+      const withData = allAsc.filter(e => hasMachineSourceData(e, cfg));
 
       if (!withData.length) {
         empty.style.display = '';
@@ -598,12 +608,12 @@
       const chartEntries = expandWithMissingWeeks(selectedEntries);
       const labels = chartEntries.map(e => e.semaineLabel || `S${e.week} ${e.year}`);
       const dataProd = chartEntries.map(e => {
-        if (e.isMissing) return null;
+        if (e.isMissing || !hasMachineSourceData(e, cfg)) return null;
         return getMachineProdValue(e, machine, cfg);
       });
       const latestProdIdx = (() => {
         for (let i = dataProd.length - 1; i >= 0; i--) {
-          if (Number.isFinite(dataProd[i])) return i;
+          if (!chartEntries[i].isMissing && hasMachineSourceData(chartEntries[i], cfg)) return i;
         }
         return dataProd.length - 1;
       })();
@@ -616,13 +626,7 @@
             const t = toFiniteNumber(e[cfg.targetField]);
             return t !== null && t > 0 ? t : null;
           });
-      let latest = withData[withData.length - 1];
-      for (let i = withData.length - 1; i >= 0; i--) {
-        if (getMachineProdValue(withData[i], machine, cfg) !== null) {
-          latest = withData[i];
-          break;
-        }
-      }
+      const latest = withData[withData.length - 1];
       const latestProd = getMachineProdValue(latest, machine, cfg) ?? 0;
       const latestTarget = machine === 'assemblage'
         ? 0
