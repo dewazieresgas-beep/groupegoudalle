@@ -1,0 +1,9 @@
+# Dépendances Node.js
+node_modules/
+
+# Base de données (données métier - sauvegardées sur le serveur, pas dans git)
+server/goudalle.json
+
+# Fichiers système
+.DS_Store
+Thumbs.db
