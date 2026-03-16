@@ -832,10 +832,23 @@
             img.style.setProperty('object-fit', 'contain', 'important');
           });
           root.querySelectorAll('.gm-comment-input').forEach((ta) => {
-            ta.setAttribute('wrap', 'soft');
-            ta.style.setProperty('white-space', 'pre-wrap', 'important');
-            ta.style.setProperty('overflow-wrap', 'anywhere', 'important');
-            ta.style.setProperty('word-break', 'break-word', 'important');
+            const cs = doc.defaultView.getComputedStyle(ta);
+            const box = doc.createElement('div');
+            box.textContent = ta.value || ta.textContent || '';
+            box.style.width = cs.width;
+            box.style.minHeight = cs.height;
+            box.style.padding = cs.padding;
+            box.style.border = cs.border;
+            box.style.borderRadius = cs.borderRadius;
+            box.style.background = cs.backgroundColor || '#fff';
+            box.style.fontFamily = cs.fontFamily;
+            box.style.fontSize = cs.fontSize;
+            box.style.lineHeight = cs.lineHeight;
+            box.style.whiteSpace = 'pre-wrap';
+            box.style.overflowWrap = 'anywhere';
+            box.style.wordBreak = 'break-word';
+            box.style.color = '#000';
+            ta.replaceWith(box);
           });
           const nodes = root.querySelectorAll('*');
           nodes.forEach((el) => {
@@ -850,10 +863,21 @@
           });
         }
       }).then(canvas => {
+        const a3Portrait = { width: 2480, height: 3508 };
+        const a3Landscape = { width: 3508, height: 2480 };
+        const isLandscape = canvas.width >= canvas.height;
+        const target = isLandscape ? a3Landscape : a3Portrait;
+        const a3Canvas = document.createElement('canvas');
+        a3Canvas.width = target.width;
+        a3Canvas.height = target.height;
+        const a3Ctx = a3Canvas.getContext('2d');
+        a3Ctx.fillStyle = '#ffffff';
+        a3Ctx.fillRect(0, 0, a3Canvas.width, a3Canvas.height);
+        a3Ctx.drawImage(canvas, 0, 0, a3Canvas.width, a3Canvas.height);
         const link = document.createElement('a');
         const date = new Date().toISOString().split('T')[0];
         link.download = `cbco_usine_dashboard_${date}.png`;
-        link.href = canvas.toDataURL('image/png');
+        link.href = a3Canvas.toDataURL('image/png');
         link.click();
       }).catch(() => {
         alert('❌ Erreur lors de la génération de l’image.');
