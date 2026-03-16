@@ -235,12 +235,13 @@ function parseGMExcel(cfg) {
       year, week,
       m3:              toNum(m3Raw),
       hours:           toNum(row[3]),   // D : Heures MO
-      tempsBeton:      toNum(row[5]),   // F : Heures béton
-      tempsAciers:     toNum(row[6]),   // G : Heures acier
-      tempsChargement: toNum(row[7]),   // H : Heures Chargement
-      tempsCentrale:   toNum(row[8]),   // I : Heures Centrale à béton
-      qtAcierFaconne:  toNum(row[9]),   // J : Qté Acier façonné (T)
-      comment:         row[15] ? String(row[15]).trim() : ''  // P : Commentaire
+      objectifRatio:   toNum(row[5]),   // F : Objectif h/m³
+      tempsBeton:      toNum(row[6]),   // G : Heures béton
+      tempsAciers:     toNum(row[7]),   // H : Heures acier
+      tempsChargement: toNum(row[8]),   // I : Heures Chargement
+      tempsCentrale:   toNum(row[9]),   // J : Heures Centrale à béton
+      qtAcierFaconne:  toNum(row[10]),  // K : Qté Acier façonné (T)
+      comment:         row[16] ? String(row[16]).trim() : ''  // Q : Commentaire
     });
   }
   return data;
