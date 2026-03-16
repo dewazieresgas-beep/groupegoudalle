@@ -836,14 +836,19 @@
           // Agrandir textes sécurité & qualité
           const cards = root.querySelectorAll(':scope > .card');
           cards.forEach((card) => {
-            card.querySelectorAll('h2').forEach(h2 => { h2.style.fontSize = '1.8em'; });
-            card.querySelectorAll('td').forEach(td => { td.style.fontSize = '1.15em'; td.style.padding = '8px 12px'; });
-            card.querySelectorAll('[style*="font-size:0.85em"]').forEach(el => { el.style.fontSize = '1.1em'; });
-            card.querySelectorAll('[style*="font-size:0.82em"]').forEach(el => { el.style.fontSize = '1.05em'; });
-            card.querySelectorAll('[style*="font-size:0.95em"]').forEach(el => { el.style.fontSize = '1.15em'; });
-            card.querySelectorAll('[style*="font-size:1.1em"]').forEach(el => { el.style.fontSize = '1.4em'; });
-            card.querySelectorAll('[style*="font-size:2em"]').forEach(el => { el.style.fontSize = '2.6em'; });
-            card.querySelectorAll('[style*="font-size:1.5em"]').forEach(el => { el.style.fontSize = '2em'; });
+            card.style.padding = '14px 16px';
+            card.querySelectorAll('.card-body').forEach(cb => { cb.style.padding = '14px 16px'; });
+            card.querySelectorAll('h2').forEach(h2 => { h2.style.fontSize = '1.6em'; });
+            card.querySelectorAll('td').forEach(td => { td.style.fontSize = '1.1em'; td.style.padding = '6px 10px'; });
+            card.querySelectorAll('[style*="font-size:0.85em"]').forEach(el => { el.style.fontSize = '1em'; });
+            card.querySelectorAll('[style*="font-size:0.82em"]').forEach(el => { el.style.fontSize = '0.95em'; });
+            card.querySelectorAll('[style*="font-size:0.95em"]').forEach(el => { el.style.fontSize = '1.05em'; });
+            card.querySelectorAll('[style*="font-size:1.1em"]').forEach(el => { el.style.fontSize = '1.25em'; });
+            card.querySelectorAll('[style*="font-size:2em"]').forEach(el => { el.style.fontSize = '2.2em'; });
+            card.querySelectorAll('[style*="font-size:1.5em"]').forEach(el => { el.style.fontSize = '1.7em'; });
+            // Padding encarts sécurité/qualité
+            card.querySelectorAll('[style*="border-radius:10px"]').forEach(el => { el.style.padding = '12px'; });
+            card.querySelectorAll('[style*="border-radius:8px"]').forEach(el => { el.style.padding = '10px'; });
           });
 
           // Collecter les paires header+section machine (skip le premier gm-header = titre page)
@@ -887,7 +892,7 @@
               const container = pair.section.querySelector('.gm-main-container');
               if (container) {
                 container.style.display = 'grid';
-                container.style.gridTemplateColumns = '1fr 2fr auto';
+                container.style.gridTemplateColumns = 'minmax(180px, auto) 1fr auto';
                 container.style.gap = '10px';
                 container.style.marginBottom = '0';
                 container.style.alignItems = 'stretch';
@@ -898,12 +903,15 @@
               if (kpiCol) {
                 kpiCol.style.height = 'auto';
                 kpiCol.style.gap = '6px';
+                kpiCol.style.minWidth = '0';
                 kpiCol.querySelectorAll('.gm-kpi-card').forEach(card => {
                   card.style.height = 'auto';
                   card.style.padding = '8px 12px';
+                  card.style.overflow = 'hidden';
+                  card.style.wordBreak = 'break-word';
                 });
-                kpiCol.querySelectorAll('.gm-kpi-value').forEach(v => { v.style.fontSize = '28px'; });
-                kpiCol.querySelectorAll('.gm-kpi-label').forEach(l => { l.style.fontSize = '12px'; l.style.marginBottom = '3px'; });
+                kpiCol.querySelectorAll('.gm-kpi-value').forEach(v => { v.style.fontSize = '26px'; v.style.overflowWrap = 'anywhere'; });
+                kpiCol.querySelectorAll('.gm-kpi-label').forEach(l => { l.style.fontSize = '11px'; l.style.marginBottom = '3px'; });
               }
 
               // Graphique
