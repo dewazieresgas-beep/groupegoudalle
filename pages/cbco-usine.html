@@ -918,16 +918,17 @@
                 chartContainer.style.minHeight = '0';
               }
 
-              // Smiley + commentaire compacts
+              // Smiley + commentaire alignés
               const indicatorCol = pair.section.querySelector('.gm-indicator-column');
               if (indicatorCol) {
                 indicatorCol.style.height = 'auto';
-                indicatorCol.style.gap = '6px';
+                indicatorCol.style.gap = '8px';
+                indicatorCol.style.justifyContent = 'flex-start';
               }
               const indicatorCard = pair.section.querySelector('.gm-indicator-card');
               if (indicatorCard) {
-                indicatorCard.style.width = '130px';
-                indicatorCard.style.height = '130px';
+                indicatorCard.style.width = '200px';
+                indicatorCard.style.height = '200px';
               }
 
               wrapper.appendChild(pair.section);
