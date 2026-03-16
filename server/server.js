@@ -270,29 +270,36 @@ function applyExcelDataToKpis(data) {
 let gmWatcher = null;
 
 function startGMWatcher(cfg) {
-  if (gmWatcher) { gmWatcher.stop(); gmWatcher = null; }
+  if (gmWatcher) { clearInterval(gmWatcher); gmWatcher = null; }
   const excelPath = path.join(cfg.folder, cfg.filename);
   if (!fs.existsSync(excelPath)) {
     console.log(`[GM-Watch] Fichier introuvable, surveillance impossible : ${excelPath}`);
     return;
   }
-  // fs.watchFile utilise le polling (compatible réseau/lecteurs mappés)
-  fs.watchFile(excelPath, { interval: 10000 }, (curr, prev) => {
-    if (curr.mtimeMs !== prev.mtimeMs) {
-      console.log(`[GM-Watch] Modification détectée dans ${cfg.filename}, import automatique...`);
-      try {
-        const data = parseGMExcel(cfg);
-        const result = applyExcelDataToKpis(data);
-        const cfg2 = dbGet('gm_excel_config', {});
-        dbSet('gm_excel_config', { ...cfg2, lastSync: new Date().toISOString(), lastSyncResult: result });
-        console.log(`[GM-Watch] Import OK — ${result.added} ajouté(s), ${result.updated} mis à jour`);
-      } catch (e) {
-        console.error(`[GM-Watch] Erreur : ${e.message}`);
+  let lastMtime = fs.statSync(excelPath).mtimeMs;
+  // Polling toutes les 30s (plus fiable que fs.watchFile sur lecteur réseau + Excel)
+  gmWatcher = setInterval(() => {
+    try {
+      if (!fs.existsSync(excelPath)) return;
+      const mtime = fs.statSync(excelPath).mtimeMs;
+      if (mtime !== lastMtime) {
+        lastMtime = mtime;
+        console.log(`[GM-Watch] Modification détectée dans ${cfg.filename}, import automatique...`);
+        try {
+          const data = parseGMExcel(cfg);
+          const result = applyExcelDataToKpis(data);
+          const cfg2 = dbGet('gm_excel_config', {});
+          dbSet('gm_excel_config', { ...cfg2, lastSync: new Date().toISOString(), lastSyncResult: result });
+          console.log(`[GM-Watch] Import OK — ${result.added} ajouté(s), ${result.updated} mis à jour`);
+        } catch (e) {
+          console.error(`[GM-Watch] Erreur lecture : ${e.message}`);
+        }
       }
+    } catch (e) {
+      console.error(`[GM-Watch] Erreur stat : ${e.message}`);
     }
-  });
-  gmWatcher = { stop: () => fs.unwatchFile(excelPath) };
-  console.log(`[GM-Watch] Surveillance active : ${excelPath}`);
+  }, 30000);
+  console.log(`[GM-Watch] Surveillance active (polling 30s) : ${excelPath}`);
 }
 
 // Au démarrage : reprendre la surveillance si une config existait déjà
@@ -331,7 +338,7 @@ app.put('/api/gm-excel-config', (req, res) => {
 
 // Désynchroniser (arrêter la surveillance)
 app.delete('/api/gm-excel-config', (req, res) => {
-  if (gmWatcher) { gmWatcher.stop(); gmWatcher = null; }
+  if (gmWatcher) { clearInterval(gmWatcher); gmWatcher = null; }
   dbSet('gm_excel_config', null);
   res.json({ success: true });
 });

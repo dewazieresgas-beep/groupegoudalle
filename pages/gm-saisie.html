@@ -24,54 +24,45 @@
 
       <div id="pageMessage" class="alert" style="display:none;"></div>
 
-      <!-- ═══ BLOC : PAS DE CONFIG ═══ -->
-      <div id="blockNoConfig" class="card" style="display:none;">
-        <div class="card-title"><h2>🔗 Connecter un fichier Excel</h2></div>
+      <!-- ═══ BLOC : CONFIG (formulaire unique, verrouillé après connexion) ═══ -->
+      <div id="blockConfig" class="card">
+        <div class="card-title">
+          <h2 id="cfgCardTitle">🔗 Connexion fichier Excel</h2>
+        </div>
         <div class="card-body">
-          <p style="color:var(--text-light); margin-bottom:20px;">
-            Renseignez les informations du fichier Excel. Une fois connecté, les données se mettront à jour
-            automatiquement dès qu'une modification est enregistrée dans le fichier.
-          </p>
-          <form onsubmit="handleConnect(event)">
+          <form onsubmit="handleConnect(event)" id="cfgForm">
             <div class="form-group">
               <label for="cfgFolder">📁 Chemin du dossier</label>
-              <input type="text" id="cfgFolder" placeholder="ex: Z:\03-BE\Projet en cours\Gaspard" required>
+              <input type="text" id="cfgFolder" value="Z:\03-BE\Projet en cours\Gaspard" required>
             </div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
               <div class="form-group">
                 <label for="cfgFilename">📄 Nom du fichier</label>
-                <input type="text" id="cfgFilename" placeholder="ex: INDICATEURS Goudalle Maçonnerie.xlsx" required>
+                <input type="text" id="cfgFilename" value="INDICATEURS Goudalle Maçonnerie.xlsx" required>
               </div>
               <div class="form-group">
                 <label for="cfgSheet">📋 Nom de la feuille</label>
-                <input type="text" id="cfgSheet" placeholder="ex: Données indicateurs" required>
+                <input type="text" id="cfgSheet" value="Données indicateurs" required>
               </div>
             </div>
-            <button type="submit" id="btnConnect" class="btn btn-success" style="width:100%; padding:14px; font-size:15px;">
-              🔗 Connecter et synchroniser
-            </button>
+            <div id="cfgLastSync" style="display:none; font-size:13px; color:var(--text-light); margin-bottom:12px;">
+              Dernière sync : <strong id="cfgDisplayLastSync">—</strong>
+            </div>
+            <div style="display:flex; gap:10px;">
+              <button type="submit" id="btnConnect" class="btn btn-success" style="flex:1; padding:14px; font-size:15px;">
+                🔗 Connecter et synchroniser
+              </button>
+              <button type="button" id="btnModifier" class="btn btn-secondary" style="display:none;" onclick="unlockConfig()">
+                ✏️ Modifier
+              </button>
+              <button type="button" id="btnForceSync" class="btn btn-primary" style="display:none;" onclick="handleForceSync()">
+                🔄 Sync maintenant
+              </button>
+              <button type="button" id="btnDesync" class="btn btn-danger" style="display:none;" onclick="handleDesync()">
+                🔌 Désynchroniser
+              </button>
+            </div>
           </form>
-        </div>
-      </div>
-
-      <!-- ═══ BLOC : CONFIG ACTIVE ═══ -->
-      <div id="blockConfig" class="card" style="display:none;">
-        <div class="card-title"><h2>✅ Synchronisation active</h2></div>
-        <div class="card-body">
-          <div style="display:grid; grid-template-columns:1fr auto; gap:16px; align-items:center;">
-            <div>
-              <div style="font-size:14px; color:var(--text-light);">Fichier surveillé :</div>
-              <div style="font-weight:600; margin:4px 0;" id="cfgDisplayPath"></div>
-              <div style="font-size:13px; color:var(--text-light);">Feuille : <strong id="cfgDisplaySheet"></strong></div>
-              <div style="font-size:13px; color:var(--text-light); margin-top:6px;">
-                Dernière sync : <strong id="cfgDisplayLastSync">—</strong>
-              </div>
-            </div>
-            <div style="display:flex; flex-direction:column; gap:8px;">
-              <button class="btn btn-primary" onclick="handleForceSync()">🔄 Synchroniser maintenant</button>
-              <button class="btn btn-danger" onclick="handleDesync()">🔌 Désynchroniser</button>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -148,21 +139,33 @@
       window.open(`${getBasePath()}pages/gm.html?download=1`, '_blank');
     }
 
-    // ── Affiche le bon bloc selon si une config existe ──
-    function renderConfigState(cfg) {
-      const noConfig = document.getElementById('blockNoConfig');
-      const hasConfig = document.getElementById('blockConfig');
-      if (!cfg || !cfg.active) {
-        noConfig.style.display = 'block';
-        hasConfig.style.display = 'none';
-      } else {
-        noConfig.style.display = 'none';
-        hasConfig.style.display = 'block';
-        document.getElementById('cfgDisplayPath').textContent = `${cfg.folder}\\${cfg.filename}`;
-        document.getElementById('cfgDisplaySheet').textContent = cfg.sheet;
-        document.getElementById('cfgDisplayLastSync').textContent = cfg.lastSync
-          ? new Date(cfg.lastSync).toLocaleString('fr-FR') : '—';
+    // ── Verrouille le formulaire après connexion réussie ──
+    function lockConfig(cfg) {
+      ['cfgFolder','cfgFilename','cfgSheet'].forEach(id => {
+        document.getElementById(id).disabled = true;
+      });
+      document.getElementById('btnConnect').style.display = 'none';
+      document.getElementById('btnModifier').style.display = 'inline-flex';
+      document.getElementById('btnForceSync').style.display = 'inline-flex';
+      document.getElementById('btnDesync').style.display = 'inline-flex';
+      document.getElementById('cfgCardTitle').textContent = '✅ Synchronisation active';
+      document.getElementById('cfgLastSync').style.display = 'block';
+      if (cfg && cfg.lastSync) {
+        document.getElementById('cfgDisplayLastSync').textContent = new Date(cfg.lastSync).toLocaleString('fr-FR');
       }
+    }
+
+    // ── Déverrouille le formulaire pour modification ──
+    function unlockConfig() {
+      ['cfgFolder','cfgFilename','cfgSheet'].forEach(id => {
+        document.getElementById(id).disabled = false;
+      });
+      document.getElementById('btnConnect').style.display = 'inline-flex';
+      document.getElementById('btnModifier').style.display = 'none';
+      document.getElementById('btnForceSync').style.display = 'none';
+      document.getElementById('btnDesync').style.display = 'none';
+      document.getElementById('cfgCardTitle').textContent = '✏️ Modifier la connexion';
+      document.getElementById('cfgLastSync').style.display = 'none';
     }
 
     // ── Charger la config depuis le serveur ──
@@ -170,10 +173,13 @@
       try {
         const res = await fetch(SERVER_URL + '/gm-excel-config', { cache: 'no-store' });
         const cfg = await res.json();
-        renderConfigState(cfg);
-      } catch {
-        renderConfigState(null);
-      }
+        if (cfg && cfg.active) {
+          document.getElementById('cfgFolder').value   = cfg.folder;
+          document.getElementById('cfgFilename').value = cfg.filename;
+          document.getElementById('cfgSheet').value    = cfg.sheet;
+          lockConfig(cfg);
+        }
+      } catch { /* pas de config, formulaire reste déverrouillé */ }
     }
 
     // ── Connecter et faire le premier import ──
@@ -194,9 +200,8 @@
         const result = await res.json();
         if (!result.success) { showMessage(`❌ ${result.error}`, 'error'); return; }
         showMessage(`✅ Connexion réussie ! ${result.result.added} semaine(s) ajoutée(s), ${result.result.updated} mise(s) à jour. La synchronisation est maintenant automatique.`, 'success');
-        await loadConfig();
+        lockConfig({ folder: body.folder, filename: body.filename, sheet: body.sheet, lastSync: new Date().toISOString() });
         loadKPIs();
-      } catch (e) {
         showMessage(`❌ Erreur : ${e.message}`, 'error');
       } finally {
         btn.textContent = '🔗 Connecter et synchroniser'; btn.disabled = false;
@@ -210,7 +215,7 @@
         const result = await res.json();
         if (!result.success) { showMessage(`❌ ${result.error}`, 'error'); return; }
         showMessage(`✅ Synchronisation effectuée — ${result.result.added} ajouté(s), ${result.result.updated} mis à jour.`, 'success');
-        await loadConfig();
+        document.getElementById('cfgDisplayLastSync').textContent = new Date().toLocaleString('fr-FR');
         loadKPIs();
       } catch (e) {
         showMessage(`❌ Erreur : ${e.message}`, 'error');
@@ -223,7 +228,7 @@
       try {
         await fetch(SERVER_URL + '/gm-excel-config', { method: 'DELETE' });
         showMessage('🔌 Désynchronisé. Vous pouvez connecter un nouveau fichier.', 'success');
-        renderConfigState(null);
+        unlockConfig();
       } catch (e) {
         showMessage(`❌ Erreur : ${e.message}`, 'error');
       }
