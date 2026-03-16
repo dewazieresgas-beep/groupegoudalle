@@ -428,7 +428,7 @@
             options: {
               responsive: true,
               plugins: {
-                legend: { display: false },
+                legend: { display: true, position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
                 tooltip: {
                   callbacks: {
                     label: (ctx) => {
@@ -450,7 +450,6 @@
                   if (val <= 0) return;
                   const meta = chart.getDatasetMeta(0).data[i];
                   const pct = ((val / total) * 100).toFixed(0);
-                  // Position au centre de la part pour le pourcentage
                   const { x, y } = meta.tooltipPosition();
                   ctx2.save();
                   ctx2.font = 'bold 13px sans-serif';
@@ -458,33 +457,6 @@
                   ctx2.textAlign = 'center';
                   ctx2.textBaseline = 'middle';
                   ctx2.fillText(pct + '%', x, y);
-                  ctx2.restore();
-
-                  // Label extérieur avec ligne
-                  const centerX = (chart.chartArea.left + chart.chartArea.right) / 2;
-                  const centerY = (chart.chartArea.top + chart.chartArea.bottom) / 2;
-                  const angle = (meta.startAngle + meta.endAngle) / 2;
-                  const outerRadius = meta.outerRadius;
-                  const midX = centerX + Math.cos(angle) * (outerRadius + 14);
-                  const midY = centerY + Math.sin(angle) * (outerRadius + 14);
-                  const endX = centerX + Math.cos(angle) * (outerRadius + 40);
-                  const endY = centerY + Math.sin(angle) * (outerRadius + 40);
-
-                  ctx2.save();
-                  ctx2.beginPath();
-                  ctx2.moveTo(centerX + Math.cos(angle) * outerRadius, centerY + Math.sin(angle) * outerRadius);
-                  ctx2.lineTo(midX, midY);
-                  ctx2.lineTo(endX, endY);
-                  ctx2.strokeStyle = '#666';
-                  ctx2.lineWidth = 1;
-                  ctx2.stroke();
-
-                  ctx2.font = '12px sans-serif';
-                  ctx2.fillStyle = '#333';
-                  ctx2.textBaseline = 'middle';
-                  ctx2.textAlign = Math.cos(angle) >= 0 ? 'left' : 'right';
-                  const textX = endX + (Math.cos(angle) >= 0 ? 4 : -4);
-                  ctx2.fillText(labels[i], textX, endY);
                   ctx2.restore();
                 });
               }
