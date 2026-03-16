@@ -839,283 +839,163 @@
       "details": "Import productivité usine: 255 semaines (remplacement complet)",
       "user": "acgoudalle",
       "timestamp": "2026-03-16T08:40:09.264Z"
+    },
+    {
+      "id": 1773665562978,
+      "action": "LOGIN",
+      "details": "Connexion de acgoudalle",
+      "user": "acgoudalle",
+      "timestamp": "2026-03-16T12:52:42.978Z"
+    },
+    {
+      "id": 1773665575639,
+      "action": "KPI_DELETED",
+      "details": "Indicateur S08/2026 supprimé",
+      "user": "acgoudalle",
+      "timestamp": "2026-03-16T12:52:55.639Z"
+    },
+    {
+      "id": 1773665579933,
+      "action": "KPI_DELETED",
+      "details": "Indicateur S07/2026 supprimé",
+      "user": "acgoudalle",
+      "timestamp": "2026-03-16T12:52:59.933Z"
+    },
+    {
+      "id": 1773665581413,
+      "action": "KPI_DELETED",
+      "details": "Indicateur S06/2026 supprimé",
+      "user": "acgoudalle",
+      "timestamp": "2026-03-16T12:53:01.413Z"
+    },
+    {
+      "id": 1773665582919,
+      "action": "KPI_DELETED",
+      "details": "Indicateur S05/2026 supprimé",
+      "user": "acgoudalle",
+      "timestamp": "2026-03-16T12:53:02.919Z"
+    },
+    {
+      "id": 1773665584519,
+      "action": "KPI_DELETED",
+      "details": "Indicateur S04/2026 supprimé",
+      "user": "acgoudalle",
+      "timestamp": "2026-03-16T12:53:04.519Z"
+    },
+    {
+      "id": 1773665586255,
+      "action": "KPI_DELETED",
+      "details": "Indicateur S03/2026 supprimé",
+      "user": "acgoudalle",
+      "timestamp": "2026-03-16T12:53:06.255Z"
+    },
+    {
+      "id": 1773665587527,
+      "action": "KPI_DELETED",
+      "details": "Indicateur S02/2026 supprimé",
+      "user": "acgoudalle",
+      "timestamp": "2026-03-16T12:53:07.527Z"
+    },
+    {
+      "id": 1773665588845,
+      "action": "KPI_DELETED",
+      "details": "Indicateur S01/2026 supprimé",
+      "user": "acgoudalle",
+      "timestamp": "2026-03-16T12:53:08.845Z"
+    },
+    {
+      "id": 1773665590947,
+      "action": "KPI_DELETED",
+      "details": "Indicateur S52/2025 supprimé",
+      "user": "acgoudalle",
+      "timestamp": "2026-03-16T12:53:10.947Z"
+    },
+    {
+      "id": 1773665592099,
+      "action": "KPI_DELETED",
+      "details": "Indicateur S51/2025 supprimé",
+      "user": "acgoudalle",
+      "timestamp": "2026-03-16T12:53:12.099Z"
+    },
+    {
+      "id": 1773665593269,
+      "action": "KPI_DELETED",
+      "details": "Indicateur S50/2025 supprimé",
+      "user": "acgoudalle",
+      "timestamp": "2026-03-16T12:53:13.269Z"
+    },
+    {
+      "id": 1773665594662,
+      "action": "KPI_DELETED",
+      "details": "Indicateur S49/2025 supprimé",
+      "user": "acgoudalle",
+      "timestamp": "2026-03-16T12:53:14.662Z"
+    },
+    {
+      "id": 1773665596653,
+      "action": "KPI_DELETED",
+      "details": "Indicateur S48/2025 supprimé",
+      "user": "acgoudalle",
+      "timestamp": "2026-03-16T12:53:16.653Z"
+    },
+    {
+      "id": 1773665600573,
+      "action": "KPI_DELETED",
+      "details": "Indicateur S47/2025 supprimé",
+      "user": "acgoudalle",
+      "timestamp": "2026-03-16T12:53:20.573Z"
+    },
+    {
+      "id": 1773665602861,
+      "action": "KPI_DELETED",
+      "details": "Indicateur S46/2025 supprimé",
+      "user": "acgoudalle",
+      "timestamp": "2026-03-16T12:53:22.861Z"
+    },
+    {
+      "id": 1773665604898,
+      "action": "KPI_DELETED",
+      "details": "Indicateur S45/2025 supprimé",
+      "user": "acgoudalle",
+      "timestamp": "2026-03-16T12:53:24.898Z"
+    },
+    {
+      "id": 1773665606515,
+      "action": "KPI_DELETED",
+      "details": "Indicateur S44/2025 supprimé",
+      "user": "acgoudalle",
+      "timestamp": "2026-03-16T12:53:26.515Z"
+    },
+    {
+      "id": 1773665608361,
+      "action": "KPI_DELETED",
+      "details": "Indicateur S43/2025 supprimé",
+      "user": "acgoudalle",
+      "timestamp": "2026-03-16T12:53:28.361Z"
+    },
+    {
+      "id": 1773665610204,
+      "action": "KPI_DELETED",
+      "details": "Indicateur S42/2025 supprimé",
+      "user": "acgoudalle",
+      "timestamp": "2026-03-16T12:53:30.204Z"
+    },
+    {
+      "id": 1773665611797,
+      "action": "KPI_DELETED",
+      "details": "Indicateur S41/2025 supprimé",
+      "user": "acgoudalle",
+      "timestamp": "2026-03-16T12:53:31.797Z"
+    },
+    {
+      "id": 1773665613403,
+      "action": "KPI_DELETED",
+      "details": "Indicateur S40/2025 supprimé",
+      "user": "acgoudalle",
+      "timestamp": "2026-03-16T12:53:33.403Z"
     }
   ],
-  "kpis": [
-    {
-      "id": 1773386132573,
-      "year": 2025,
-      "week": 40,
-      "m3": 11.5,
-      "hours": 120,
-      "comment": "...",
-      "status": "published",
-      "createdAt": "2026-03-13T07:15:32.573Z",
-      "createdBy": "acgoudalle",
-      "updatedAt": "2026-03-13T07:15:32.573Z",
-      "updatedBy": "acgoudalle"
-    },
-    {
-      "id": 1773386153670,
-      "year": 2025,
-      "week": 41,
-      "m3": 16.5,
-      "hours": 120.5,
-      "comment": "...",
-      "status": "published",
-      "createdAt": "2026-03-13T07:15:53.670Z",
-      "createdBy": "acgoudalle",
-      "updatedAt": "2026-03-13T07:15:53.670Z",
-      "updatedBy": "acgoudalle"
-    },
-    {
-      "id": 1773386209111,
-      "year": 2025,
-      "week": 42,
-      "m3": 19.5,
-      "hours": 119.5,
-      "comment": "...",
-      "status": "published",
-      "createdAt": "2026-03-13T07:16:49.111Z",
-      "createdBy": "acgoudalle",
-      "updatedAt": "2026-03-13T07:16:49.112Z",
-      "updatedBy": "acgoudalle"
-    },
-    {
-      "id": 1773386232774,
-      "year": 2025,
-      "week": 43,
-      "m3": 13.8,
-      "hours": 119,
-      "comment": "...",
-      "status": "published",
-      "createdAt": "2026-03-13T07:17:12.774Z",
-      "createdBy": "acgoudalle",
-      "updatedAt": "2026-03-13T07:17:12.774Z",
-      "updatedBy": "acgoudalle"
-    },
-    {
-      "id": 1773386263688,
-      "year": 2025,
-      "week": 44,
-      "m3": 14,
-      "hours": 119.5,
-      "comment": "...",
-      "status": "published",
-      "createdAt": "2026-03-13T07:17:43.688Z",
-      "createdBy": "acgoudalle",
-      "updatedAt": "2026-03-13T07:17:43.688Z",
-      "updatedBy": "acgoudalle"
-    },
-    {
-      "id": 1773386278802,
-      "year": 2025,
-      "week": 45,
-      "m3": 17.3,
-      "hours": 120,
-      "comment": "...",
-      "status": "published",
-      "createdAt": "2026-03-13T07:17:58.802Z",
-      "createdBy": "acgoudalle",
-      "updatedAt": "2026-03-13T07:17:58.802Z",
-      "updatedBy": "acgoudalle"
-    },
-    {
-      "id": 1773386319084,
-      "year": 2025,
-      "week": 46,
-      "m3": 11.8,
-      "hours": 73,
-      "comment": "...",
-      "status": "published",
-      "createdAt": "2026-03-13T07:18:39.084Z",
-      "createdBy": "acgoudalle",
-      "updatedAt": "2026-03-13T07:18:39.084Z",
-      "updatedBy": "acgoudalle"
-    },
-    {
-      "id": 1773386334092,
-      "year": 2025,
-      "week": 47,
-      "m3": 23.5,
-      "hours": 124,
-      "comment": "...",
-      "status": "published",
-      "createdAt": "2026-03-13T07:18:54.092Z",
-      "createdBy": "acgoudalle",
-      "updatedAt": "2026-03-13T07:18:54.092Z",
-      "updatedBy": "acgoudalle"
-    },
-    {
-      "id": 1773386365975,
-      "year": 2025,
-      "week": 48,
-      "m3": 27.5,
-      "hours": 120,
-      "comment": "...",
-      "status": "published",
-      "createdAt": "2026-03-13T07:19:25.975Z",
-      "createdBy": "acgoudalle",
-      "updatedAt": "2026-03-13T07:19:25.975Z",
-      "updatedBy": "acgoudalle"
-    },
-    {
-      "id": 1773386384095,
-      "year": 2025,
-      "week": 49,
-      "m3": 23.8,
-      "hours": 124,
-      "comment": "...",
-      "status": "published",
-      "createdAt": "2026-03-13T07:19:44.095Z",
-      "createdBy": "acgoudalle",
-      "updatedAt": "2026-03-13T07:19:44.095Z",
-      "updatedBy": "acgoudalle"
-    },
-    {
-      "id": 1773386424153,
-      "year": 2025,
-      "week": 50,
-      "m3": 21,
-      "hours": 92,
-      "comment": "...",
-      "status": "published",
-      "createdAt": "2026-03-13T07:20:24.153Z",
-      "createdBy": "acgoudalle",
-      "updatedAt": "2026-03-13T07:20:43.024Z",
-      "updatedBy": "acgoudalle"
-    },
-    {
-      "id": 1773386473653,
-      "year": 2025,
-      "week": 51,
-      "m3": 18.65,
-      "hours": 123,
-      "comment": "...",
-      "status": "published",
-      "createdAt": "2026-03-13T07:21:13.653Z",
-      "createdBy": "acgoudalle",
-      "updatedAt": "2026-03-13T07:21:13.653Z",
-      "updatedBy": "acgoudalle"
-    },
-    {
-      "id": 1773386498711,
-      "year": 2025,
-      "week": 52,
-      "m3": 0,
-      "hours": 0,
-      "comment": "Vacances de Noël !",
-      "status": "published",
-      "createdAt": "2026-03-13T07:21:38.711Z",
-      "createdBy": "acgoudalle",
-      "updatedAt": "2026-03-13T07:21:38.711Z",
-      "updatedBy": "acgoudalle"
-    },
-    {
-      "id": 1773386507126,
-      "year": 2026,
-      "week": 1,
-      "m3": 0,
-      "hours": 0,
-      "comment": "Vacances de Noël !",
-      "status": "published",
-      "createdAt": "2026-03-13T07:21:47.126Z",
-      "createdBy": "acgoudalle",
-      "updatedAt": "2026-03-13T07:21:47.126Z",
-      "updatedBy": "acgoudalle"
-    },
-    {
-      "id": 1773386581768,
-      "year": 2026,
-      "week": 3,
-      "m3": 27.5,
-      "hours": 122.5,
-      "comment": "...",
-      "status": "published",
-      "createdAt": "2026-03-13T07:23:01.768Z",
-      "createdBy": "acgoudalle",
-      "updatedAt": "2026-03-13T07:23:01.768Z",
-      "updatedBy": "acgoudalle"
-    },
-    {
-      "id": 1773386663834,
-      "year": 2026,
-      "week": 6,
-      "m3": 30,
-      "hours": 121,
-      "comment": "...",
-      "status": "published",
-      "createdAt": "2026-03-13T07:24:23.834Z",
-      "createdBy": "acgoudalle",
-      "updatedAt": "2026-03-13T07:24:23.834Z",
-      "updatedBy": "acgoudalle"
-    },
-    {
-      "id": 1773386679794,
-      "year": 2026,
-      "week": 7,
-      "m3": 30,
-      "hours": 148,
-      "comment": "...",
-      "status": "published",
-      "createdAt": "2026-03-13T07:24:39.794Z",
-      "createdBy": "acgoudalle",
-      "updatedAt": "2026-03-13T07:24:39.794Z",
-      "updatedBy": "acgoudalle"
-    },
-    {
-      "id": 1773386563693,
-      "year": 2026,
-      "week": 2,
-      "m3": 10.7,
-      "hours": 101,
-      "comment": "Retour de vacances, les T°C négatives, La centrale a gelé",
-      "status": "published",
-      "createdAt": "2026-03-13T07:22:43.693Z",
-      "createdBy": "acgoudalle",
-      "updatedAt": "2026-03-13T07:25:38.691Z",
-      "updatedBy": "acgoudalle"
-    },
-    {
-      "id": 1773386595568,
-      "year": 2026,
-      "week": 4,
-      "m3": 22,
-      "hours": 129,
-      "comment": "Manque de puissance petit coulage, le temps de résoudre le problème",
-      "status": "published",
-      "createdAt": "2026-03-13T07:23:15.568Z",
-      "createdBy": "acgoudalle",
-      "updatedAt": "2026-03-13T07:26:05.273Z",
-      "updatedBy": "acgoudalle"
-    },
-    {
-      "id": 1773386652756,
-      "year": 2026,
-      "week": 5,
-      "m3": 22.6,
-      "hours": 145,
-      "comment": "Trop d'heures effectués par rapport à la quantité de béton coulé",
-      "status": "published",
-      "createdAt": "2026-03-13T07:24:12.756Z",
-      "createdBy": "acgoudalle",
-      "updatedAt": "2026-03-13T07:26:26.287Z",
-      "updatedBy": "acgoudalle"
-    },
-    {
-      "id": 1773386695229,
-      "year": 2026,
-      "week": 8,
-      "m3": 30,
-      "hours": 158,
-      "comment": "Accident Fabrice le Mercredi 18/02 --> Arrêt de travail 3 Semaines.\nPrésence de Mickael et Arnaud a l'atelier le vendredi 20/02/2026",
-      "status": "published",
-      "createdAt": "2026-03-13T07:24:55.229Z",
-      "createdBy": "acgoudalle",
-      "updatedAt": "2026-03-13T07:27:32.580Z",
-      "updatedBy": "acgoudalle"
-    }
-  ],
+  "kpis": [],
   "cbco_commercial": [
     {
       "id": "mmno7fq2tpi3e",
