@@ -749,13 +749,13 @@
           const nodes = root.querySelectorAll('*');
           nodes.forEach((el) => {
             if (el.tagName === 'CANVAS' || el.tagName === 'IMG' || el.tagName === 'SVG') return;
-            const inline = (el.getAttribute('style') || '').toLowerCase();
-            if (inline.includes('color:')) return; // conserver les couleurs spécifiques déjà définies
             const cs = doc.defaultView.getComputedStyle(el);
             if (!cs) return;
             const c = cs.color || '';
             if (c.includes('rgb(255, 255, 255)')) return;
-            el.style.color = '#000000';
+            el.style.setProperty('color', '#000000', 'important');
+            el.style.setProperty('opacity', '1', 'important');
+            el.style.setProperty('text-shadow', 'none', 'important');
           });
         }
       }).then(canvas => {
