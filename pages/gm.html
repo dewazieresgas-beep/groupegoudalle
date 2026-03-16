@@ -78,6 +78,19 @@
           <h2>Commentaire de la semaine</h2>
           <textarea id="weekComment" class="gm-comment-input" placeholder="Ajouter un commentaire..." rows="4" readonly></textarea>
         </div>
+
+        <!-- CAMEMBERT RÉPARTITION DU TEMPS -->
+        <div id="timeDistributionSection" style="display:none; margin-top:20px;">
+          <div style="background:#fff; border-radius:8px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+            <h2 style="margin:0 0 15px 0; text-align:center;">Répartition du temps de travail</h2>
+            <div style="display:grid; grid-template-columns: 200px 1fr; gap:20px; align-items:center;">
+              <div id="timeDistributionLegend" style="font-size:14px; line-height:2;"></div>
+              <div style="max-width:350px; margin:0 auto;">
+                <canvas id="timeDistributionChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- SECTION SECONDAIRE - HISTORIQUE -->
@@ -372,6 +385,57 @@
 
       // ===== GÉNÉRATION DU GRAPHIQUE DE TENDANCE =====
       renderTrendChart(published, initialWeeks);
+
+      // ===== CAMEMBERT RÉPARTITION DU TEMPS =====
+      if (published.length > 0) {
+        const last = published[0];
+        const beton = parseFloat(last.tempsBeton) || 0;
+        const aciers = parseFloat(last.tempsAciers) || 0;
+        const chargement = parseFloat(last.tempsChargement) || 0;
+        const centrale = parseFloat(last.tempsCentrale) || 0;
+        const total = beton + aciers + chargement + centrale;
+
+        if (total > 0) {
+          document.getElementById('timeDistributionSection').style.display = 'block';
+          const legendEl = document.getElementById('timeDistributionLegend');
+          legendEl.innerHTML = `
+            <div><strong>Temps</strong> ${last.hours} h</div>
+            <div>Béton: <strong>${beton} h</strong></div>
+            <div>Aciers: <strong>${aciers} h</strong></div>
+            <div>Chargement: <strong>${chargement} h</strong></div>
+            <div>Centrale: <strong>${centrale} h</strong></div>
+          `;
+
+          const pieCtx = document.getElementById('timeDistributionChart').getContext('2d');
+          new Chart(pieCtx, {
+            type: 'pie',
+            data: {
+              labels: ['Béton', 'Aciers', 'Chargement', 'Centrale'],
+              datasets: [{
+                data: [beton, aciers, chargement, centrale],
+                backgroundColor: ['#4472C4', '#ED7D31', '#A5A5A5', '#FFC000'],
+                borderWidth: 1,
+                borderColor: '#fff'
+              }]
+            },
+            options: {
+              responsive: true,
+              plugins: {
+                legend: { display: true, position: 'bottom' },
+                tooltip: {
+                  callbacks: {
+                    label: (ctx) => {
+                      const val = ctx.parsed;
+                      const pct = total > 0 ? ((val / total) * 100).toFixed(0) : 0;
+                      return `${ctx.label}: ${val} h (${pct}%)`;
+                    }
+                  }
+                }
+              }
+            }
+          });
+        }
+      }
 
       // ===== HISTORIQUE DU MOIS DERNIER (4 SEMAINES) =====
       const today = new Date();

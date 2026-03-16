@@ -256,7 +256,7 @@ function getKPIs() {
  * @param {string} status - Statut : 'draft' (brouillon) ou 'published' (publié)
  * @returns {Object} - Indicateur créé/mis à jour
  */
-function saveKPI(year, week, m3, hours, comment, status = 'draft') {
+function saveKPI(year, week, m3, hours, comment, status = 'draft', timeDistribution = null) {
   const kpis = getKPIs();
   
   // Vérifier si un indicateur existe déjà pour cette semaine (mise à jour)
@@ -271,6 +271,10 @@ function saveKPI(year, week, m3, hours, comment, status = 'draft') {
     hours: parseFloat(hours),
     comment,
     status,
+    tempsBeton: timeDistribution?.beton ?? existing?.tempsBeton ?? null,
+    tempsAciers: timeDistribution?.aciers ?? existing?.tempsAciers ?? null,
+    tempsChargement: timeDistribution?.chargement ?? existing?.tempsChargement ?? null,
+    tempsCentrale: timeDistribution?.centrale ?? existing?.tempsCentrale ?? null,
     createdAt: existing?.createdAt || new Date().toISOString(),  // Conserver date création
     createdBy: existing?.createdBy || Auth.getSession().username,
     updatedAt: new Date().toISOString(),  // Mettre à jour la date de modification

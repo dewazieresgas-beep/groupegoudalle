@@ -74,6 +74,28 @@
               <textarea id="comment" placeholder="Décrivez les conditions de travail, les notes importantes, etc." required></textarea>
             </div>
 
+            <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e0e0e0;">
+              <label style="font-weight:600; font-size:14px; margin-bottom:10px; display:block;">⏱️ Répartition du temps de travail (en heures)</label>
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px;">
+                <div class="form-group" style="margin:0;">
+                  <label for="tempsBeton">Béton</label>
+                  <input type="number" id="tempsBeton" step="0.01" placeholder="0" min="0">
+                </div>
+                <div class="form-group" style="margin:0;">
+                  <label for="tempsAciers">Aciers</label>
+                  <input type="number" id="tempsAciers" step="0.01" placeholder="0" min="0">
+                </div>
+                <div class="form-group" style="margin:0;">
+                  <label for="tempsChargement">Chargement</label>
+                  <input type="number" id="tempsChargement" step="0.01" placeholder="0" min="0">
+                </div>
+                <div class="form-group" style="margin:0;">
+                  <label for="tempsCentrale">Centrale à béton</label>
+                  <input type="number" id="tempsCentrale" step="0.01" placeholder="0" min="0">
+                </div>
+              </div>
+            </div>
+
             <div class="form-group">
               <label>
                 <input type="checkbox" id="publish"> ✅ Publier immédiatement
@@ -131,13 +153,17 @@
                 <th>m³</th>
                 <th>Heures</th>
                 <th>h/m³</th>
+                <th>Béton</th>
+                <th>Aciers</th>
+                <th>Chargement</th>
+                <th>Centrale</th>
                 <th>Statut</th>
                 <th>Commentaire</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              <tr><td colspan="7" style="text-align:center; padding: 20px;">Chargement...</td></tr>
+              <tr><td colspan="11" style="text-align:center; padding: 20px;">Chargement...</td></tr>
             </tbody>
           </table>
         </div>
@@ -186,7 +212,13 @@
 
       // ===== ENREGISTREMENT =====
       const status = publish ? 'published' : 'draft';
-      const kpi = saveKPI(year, week, m3, hours, comment, status);
+      const timeDistribution = {
+        beton: parseFloat(document.getElementById('tempsBeton').value) || null,
+        aciers: parseFloat(document.getElementById('tempsAciers').value) || null,
+        chargement: parseFloat(document.getElementById('tempsChargement').value) || null,
+        centrale: parseFloat(document.getElementById('tempsCentrale').value) || null
+      };
+      const kpi = saveKPI(year, week, m3, hours, comment, status, timeDistribution);
 
       showMessage(`✅ Indicateur S${String(week).padStart(2, '0')}/${year} ${status === 'published' ? 'publié' : 'enregistré en brouillon'}`, 'success');
 
@@ -197,6 +229,10 @@
       document.getElementById('hours').value = '';
       document.getElementById('comment').value = '';
       document.getElementById('publish').checked = false;
+      document.getElementById('tempsBeton').value = '';
+      document.getElementById('tempsAciers').value = '';
+      document.getElementById('tempsChargement').value = '';
+      document.getElementById('tempsCentrale').value = '';
       
       // Cacher l'aperçu temps réel
       document.getElementById('realtimePreview').style.display = 'none';
@@ -227,6 +263,10 @@
                 ${ratio !== null ? ratio.toFixed(2) : '—'} ${getSmileyEmoji(smiley)}
               </span>
             </td>
+            <td>${k.tempsBeton != null ? k.tempsBeton : '—'}</td>
+            <td>${k.tempsAciers != null ? k.tempsAciers : '—'}</td>
+            <td>${k.tempsChargement != null ? k.tempsChargement : '—'}</td>
+            <td>${k.tempsCentrale != null ? k.tempsCentrale : '—'}</td>
             <td>
               <span class="badge ${k.status === 'published' ? 'badge-success' : 'badge-warning'}">
                 ${k.status === 'published' ? '✅ Publié' : '📝 Brouillon'}
@@ -244,7 +284,7 @@
 
       // Message si aucun indicateur
       if (kpis.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 20px;">Aucun indicateur créé</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding: 20px;">Aucun indicateur créé</td></tr>`;
       }
     }
 
@@ -262,6 +302,10 @@
         document.getElementById('hours').value = kpi.hours;
         document.getElementById('comment').value = kpi.comment;
         document.getElementById('publish').checked = kpi.status === 'published';
+        document.getElementById('tempsBeton').value = kpi.tempsBeton || '';
+        document.getElementById('tempsAciers').value = kpi.tempsAciers || '';
+        document.getElementById('tempsChargement').value = kpi.tempsChargement || '';
+        document.getElementById('tempsCentrale').value = kpi.tempsCentrale || '';
         
         // Mettre à jour l'aperçu temps réel avec les valeurs chargées
         updateRealtimePreview();
