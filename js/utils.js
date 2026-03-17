@@ -448,7 +448,6 @@ function getSidebar() {
   const accountActive = currentPage === 'account.html' ? ' active' : '';
   items += `
     <a href="${base}pages/account.html" class="sidebar-item${accountActive}">👤 Profil</a>
-    <a href="#" onclick="logoutUser(); return false;" class="sidebar-item logout">🚪 Déconnexion</a>
   `;
 
   return `
@@ -463,7 +462,10 @@ function getSidebar() {
         <nav class="sidebar-nav">
           ${items}
         </nav>
-        <div class="user-badge">${session.displayName}</div>
+        <div class="user-badge">
+          ${session.displayName}
+          <a href="#" onclick="logoutUser(); return false;" style="display:block; margin-top:6px; font-size:11px; color:#b85c5c; text-decoration:none; font-weight:600;">🚪 Déconnexion</a>
+        </div>
       </div>
     </aside>
     <script>
