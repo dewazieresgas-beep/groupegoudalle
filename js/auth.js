@@ -678,22 +678,35 @@ const Auth = {
 
   /**
    * Vérifie qu'un utilisateur a une permission, sinon redirige vers page d'erreur
-   * À utiliser pour protéger les pages selon les rôles
+   * Attend que les données serveur soient chargées avant de vérifier les permissions
+   * (évite les faux refus quand les customPermissions viennent du serveur)
    * @param {string} permission - Permission requise (ex: 'users_admin')
-   * @returns {boolean} - true si autorisé, false sinon
    */
   requirePermission(permission) {
     if (!this.isConnected()) {
       window.location.href = this._getLoginUrl();
       return false;
     }
-    if (!this.hasAccess(permission)) {
-      const base = window.location.pathname.includes('/pages/') ? '' : 'pages/';
-      window.location.href = `./${base}error-access.html`;
-      return false;
-    }
     this.initActivityTracking();
-    return true;
+
+    const check = () => {
+      if (!this.hasAccess(permission)) {
+        const base = window.location.pathname.includes('/pages/') ? '' : 'pages/';
+        window.location.href = `./${base}error-access.html`;
+      } else {
+        // Afficher le contenu maintenant que la permission est confirmée
+        document.documentElement.style.visibility = '';
+      }
+    };
+
+    // Masquer le contenu le temps que le serveur réponde
+    document.documentElement.style.visibility = 'hidden';
+
+    if (window.serverReady) {
+      window.serverReady.then(check);
+    } else {
+      check();
+    }
   }
 };
 
