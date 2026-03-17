@@ -318,60 +318,9 @@
     </form>
 
     <div class="demo-accounts">
-      <h3>📋 Comptes de démo</h3>
-      
-      <div class="demo-account" onclick="autofill('acgoudalle', '123')">
-        <div class="demo-account-header">
-          <span class="demo-account-user">acgoudalle</span>
-          <span class="demo-account-role">Direction</span>
-        </div>
-        <div class="demo-account-pwd">Mot de passe: 123</div>
-        <div class="demo-account-desc">Accès complet - Gestion complète du système</div>
-      </div>
-
-      <div class="demo-account" onclick="autofill('julie', '123')">
-        <div class="demo-account-header">
-          <span class="demo-account-user">julie</span>
-          <span class="demo-account-role">Référent</span>
-        </div>
-        <div class="demo-account-pwd">Mot de passe: 123</div>
-        <div class="demo-account-desc">Saisie des indicateurs - Gestion des données</div>
-      </div>
-
-      <div class="demo-account" onclick="autofill('gaspard', '123')">
-        <div class="demo-account-header">
-          <span class="demo-account-user">gaspard</span>
-          <span class="demo-account-role">Consultation</span>
-        </div>
-        <div class="demo-account-pwd">Mot de passe: 123</div>
-        <div class="demo-account-desc">Lecture seule - Consulter les données</div>
-      </div>
-
-      <div class="demo-account" onclick="autofill('mathieu', '123')">
-        <div class="demo-account-header">
-          <span class="demo-account-user">mathieu</span>
-          <span class="demo-account-role">Référent CBCO</span>
-        </div>
-        <div class="demo-account-pwd">Mot de passe: 123</div>
-        <div class="demo-account-desc">Suivi du chiffre d'affaires CBCO - Croissance annuelle</div>
-      </div>
-
-      <div class="demo-account" onclick="autofill('mickael', '123')">
-        <div class="demo-account-header">
-          <span class="demo-account-user">mickael</span>
-          <span class="demo-account-role">Référent Goudalle Charpente</span>
-        </div>
-        <div class="demo-account-pwd">Mot de passe: 123</div>
-        <div class="demo-account-desc">Saisie des indicateurs pour Goudalle Charpente</div>
-      </div>
-
-      <div class="demo-account" onclick="autofill('christelle', '123')">
-        <div class="demo-account-header">
-          <span class="demo-account-user">christelle</span>
-          <span class="demo-account-role">Référent Sylve Support</span>
-        </div>
-        <div class="demo-account-pwd">Mot de passe: 123</div>
-        <div class="demo-account-desc">Saisie des indicateurs pour Sylve Support</div>
+      <h3>👤 Comptes disponibles</h3>
+      <div id="accountsList">
+        <p style="color:#999; font-size:13px; margin:0;">Chargement...</p>
       </div>
     </div>
   </div>
@@ -379,16 +328,49 @@
 
   <script>
     /**
-     * Remplit automatiquement le formulaire avec les identifiants d'un compte de démo
-     * Utilisé par les boutons de comptes de démonstration
+     * Remplit automatiquement le formulaire avec l'identifiant d'un compte
      * @param {string} username - Nom d'utilisateur à préremplir
-     * @param {string} password - Mot de passe à préremplir
      */
-    function autofill(username, password) {
+    function autofill(username) {
       document.getElementById('username').value = username;
-      document.getElementById('password').value = password;
-      document.getElementById('username').focus();
+      document.getElementById('password').value = '';
+      document.getElementById('password').focus();
     }
+
+    function getRoleLabel(u) {
+      if (u.role === 'direction') return 'Direction';
+      const perms = Array.isArray(u.customPermissions) ? u.customPermissions : [];
+      const sections = [];
+      const commercial = ['cbco', 'cbco_saisie', 'cbco_commercial'];
+      const compta = ['sylve', 'sylve_saisie', 'gc_paiement', 'gm_paiement', 'cbco_paiement'];
+      const production = ['gm', 'gm_saisie', 'cbco_usine', 'cbco_productivite_saisie'];
+      if (commercial.some(k => perms.includes(k))) sections.push('Commercial');
+      if (compta.some(k => perms.includes(k))) sections.push('Comptabilité');
+      if (production.some(k => perms.includes(k))) sections.push('Production');
+      if (perms.includes('users_admin')) sections.push('Admin');
+      if (sections.length > 0) return sections.join(', ');
+      return 'Accès limité';
+    }
+
+    function renderAccountsList() {
+      const users = Auth.getUserList().filter(u => u.isActive);
+      const container = document.getElementById('accountsList');
+      if (!users || users.length === 0) {
+        container.innerHTML = '<p style="color:#999; font-size:13px; margin:0;">Aucun compte disponible</p>';
+        return;
+      }
+      container.innerHTML = users.map(u => `
+        <div class="demo-account" onclick="autofill('${escapeHtml(u.username)}')">
+          <div class="demo-account-header">
+            <span class="demo-account-user">${escapeHtml(u.username)}</span>
+            <span class="demo-account-role">${getRoleLabel(u)}</span>
+          </div>
+          <div class="demo-account-desc">${escapeHtml(u.displayName || '')}</div>
+        </div>
+      `).join('');
+    }
+
+    window.onServerReady(renderAccountsList);
 
     /**
      * Affiche un message de feedback à l'utilisateur

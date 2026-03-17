@@ -45,6 +45,8 @@ const Auth = {
     }
     // Migration douce : si la base existe déjà, ajouter les comptes démo manquants
     this.ensureDefaultUsers();
+    // Supprimer les anciens comptes de démonstration (migration)
+    this.removeDemoAccounts();
 
     // Initialiser le code d'admin par défaut si absent
     if (!localStorage.getItem(this.STORAGE_KEY_ADMIN_CODE)) {
@@ -70,51 +72,6 @@ const Auth = {
         createdBy: 'SYSTEM',
         isActive: true
       },
-      'julie': {
-        username: 'julie',
-        password: '123',
-        role: this.ROLES.REFERENT,
-        displayName: 'Julie Referent',
-        createdAt: new Date().toISOString(),
-        createdBy: 'acgoudalle',
-        isActive: true
-      },
-      'christelle': {
-        username: 'christelle',
-        password: '123',
-        role: this.ROLES.REFERENT_SYLVE,
-        displayName: 'Christelle',
-        createdAt: new Date().toISOString(),
-        createdBy: 'acgoudalle',
-        isActive: true
-      },
-      'mickael': {
-        username: 'mickael',
-        password: '123',
-        role: this.ROLES.REFERENT_GC,
-        displayName: 'Mickael',
-        createdAt: new Date().toISOString(),
-        createdBy: 'acgoudalle',
-        isActive: true
-      },
-      'mathieu': {
-        username: 'mathieu',
-        password: '123',
-        role: this.ROLES.REFERENT_CBCO,
-        displayName: 'Mathieu',
-        createdAt: new Date().toISOString(),
-        createdBy: 'acgoudalle',
-        isActive: true
-      },
-      'gaspard': {
-        username: 'gaspard',
-        password: '123',
-        role: this.ROLES.LECTURE,
-        displayName: 'Gaspard de Wazières',
-        createdAt: new Date().toISOString(),
-        createdBy: 'acgoudalle',
-        isActive: true
-      }
     };
 
     Object.keys(defaultUsers).forEach((username) => {
@@ -130,7 +87,28 @@ const Auth = {
   },
 
   /**
-   * Crée la base de données initiale avec des comptes de démonstration
+   * Supprime les anciens comptes de démonstration (julie, mathieu, gaspard, christelle, mickael)
+   * Appelée une fois à l'init pour nettoyer les bases de données existantes
+   */
+  removeDemoAccounts() {
+    const demoUsernames = ['julie', 'mathieu', 'gaspard', 'christelle', 'mickael'];
+    const users = this.getAllUsers();
+    let updated = false;
+
+    demoUsernames.forEach(username => {
+      if (users[username] && users[username].createdBy === 'acgoudalle' && users[username].password === '123') {
+        delete users[username];
+        updated = true;
+      }
+    });
+
+    if (updated) {
+      localStorage.setItem(this.STORAGE_KEY_USERS, JSON.stringify(users));
+    }
+  },
+
+  /**
+   * Crée la base de données initiale avec uniquement le compte direction
    * Appelée uniquement lors de la première utilisation de l'application
    */
   createDefaultDatabase() {
@@ -143,36 +121,6 @@ const Auth = {
         displayName: 'Anne-Cécile Goudalle',
         createdAt: new Date().toISOString(),
         createdBy: 'SYSTEM',
-        isActive: true
-      },
-      // Compte référent - Peut gérer et saisir des données
-      'julie': {
-        username: 'julie',
-        password: '123',
-        role: this.ROLES.REFERENT,
-        displayName: 'Julie Referent',
-        createdAt: new Date().toISOString(),
-        createdBy: 'acgoudalle',
-        isActive: true
-      },
-      // Compte référent CBCO - Suivi chiffre d'affaires CBCO
-      'mathieu': {
-        username: 'mathieu',
-        password: '123',
-        role: this.ROLES.REFERENT_CBCO,
-        displayName: 'Mathieu',
-        createdAt: new Date().toISOString(),
-        createdBy: 'acgoudalle',
-        isActive: true
-      },
-      // Compte lecture - Consultation uniquement
-      'gaspard': {
-        username: 'gaspard',
-        password: '123',
-        role: this.ROLES.LECTURE,
-        displayName: 'Gaspard de Wazières',
-        createdAt: new Date().toISOString(),
-        createdBy: 'acgoudalle',
         isActive: true
       },
     };
