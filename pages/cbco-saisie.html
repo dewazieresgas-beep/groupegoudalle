@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Saisies CBCO - Mode tableur</title>
+  <title>Saisie Chiffre d'Affaires - Intranet</title>
   <link rel="stylesheet" href="../css/style.css">
   <style>
     .sheet-toolbar {
@@ -704,7 +704,7 @@
 
     function initCBCOSaisie() {
       document.getElementById('sidebar').innerHTML = getSidebar();
-      injectGCSecondaryBar();
+      injectCommercialSecondaryBar();
       loadYear(new Date().getFullYear());
 
       window.addEventListener('beforeunload', (event) => {

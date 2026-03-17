@@ -121,18 +121,23 @@ function getCurrentPage() {
  * Vérifie si l'utilisateur est sur une sous-page de Goudalle Maçonnerie
  * @returns {boolean} - true si on est sur gm.html, gm-saisie.html ou gm-admin.html
  */
-function isGMPage() {
+function isProductionPage() {
   const page = getCurrentPage();
-  return page === 'gm.html' || page === 'gm-saisie.html' || page === 'gm-paiement.html' || page === 'gm-export.html';
+  return page === 'gm.html' || page === 'gm-saisie.html' || page === 'cbco-usine.html' || page === 'cbco-productivite-saisie.html';
 }
 
 /**
  * Vérifie si l'utilisateur est sur une sous-page de Goudalle Charpente
  * @returns {boolean} - true si on est sur gc.html ou gc-saisie.html
  */
-function isGCPage() {
+function isCommercialPage() {
   const page = getCurrentPage();
-  return page === 'gc.html' || page === 'gc-saisie.html' || page === 'gc-paiement.html' || page === 'cbco.html' || page === 'cbco-saisie.html' || page === 'cbco-commercial.html';
+  return page === 'cbco.html' || page === 'cbco-saisie.html' || page === 'cbco-commercial.html';
+}
+
+function isComptaPage() {
+  const page = getCurrentPage();
+  return page === 'sylve-support.html' || page === 'sylve-support-saisie.html' || page === 'gc-paiement.html' || page === 'gm-paiement.html' || page === 'cbco-paiement.html';
 }
 
 // ============ WEEK UTILS ============
@@ -371,45 +376,43 @@ function getSidebar() {
   const session = Auth.getSession();
   if (!session) return '';  // Pas de sidebar si non connecté
 
-  // Récupérer les permissions de l'utilisateur
   const isDirection = Auth.isDirection();
-  const canEdit = Auth.canEditGM();
-  const canView = Auth.canViewGM();
   const base = getBasePath();
-
-  // Détecter la page active pour le style
   const currentPage = getCurrentPage();
-  const onGMPage = isGMPage();
-  const onGCPage = isGCPage();
 
-  // ===== CONSTRUCTION DU MENU HIÉRARCHIQUE SELON LES DROITS =====
   const accueilActive = currentPage === 'index.html' ? ' active' : '';
   let items = `
     <a href="${base}index.html" class="sidebar-item${accueilActive}">🏠 Accueil</a>
   `;
 
-  // ===== SECTION GOUDALLE CHARPENTE =====
-  if (Auth.hasAccess('gc')) {
-    const gcActive = onGCPage ? ' active' : '';
-    items += `<a href="${base}pages/gc.html" class="sidebar-item${gcActive}">🪵 Goudalle Charpente</a>`;
+  // ===== INDICATEURS CHANTIERS (direction seulement - placeholder) =====
+  if (isDirection) {
+    const chantiersActive = currentPage === 'indicateurs-chantiers.html' ? ' active' : '';
+    items += `<a href="${base}pages/indicateurs-chantiers.html" class="sidebar-item${chantiersActive}">🚧 Indicateurs Chantiers</a>`;
   }
 
-  // ===== SECTION CBCO =====
-  if (Auth.canViewCBCO()) {
-    const cbcoActive = isCBCOPage() ? ' active' : '';
-    items += `<a href="${base}pages/cbco-usine.html" class="sidebar-item${cbcoActive}">💼 CBCO</a>`;
+  // ===== INDICATEURS COMMERCIAUX =====
+  if (Auth.hasAccess('cbco') || Auth.hasAccess('cbco_saisie') || Auth.hasAccess('cbco_commercial')) {
+    const commercialActive = isCommercialPage() ? ' active' : '';
+    items += `<a href="${base}pages/cbco.html" class="sidebar-item${commercialActive}">💼 Indicateurs Commerciaux</a>`;
   }
 
-  // ===== SECTION GOUDALLE MAÇONNERIE =====
-  if (canView) {
-    const gmActive = onGMPage ? ' active' : '';
-    items += `<a href="${base}pages/gm.html" class="sidebar-item${gmActive}">🏭 Goudalle Maçonnerie</a>`;
+  // ===== INDICATEURS RH (direction seulement - placeholder) =====
+  if (isDirection) {
+    const rhActive = currentPage === 'indicateurs-rh.html' ? ' active' : '';
+    items += `<a href="${base}pages/indicateurs-rh.html" class="sidebar-item${rhActive}">👷 Indicateurs RH</a>`;
   }
 
-  // ===== SECTION SYLVE SUPPORT =====
-  if (Auth.canViewSylve()) {
-    const ssActive = isSylvePage() ? ' active' : '';
-    items += `<a href="${base}pages/sylve-support.html" class="sidebar-item${ssActive}">🏗️ Sylve Support</a>`;
+  // ===== INDICATEURS COMPTABILITÉ =====
+  if (Auth.canViewSylve() || Auth.hasAccess('gc_paiement') || Auth.hasAccess('gm_paiement') || Auth.hasAccess('cbco_paiement')) {
+    const comptaActive = isComptaPage() ? ' active' : '';
+    items += `<a href="${base}pages/sylve-support.html" class="sidebar-item${comptaActive}">📒 Indicateurs Comptabilité</a>`;
+  }
+
+  // ===== INDICATEURS PRODUCTION =====
+  if (Auth.canViewGM() || Auth.hasAccess('gm_saisie') || Auth.hasAccess('cbco_usine') || Auth.hasAccess('cbco_productivite_saisie')) {
+    const productionActive = isProductionPage() ? ' active' : '';
+    items += `<a href="${base}pages/gm.html" class="sidebar-item${productionActive}">🏭 Indicateurs Production</a>`;
   }
 
   // ===== SECTIONS ADMINISTRATIVES (direction uniquement) =====
@@ -498,7 +501,7 @@ function toggleSubMenu(event, submenuId) {
  * Génère et injecte la barre de navigation secondaire Goudalle Maçonnerie
  * À appeler sur toutes les pages GM (gm.html, gm-saisie.html, etc.)
  */
-function injectGMSecondaryBar() {
+function injectProductionSecondaryBar() {
   const session = Auth.getSession();
   if (!session) return;
 
@@ -507,29 +510,29 @@ function injectGMSecondaryBar() {
 
   let secondaryItems = '';
 
-  const consultationActive = currentPage === 'gm.html' ? ' active' : '';
-  secondaryItems += `<a href="${base}pages/gm.html" class="sidebar-item${consultationActive}">📊 Consultation</a>`;
-
+  if (Auth.canViewGM()) {
+    const gmActive = currentPage === 'gm.html' ? ' active' : '';
+    secondaryItems += `<a href="${base}pages/gm.html" class="sidebar-item${gmActive}">📊 Indicateurs Maçonnerie</a>`;
+  }
+  if (Auth.hasAccess('cbco_usine')) {
+    const usineActive = currentPage === 'cbco-usine.html' ? ' active' : '';
+    secondaryItems += `<a href="${base}pages/cbco-usine.html" class="sidebar-item${usineActive}">🏭 Indicateurs Usine CBCO</a>`;
+  }
   if (Auth.hasAccess('gm_saisie')) {
     const saisieActive = currentPage === 'gm-saisie.html' ? ' active' : '';
-    secondaryItems += `<a href="${base}pages/gm-saisie.html" class="sidebar-item${saisieActive}">✏️ Saisies indicateurs</a>`;
+    secondaryItems += `<a href="${base}pages/gm-saisie.html" class="sidebar-item${saisieActive}">✏️ Saisie Indicateurs Maçonnerie</a>`;
   }
-  if (Auth.hasAccess('gm_paiement')) {
-    const paiementActive = currentPage === 'gm-paiement.html' ? ' active' : '';
-    secondaryItems += `<a href="${base}pages/gm-paiement.html" class="sidebar-item${paiementActive}">💳 Paiements en attente</a>`;
-  }
-  if (Auth.hasAccess('gm')) {
-    const exportActive = currentPage === 'gm-export.html' ? ' active' : '';
-    secondaryItems += `<a href="${base}pages/gm-export.html" class="sidebar-item${exportActive}">📤 Exports de chiffres</a>`;
+  if (Auth.hasAccess('cbco_productivite_saisie')) {
+    const prodActive = currentPage === 'cbco-productivite-saisie.html' ? ' active' : '';
+    secondaryItems += `<a href="${base}pages/cbco-productivite-saisie.html" class="sidebar-item${prodActive}">✏️ Saisie Productivité Usine</a>`;
   }
 
-  // Créer et injecter la barre secondaire
   if (secondaryItems) {
     const barHTML = `
-      <aside class="sidebar-secondary" id="gmSidebar">
+      <aside class="sidebar-secondary" id="productionSidebar">
         <div class="sidebar-secondary-content">
-          <div class="sidebar-secondary-title">🏭 Goudalle Maçonnerie</div>
-          <button class="sidebar-secondary-close" onclick="toggleGMSidebar();">✕</button>
+          <div class="sidebar-secondary-title">🏭 Indicateurs Production</div>
+          <button class="sidebar-secondary-close" onclick="toggleProductionSidebar();">✕</button>
           <nav class="sidebar-secondary-nav">
             ${secondaryItems}
           </nav>
@@ -537,16 +540,14 @@ function injectGMSecondaryBar() {
       </aside>
     `;
 
-    // Injecter après la sidebar principale
     const sidebar = document.querySelector('.sidebar');
     if (sidebar) {
       sidebar.insertAdjacentHTML('afterend', barHTML);
     }
 
-    // Ouvrir la barre par défaut sur cette page
-    const gmSidebar = document.getElementById('gmSidebar');
-    if (gmSidebar) {
-      gmSidebar.classList.add('open');
+    const productionSidebar = document.getElementById('productionSidebar');
+    if (productionSidebar) {
+      productionSidebar.classList.add('open');
     }
   }
 }
@@ -555,7 +556,7 @@ function injectGMSecondaryBar() {
  * Génère et injecte la barre de navigation secondaire Goudalle Charpente
  * À appeler sur toutes les pages GC (gc.html, gc-saisie.html)
  */
-function injectGCSecondaryBar() {
+function injectCommercialSecondaryBar() {
   const session = Auth.getSession();
   if (!session) return;
 
@@ -563,37 +564,26 @@ function injectGCSecondaryBar() {
   const currentPage = getCurrentPage();
 
   let secondaryItems = '';
+
   if (Auth.hasAccess('cbco')) {
     const bureauActive = currentPage === 'cbco.html' ? ' active' : '';
-    secondaryItems += `<a href="${base}pages/cbco.html" class="sidebar-item${bureauActive}">🏢 Dashboard bureau d'étude</a>`;
+    secondaryItems += `<a href="${base}pages/cbco.html" class="sidebar-item${bureauActive}">🏢 Indicateurs Bureau d'Étude</a>`;
   }
   if (Auth.hasAccess('cbco_saisie')) {
     const caActive = currentPage === 'cbco-saisie.html' ? ' active' : '';
-    secondaryItems += `<a href="${base}pages/cbco-saisie.html" class="sidebar-item${caActive}">✏️ Saisie chiffre d'affaires</a>`;
+    secondaryItems += `<a href="${base}pages/cbco-saisie.html" class="sidebar-item${caActive}">✏️ Saisie Chiffre d'Affaires</a>`;
   }
   if (Auth.hasAccess('cbco_commercial')) {
     const commercialActive = currentPage === 'cbco-commercial.html' ? ' active' : '';
-    secondaryItems += `<a href="${base}pages/cbco-commercial.html" class="sidebar-item${commercialActive}">💼 Saisie indicateurs commercial</a>`;
-  }
-
-  const dashboardActive = currentPage === 'gc.html' ? ' active' : '';
-  secondaryItems += `<a href="${base}pages/gc.html" class="sidebar-item${dashboardActive}">📊 Dashboard</a>`;
-
-  if (Auth.hasAccess('gc_saisie')) {
-    const saisieActive = currentPage === 'gc-saisie.html' ? ' active' : '';
-    secondaryItems += `<a href="${base}pages/gc-saisie.html" class="sidebar-item${saisieActive}">✏️ Saisies indicateurs</a>`;
-  }
-  if (Auth.hasAccess('gc_paiement')) {
-    const paiementActive = currentPage === 'gc-paiement.html' ? ' active' : '';
-    secondaryItems += `<a href="${base}pages/gc-paiement.html" class="sidebar-item${paiementActive}">💳 Paiements en attente</a>`;
+    secondaryItems += `<a href="${base}pages/cbco-commercial.html" class="sidebar-item${commercialActive}">💼 Saisie Indicateurs Commerciaux</a>`;
   }
 
   if (secondaryItems) {
     const barHTML = `
-      <aside class="sidebar-secondary" id="gcSidebar">
+      <aside class="sidebar-secondary" id="commercialSidebar">
         <div class="sidebar-secondary-content">
-          <div class="sidebar-secondary-title">🪵 Goudalle Charpente</div>
-          <button class="sidebar-secondary-close" onclick="toggleGCSidebar();">✕</button>
+          <div class="sidebar-secondary-title">💼 Indicateurs Commerciaux</div>
+          <button class="sidebar-secondary-close" onclick="toggleCommercialSidebar();">✕</button>
           <nav class="sidebar-secondary-nav">
             ${secondaryItems}
           </nav>
@@ -606,9 +596,9 @@ function injectGCSecondaryBar() {
       sidebar.insertAdjacentHTML('afterend', barHTML);
     }
 
-    const gcSidebar = document.getElementById('gcSidebar');
-    if (gcSidebar) {
-      gcSidebar.classList.add('open');
+    const commercialSidebar = document.getElementById('commercialSidebar');
+    if (commercialSidebar) {
+      commercialSidebar.classList.add('open');
     }
   }
 }
@@ -793,7 +783,7 @@ function getCBCOYearlySummary() {
  * Génère et injecte la barre de navigation secondaire CBCO
  * À appeler sur toutes les pages CBCO (cbco.html, cbco-saisie.html, etc.)
  */
-function injectCBCOSecondaryBar() {
+function injectComptaSecondaryBar() {
   const session = Auth.getSession();
   if (!session) return;
 
@@ -802,26 +792,33 @@ function injectCBCOSecondaryBar() {
 
   let secondaryItems = '';
 
-  if (Auth.hasAccess('cbco_usine')) {
-    const usineActive = currentPage === 'cbco-usine.html' ? ' active' : '';
-    secondaryItems += `<a href="${base}pages/cbco-usine.html" class="sidebar-item${usineActive}">🏭 Dashboard usine</a>`;
+  if (Auth.canViewSylve()) {
+    const dashActive = currentPage === 'sylve-support.html' ? ' active' : '';
+    secondaryItems += `<a href="${base}pages/sylve-support.html" class="sidebar-item${dashActive}">📊 Indicateurs Balance Âgée</a>`;
   }
-  if (Auth.hasAccess('cbco_productivite_saisie')) {
-    const prodActive = currentPage === 'cbco-productivite-saisie.html' ? ' active' : '';
-    secondaryItems += `<a href="${base}pages/cbco-productivite-saisie.html" class="sidebar-item${prodActive}">🏭 Saisie productivité usine</a>`;
+  if (Auth.hasAccess('sylve_saisie')) {
+    const saisieActive = currentPage === 'sylve-support-saisie.html' ? ' active' : '';
+    secondaryItems += `<a href="${base}pages/sylve-support-saisie.html" class="sidebar-item${saisieActive}">✏️ Saisie Factures</a>`;
+  }
+  if (Auth.hasAccess('gc_paiement')) {
+    const gcPaiActive = currentPage === 'gc-paiement.html' ? ' active' : '';
+    secondaryItems += `<a href="${base}pages/gc-paiement.html" class="sidebar-item${gcPaiActive}">💳 Paiements en Attente - Charpente</a>`;
+  }
+  if (Auth.hasAccess('gm_paiement')) {
+    const gmPaiActive = currentPage === 'gm-paiement.html' ? ' active' : '';
+    secondaryItems += `<a href="${base}pages/gm-paiement.html" class="sidebar-item${gmPaiActive}">💳 Paiements en Attente - Maçonnerie</a>`;
   }
   if (Auth.hasAccess('cbco_paiement')) {
-    const paiementActive = currentPage === 'cbco-paiement.html' ? ' active' : '';
-    secondaryItems += `<a href="${base}pages/cbco-paiement.html" class="sidebar-item${paiementActive}">💳 Paiements en attente</a>`;
+    const cbcoPaiActive = currentPage === 'cbco-paiement.html' ? ' active' : '';
+    secondaryItems += `<a href="${base}pages/cbco-paiement.html" class="sidebar-item${cbcoPaiActive}">💳 Paiements en Attente - CBCO</a>`;
   }
 
-  // Créer et injecter la barre secondaire
   if (secondaryItems) {
     const barHTML = `
-      <aside class="sidebar-secondary" id="cbcoSidebar">
+      <aside class="sidebar-secondary" id="comptaSidebar">
         <div class="sidebar-secondary-content">
-          <div class="sidebar-secondary-title">💼 CBCO</div>
-          <button class="sidebar-secondary-close" onclick="toggleCBCOSidebar();">✕</button>
+          <div class="sidebar-secondary-title">📒 Indicateurs Comptabilité</div>
+          <button class="sidebar-secondary-close" onclick="toggleComptaSidebar();">✕</button>
           <nav class="sidebar-secondary-nav">
             ${secondaryItems}
           </nav>
@@ -829,36 +826,16 @@ function injectCBCOSecondaryBar() {
       </aside>
     `;
 
-    // Injecter après la sidebar principale
     const sidebar = document.querySelector('.sidebar');
     if (sidebar) {
       sidebar.insertAdjacentHTML('afterend', barHTML);
     }
 
-    // Ouvrir la barre par défaut sur cette page
-    const cbcoSidebar = document.getElementById('cbcoSidebar');
-    if (cbcoSidebar) {
-      cbcoSidebar.classList.add('open');
+    const comptaSidebar = document.getElementById('comptaSidebar');
+    if (comptaSidebar) {
+      comptaSidebar.classList.add('open');
     }
   }
-}
-
-/**
- * Verifies if current page is a CBCO page
- * @returns {boolean}
- */
-function isCBCOPage() {
-  const page = getCurrentPage();
-  return page === 'cbco-usine.html' || page === 'cbco-paiement.html' || page === 'cbco-productivite-saisie.html';
-}
-
-/**
- * Vérifie si la page courante est une page Sylve Support
- * @returns {boolean}
- */
-function isSylvePage() {
-  const page = getCurrentPage();
-  return page === 'sylve-support.html' || page === 'sylve-support-saisie.html';
 }
 
 function isUsersPage() {
@@ -896,57 +873,45 @@ function formatNumber(value) {
  * Toggle (ouvrir/fermer) la barre de navigation secondaire Goudalle Maçonnerie
  * @param {Event} event - Événement optionnel du clic
  */
-function toggleGMSidebar(event) {
+function toggleProductionSidebar(event) {
   if (event) {
     event.preventDefault();
     event.stopPropagation();
   }
-  
-  const gmSidebar = document.getElementById('gmSidebar');
-  if (!gmSidebar) return;
-  
-  // Toggle la classe 'open'
-  const isOpen = gmSidebar.classList.toggle('open');
-  
-  // Sauvegarder l'état dans localStorage
-  localStorage.setItem('gm_sidebar_state', isOpen ? 'open' : 'closed');
+  const productionSidebar = document.getElementById('productionSidebar');
+  if (!productionSidebar) return;
+  const isOpen = productionSidebar.classList.toggle('open');
+  localStorage.setItem('production_sidebar_state', isOpen ? 'open' : 'closed');
 }
 
 /**
  * Toggle (ouvrir/fermer) la barre de navigation secondaire Goudalle Charpente
  * @param {Event} event - Événement optionnel du clic
  */
-function toggleGCSidebar(event) {
+function toggleCommercialSidebar(event) {
   if (event) {
     event.preventDefault();
     event.stopPropagation();
   }
-
-  const gcSidebar = document.getElementById('gcSidebar');
-  if (!gcSidebar) return;
-
-  const isOpen = gcSidebar.classList.toggle('open');
-  localStorage.setItem('gc_sidebar_state', isOpen ? 'open' : 'closed');
+  const commercialSidebar = document.getElementById('commercialSidebar');
+  if (!commercialSidebar) return;
+  const isOpen = commercialSidebar.classList.toggle('open');
+  localStorage.setItem('commercial_sidebar_state', isOpen ? 'open' : 'closed');
 }
 
 /**
  * Toggle la barre de navigation secondaire CBCO
  * @param {Event} event - Événement du clic (optionnel)
  */
-function toggleCBCOSidebar(event) {
+function toggleComptaSidebar(event) {
   if (event) {
     event.preventDefault();
     event.stopPropagation();
   }
-  
-  const cbcoSidebar = document.getElementById('cbcoSidebar');
-  if (!cbcoSidebar) return;
-  
-  // Toggle la classe 'open'
-  const isOpen = cbcoSidebar.classList.toggle('open');
-  
-  // Sauvegarder l'état dans localStorage
-  localStorage.setItem('cbco_sidebar_state', isOpen ? 'open' : 'closed');
+  const comptaSidebar = document.getElementById('comptaSidebar');
+  if (!comptaSidebar) return;
+  const isOpen = comptaSidebar.classList.toggle('open');
+  localStorage.setItem('compta_sidebar_state', isOpen ? 'open' : 'closed');
 }
 
 /**
@@ -1014,30 +979,30 @@ function toggleUsersSidebar(event) {
  * Appelé automatiquement au chargement de la page
  */
 function restoreSubMenuStates() {
-  // Restaurer l'état du sidebar secondaire GM
-  const gmState = localStorage.getItem('gm_sidebar_state');
-  if (gmState === 'open') {
-    const gmSidebar = document.getElementById('gmSidebar');
-    if (gmSidebar) {
-      gmSidebar.classList.add('open');
+  // Restaurer l'état du sidebar secondaire Production
+  const productionState = localStorage.getItem('production_sidebar_state');
+  if (productionState === 'open') {
+    const productionSidebar = document.getElementById('productionSidebar');
+    if (productionSidebar) {
+      productionSidebar.classList.add('open');
     }
   }
 
-  // Restaurer l'état du sidebar secondaire GC
-  const gcState = localStorage.getItem('gc_sidebar_state');
-  if (gcState === 'open') {
-    const gcSidebar = document.getElementById('gcSidebar');
-    if (gcSidebar) {
-      gcSidebar.classList.add('open');
+  // Restaurer l'état du sidebar secondaire Commercial
+  const commercialState = localStorage.getItem('commercial_sidebar_state');
+  if (commercialState === 'open') {
+    const commercialSidebar = document.getElementById('commercialSidebar');
+    if (commercialSidebar) {
+      commercialSidebar.classList.add('open');
     }
   }
 
-  // Restaurer l'état du sidebar secondaire CBCO
-  const cbcoState = localStorage.getItem('cbco_sidebar_state');
-  if (cbcoState === 'open') {
-    const cbcoSidebar = document.getElementById('cbcoSidebar');
-    if (cbcoSidebar) {
-      cbcoSidebar.classList.add('open');
+  // Restaurer l'état du sidebar secondaire Comptabilité
+  const comptaState = localStorage.getItem('compta_sidebar_state');
+  if (comptaState === 'open') {
+    const comptaSidebar = document.getElementById('comptaSidebar');
+    if (comptaSidebar) {
+      comptaSidebar.classList.add('open');
     }
   }
 
@@ -1273,63 +1238,6 @@ function getCBCOCommercialTauxReussite(month, year) {
   const cloturees = gagnees + perdues;
   const taux = cloturees > 0 ? (gagnees / cloturees) * 100 : null;
   return { taux, gagnees, perdues, enCours, total: entries.length };
-}
-
-/**
- * Toggle la barre de navigation secondaire Sylve Support
- * @param {Event} event - Événement du clic (optionnel)
- */
-function toggleSylveSidebar(event) {
-  if (event) {
-    event.preventDefault();
-    event.stopPropagation();
-  }
-  const sidebar = document.getElementById('sylveSidebar');
-  if (!sidebar) return;
-  const isOpen = sidebar.classList.toggle('open');
-  localStorage.setItem('sylve_sidebar_state', isOpen ? 'open' : 'closed');
-}
-
-/**
- * Génère et injecte la barre de navigation secondaire Sylve Support
- */
-function injectSylveSecondaryBar() {
-  const session = Auth.getSession();
-  if (!session) return;
-
-  const base = getBasePath();
-  const currentPage = getCurrentPage();
-
-  let secondaryItems = '';
-  const consultationActive = currentPage === 'sylve-support.html' ? ' active' : '';
-  secondaryItems += `<a href="${base}pages/sylve-support.html" class="sidebar-item${consultationActive}">📊 Dashboard</a>`;
-
-  if (Auth.hasAccess('sylve_saisie')) {
-    const saisieActive = currentPage === 'sylve-support-saisie.html' ? ' active' : '';
-    secondaryItems += `<a href="${base}pages/sylve-support-saisie.html" class="sidebar-item${saisieActive}">✏️ Saisie factures</a>`;
-  }
-
-  if (secondaryItems) {
-    const barHTML = `
-      <aside class="sidebar-secondary" id="sylveSidebar">
-        <div class="sidebar-secondary-content">
-          <div class="sidebar-secondary-title">🏗️ SYLVE SUPPORT</div>
-          <button class="sidebar-secondary-close" onclick="toggleSylveSidebar();">✕</button>
-          <nav class="sidebar-secondary-nav">
-            ${secondaryItems}
-          </nav>
-        </div>
-      </aside>
-    `;
-    const sidebar = document.querySelector('.sidebar');
-    if (sidebar) {
-      sidebar.insertAdjacentHTML('afterend', barHTML);
-    }
-    const sylveSidebar = document.getElementById('sylveSidebar');
-    if (sylveSidebar) {
-      sylveSidebar.classList.add('open');
-    }
-  }
 }
 
 // ============ SYLVE SUPPORT DATA ============
