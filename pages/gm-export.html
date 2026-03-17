@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exports de chiffres - Goudalle Maçonnerie</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .gm-export-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; }
+    .gm-export-inline { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+    .gm-export-metrics { display: grid; grid-template-columns: repeat(2, minmax(220px, 1fr)); gap: 8px 14px; margin-top: 10px; }
+    .gm-export-metrics label { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 13px; font-weight: 500; }
+    .gm-export-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-top: 14px; }
+    .gm-export-card { background: var(--lighter); border: 1px solid var(--border-light); border-radius: 8px; padding: 12px; }
+    .gm-export-card .label { font-size: 12px; color: var(--secondary); margin-bottom: 6px; }
+    .gm-export-card .value { font-size: 24px; font-weight: 700; color: var(--primary); }
+    .gm-export-toolbar { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+    @media (max-width: 1100px) { .gm-export-grid { grid-template-columns: 1fr; } .gm-export-metrics { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <script src="../js/api.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+  <script>window.APP_LOGO = 'maconnerie';</script>
+  <script>Auth.requirePermission('gm');</script>
+
+  <div class="app-container">
+    <div id="sidebar"></div>
+
+    <main class="main-content">
+      <div class="d-flex justify-between items-center mb-3" style="gap:12px; flex-wrap:wrap;">
+        <h1 class="mb-0">Exports de chiffres - Goudalle Maçonnerie</h1>
+      </div>
+
+      <div id="pageMessage" class="alert" style="display:none;"></div>
+
+      <div class="gm-export-grid">
+        <section class="card">
+          <div class="card-title"><h2>Filtres d'analyse</h2></div>
+          <div class="card-body">
+            <div class="gm-export-inline">
+              <div class="form-group" style="min-width:140px; margin:0;">
+                <label for="yearStart">Année début</label>
+                <select id="yearStart"></select>
+              </div>
+              <div class="form-group" style="min-width:140px; margin:0;">
+                <label for="yearEnd">Année fin</label>
+                <select id="yearEnd"></select>
+              </div>
+              <div class="form-group" style="min-width:180px; margin:0;">
+                <label for="statusFilter">Statut</label>
+                <select id="statusFilter">
+                  <option value="all">Tous</option>
+                  <option value="published">Publiés</option>
+                  <option value="draft">Brouillons</option>
+                </select>
+              </div>
+              <button type="button" class="btn btn-secondary" onclick="resetFilters()">↺ Réinitialiser</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-title"><h2>Export rapide</h2></div>
+          <div class="card-body">
+            <p style="margin:0 0 10px 0; color:var(--secondary);">Exportez les chiffres affichés selon vos filtres et indicateurs sélectionnés.</p>
+            <div class="gm-export-inline">
+              <button type="button" class="btn btn-primary" onclick="exportSummaryCsv()">📤 Export résumé CSV</button>
+              <button type="button" class="btn btn-secondary" onclick="exportDetailCsv()">📄 Export détaillé CSV</button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <section class="card" style="margin-top:16px;">
+        <div class="card-title"><h2>Indicateurs à afficher</h2></div>
+        <div class="card-body">
+          <div class="gm-export-inline" style="margin-bottom:8px;">
+            <button type="button" class="btn btn-secondary" onclick="selectRecommendedMetrics()">⭐ Recommandés</button>
+            <button type="button" class="btn btn-secondary" onclick="selectAllMetrics()">Tout sélectionner</button>
+            <button type="button" class="btn btn-secondary" onclick="clearMetrics()">Tout désélectionner</button>
+          </div>
+          <div id="metricsContainer" class="gm-export-metrics"></div>
+        </div>
+      </section>
+
+      <section class="card" style="margin-top:16px;">
+        <div class="card-title"><h2>Synthèse dynamique</h2></div>
+        <div class="card-body">
+          <div id="summaryCards" class="gm-export-cards"></div>
+        </div>
+      </section>
+
+      <section class="card" style="margin-top:16px;">
+        <div class="card-title"><h2>Tableau résumé par année</h2></div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table id="summaryTable">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" style="margin-top:16px;">
+        <div class="card-title"><h2>Données détaillées (semaine par semaine)</h2></div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table id="detailsTable">
+              <thead>
+                <tr>
+                  <th>Semaine</th>
+                  <th>Statut</th>
+                  <th>m³</th>
+                  <th>Heures</th>
+                  <th>h/m³</th>
+                  <th>Acier façonné (T)</th>
+                  <th>H. béton</th>
+                  <th>H. aciers</th>
+                  <th>H. chargement</th>
+                  <th>H. centrale</th>
+                  <th>Commentaire</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const METRICS = [
+      { id: 'weeks', label: 'Nombre de semaines', recommended: true, format: v => String(v), compute: rows => rows.length },
+      { id: 'm3', label: 'Total m³ coulés', recommended: true, format: v => formatNumber(v), compute: rows => sum(rows, r => r.m3) },
+      { id: 'hours', label: 'Total heures', recommended: true, format: v => formatNumber(v), compute: rows => sum(rows, r => r.hours) },
+      { id: 'avgRatio', label: 'Moyenne h/m³', recommended: true, format: v => v == null ? '—' : formatNumber(v), compute: rows => avg(rows.map(r => calculateRatio(r.hours, r.m3))) },
+      { id: 'minRatio', label: 'Meilleur ratio h/m³', recommended: false, format: v => v == null ? '—' : formatNumber(v), compute: rows => min(rows.map(r => calculateRatio(r.hours, r.m3))) },
+      { id: 'maxRatio', label: 'Ratio h/m³ le plus élevé', recommended: false, format: v => v == null ? '—' : formatNumber(v), compute: rows => max(rows.map(r => calculateRatio(r.hours, r.m3))) },
+      { id: 'acier', label: 'Total acier façonné (T)', recommended: false, format: v => formatNumber(v), compute: rows => sum(rows, r => r.qtAcierFaconne) },
+      { id: 'beton', label: 'Total heures béton', recommended: false, format: v => formatNumber(v), compute: rows => sum(rows, r => r.tempsBeton) },
+      { id: 'aciers', label: 'Total heures aciers', recommended: false, format: v => formatNumber(v), compute: rows => sum(rows, r => r.tempsAciers) },
+      { id: 'chargement', label: 'Total heures chargement', recommended: false, format: v => formatNumber(v), compute: rows => sum(rows, r => r.tempsChargement) },
+      { id: 'centrale', label: 'Total heures centrale', recommended: false, format: v => formatNumber(v), compute: rows => sum(rows, r => r.tempsCentrale) },
+    ];
+
+    let filteredRows = [];
+    let summaryRows = [];
+
+    function showMessage(msg, type) {
+      const box = document.getElementById('pageMessage');
+      box.textContent = msg;
+      box.className = `alert alert-${type}`;
+      box.style.display = 'block';
+    }
+
+    function hideMessage() {
+      document.getElementById('pageMessage').style.display = 'none';
+    }
+
+    function asNumber(value) {
+      const n = parseFloat(value);
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    function sum(rows, fn) {
+      return rows.reduce((acc, row) => acc + asNumber(fn(row)), 0);
+    }
+
+    function avg(values) {
+      const finite = values.filter(v => Number.isFinite(v));
+      if (finite.length === 0) return null;
+      return finite.reduce((a, b) => a + b, 0) / finite.length;
+    }
+
+    function min(values) {
+      const finite = values.filter(v => Number.isFinite(v));
+      if (finite.length === 0) return null;
+      return Math.min(...finite);
+    }
+
+    function max(values) {
+      const finite = values.filter(v => Number.isFinite(v));
+      if (finite.length === 0) return null;
+      return Math.max(...finite);
+    }
+
+    function getAllRows() {
+      return getKPIs().map(k => ({
+        ...k,
+        year: parseInt(k.year, 10),
+        week: parseInt(k.week, 10),
+        m3: asNumber(k.m3),
+        hours: asNumber(k.hours),
+        tempsBeton: asNumber(k.tempsBeton),
+        tempsAciers: asNumber(k.tempsAciers),
+        tempsChargement: asNumber(k.tempsChargement),
+        tempsCentrale: asNumber(k.tempsCentrale),
+        qtAcierFaconne: asNumber(k.qtAcierFaconne)
+      })).filter(k => Number.isFinite(k.year) && Number.isFinite(k.week)).sort(compareByYearWeekDesc);
+    }
+
+    function getSelectedMetricIds() {
+      return METRICS.map(m => m.id).filter(id => document.getElementById(`metric_${id}`)?.checked);
+    }
+
+    function getMetricById(id) {
+      return METRICS.find(m => m.id === id);
+    }
+
+    function setupMetricSelector() {
+      const container = document.getElementById('metricsContainer');
+      container.innerHTML = METRICS.map(m => `
+        <label>
+          <input type="checkbox" id="metric_${m.id}" ${m.recommended ? 'checked' : ''}>
+          <span>${escapeHtml(m.label)}</span>
+        </label>
+      `).join('');
+
+      METRICS.forEach(m => {
+        document.getElementById(`metric_${m.id}`).addEventListener('change', refreshData);
+      });
+    }
+
+    function setupYearFilters() {
+      const rows = getAllRows();
+      const years = [...new Set(rows.map(r => r.year))].sort((a, b) => a - b);
+      const yearStart = document.getElementById('yearStart');
+      const yearEnd = document.getElementById('yearEnd');
+
+      if (years.length === 0) {
+        yearStart.innerHTML = '<option value="">—</option>';
+        yearEnd.innerHTML = '<option value="">—</option>';
+        return;
+      }
+
+      const options = years.map(y => `<option value="${y}">${y}</option>`).join('');
+      yearStart.innerHTML = options;
+      yearEnd.innerHTML = options;
+      yearStart.value = String(years[0]);
+      yearEnd.value = String(years[years.length - 1]);
+    }
+
+    function normalizeYearBounds() {
+      const startEl = document.getElementById('yearStart');
+      const endEl = document.getElementById('yearEnd');
+      const start = parseInt(startEl.value, 10);
+      const end = parseInt(endEl.value, 10);
+      if (Number.isFinite(start) && Number.isFinite(end) && start > end) {
+        endEl.value = String(start);
+      }
+    }
+
+    function getFilteredRows() {
+      normalizeYearBounds();
+      const start = parseInt(document.getElementById('yearStart').value, 10);
+      const end = parseInt(document.getElementById('yearEnd').value, 10);
+      const status = document.getElementById('statusFilter').value;
+      const all = getAllRows();
+
+      return all.filter(r => {
+        if (Number.isFinite(start) && r.year < start) return false;
+        if (Number.isFinite(end) && r.year > end) return false;
+        if (status !== 'all' && r.status !== status) return false;
+        return true;
+      });
+    }
+
+    function renderSummaryCards(rows, selectedMetricIds) {
+      const cards = document.getElementById('summaryCards');
+      const selected = selectedMetricIds.map(getMetricById).filter(Boolean).slice(0, 6);
+      if (rows.length === 0) {
+        cards.innerHTML = '<div class="gm-export-card"><div class="label">Aucune donnée</div><div class="value">0</div></div>';
+        return;
+      }
+      cards.innerHTML = selected.map(metric => {
+        const value = metric.compute(rows);
+        return `<div class="gm-export-card"><div class="label">${escapeHtml(metric.label)}</div><div class="value">${escapeHtml(metric.format(value))}</div></div>`;
+      }).join('');
+    }
+
+    function computeSummaryRows(rows, selectedMetricIds) {
+      const byYear = {};
+      rows.forEach(r => {
+        if (!byYear[r.year]) byYear[r.year] = [];
+        byYear[r.year].push(r);
+      });
+
+      return Object.keys(byYear).map(y => {
+        const year = parseInt(y, 10);
+        const yearRows = byYear[year];
+        const values = {};
+        selectedMetricIds.forEach(id => {
+          const metric = getMetricById(id);
+          if (metric) values[id] = metric.compute(yearRows);
+        });
+        return { year, values, rows: yearRows };
+      }).sort((a, b) => b.year - a.year);
+    }
+
+    function renderSummaryTable(rows, selectedMetricIds) {
+      const head = document.querySelector('#summaryTable thead');
+      const body = document.querySelector('#summaryTable tbody');
+      const selected = selectedMetricIds.map(getMetricById).filter(Boolean);
+
+      head.innerHTML = `<tr><th>Année</th>${selected.map(m => `<th>${escapeHtml(m.label)}</th>`).join('')}</tr>`;
+      if (rows.length === 0 || selected.length === 0) {
+        body.innerHTML = '<tr><td colspan="20" style="text-align:center; padding:20px;">Aucune donnée disponible pour ce filtre</td></tr>';
+        return;
+      }
+
+      body.innerHTML = rows.map(entry => `
+        <tr>
+          <td><strong>${entry.year}</strong></td>
+          ${selected.map(m => `<td>${escapeHtml(m.format(entry.values[m.id]))}</td>`).join('')}
+        </tr>
+      `).join('');
+    }
+
+    function renderDetailsTable(rows) {
+      const body = document.querySelector('#detailsTable tbody');
+      if (rows.length === 0) {
+        body.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:20px;">Aucune semaine trouvée pour ces filtres</td></tr>';
+        return;
+      }
+
+      body.innerHTML = rows.map(r => {
+        const ratio = calculateRatio(r.hours, r.m3);
+        const range = getWeekDateRange(r.week, r.year);
+        return `
+          <tr>
+            <td><strong>S${String(r.week).padStart(2, '0')}/${r.year}</strong><br><small>${range.monday} - ${range.friday}</small></td>
+            <td>${r.status === 'published' ? 'Publié' : 'Brouillon'}</td>
+            <td>${formatNumber(r.m3)}</td>
+            <td>${formatNumber(r.hours)}</td>
+            <td>${ratio == null ? '—' : formatNumber(ratio)}</td>
+            <td>${formatNumber(r.qtAcierFaconne)}</td>
+            <td>${formatNumber(r.tempsBeton)}</td>
+            <td>${formatNumber(r.tempsAciers)}</td>
+            <td>${formatNumber(r.tempsChargement)}</td>
+            <td>${formatNumber(r.tempsCentrale)}</td>
+            <td><small style="white-space:pre-wrap;">${escapeHtml(r.comment || '')}</small></td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function refreshData() {
+      hideMessage();
+      const selectedMetricIds = getSelectedMetricIds();
+      if (selectedMetricIds.length === 0) {
+        showMessage('Sélectionnez au moins un indicateur pour afficher la synthèse.', 'warning');
+      }
+
+      filteredRows = getFilteredRows();
+      summaryRows = computeSummaryRows(filteredRows, selectedMetricIds);
+      renderSummaryCards(filteredRows, selectedMetricIds);
+      renderSummaryTable(summaryRows, selectedMetricIds);
+      renderDetailsTable(filteredRows);
+    }
+
+    function selectRecommendedMetrics() {
+      METRICS.forEach(m => {
+        const el = document.getElementById(`metric_${m.id}`);
+        if (el) el.checked = !!m.recommended;
+      });
+      refreshData();
+    }
+
+    function selectAllMetrics() {
+      METRICS.forEach(m => {
+        const el = document.getElementById(`metric_${m.id}`);
+        if (el) el.checked = true;
+      });
+      refreshData();
+    }
+
+    function clearMetrics() {
+      METRICS.forEach(m => {
+        const el = document.getElementById(`metric_${m.id}`);
+        if (el) el.checked = false;
+      });
+      refreshData();
+    }
+
+    function resetFilters() {
+      setupYearFilters();
+      document.getElementById('statusFilter').value = 'all';
+      selectRecommendedMetrics();
+    }
+
+    function toCsv(headers, rows) {
+      const escapeCell = (value) => {
+        const str = String(value == null ? '' : value);
+        if (/[;"\n\r,]/.test(str)) {
+          return `"${str.replace(/"/g, '""')}"`;
+        }
+        return str;
+      };
+      const lines = [headers.map(escapeCell).join(';')];
+      rows.forEach(row => lines.push(row.map(escapeCell).join(';')));
+      return '\uFEFF' + lines.join('\n');
+    }
+
+    function downloadCsv(filename, content) {
+      const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportSummaryCsv() {
+      const selectedMetricIds = getSelectedMetricIds();
+      if (selectedMetricIds.length === 0) {
+        showMessage('Impossible d\'exporter: aucun indicateur sélectionné.', 'error');
+        return;
+      }
+      if (summaryRows.length === 0) {
+        showMessage('Impossible d\'exporter: aucune donnée selon vos filtres.', 'error');
+        return;
+      }
+      const selected = selectedMetricIds.map(getMetricById).filter(Boolean);
+      const headers = ['Année', ...selected.map(m => m.label)];
+      const rows = summaryRows.map(entry => [
+        entry.year,
+        ...selected.map(m => m.format(entry.values[m.id]))
+      ]);
+      downloadCsv(`GM_export_resume_${new Date().toISOString().slice(0, 10)}.csv`, toCsv(headers, rows));
+      showMessage('Export résumé généré avec succès.', 'success');
+    }
+
+    function exportDetailCsv() {
+      if (filteredRows.length === 0) {
+        showMessage('Impossible d\'exporter: aucune donnée détaillée selon vos filtres.', 'error');
+        return;
+      }
+      const headers = ['Annee', 'Semaine', 'Statut', 'DateDebut', 'DateFin', 'm3', 'Heures', 'Ratio_h_par_m3', 'AcierFaconne_T', 'HeuresBeton', 'HeuresAciers', 'HeuresChargement', 'HeuresCentrale', 'Commentaire'];
+      const rows = filteredRows.map(r => {
+        const ratio = calculateRatio(r.hours, r.m3);
+        const range = getWeekDateRange(r.week, r.year);
+        return [
+          r.year,
+          r.week,
+          r.status,
+          range.monday,
+          range.friday,
+          r.m3,
+          r.hours,
+          ratio == null ? '' : ratio.toFixed(4),
+          r.qtAcierFaconne,
+          r.tempsBeton,
+          r.tempsAciers,
+          r.tempsChargement,
+          r.tempsCentrale,
+          r.comment || ''
+        ];
+      });
+      downloadCsv(`GM_export_detail_${new Date().toISOString().slice(0, 10)}.csv`, toCsv(headers, rows));
+      showMessage('Export détaillé généré avec succès.', 'success');
+    }
+
+    function init() {
+      document.getElementById('sidebar').innerHTML = getSidebar();
+      injectGMSecondaryBar();
+      setupMetricSelector();
+      setupYearFilters();
+      document.getElementById('yearStart').addEventListener('change', refreshData);
+      document.getElementById('yearEnd').addEventListener('change', refreshData);
+      document.getElementById('statusFilter').addEventListener('change', refreshData);
+      refreshData();
+    }
+
+    window.onServerReady(init);
+  </script>
+
+  <footer class="site-footer"></footer>
+</body>
+</html>

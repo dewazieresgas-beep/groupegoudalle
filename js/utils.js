@@ -123,7 +123,7 @@ function getCurrentPage() {
  */
 function isGMPage() {
   const page = getCurrentPage();
-  return page === 'gm.html' || page === 'gm-saisie.html' || page === 'gm-paiement.html';
+  return page === 'gm.html' || page === 'gm-saisie.html' || page === 'gm-paiement.html' || page === 'gm-export.html';
 }
 
 /**
@@ -517,6 +517,10 @@ function injectGMSecondaryBar() {
   if (Auth.hasAccess('gm_paiement')) {
     const paiementActive = currentPage === 'gm-paiement.html' ? ' active' : '';
     secondaryItems += `<a href="${base}pages/gm-paiement.html" class="sidebar-item${paiementActive}">💳 Paiements en attente</a>`;
+  }
+  if (Auth.hasAccess('gm')) {
+    const exportActive = currentPage === 'gm-export.html' ? ' active' : '';
+    secondaryItems += `<a href="${base}pages/gm-export.html" class="sidebar-item${exportActive}">📤 Exports de chiffres</a>`;
   }
 
   // Créer et injecter la barre secondaire
