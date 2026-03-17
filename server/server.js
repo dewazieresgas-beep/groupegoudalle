@@ -401,4 +401,18 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🗄️  Base de données : ${DB_PATH}`);
   console.log('✅ Serveur prêt - accessible depuis le réseau');
   console.log('');
+
+  // Vérification des fichiers Excel configurés
+  const gmCfg = dbGet('gm_excel_config', null);
+  if (gmCfg && gmCfg.active) {
+    const excelPath = path.join(gmCfg.folder, gmCfg.filename);
+    if (fs.existsSync(excelPath)) {
+      console.log(`✅ [Excel GM] Connecté : ${excelPath}`);
+    } else {
+      console.log(`❌ [Excel GM] Fichier introuvable : ${excelPath}`);
+    }
+  } else {
+    console.log(`⚠️  [Excel GM] Aucun fichier Excel configuré`);
+  }
+  console.log('');
 });
