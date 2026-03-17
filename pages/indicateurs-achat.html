@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Indicateurs Achat - Intranet Goudalle</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <script src="../js/api.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+
+  <script>
+    Auth.requireAuth();
+  </script>
+
+  <div class="app-container">
+    <div id="sidebar"></div>
+
+    <main class="main-content">
+      <div class="d-flex justify-between items-center mb-3" style="gap: 12px; flex-wrap: wrap;">
+        <h1 class="mb-0">Indicateurs Achat</h1>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <h2>En cours de développement</h2>
+        </div>
+        <div class="card-body">
+          <p style="color: #666;">Cette section est en cours de développement. Le contenu sera ajouté prochainement.</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    function init() {
+      document.getElementById('sidebar').innerHTML = getSidebar();
+    }
+
+    window.onServerReady(init);
+  </script>
+
+  <footer class="site-footer"></footer>
+</body>
+</html>

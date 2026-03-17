@@ -425,13 +425,13 @@ function getSidebar() {
     <a href="${base}index.html" class="sidebar-item${accueilActive}">🏠 Accueil</a>
   `;
 
-  // ===== INDICATEURS CHANTIERS (direction seulement - placeholder) =====
+  // ===== CHANTIERS (direction seulement - placeholder) =====
   if (isDirection) {
     const chantiersActive = currentPage === 'indicateurs-chantiers.html' ? ' active' : '';
-    items += `<a href="${base}pages/indicateurs-chantiers.html" class="sidebar-item${chantiersActive}">🚧 Indicateurs Chantiers</a>`;
+    items += `<a href="${base}pages/indicateurs-chantiers.html" class="sidebar-item${chantiersActive}">🚧 Chantiers</a>`;
   }
 
-  // ===== INDICATEURS PRODUCTION =====
+  // ===== PRODUCTION =====
   if (Auth.canViewGM() || Auth.hasAccess('gm_saisie') || Auth.hasAccess('cbco_usine') || Auth.hasAccess('cbco_productivite_saisie')) {
     const productionActive = isProductionPage() ? ' active' : '';
     // Pointer vers la première page accessible dans la section production
@@ -441,10 +441,10 @@ function getSidebar() {
       else if (Auth.hasAccess('gm_saisie')) productionHref = `${base}pages/gm-saisie.html`;
       else if (Auth.hasAccess('cbco_productivite_saisie')) productionHref = `${base}pages/cbco-productivite-saisie.html`;
     }
-    items += `<a href="${productionHref}" class="sidebar-item${productionActive}">🏭 Indicateurs Production</a>`;
+    items += `<a href="${productionHref}" class="sidebar-item${productionActive}">🏭 Production</a>`;
   }
 
-  // ===== INDICATEURS COMMERCIAUX =====
+  // ===== COMMERCIAUX =====
   if (Auth.hasAccess('cbco') || Auth.hasAccess('cbco_saisie') || Auth.hasAccess('cbco_commercial')) {
     const commercialActive = isCommercialPage() ? ' active' : '';
     // Pointer vers la première page accessible dans la section commerciale
@@ -453,16 +453,22 @@ function getSidebar() {
       if (Auth.hasAccess('cbco_saisie')) commercialHref = `${base}pages/cbco-saisie.html`;
       else if (Auth.hasAccess('cbco_commercial')) commercialHref = `${base}pages/cbco-commercial.html`;
     }
-    items += `<a href="${commercialHref}" class="sidebar-item${commercialActive}">💼 Indicateurs Commerciaux</a>`;
+    items += `<a href="${commercialHref}" class="sidebar-item${commercialActive}">💼 Commerce</a>`;
   }
 
-  // ===== INDICATEURS RH (direction seulement - placeholder) =====
+  // ===== ACHAT (direction seulement - placeholder) =====
+  if (isDirection) {
+    const achatActive = currentPage === 'indicateurs-achat.html' ? ' active' : '';
+    items += `<a href="${base}pages/indicateurs-achat.html" class="sidebar-item${achatActive}">🛒 Achat</a>`;
+  }
+
+  // ===== RH (direction seulement - placeholder) =====
   if (isDirection) {
     const rhActive = currentPage === 'indicateurs-rh.html' ? ' active' : '';
-    items += `<a href="${base}pages/indicateurs-rh.html" class="sidebar-item${rhActive}">👷 Indicateurs RH</a>`;
+    items += `<a href="${base}pages/indicateurs-rh.html" class="sidebar-item${rhActive}">👷 RH</a>`;
   }
 
-  // ===== INDICATEURS COMPTABILITÉ =====
+  // ===== COMPTABILITÉ =====
   if (Auth.canViewSylve() || Auth.hasAccess('gc_paiement') || Auth.hasAccess('gm_paiement') || Auth.hasAccess('cbco_paiement') || Auth.hasAccess('sylve_saisie')) {
     const comptaActive = isComptaPage() ? ' active' : '';
     // Pointer vers la première page accessible dans la section comptabilité
@@ -473,7 +479,7 @@ function getSidebar() {
       else if (Auth.hasAccess('gm_paiement')) comptaHref = `${base}pages/gm-paiement.html`;
       else if (Auth.hasAccess('cbco_paiement')) comptaHref = `${base}pages/cbco-paiement.html`;
     }
-    items += `<a href="${comptaHref}" class="sidebar-item${comptaActive}">📒 Indicateurs Comptabilité</a>`;
+    items += `<a href="${comptaHref}" class="sidebar-item${comptaActive}">📒 Comptabilité</a>`;
   }
 
   // ===== SECTIONS ADMINISTRATIVES (direction uniquement) =====
