@@ -139,6 +139,14 @@
       return mult > 0 && mult < 1 ? (base / mult) : base;
     }
 
+    function getRetardJours(client) {
+      if ((client.j61_plus || 0) > 0) return { label: '61+ jours', color: '#c0392b' };
+      if ((client.j46_60 || 0) > 0) return { label: '46–60 jours', color: '#e67e22' };
+      if ((client.j31_45 || 0) > 0) return { label: '31–45 jours', color: '#f39c12' };
+      if ((client.j1_30 || 0) > 0) return { label: '1–30 jours', color: '#27ae60' };
+      return { label: '—', color: '#999' };
+    }
+
     function getOptionLabel(typeId) {
       const opt = TYPE_OPTIONS.find(o => o.id === typeId);
       return opt ? opt.label : typeId;
@@ -415,6 +423,7 @@
           <tr data-compte="${escapeHtml(clientKey)}" data-retard="${c.retard}">
             <td><strong>${escapeHtml(c.client)}</strong>${badge}</td>
             <td style="font-weight:600; white-space:nowrap;">${formatSylveEuros(c.retard)}</td>
+            <td style="text-align:center; white-space:nowrap;"><span style="background:${getRetardJours(c).color}; color:#fff; padding:3px 10px; border-radius:12px; font-size:0.82em; font-weight:600;">${getRetardJours(c).label}</span></td>
             <td>
               <div class="pe-select">
                 <button type="button" class="btn btn-secondary pe-select-btn">Selectionner</button>
@@ -442,12 +451,13 @@
                 <tr>
                   <th style="text-align:center;">Client</th>
                   <th style="text-align:center;">Retard total</th>
+                  <th style="text-align:center;">Ancienneté</th>
                   <th style="text-align:center;">Selection</th>
                   <th style="text-align:center;">Montants</th>
                   <th style="text-align:center;">Commentaire</th>
                 </tr>
               </thead>
-              <tbody>${rows || '<tr><td colspan="5" style="text-align:center; color:#999;">Aucun client en retard</td></tr>'}</tbody>
+              <tbody>${rows || '<tr><td colspan="6" style="text-align:center; color:#999;">Aucun client en retard</td></tr>'}</tbody>
             </table>
           </div>
         </div>
