@@ -459,7 +459,6 @@ function getSidebar() {
       </div>
       <div class="mainbar">
         <div class="brand">
-          <img src="${getLogoPath()}" alt="Logo">
         </div>
         <nav class="sidebar-nav">
           ${items}
