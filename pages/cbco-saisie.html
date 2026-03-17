@@ -193,10 +193,10 @@
 
           <div class="sheet-toolbar">
             <div class="form-group">
-              <label for="sheetYear" style="margin-bottom: 4px;">Année</label>
+              <label for="sheetYear" style="margin-bottom: 4px;">Exercice (début)</label>
               <input id="sheetYear" class="sheet-year-input" type="number" min="2020" max="2100">
             </div>
-            <button class="btn btn-secondary" type="button" onclick="loadYearFromInput()">Charger l'année</button>
+              <button class="btn btn-secondary" type="button" onclick="loadYearFromInput()">Charger l'exercice</button>
             <button id="undoBtn" class="btn btn-secondary" type="button" onclick="undoChange()" disabled>↶ Revenir</button>
             <button id="redoBtn" class="btn btn-secondary" type="button" onclick="redoChange()" disabled>↷ Avancer</button>
             <button id="saveBtn" class="btn btn-primary" type="button" onclick="saveSpreadsheet()" disabled>💾 Sauvegarder</button>
@@ -211,7 +211,7 @@
                   <th>Montant chantier estimé en cours (K€)</th>
                   <th>Montant chantier estimé terminé (K€)</th>
                   <th>Total mensuel (K€)</th>
-                  <th>Cumul annuel (K€)</th>
+                  <th>Cumul exercice (K€)</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -222,11 +222,11 @@
           <div class="sheet-footer-tools">
             <div style="display:flex; gap:10px; flex-wrap:wrap;">
               <button class="btn btn-secondary" type="button" onclick="copyFromPreviousYear()">Copier N-1</button>
-              <button class="btn btn-danger" type="button" onclick="clearYear()">Vider l'année</button>
+              <button class="btn btn-danger" type="button" onclick="clearYear()">Vider l'exercice</button>
               <button class="btn btn-secondary" type="button" onclick="exportYearCsv()">Exporter CSV</button>
               <button class="btn btn-secondary" type="button" onclick="goToCBCO()">Retour dashboard</button>
             </div>
-            <div id="yearTotal" class="sheet-total-year">Total annuel: 0,00 K€</div>
+            <div id="yearTotal" class="sheet-total-year">Total exercice: 0,00 K€</div>
           </div>
 
           <div class="sheet-hint">
@@ -243,8 +243,12 @@
       'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
     ];
 
+    // Mois calendaires dans l'ordre de l'exercice fiscal (oct=1..sept=12)
+    // Indice 0 = mois fiscal 1 = Octobre, indice 11 = mois fiscal 12 = Septembre
+    const FISCAL_CALENDAR_MONTHS = [10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+
     const sheetState = {
-      year: new Date().getFullYear(),
+      year: getCurrentFiscalYear(),
       rows: [],
       savedRows: [],
       history: [],
@@ -295,18 +299,28 @@
       return JSON.stringify(a) === JSON.stringify(b);
     }
 
-    function monthRowsFromStorage(year) {
-      const rows = Array.from({ length: 12 }, (_, idx) => ({
-        month: idx + 1,
-        montantChantiersCours: 0,
-        montantChantiersTermines: 0
-      }));
+    function monthRowsFromStorage(fiscalYear) {
+      // Construire les 12 lignes de l'exercice fiscal (oct N → sept N+1)
+      const rows = FISCAL_CALENDAR_MONTHS.map((calMonth, idx) => {
+        const calYear = calMonth >= 10 ? fiscalYear : fiscalYear + 1;
+        return {
+          month: idx + 1,            // position fiscale 1-12 (oct=1..sept=12)
+          calendarMonth: calMonth,   // mois calendaire (1-12)
+          calendarYear: calYear,     // année calendaire
+          montantChantiersCours: 0,
+          montantChantiersTermines: 0
+        };
+      });
 
-      const entries = getCBCOData().filter(entry => entry.year === year);
+      // Charger les entrées pour les deux années calendaires couvrant l'exercice
+      const entries = getCBCOData().filter(entry =>
+        (entry.month >= 10 && entry.year === fiscalYear) ||
+        (entry.month < 10 && entry.year === fiscalYear + 1)
+      );
       entries.forEach(entry => {
-        const row = rows[entry.month - 1];
+        const fiscalMonth = getFiscalMonth(entry.month);
+        const row = rows[fiscalMonth - 1];
         if (!row) return;
-        // Garder les valeurs en EUR (pas de conversion ici)
         row.montantChantiersCours = normalizeNumber(entry.montantChantiersCours);
         row.montantChantiersTermines = normalizeNumber(entry.montantChantiersTermines);
       });
@@ -392,7 +406,7 @@
       const tbody = document.getElementById('sheetBody');
       tbody.innerHTML = sheetState.rows.map(row => `
         <tr data-month="${row.month}">
-          <td class="sheet-month">${MONTH_NAMES[row.month]}</td>
+          <td class="sheet-month">${MONTH_NAMES[row.calendarMonth]} <span style="font-size:0.82em;color:#888;">${row.calendarYear}</span></td>
           <td>
             <input
               class="sheet-input"
@@ -443,7 +457,7 @@
         if (cumulCell) cumulCell.textContent = formatCurrency(info.cumul);
       });
 
-      document.getElementById('yearTotal').textContent = `Total annuel: ${formatCurrency(annual)}`;
+      document.getElementById('yearTotal').textContent = `Total exercice: ${formatCurrency(annual)}`;
     }
 
     function bindInputEvents() {
@@ -517,12 +531,12 @@
       }
     }
 
-    function loadYear(year) {
+    function loadYear(fiscalYear) {
       hideMessage();
-      sheetState.year = year;
-      document.getElementById('sheetYear').value = year;
+      sheetState.year = fiscalYear;
+      document.getElementById('sheetYear').value = fiscalYear;
 
-      const rows = monthRowsFromStorage(year);
+      const rows = monthRowsFromStorage(fiscalYear);
       sheetState.rows = cloneRows(rows);
       sheetState.savedRows = cloneRows(rows);
       sheetState.history = [cloneRows(rows)];
@@ -535,8 +549,8 @@
 
     function loadYearFromInput() {
       const year = parseInt(document.getElementById('sheetYear').value, 10);
-      if (!Number.isFinite(year) || year < 2020 || year > 2100) {
-        showMessage('Veuillez saisir une année valide entre 2020 et 2100.', 'error');
+      if (!Number.isFinite(year) || year < 2020 || year > 2099) {
+        showMessage('Veuillez saisir l\'année de début d\'exercice entre 2020 et 2099 (ex: 2025 pour 2025/2026).', 'error');
         return;
       }
 
@@ -604,7 +618,7 @@
       const previousRows = monthRowsFromStorage(sheetState.year - 1);
       const hasData = previousRows.some(row => (row.montantChantiersCours + row.montantChantiersTermines) > 0);
       if (!hasData) {
-        showMessage(`Aucune donnée trouvée pour ${sheetState.year - 1}.`, 'error');
+        showMessage(`Aucune donnée trouvée pour l'exercice ${getFiscalYearLabel(sheetState.year - 1)}.`, 'error');
         return;
       }
 
@@ -614,14 +628,16 @@
       renderTableRows();
       refreshHistoryButtons();
       refreshDirtyState();
-      showMessage(`Données de ${sheetState.year - 1} copiées dans ${sheetState.year}.`, 'success');
+      showMessage(`Données de l'exercice ${getFiscalYearLabel(sheetState.year - 1)} copiées dans ${getFiscalYearLabel(sheetState.year)}.`, 'success');
     }
 
     function clearYear() {
-      if (!confirm(`Vider toutes les cellules de ${sheetState.year} ?`)) return;
+      if (!confirm(`Vider toutes les cellules de l'exercice ${getFiscalYearLabel(sheetState.year)} ?`)) return;
 
-      sheetState.rows = Array.from({ length: 12 }, (_, idx) => ({
+      sheetState.rows = FISCAL_CALENDAR_MONTHS.map((calMonth, idx) => ({
         month: idx + 1,
+        calendarMonth: calMonth,
+        calendarYear: calMonth >= 10 ? sheetState.year : sheetState.year + 1,
         montantChantiersCours: 0,
         montantChantiersTermines: 0
       }));
@@ -630,13 +646,15 @@
       renderTableRows();
       refreshHistoryButtons();
       refreshDirtyState();
-      showMessage(`Année ${sheetState.year} vidée. Pensez à sauvegarder.`, 'info');
+      showMessage(`Exercice ${getFiscalYearLabel(sheetState.year)} vidé. Pensez à sauvegarder.`, 'info');
     }
 
     function saveSpreadsheet() {
       try {
-        const existingForYear = getCBCOData().filter(entry => entry.year === sheetState.year);
-        const existingMonths = new Set(existingForYear.map(entry => entry.month));
+        const existingForFiscalYear = getCBCOData().filter(entry =>
+          getFiscalYear(entry.year, entry.month) === sheetState.year
+        );
+        const existingEntries = new Set(existingForFiscalYear.map(entry => `${entry.year}-${entry.month}`));
 
         sheetState.rows.forEach(row => {
           // Les valeurs sont déjà en EUR, pas besoin de conversion
@@ -645,9 +663,9 @@
           const total = cours + termines;
 
           if (total > 0) {
-            saveCBCOEntry(sheetState.year, row.month, cours, termines);
-          } else if (existingMonths.has(row.month)) {
-            deleteCBCOEntry(sheetState.year, row.month);
+            saveCBCOEntry(row.calendarYear, row.calendarMonth, cours, termines);
+          } else if (existingEntries.has(`${row.calendarYear}-${row.calendarMonth}`)) {
+            deleteCBCOEntry(row.calendarYear, row.calendarMonth);
           }
         });
 
@@ -660,7 +678,7 @@
         renderTableRows();
         refreshHistoryButtons();
         refreshDirtyState();
-        showMessage(`Données ${sheetState.year} sauvegardées avec succès.`, 'success');
+        showMessage(`Exercice ${getFiscalYearLabel(sheetState.year)} sauvegardé avec succès.`, 'success');
       } catch (error) {
         console.error(error);
         showMessage('Erreur pendant la sauvegarde des données CBCO.', 'error');
@@ -669,14 +687,15 @@
 
     function exportYearCsv() {
       const totals = computeRowTotals(sheetState.rows);
-      const headers = ['Année', 'Mois', 'Montant chantier en cours (K€)', 'Montant chantier terminé (K€)', 'Total mensuel (K€)', 'Cumul annuel (K€)'];
+      const headers = ['Exercice', 'Mois', 'Année', 'Montant chantier en cours (K€)', 'Montant chantier terminé (K€)', 'Total mensuel (K€)', 'Cumul exercice (K€)'];
       const lines = [headers.join(';')];
 
       sheetState.rows.forEach(row => {
         const info = totals[row.month];
         const line = [
-          sheetState.year,
-          MONTH_NAMES[row.month],
+          getFiscalYearLabel(sheetState.year),
+          MONTH_NAMES[row.calendarMonth],
+          row.calendarYear,
           row.montantChantiersCours.toFixed(2).replace('.', ','),
           row.montantChantiersTermines.toFixed(2).replace('.', ','),
           info.total.toFixed(2).replace('.', ','),
@@ -690,7 +709,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `cbco_${sheetState.year}.csv`;
+      a.download = `cbco_${getFiscalYearLabel(sheetState.year).replace('/', '-')}.csv`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -705,7 +724,7 @@
     function initCBCOSaisie() {
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectCommercialSecondaryBar();
-      loadYear(new Date().getFullYear());
+      loadYear(getCurrentFiscalYear());
 
       window.addEventListener('beforeunload', (event) => {
         if (!sheetState.isDirty) return;

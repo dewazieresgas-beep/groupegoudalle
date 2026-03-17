@@ -163,6 +163,46 @@ function getCurrentYear() {
   return new Date().getFullYear();
 }
 
+// ============ EXERCICE FISCAL (1er oct → 30 sept) ============
+/**
+ * Calcule l'année de début de l'exercice fiscal (1er oct - 30 sept)
+ * Ex : octobre 2025 → exercice 2025 (= 2025/2026), mars 2026 → exercice 2025
+ * @param {number} year - Année calendaire
+ * @param {number} month - Mois (1-12)
+ * @returns {number} - Année de début de l'exercice
+ */
+function getFiscalYear(year, month) {
+  return month >= 10 ? year : year - 1;
+}
+
+/**
+ * Retourne le libellé d'un exercice fiscal (ex : "2025/2026")
+ * @param {number} fiscalYearStart - Année de début de l'exercice
+ * @returns {string} - Libellé "YYYY/YYYY+1"
+ */
+function getFiscalYearLabel(fiscalYearStart) {
+  return `${fiscalYearStart}/${fiscalYearStart + 1}`;
+}
+
+/**
+ * Retourne la position d'un mois dans l'exercice fiscal
+ * Octobre = 1, Novembre = 2, Décembre = 3, Janvier = 4, ..., Septembre = 12
+ * @param {number} month - Mois calendaire (1-12)
+ * @returns {number} - Position dans l'exercice (1-12)
+ */
+function getFiscalMonth(month) {
+  return month >= 10 ? month - 9 : month + 3;
+}
+
+/**
+ * Retourne l'exercice fiscal en cours
+ * @returns {number} - Année de début de l'exercice en cours
+ */
+function getCurrentFiscalYear() {
+  const now = new Date();
+  return getFiscalYear(now.getFullYear(), now.getMonth() + 1);
+}
+
 /**
  * Retourne le numéro de la semaine en cours
  * @returns {number} - Numéro de semaine (1-53)
@@ -708,25 +748,26 @@ function saveCBCOEntry(year, month, montantChantiersCours, montantChantiersTermi
  * @param {Array} data - Données CBCO (ordre n'importe pas, sera trié par année/mois)
  */
 function calculateCBCOCumuls(data) {
-  // Trier d'abord par année, puis par mois
-  const sorted = data.sort((a, b) => {
-    if (a.year !== b.year) return a.year - b.year;
-    return a.month - b.month;
+  // Trier par exercice fiscal, puis par position dans l'exercice (oct → sept)
+  data.sort((a, b) => {
+    const fyA = getFiscalYear(a.year, a.month);
+    const fyB = getFiscalYear(b.year, b.month);
+    if (fyA !== fyB) return fyA - fyB;
+    return getFiscalMonth(a.month) - getFiscalMonth(b.month);
   });
 
-  // Grouper par année
-  const byYear = {};
-  sorted.forEach(entry => {
-    if (!byYear[entry.year]) {
-      byYear[entry.year] = [];
-    }
-    byYear[entry.year].push(entry);
+  // Grouper par exercice fiscal
+  const byFiscalYear = {};
+  data.forEach(entry => {
+    const fy = getFiscalYear(entry.year, entry.month);
+    if (!byFiscalYear[fy]) byFiscalYear[fy] = [];
+    byFiscalYear[fy].push(entry);
   });
 
-  // Pour chaque année, calculer les cumuls cumulatifs
-  Object.keys(byYear).sort((a, b) => a - b).forEach(year => {
+  // Pour chaque exercice, calculer les cumuls cumulatifs (oct → sept)
+  Object.keys(byFiscalYear).sort((a, b) => a - b).forEach(fy => {
     let cumul = 0;
-    byYear[year].forEach(entry => {
+    byFiscalYear[fy].forEach(entry => {
       cumul += entry.montantTotal;
       entry.cumulAnnuel = cumul;
     });
@@ -761,21 +802,20 @@ function deleteCBCOEntry(year, month) {
  */
 function getCBCOByYear() {
   const data = getCBCOData();
-  const byYear = {};
-  
+  const byFiscalYear = {};
+
   data.forEach(entry => {
-    if (!byYear[entry.year]) {
-      byYear[entry.year] = [];
-    }
-    byYear[entry.year].push(entry);
+    const fy = getFiscalYear(entry.year, entry.month);
+    if (!byFiscalYear[fy]) byFiscalYear[fy] = [];
+    byFiscalYear[fy].push(entry);
   });
-  
-  // Trier les mois dans chaque année
-  Object.keys(byYear).forEach(year => {
-    byYear[year].sort((a, b) => a.month - b.month);
+
+  // Trier les entrées de chaque exercice par position fiscale (oct → sept)
+  Object.keys(byFiscalYear).forEach(fy => {
+    byFiscalYear[fy].sort((a, b) => getFiscalMonth(a.month) - getFiscalMonth(b.month));
   });
-  
-  return byYear;
+
+  return byFiscalYear;
 }
 
 /**

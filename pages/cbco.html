@@ -61,7 +61,7 @@
             </div>
             <!-- Cumul annuel mis en valeur -->
             <div class="cbco-stat-box highlight">
-              <div class="cbco-stat-label">📈 Cumul annuel</div>
+              <div class="cbco-stat-label">📈 Cumul exercice</div>
               <div class="cbco-stat-value" id="currentCumulAnnuel">0 K€</div>
             </div>
           </div>
@@ -116,6 +116,9 @@
     let currentYearChart;
     const MONTH_NAMES = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
                           'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+    // Mois de l'exercice fiscal : octobre → septembre
+    const FISCAL_MONTH_NAMES = ['Octobre', 'Novembre', 'Décembre', 'Janvier', 'Février', 'Mars',
+                                 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre'];
 
     /**
      * Formate un mois et une année
@@ -169,7 +172,7 @@
         checkbox.onchange = renderCBCOChart;
         
         const span = document.createElement('span');
-        span.textContent = year;
+        span.textContent = getFiscalYearLabel(parseInt(year));
         
         label.appendChild(checkbox);
         label.appendChild(span);
@@ -270,24 +273,24 @@
       ];
 
       years.forEach((year, idx) => {
-        const entries = byYear[year].sort((a, b) => a.month - b.month);
+        const entries = byYear[year].sort((a, b) => getFiscalMonth(a.month) - getFiscalMonth(b.month));
 
-        // Aligner chaque cumul sur son vrai mois (1..12)
+        // Aligner chaque cumul sur son mois fiscal (1=oct..12=sept)
         const cumulByMonth = {};
         entries.forEach(e => {
-          cumulByMonth[e.month] = e.cumulAnnuel;
+          cumulByMonth[getFiscalMonth(e.month)] = e.cumulAnnuel;
         });
 
         const cumulValues = Array.from({ length: 12 }, (_, i) => {
-          const month = i + 1;
-          return Object.prototype.hasOwnProperty.call(cumulByMonth, month)
-            ? cumulByMonth[month]
+          const fiscalMonth = i + 1;
+          return Object.prototype.hasOwnProperty.call(cumulByMonth, fiscalMonth)
+            ? cumulByMonth[fiscalMonth]
             : null;
         });
 
         const color = colors[idx % colors.length];
         datasets.push({
-          label: `Année ${year}`,
+          label: getFiscalYearLabel(parseInt(year)),
           data: cumulValues,
           borderColor: color.border,
           backgroundColor: color.border,
@@ -303,8 +306,8 @@
       const ctx = document.getElementById('cbcoChart').getContext('2d');
       if (cbcoChart) cbcoChart.destroy();
 
-      // Toujours afficher Janvier à Décembre
-      const labels = Array.from({ length: 12 }, (_, i) => MONTH_NAMES[i + 1]);
+      // Toujours afficher Octobre à Septembre (exercice fiscal)
+      const labels = FISCAL_MONTH_NAMES;
 
       cbcoChart = new Chart(ctx, {
         type: 'line',
@@ -324,7 +327,7 @@
               callbacks: {
                 label: (ctx) => {
                   const v = ctx.parsed?.y;
-                  return `Cumul annuel : ${formatCBCOCurrency(v)}`;
+                  return `Cumul exercice : ${formatCBCOCurrency(v)}`;
                 }
               }
             }
@@ -351,16 +354,18 @@
      * Génère le graphique des montants mensuels pour l'année en cours
      */
     function renderCurrentYearChart() {
-      const currentYear = new Date().getFullYear();
-      const data = getCBCOData().filter(e => e.year === currentYear).sort((a, b) => a.month - b.month);
+      const currentFiscalYear = getCurrentFiscalYear();
+      const data = getCBCOData()
+        .filter(e => getFiscalYear(e.year, e.month) === currentFiscalYear)
+        .sort((a, b) => getFiscalMonth(a.month) - getFiscalMonth(b.month));
       
-      // Créer des tableaux pour les 12 mois avec null pour les mois sans données
+      // Créer des tableaux pour les 12 mois fiscaux avec null pour les mois sans données
       const montantCours = Array(12).fill(null);
       const montantTermines = Array(12).fill(null);
       const montantTotal = Array(12).fill(null);
       
       data.forEach(e => {
-        const idx = e.month - 1;
+        const idx = getFiscalMonth(e.month) - 1;
         montantCours[idx] = e.montantChantiersCours;
         montantTermines[idx] = e.montantChantiersTermines;
         montantTotal[idx] = e.montantTotal;
@@ -369,7 +374,7 @@
       const ctx = document.getElementById('currentYearChart').getContext('2d');
       if (currentYearChart) currentYearChart.destroy();
       
-      const labels = Array.from({ length: 12 }, (_, i) => MONTH_NAMES[i + 1]);
+      const labels = FISCAL_MONTH_NAMES;
       
       currentYearChart = new Chart(ctx, {
         type: 'line',
@@ -431,7 +436,7 @@
             },
             title: {
               display: true,
-              text: `Année ${currentYear}`
+              text: `Exercice ${getFiscalYearLabel(currentFiscalYear)}`
             }
           },
           scales: {
@@ -476,7 +481,7 @@
           section1.style.marginBottom = '20px';
           
           const title1 = document.createElement('h2');
-          title1.textContent = 'Évolution du cumul annuel par année';
+          title1.textContent = 'Évolution du cumul par exercice fiscal';
           title1.style.margin = '0 0 15px 0';
           title1.style.fontSize = '20px';
           title1.style.color = '#333';
