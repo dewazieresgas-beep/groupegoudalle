@@ -391,6 +391,19 @@ function getSidebar() {
     items += `<a href="${base}pages/indicateurs-chantiers.html" class="sidebar-item${chantiersActive}">🚧 Indicateurs Chantiers</a>`;
   }
 
+  // ===== INDICATEURS PRODUCTION =====
+  if (Auth.canViewGM() || Auth.hasAccess('gm_saisie') || Auth.hasAccess('cbco_usine') || Auth.hasAccess('cbco_productivite_saisie')) {
+    const productionActive = isProductionPage() ? ' active' : '';
+    // Pointer vers la première page accessible dans la section production
+    let productionHref = `${base}pages/gm.html`;
+    if (!Auth.canViewGM()) {
+      if (Auth.hasAccess('cbco_usine')) productionHref = `${base}pages/cbco-usine.html`;
+      else if (Auth.hasAccess('gm_saisie')) productionHref = `${base}pages/gm-saisie.html`;
+      else if (Auth.hasAccess('cbco_productivite_saisie')) productionHref = `${base}pages/cbco-productivite-saisie.html`;
+    }
+    items += `<a href="${productionHref}" class="sidebar-item${productionActive}">🏭 Indicateurs Production</a>`;
+  }
+
   // ===== INDICATEURS COMMERCIAUX =====
   if (Auth.hasAccess('cbco') || Auth.hasAccess('cbco_saisie') || Auth.hasAccess('cbco_commercial')) {
     const commercialActive = isCommercialPage() ? ' active' : '';
@@ -421,19 +434,6 @@ function getSidebar() {
       else if (Auth.hasAccess('cbco_paiement')) comptaHref = `${base}pages/cbco-paiement.html`;
     }
     items += `<a href="${comptaHref}" class="sidebar-item${comptaActive}">📒 Indicateurs Comptabilité</a>`;
-  }
-
-  // ===== INDICATEURS PRODUCTION =====
-  if (Auth.canViewGM() || Auth.hasAccess('gm_saisie') || Auth.hasAccess('cbco_usine') || Auth.hasAccess('cbco_productivite_saisie')) {
-    const productionActive = isProductionPage() ? ' active' : '';
-    // Pointer vers la première page accessible dans la section production
-    let productionHref = `${base}pages/gm.html`;
-    if (!Auth.canViewGM()) {
-      if (Auth.hasAccess('cbco_usine')) productionHref = `${base}pages/cbco-usine.html`;
-      else if (Auth.hasAccess('gm_saisie')) productionHref = `${base}pages/gm-saisie.html`;
-      else if (Auth.hasAccess('cbco_productivite_saisie')) productionHref = `${base}pages/cbco-productivite-saisie.html`;
-    }
-    items += `<a href="${productionHref}" class="sidebar-item${productionActive}">🏭 Indicateurs Production</a>`;
   }
 
   // ===== SECTIONS ADMINISTRATIVES (direction uniquement) =====
