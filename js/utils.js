@@ -132,7 +132,7 @@ function isGMPage() {
  */
 function isGCPage() {
   const page = getCurrentPage();
-  return page === 'gc.html' || page === 'gc-saisie.html' || page === 'gc-paiement.html';
+  return page === 'gc.html' || page === 'gc-saisie.html' || page === 'gc-paiement.html' || page === 'cbco.html' || page === 'cbco-saisie.html' || page === 'cbco-commercial.html';
 }
 
 // ============ WEEK UTILS ============
@@ -559,6 +559,19 @@ function injectGCSecondaryBar() {
   const currentPage = getCurrentPage();
 
   let secondaryItems = '';
+  if (Auth.hasAccess('cbco')) {
+    const bureauActive = currentPage === 'cbco.html' ? ' active' : '';
+    secondaryItems += `<a href="${base}pages/cbco.html" class="sidebar-item${bureauActive}">🏢 Dashboard bureau d'étude</a>`;
+  }
+  if (Auth.hasAccess('cbco_saisie')) {
+    const caActive = currentPage === 'cbco-saisie.html' ? ' active' : '';
+    secondaryItems += `<a href="${base}pages/cbco-saisie.html" class="sidebar-item${caActive}">✏️ Saisie chiffre d'affaires</a>`;
+  }
+  if (Auth.hasAccess('cbco_commercial')) {
+    const commercialActive = currentPage === 'cbco-commercial.html' ? ' active' : '';
+    secondaryItems += `<a href="${base}pages/cbco-commercial.html" class="sidebar-item${commercialActive}">💼 Saisie indicateurs commercial</a>`;
+  }
+
   const dashboardActive = currentPage === 'gc.html' ? ' active' : '';
   secondaryItems += `<a href="${base}pages/gc.html" class="sidebar-item${dashboardActive}">📊 Dashboard</a>`;
 
@@ -789,22 +802,9 @@ function injectCBCOSecondaryBar() {
     const usineActive = currentPage === 'cbco-usine.html' ? ' active' : '';
     secondaryItems += `<a href="${base}pages/cbco-usine.html" class="sidebar-item${usineActive}">🏭 Dashboard usine</a>`;
   }
-  if (Auth.hasAccess('cbco')) {
-    const consultationActive = currentPage === 'cbco.html' ? ' active' : '';
-    secondaryItems += `<a href="${base}pages/cbco.html" class="sidebar-item${consultationActive}">🏢 Dashboard bureau d'étude</a>`;
-  }
-
-  if (Auth.hasAccess('cbco_saisie')) {
-    const saisieActive = currentPage === 'cbco-saisie.html' ? ' active' : '';
-    secondaryItems += `<a href="${base}pages/cbco-saisie.html" class="sidebar-item${saisieActive}">✏️ Saisie chiffre d'affaires</a>`;
-    if (Auth.hasAccess('cbco_productivite_saisie')) {
-      const prodActive = currentPage === 'cbco-productivite-saisie.html' ? ' active' : '';
-      secondaryItems += `<a href="${base}pages/cbco-productivite-saisie.html" class="sidebar-item${prodActive}">🏭 Saisie productivité usine</a>`;
-    }
-  }
-  if (Auth.hasAccess('cbco_commercial')) {
-    const commercialActive = currentPage === 'cbco-commercial.html' ? ' active' : '';
-    secondaryItems += `<a href="${base}pages/cbco-commercial.html" class="sidebar-item${commercialActive}">💼 Saisie indicateurs commercial</a>`;
+  if (Auth.hasAccess('cbco_productivite_saisie')) {
+    const prodActive = currentPage === 'cbco-productivite-saisie.html' ? ' active' : '';
+    secondaryItems += `<a href="${base}pages/cbco-productivite-saisie.html" class="sidebar-item${prodActive}">🏭 Saisie productivité usine</a>`;
   }
   if (Auth.hasAccess('cbco_paiement')) {
     const paiementActive = currentPage === 'cbco-paiement.html' ? ' active' : '';
@@ -845,7 +845,7 @@ function injectCBCOSecondaryBar() {
  */
 function isCBCOPage() {
   const page = getCurrentPage();
-  return page === 'cbco.html' || page === 'cbco-usine.html' || page === 'cbco-saisie.html' || page === 'cbco-commercial.html' || page === 'cbco-paiement.html' || page === 'cbco-productivite-saisie.html';
+  return page === 'cbco-usine.html' || page === 'cbco-paiement.html' || page === 'cbco-productivite-saisie.html';
 }
 
 /**
