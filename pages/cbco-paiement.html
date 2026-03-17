@@ -6,13 +6,15 @@
   <title>Paiements en Attente - CBCO - Intranet</title>
   <link rel="stylesheet" href="../css/style.css">
   <style>
-    .pe-table { width: 100%; table-layout: fixed; font-size: 0.78em; }
+    .pe-table-wrap { overflow-x: auto; }
+    .pe-table { width: 100%; min-width: 900px; table-layout: fixed; font-size: 0.78em; }
     .pe-table th, .pe-table td { padding: 8px 6px; vertical-align: top; }
-    .pe-table th:nth-child(1) { width: 30%; }
-    .pe-table th:nth-child(2) { width: 12%; }
-    .pe-table th:nth-child(3) { width: 16%; }
-    .pe-table th:nth-child(4) { width: 20%; }
-    .pe-table th:nth-child(5) { width: 22%; }
+    .pe-table th:nth-child(1) { width: 22%; }
+    .pe-table th:nth-child(2) { width: 11%; }
+    .pe-table th:nth-child(3) { width: 10%; }
+    .pe-table th:nth-child(4) { width: 15%; }
+    .pe-table th:nth-child(5) { width: 18%; }
+    .pe-table th:nth-child(6) { width: 24%; }
 
     .pe-select { position: relative; }
     .pe-select-btn { width: 100%; }
@@ -446,6 +448,7 @@
             <span class="badge badge-primary">Import: ${periode} - ${clients.length} clients en retard</span>
           </div>
           <div class="card-body">
+            <div class="pe-table-wrap">
             <table class="pe-table">
               <thead>
                 <tr>
@@ -459,6 +462,7 @@
               </thead>
               <tbody>${rows || '<tr><td colspan="6" style="text-align:center; color:#999;">Aucun client en retard</td></tr>'}</tbody>
             </table>
+            </div>
           </div>
         </div>
       `;
