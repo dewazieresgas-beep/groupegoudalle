@@ -45,8 +45,6 @@ const Auth = {
     }
     // Migration douce : si la base existe déjà, ajouter les comptes démo manquants
     this.ensureDefaultUsers();
-    // Supprimer les anciens comptes de démonstration (migration)
-    this.removeDemoAccounts();
 
     // Initialiser le code d'admin par défaut si absent
     if (!localStorage.getItem(this.STORAGE_KEY_ADMIN_CODE)) {
@@ -77,27 +75,6 @@ const Auth = {
     Object.keys(defaultUsers).forEach((username) => {
       if (!users[username]) {
         users[username] = defaultUsers[username];
-        updated = true;
-      }
-    });
-
-    if (updated) {
-      localStorage.setItem(this.STORAGE_KEY_USERS, JSON.stringify(users));
-    }
-  },
-
-  /**
-   * Supprime les anciens comptes de démonstration (julie, mathieu, gaspard, christelle, mickael)
-   * Appelée une fois à l'init pour nettoyer les bases de données existantes
-   */
-  removeDemoAccounts() {
-    const demoUsernames = ['julie', 'mathieu', 'gaspard', 'christelle', 'mickael'];
-    const users = this.getAllUsers();
-    let updated = false;
-
-    demoUsernames.forEach(username => {
-      if (users[username] && users[username].createdBy === 'acgoudalle' && users[username].password === '123') {
-        delete users[username];
         updated = true;
       }
     });
