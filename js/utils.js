@@ -394,7 +394,13 @@ function getSidebar() {
   // ===== INDICATEURS COMMERCIAUX =====
   if (Auth.hasAccess('cbco') || Auth.hasAccess('cbco_saisie') || Auth.hasAccess('cbco_commercial')) {
     const commercialActive = isCommercialPage() ? ' active' : '';
-    items += `<a href="${base}pages/cbco.html" class="sidebar-item${commercialActive}">💼 Indicateurs Commerciaux</a>`;
+    // Pointer vers la première page accessible dans la section commerciale
+    let commercialHref = `${base}pages/cbco.html`;
+    if (!Auth.hasAccess('cbco')) {
+      if (Auth.hasAccess('cbco_saisie')) commercialHref = `${base}pages/cbco-saisie.html`;
+      else if (Auth.hasAccess('cbco_commercial')) commercialHref = `${base}pages/cbco-commercial.html`;
+    }
+    items += `<a href="${commercialHref}" class="sidebar-item${commercialActive}">💼 Indicateurs Commerciaux</a>`;
   }
 
   // ===== INDICATEURS RH (direction seulement - placeholder) =====
@@ -404,15 +410,30 @@ function getSidebar() {
   }
 
   // ===== INDICATEURS COMPTABILITÉ =====
-  if (Auth.canViewSylve() || Auth.hasAccess('gc_paiement') || Auth.hasAccess('gm_paiement') || Auth.hasAccess('cbco_paiement')) {
+  if (Auth.canViewSylve() || Auth.hasAccess('gc_paiement') || Auth.hasAccess('gm_paiement') || Auth.hasAccess('cbco_paiement') || Auth.hasAccess('sylve_saisie')) {
     const comptaActive = isComptaPage() ? ' active' : '';
-    items += `<a href="${base}pages/sylve-support.html" class="sidebar-item${comptaActive}">📒 Indicateurs Comptabilité</a>`;
+    // Pointer vers la première page accessible dans la section comptabilité
+    let comptaHref = `${base}pages/sylve-support.html`;
+    if (!Auth.canViewSylve()) {
+      if (Auth.hasAccess('sylve_saisie')) comptaHref = `${base}pages/sylve-support-saisie.html`;
+      else if (Auth.hasAccess('gc_paiement')) comptaHref = `${base}pages/gc-paiement.html`;
+      else if (Auth.hasAccess('gm_paiement')) comptaHref = `${base}pages/gm-paiement.html`;
+      else if (Auth.hasAccess('cbco_paiement')) comptaHref = `${base}pages/cbco-paiement.html`;
+    }
+    items += `<a href="${comptaHref}" class="sidebar-item${comptaActive}">📒 Indicateurs Comptabilité</a>`;
   }
 
   // ===== INDICATEURS PRODUCTION =====
   if (Auth.canViewGM() || Auth.hasAccess('gm_saisie') || Auth.hasAccess('cbco_usine') || Auth.hasAccess('cbco_productivite_saisie')) {
     const productionActive = isProductionPage() ? ' active' : '';
-    items += `<a href="${base}pages/gm.html" class="sidebar-item${productionActive}">🏭 Indicateurs Production</a>`;
+    // Pointer vers la première page accessible dans la section production
+    let productionHref = `${base}pages/gm.html`;
+    if (!Auth.canViewGM()) {
+      if (Auth.hasAccess('cbco_usine')) productionHref = `${base}pages/cbco-usine.html`;
+      else if (Auth.hasAccess('gm_saisie')) productionHref = `${base}pages/gm-saisie.html`;
+      else if (Auth.hasAccess('cbco_productivite_saisie')) productionHref = `${base}pages/cbco-productivite-saisie.html`;
+    }
+    items += `<a href="${productionHref}" class="sidebar-item${productionActive}">🏭 Indicateurs Production</a>`;
   }
 
   // ===== SECTIONS ADMINISTRATIVES (direction uniquement) =====
