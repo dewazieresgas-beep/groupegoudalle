@@ -82,13 +82,15 @@
         <section class="cbco-card-v2">
           <header class="cbco-card-title-v2">Évolution du chiffre d'affaires cumulé par année</header>
           <div class="cbco-card-content-v2">
-            <div style="margin-bottom: 15px;">
-              <label style="display: block; margin-bottom: 10px; font-weight: 600;">Afficher les années :</label>
-              <div id="chartYearFilterContainer" style="display: flex; flex-wrap: wrap; gap: 10px;">
-                <!-- Les checkboxes seront générées par JavaScript -->
+            <div style="margin-bottom: 15px; position:relative; display:inline-block;">
+              <button id="chartYearFilterBtn" class="btn btn-secondary btn-small" type="button" onclick="toggleChartYearDropdown()">Années</button>
+              <div id="chartYearDropdown" style="display:none; position:absolute; top:42px; left:0; min-width:260px; background:#fff; border:1px solid var(--border-light); border-radius:8px; box-shadow:var(--shadow-lg); padding:10px; z-index:30;">
+                <div style="display:flex; gap:8px; margin-bottom:8px;">
+                  <button type="button" class="btn btn-secondary btn-small" onclick="setAllChartYears(true)">Tout</button>
+                  <button type="button" class="btn btn-secondary btn-small" onclick="setAllChartYears(false)">Aucun</button>
+                </div>
+                <div id="chartYearFilterContainer" style="display:flex; flex-direction:column; gap:6px; max-height:220px; overflow:auto;"></div>
               </div>
-              <button onclick="selectAllChartYears()" class="btn btn-small btn-secondary" style="margin-top: 8px; margin-right: 5px;">Sélectionner tout</button>
-              <button onclick="clearAllChartYears()" class="btn btn-small btn-secondary" style="margin-top: 8px;">Désélectionner tout</button>
             </div>
             <div class="cbco-chart-container">
               <canvas id="cbcoChart"></canvas>
@@ -120,6 +122,7 @@
     // Variables globales
     let cbcoChart;
     let currentYearChart;
+    let selectedChartYears = null;
     const MONTH_NAMES = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
                           'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
     // Mois de l'exercice fiscal : octobre → septembre
@@ -160,17 +163,55 @@
       return FISCAL_MONTH_NAMES;
     }
 
-    /**
-     * Initialise les checkboxes de filtrage par année pour le graphique
-     */
+    function getSelectableChartYears() {
+      const byYear = getCBCOByYearForDisplay();
+      return Object.keys(byYear)
+        .map(y => parseInt(y, 10))
+        .filter(Number.isFinite)
+        .filter(y => (byYear[y] || []).some(e => Number(e.montantTotal) > 0))
+        .sort((a, b) => b - a);
+    }
+
+    function updateChartYearFilterButtonLabel() {
+      const btn = document.getElementById('chartYearFilterBtn');
+      if (!btn) return;
+      const selected = [...(selectedChartYears || [])].sort((a, b) => b - a);
+      if (!selected.length) {
+        btn.textContent = 'Années (aucune)';
+        return;
+      }
+      const labels = selected.map(y => getShortFiscalYearLabel(y));
+      btn.textContent = labels.length <= 2 ? `Années : ${labels.join(', ')}` : `Années : ${labels.length} sélectionnées`;
+    }
+
+    function toggleChartYearDropdown() {
+      const dd = document.getElementById('chartYearDropdown');
+      if (!dd) return;
+      dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function setAllChartYears(checked) {
+      const years = getSelectableChartYears();
+      selectedChartYears = new Set(checked ? years : []);
+      initChartYearFilter();
+      renderCBCOChart();
+    }
+
     function initChartYearFilter() {
-      const data = getCBCODataUpToLatestComplete();
-      const years = [...new Set(data.map(e => e.year))].sort((a, b) => b - a);
+      const years = getSelectableChartYears();
+      if (selectedChartYears === null) {
+        selectedChartYears = new Set(years.slice(0, 3));
+      } else {
+        selectedChartYears = new Set([...selectedChartYears].filter(y => years.includes(y)));
+        if (!selectedChartYears.size && years.length) {
+          selectedChartYears = new Set(years.slice(0, 3));
+        }
+      }
       
       const container = document.getElementById('chartYearFilterContainer');
       container.innerHTML = '';
       
-      years.forEach((year, index) => {
+      years.forEach((year) => {
         const label = document.createElement('label');
         label.style.display = 'flex';
         label.style.alignItems = 'center';
@@ -185,37 +226,22 @@
         checkbox.type = 'checkbox';
         checkbox.value = year;
         checkbox.className = 'chart-year-checkbox';
-        // Cocher seulement les 3 dernières années par défaut
-        checkbox.checked = index < 3;
-        checkbox.onchange = renderCBCOChart;
+        checkbox.checked = selectedChartYears.has(year);
+        checkbox.onchange = () => {
+          if (checkbox.checked) selectedChartYears.add(year);
+          else selectedChartYears.delete(year);
+          updateChartYearFilterButtonLabel();
+          renderCBCOChart();
+        };
         
         const span = document.createElement('span');
-        span.textContent = getFiscalYearLabel(parseInt(year));
+        span.textContent = getShortFiscalYearLabel(parseInt(year, 10));
         
         label.appendChild(checkbox);
         label.appendChild(span);
         container.appendChild(label);
       });
-    }
-
-    /**
-     * Sélectionne toutes les années du graphique
-     */
-    function selectAllChartYears() {
-      document.querySelectorAll('.chart-year-checkbox').forEach(cb => {
-        cb.checked = true;
-      });
-      renderCBCOChart();
-    }
-
-    /**
-     * Désélectionne toutes les années du graphique
-     */
-    function clearAllChartYears() {
-      document.querySelectorAll('.chart-year-checkbox').forEach(cb => {
-        cb.checked = false;
-      });
-      renderCBCOChart();
+      updateChartYearFilterButtonLabel();
     }
 
     function getLatestCompleteMonthEntry() {
@@ -281,8 +307,7 @@
       const allYears = Object.keys(byYear).sort((a, b) => a - b);
       
       // Filtrer selon les années sélectionnées
-      const selectedYears = [...document.querySelectorAll('.chart-year-checkbox:checked')]
-        .map(cb => cb.value);
+      const selectedYears = [...(selectedChartYears || [])].map(String);
       
       const years = selectedYears.length > 0 
         ? allYears.filter(y => selectedYears.includes(y))
@@ -644,6 +669,14 @@
       renderCBCOChart();
       renderCurrentYearChart();
       renderCommercialDonutCBCO();
+      document.addEventListener('click', (event) => {
+        const dd = document.getElementById('chartYearDropdown');
+        const btn = document.getElementById('chartYearFilterBtn');
+        if (!dd || !btn) return;
+        const inDropdown = dd.contains(event.target);
+        const onButton = btn.contains(event.target);
+        if (!inDropdown && !onButton) dd.style.display = 'none';
+      });
     }
 
     /**
