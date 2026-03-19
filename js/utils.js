@@ -123,7 +123,7 @@ function getCurrentPage() {
  */
 function isProductionPage() {
   const page = getCurrentPage();
-  return page === 'gm.html' || page === 'gm-saisie.html' || page === 'cbco-usine.html' || page === 'cbco-productivite-saisie.html';
+  return page === 'gm.html' || page === 'gm-saisie.html' || page === 'cbco-usine.html' || page === 'cbco-productivite-saisie.html' || page === 'indicateurs-generale.html';
 }
 
 /**
@@ -577,6 +577,11 @@ function injectProductionSecondaryBar() {
   const currentPage = getCurrentPage();
 
   let secondaryItems = '';
+
+  if (Auth.canViewGM() || Auth.hasAccess('gm_saisie') || Auth.hasAccess('cbco_usine') || Auth.hasAccess('cbco_productivite_saisie')) {
+    const generaleActive = currentPage === 'indicateurs-generale.html' ? ' active' : '';
+    secondaryItems += `<a href="${base}pages/indicateurs-generale.html" class="sidebar-item${generaleActive}">📈 Indicateures générale</a>`;
+  }
 
   if (Auth.canViewGM()) {
     const gmActive = currentPage === 'gm.html' ? ' active' : '';

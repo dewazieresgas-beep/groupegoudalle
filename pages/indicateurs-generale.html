@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Indicateures générale - Production</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .ig-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 3fr) minmax(240px, 1fr);
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .ig-chart-wrap { height: 340px; }
+    .ig-chart-wrap-small { height: 300px; }
+    .ig-chart-wrap canvas,
+    .ig-chart-wrap-small canvas { width: 100% !important; height: 100% !important; }
+    .ig-year-select {
+      width: auto;
+      min-width: 140px;
+      max-width: 180px;
+    }
+    @media (max-width: 1100px) {
+      .ig-grid { grid-template-columns: 1fr; }
+      .ig-chart-wrap { height: 300px; }
+      .ig-chart-wrap-small { height: 280px; }
+    }
+  </style>
+</head>
+<body>
+  <script src="../js/api.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+  <script>
+    window.APP_LOGO = 'cbco';
+    Auth.requireAuth();
+  </script>
+
+  <div class="app-container">
+    <div id="sidebar"></div>
+
+    <main class="main-content">
+      <div class="d-flex justify-between items-center mb-3" style="gap: 12px; flex-wrap: wrap;">
+        <h1 class="mb-0">Indicateures générale</h1>
+        <div class="d-flex items-center" style="gap: 8px;">
+          <label for="igYearSelect" class="mb-0" style="margin:0;">Année :</label>
+          <select id="igYearSelect" class="ig-year-select"></select>
+        </div>
+      </div>
+
+      <div class="ig-grid">
+        <div class="card">
+          <div class="card-title"><h2>Poutres (m3)</h2></div>
+          <div class="card-body">
+            <div class="ig-chart-wrap"><canvas id="poutresTrendChart"></canvas></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><h2>Poutres (m3)</h2></div>
+          <div class="card-body">
+            <div class="ig-chart-wrap-small"><canvas id="poutresTotalChart"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ig-grid">
+        <div class="card">
+          <div class="card-title"><h2 id="panneauxYearTitle">Panneaux taillés, collés, assemblés (m2)</h2></div>
+          <div class="card-body">
+            <div class="ig-chart-wrap"><canvas id="panneauxTrendChart"></canvas></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><h2>Panneaux taillés, collés, assemblés (m2)</h2></div>
+          <div class="card-body">
+            <div class="ig-chart-wrap-small"><canvas id="panneauxTotalChart"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    function hasProductionAccess() {
+      return Auth.canViewGM() ||
+        Auth.hasAccess('gm_saisie') ||
+        Auth.hasAccess('cbco_usine') ||
+        Auth.hasAccess('cbco_productivite_saisie');
+    }
+
+    function cssVar(name, fallback) {
+      const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      return value || fallback;
+    }
+
+    function numberFr(value) {
+      return Number(value || 0).toLocaleString('fr-FR');
+    }
+
+    const valueLabelPlugin = {
+      id: 'valueLabelPlugin',
+      afterDatasetsDraw(chart) {
+        if (!chart?.config?.options?.plugins?.valueLabelPlugin?.enabled) return;
+        const { ctx } = chart;
+        ctx.save();
+        ctx.fillStyle = '#444';
+        ctx.font = '600 11px Inter, Arial, sans-serif';
+        ctx.textAlign = 'center';
+        const meta = chart.getDatasetMeta(0);
+        const values = chart.data.datasets[0].data;
+        meta.data.forEach((bar, index) => {
+          const value = values[index];
+          ctx.fillText(numberFr(value), bar.x, bar.y - 8);
+        });
+        ctx.restore();
+      }
+    };
+    let poutresTrendChart;
+    let poutresTotalChart;
+    let panneauxTrendChart;
+    let panneauxTotalChart;
+
+    function toFiniteNumber(value) {
+      const n = Number(value);
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    function sum(values) {
+      return values.reduce((acc, v) => acc + toFiniteNumber(v), 0);
+    }
+
+    function pickLatestYear(entries) {
+      return entries.reduce((max, e) => Math.max(max, Number(e.year) || 0), 0) || new Date().getFullYear();
+    }
+
+    function seriesByWeek(entries, year, getter) {
+      const out = Array.from({ length: 52 }, () => 0);
+      entries.forEach((entry) => {
+        const week = Number(entry.week);
+        if (Number(entry.year) !== year || !Number.isFinite(week) || week < 1 || week > 52) return;
+        out[week - 1] = toFiniteNumber(getter(entry));
+      });
+      return out;
+    }
+
+    function buildCharts() {
+      const all = getCBCOProductiviteData();
+      const yearSelect = document.getElementById('igYearSelect');
+      const years = [...new Set(all.map((e) => Number(e.year)).filter(Number.isFinite))]
+        .sort((a, b) => b - a);
+      if (!years.length) years.push(new Date().getFullYear());
+      const previous = Number(yearSelect.value);
+      yearSelect.innerHTML = years.map((y) => `<option value="${y}">${y}</option>`).join('');
+      const year = years.includes(previous) ? previous : years[0];
+      yearSelect.value = String(year);
+      const weeks = Array.from({ length: 52 }, (_, i) => String(i + 1));
+      const poutresWeekly = seriesByWeek(all, year, (e) => toFiniteNumber(e.speedcutM3) + toFiniteNumber(e.ultraM3));
+      const panneaux = seriesByWeek(all, year, (e) => e.extraM2);
+      const collage = seriesByWeek(all, year, (e) => e.collagePresses);
+      const assemblage = seriesByWeek(all, year, (e) => e.assemblageSurface);
+      const totalPoutres = sum(poutresWeekly);
+      const totals = {
+        collage: sum(collage),
+        panneaux: sum(panneaux),
+        assemblage: sum(assemblage)
+      };
+      document.getElementById('panneauxYearTitle').textContent = `Panneaux taillés, collés, assemblés (m2) - ${year}`;
+
+      Chart.register(valueLabelPlugin);
+
+      if (poutresTrendChart) poutresTrendChart.destroy();
+      if (poutresTotalChart) poutresTotalChart.destroy();
+      if (panneauxTrendChart) panneauxTrendChart.destroy();
+      if (panneauxTotalChart) panneauxTotalChart.destroy();
+
+      poutresTrendChart = new Chart(document.getElementById('poutresTrendChart').getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: weeks,
+          datasets: [{
+            label: 'Total Poutres (m3)',
+            data: poutresWeekly,
+            borderColor: '#9aa1ab',
+            borderWidth: 2,
+            pointRadius: 0,
+            tension: 0.2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: true, position: 'bottom' } },
+          scales: {
+            y: { beginAtZero: true, suggestedMax: 200, grid: { color: '#ece7e1' }, ticks: { color: '#6b6b6b' } },
+            x: { grid: { display: false }, ticks: { maxRotation: 85, minRotation: 85, font: { size: 9 }, color: '#7a7a7a' } }
+          }
+        }
+      });
+
+      poutresTotalChart = new Chart(document.getElementById('poutresTotalChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: [`TOTAL ${year}`],
+          datasets: [{ label: 'Total Poutres (m3)', data: [totalPoutres], backgroundColor: '#a6a6a6' }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: true, position: 'bottom' },
+            valueLabelPlugin: { enabled: true }
+          },
+          scales: {
+            y: { beginAtZero: true, suggestedMax: 5000, grid: { color: '#ece7e1' }, ticks: { color: '#6b6b6b' } },
+            x: { grid: { display: false }, ticks: { color: '#7a7a7a', maxRotation: 90, minRotation: 90 } }
+          }
+        }
+      });
+
+      panneauxTrendChart = new Chart(document.getElementById('panneauxTrendChart').getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: weeks,
+          datasets: [
+            { label: 'Panneaux (m2)', data: panneaux, borderColor: '#f0b400', borderWidth: 2, pointRadius: 0, tension: 0.2 },
+            { label: 'Collage (m2)', data: collage, borderColor: '#73b24a', borderWidth: 2, pointRadius: 0, tension: 0.2 },
+            { label: 'Assemblage (m2)', data: assemblage, borderColor: '#8f4a13', borderWidth: 2, pointRadius: 0, tension: 0.2 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: true, position: 'bottom' } },
+          scales: {
+            y: { beginAtZero: true, suggestedMax: 3000, grid: { color: '#ece7e1' }, ticks: { color: '#6b6b6b' } },
+            x: { grid: { display: false }, ticks: { maxRotation: 85, minRotation: 85, font: { size: 9 }, color: '#7a7a7a' } }
+          }
+        }
+      });
+
+      panneauxTotalChart = new Chart(document.getElementById('panneauxTotalChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: ['Collage (m2)', 'Panneaux (m2)', 'Assemblage (m2)'],
+          datasets: [{
+            label: `TOTAL ${year}`,
+            data: [totals.collage, totals.panneaux, totals.assemblage],
+            backgroundColor: [cssVar('--success', '#73b24a'), '#f1d46a', '#8f4a13']
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: true, position: 'bottom' },
+            valueLabelPlugin: { enabled: true }
+          },
+          scales: {
+            y: { beginAtZero: true, suggestedMax: 60000, grid: { color: '#ece7e1' }, ticks: { color: '#6b6b6b' } },
+            x: { grid: { display: false }, ticks: { color: '#7a7a7a', maxRotation: 90, minRotation: 90 } }
+          }
+        }
+      });
+    }
+
+    function init() {
+      if (!hasProductionAccess()) {
+        window.location.href = './error-access.html';
+        return;
+      }
+      document.getElementById('sidebar').innerHTML = getSidebar();
+      injectProductionSecondaryBar();
+      document.getElementById('igYearSelect').addEventListener('change', buildCharts);
+      buildCharts();
+    }
+
+    window.onServerReady(init);
+  </script>
+
+  <footer class="site-footer"></footer>
+</body>
+</html>
