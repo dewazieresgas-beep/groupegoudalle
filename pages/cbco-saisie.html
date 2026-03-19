@@ -179,7 +179,48 @@
 
     <main class="main-content">
       <div class="d-flex justify-between items-center mb-3" style="gap: 12px; flex-wrap: wrap;">
-        <h1 class="mb-0">Saisie CBCO - Mode tableur</h1>
+        <h1 class="mb-0">Synchronisation Excel - Saisie Chiffre d'Affaires</h1>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <h2 id="cfgCardTitle">🔗 Connexion fichier Excel</h2>
+        </div>
+        <div class="card-body">
+          <form onsubmit="handleConnect(event)" id="cfgForm">
+            <div class="form-group">
+              <label for="cfgFolder">📁 Chemin du dossier</label>
+              <input type="text" id="cfgFolder" value="Z:\03-BE\Projet en cours\Gaspard" required>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+              <div class="form-group">
+                <label for="cfgFilename">📄 Nom du fichier</label>
+                <input type="text" id="cfgFilename" value="INDICATEURS CBCO.xlsx" required>
+              </div>
+              <div class="form-group">
+                <label for="cfgSheet">📋 Nom de la feuille</label>
+                <input type="text" id="cfgSheet" value="indicateur commercial" required>
+              </div>
+            </div>
+            <div id="cfgLastSync" style="display:none; font-size:13px; color:var(--text-light); margin-bottom:12px;">
+              Dernière sync : <strong id="cfgDisplayLastSync">—</strong>
+            </div>
+            <div style="display:flex; gap:10px;">
+              <button type="submit" id="btnConnect" class="btn btn-success" style="flex:1; padding:14px; font-size:15px;">
+                🔗 Connecter et synchroniser
+              </button>
+              <button type="button" id="btnModifier" class="btn btn-secondary" style="display:none;" onclick="unlockConfig()">
+                ✏️ Modifier
+              </button>
+              <button type="button" id="btnForceSync" class="btn btn-primary" style="display:none;" onclick="handleForceSync()">
+                🔄 Sync maintenant
+              </button>
+              <button type="button" id="btnDesync" class="btn btn-danger" style="display:none;" onclick="handleDesync()">
+                🔌 Désynchroniser
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
 
       <div class="card">
@@ -267,6 +308,97 @@
     function hideMessage() {
       const msgDiv = document.getElementById('message');
       msgDiv.style.display = 'none';
+    }
+
+    function lockConfig(cfg) {
+      ['cfgFolder','cfgFilename','cfgSheet'].forEach(id => {
+        document.getElementById(id).disabled = true;
+      });
+      document.getElementById('btnConnect').style.display = 'none';
+      document.getElementById('btnModifier').style.display = 'inline-flex';
+      document.getElementById('btnForceSync').style.display = 'inline-flex';
+      document.getElementById('btnDesync').style.display = 'inline-flex';
+      document.getElementById('cfgCardTitle').textContent = '✅ Synchronisation active';
+      document.getElementById('cfgLastSync').style.display = 'block';
+      if (cfg && cfg.lastSync) {
+        document.getElementById('cfgDisplayLastSync').textContent = new Date(cfg.lastSync).toLocaleString('fr-FR');
+      }
+    }
+
+    function unlockConfig() {
+      ['cfgFolder','cfgFilename','cfgSheet'].forEach(id => {
+        document.getElementById(id).disabled = false;
+      });
+      document.getElementById('btnConnect').style.display = 'inline-flex';
+      document.getElementById('btnModifier').style.display = 'none';
+      document.getElementById('btnForceSync').style.display = 'none';
+      document.getElementById('btnDesync').style.display = 'none';
+      document.getElementById('cfgCardTitle').textContent = '✏️ Modifier la connexion';
+      document.getElementById('cfgLastSync').style.display = 'none';
+    }
+
+    async function loadConfig() {
+      try {
+        const res = await fetch(SERVER_URL + '/cbco-excel-config', { cache: 'no-store' });
+        const cfg = await res.json();
+        if (cfg && cfg.active) {
+          document.getElementById('cfgFolder').value = cfg.folder;
+          document.getElementById('cfgFilename').value = cfg.filename;
+          document.getElementById('cfgSheet').value = cfg.sheet;
+          lockConfig(cfg);
+        }
+      } catch { /* pas de config */ }
+    }
+
+    async function handleConnect(event) {
+      event.preventDefault();
+      const btn = document.getElementById('btnConnect');
+      btn.textContent = '⏳ Connexion...'; btn.disabled = true;
+      const body = {
+        folder: document.getElementById('cfgFolder').value.trim(),
+        filename: document.getElementById('cfgFilename').value.trim(),
+        sheet: document.getElementById('cfgSheet').value.trim()
+      };
+      try {
+        const res = await fetch(SERVER_URL + '/cbco-excel-config', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const result = await res.json();
+        if (!result.success) { showMessage(`❌ ${result.error}`, 'error'); return; }
+        showMessage(`✅ Connexion réussie ! ${result.result.added} mois ajouté(s), ${result.result.updated} mis à jour. La synchronisation est maintenant automatique.`, 'success');
+        lockConfig({ ...body, lastSync: new Date().toISOString() });
+        loadYear(sheetState.year);
+      } catch (e) {
+        showMessage(`❌ Erreur : ${e.message}`, 'error');
+      } finally {
+        btn.textContent = '🔗 Connecter et synchroniser'; btn.disabled = false;
+      }
+    }
+
+    async function handleForceSync() {
+      try {
+        const res = await fetch(SERVER_URL + '/cbco-import-excel', { method: 'POST' });
+        const result = await res.json();
+        if (!result.success) { showMessage(`❌ ${result.error}`, 'error'); return; }
+        showMessage(`✅ Synchronisation effectuée — ${result.result.added} ajouté(s), ${result.result.updated} mis à jour.`, 'success');
+        document.getElementById('cfgDisplayLastSync').textContent = new Date().toLocaleString('fr-FR');
+        loadYear(sheetState.year);
+      } catch (e) {
+        showMessage(`❌ Erreur : ${e.message}`, 'error');
+      }
+    }
+
+    async function handleDesync() {
+      if (!confirm('Désynchroniser le fichier Excel ? Les données déjà importées sont conservées.')) return;
+      try {
+        await fetch(SERVER_URL + '/cbco-excel-config', { method: 'DELETE' });
+        showMessage('🔌 Désynchronisé. Vous pouvez connecter un nouveau fichier.', 'success');
+        unlockConfig();
+      } catch (e) {
+        showMessage(`❌ Erreur : ${e.message}`, 'error');
+      }
     }
 
     function toKiloeuro(eurValue) {
@@ -724,6 +856,7 @@
     function initCBCOSaisie() {
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectCommercialSecondaryBar();
+      loadConfig();
       loadYear(getCurrentFiscalYear());
 
       window.addEventListener('beforeunload', (event) => {

@@ -640,7 +640,7 @@ function injectCommercialSecondaryBar() {
 
   if (Auth.hasAccess('cbco')) {
     const bureauActive = currentPage === 'cbco.html' ? ' active' : '';
-    secondaryItems += `<a href="${base}pages/cbco.html" class="sidebar-item${bureauActive}">🏢 Indicateurs Bureau d'Étude</a>`;
+    secondaryItems += `<a href="${base}pages/cbco.html" class="sidebar-item${bureauActive}">🏢 Indicateurs Comercial</a>`;
   }
   if (Auth.hasAccess('cbco_saisie')) {
     const caActive = currentPage === 'cbco-saisie.html' ? ' active' : '';

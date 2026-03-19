@@ -378,6 +378,230 @@ app.post('/api/gm-import-excel', (req, res) => {
   }
 });
 
+// ─── EXCEL CBCO (CHIFFRE D'AFFAIRES) : CONFIG + WATCHER + AUTO-IMPORT ───────────
+
+function parseCBCOMonthCell(value) {
+  if (value === null || value === undefined || value === '') return null;
+
+  if (value instanceof Date && !isNaN(value.getTime())) {
+    return { month: value.getMonth() + 1, year: value.getFullYear() };
+  }
+
+  if (typeof value === 'number') {
+    const parsed = XLSX.SSF.parse_date_code(value);
+    if (parsed && parsed.y && parsed.m) {
+      return { month: parsed.m, year: parsed.y };
+    }
+  }
+
+  const raw = String(value).trim().toLowerCase().replace(/\./g, '');
+  const normalized = raw.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const match = normalized.match(/^([a-z]+)[\s\-_\/]*(\d{2,4})$/);
+  if (!match) return null;
+
+  const monthToken = match[1];
+  const yearToken = match[2];
+  const monthMap = {
+    janv: 1, janvier: 1, jan: 1,
+    fevr: 2, fevrier: 2, fev: 2,
+    mars: 3,
+    avr: 4, avril: 4,
+    mai: 5,
+    juin: 6,
+    juil: 7, juillet: 7,
+    aout: 8, aou: 8,
+    sept: 9, septembre: 9,
+    oct: 10, octobre: 10,
+    nov: 11, novembre: 11,
+    dec: 12, decembre: 12
+  };
+
+  const month = monthMap[monthToken];
+  if (!month) return null;
+  const yNum = parseInt(yearToken, 10);
+  if (!Number.isFinite(yNum)) return null;
+  const year = yearToken.length === 2 ? (2000 + yNum) : yNum;
+  return { month, year };
+}
+
+function parseCBCOKiloValue(value) {
+  if (value === null || value === undefined || value === '') return 0;
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  const cleaned = String(value)
+    .replace(/\s/g, '')
+    .replace(/[kK€]/g, '')
+    .replace(',', '.');
+  const parsed = parseFloat(cleaned);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function parseCBCOExcel(cfg) {
+  const excelPath = path.join(cfg.folder, cfg.filename);
+  if (!fs.existsSync(excelPath)) {
+    throw new Error(`Fichier introuvable : "${excelPath}"`);
+  }
+  const workbook = XLSX.readFile(excelPath);
+  const sheet = workbook.Sheets[cfg.sheet];
+  if (!sheet) {
+    throw new Error(`Feuille "${cfg.sheet}" introuvable. Feuilles disponibles : ${workbook.SheetNames.join(', ')}`);
+  }
+
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
+  const map = new Map();
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i] || [];
+    const monthInfo = parseCBCOMonthCell(row[0]); // A : mois
+    if (!monthInfo) continue;
+
+    const montantChantiersCours = parseCBCOKiloValue(row[1]);    // B
+    const montantChantiersTermines = parseCBCOKiloValue(row[2]); // C
+    const montantTotal = montantChantiersCours + montantChantiersTermines;
+    const key = `${monthInfo.year}_${monthInfo.month}`;
+
+    map.set(key, {
+      year: monthInfo.year,
+      month: monthInfo.month,
+      montantChantiersCours,
+      montantChantiersTermines,
+      montantTotal
+    });
+  }
+
+  return [...map.values()];
+}
+
+function applyExcelDataToCBCO(data) {
+  const existing = dbGet('cbco', []);
+  const now = new Date().toISOString();
+  let added = 0, updated = 0, removed = 0;
+
+  const excelKeys = new Set(data.map(r => `${r.year}_${r.month}`));
+
+  const kept = existing.filter(entry => {
+    const key = `${entry.year}_${entry.month}`;
+    if (entry.createdBy === 'excel-auto' && !excelKeys.has(key)) {
+      removed++;
+      return false;
+    }
+    return true;
+  });
+
+  for (const row of data) {
+    const idx = kept.findIndex(e => e.year === row.year && e.month === row.month);
+    if (idx >= 0) {
+      kept[idx] = {
+        ...kept[idx],
+        ...row,
+        updatedAt: now,
+        updatedBy: 'excel-auto'
+      };
+      updated++;
+    } else {
+      const maxId = kept.reduce((max, e) => Math.max(max, Number(e.id) || 0), 0);
+      kept.push({
+        id: maxId + 1,
+        ...row,
+        cumulAnnuel: 0,
+        createdAt: now,
+        createdBy: 'excel-auto',
+        updatedAt: now,
+        updatedBy: 'excel-auto'
+      });
+      added++;
+    }
+  }
+
+  dbSet('cbco', kept);
+  return { added, updated, removed };
+}
+
+let cbcoWatcher = null;
+
+function startCBCOWatcher(cfg) {
+  if (cbcoWatcher) { clearInterval(cbcoWatcher); cbcoWatcher = null; }
+  const excelPath = path.join(cfg.folder, cfg.filename);
+  if (!fs.existsSync(excelPath)) {
+    console.log(`[CBCO-Watch] Fichier introuvable, surveillance impossible : ${excelPath}`);
+    return;
+  }
+
+  let lastMtime = fs.statSync(excelPath).mtimeMs;
+  cbcoWatcher = setInterval(() => {
+    try {
+      if (!fs.existsSync(excelPath)) return;
+      const mtime = fs.statSync(excelPath).mtimeMs;
+      if (mtime !== lastMtime) {
+        lastMtime = mtime;
+        console.log(`[CBCO-Watch] Modification détectée dans ${cfg.filename}, import automatique...`);
+        try {
+          const data = parseCBCOExcel(cfg);
+          const result = applyExcelDataToCBCO(data);
+          const cfg2 = dbGet('cbco_excel_config', {});
+          dbSet('cbco_excel_config', { ...cfg2, lastSync: new Date().toISOString(), lastSyncResult: result });
+          console.log(`[CBCO-Watch] Import OK — ${result.added} ajouté(s), ${result.updated} mis à jour`);
+        } catch (e) {
+          console.error(`[CBCO-Watch] Erreur lecture : ${e.message}`);
+        }
+      }
+    } catch (e) {
+      console.error(`[CBCO-Watch] Erreur stat : ${e.message}`);
+    }
+  }, 30000);
+
+  console.log(`[CBCO-Watch] Surveillance active (polling 30s) : ${excelPath}`);
+}
+
+(function resumeCBCOWatcherOnStartup() {
+  const cfg = dbGet('cbco_excel_config', null);
+  if (cfg && cfg.active) {
+    console.log('[CBCO-Watch] Reprise de la surveillance au démarrage...');
+    startCBCOWatcher(cfg);
+  }
+})();
+
+app.get('/api/cbco-excel-config', (req, res) => {
+  res.json(dbGet('cbco_excel_config', null));
+});
+
+app.put('/api/cbco-excel-config', (req, res) => {
+  const { folder, filename, sheet } = req.body;
+  if (!folder || !filename || !sheet) {
+    return res.status(400).json({ success: false, error: 'Champs manquants : folder, filename, sheet' });
+  }
+  try {
+    const data = parseCBCOExcel({ folder, filename, sheet });
+    const result = applyExcelDataToCBCO(data);
+    const cfg = { folder, filename, sheet, active: true, lastSync: new Date().toISOString(), lastSyncResult: result };
+    dbSet('cbco_excel_config', cfg);
+    startCBCOWatcher(cfg);
+    res.json({ success: true, result, rowCount: data.length });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.delete('/api/cbco-excel-config', (req, res) => {
+  if (cbcoWatcher) { clearInterval(cbcoWatcher); cbcoWatcher = null; }
+  dbSet('cbco_excel_config', null);
+  res.json({ success: true });
+});
+
+app.post('/api/cbco-import-excel', (req, res) => {
+  const cfg = dbGet('cbco_excel_config', null);
+  if (!cfg || !cfg.active) {
+    return res.status(400).json({ success: false, error: 'Aucune synchronisation configurée.' });
+  }
+  try {
+    const data = parseCBCOExcel(cfg);
+    const result = applyExcelDataToCBCO(data);
+    dbSet('cbco_excel_config', { ...cfg, lastSync: new Date().toISOString(), lastSyncResult: result });
+    res.json({ success: true, result, source: cfg.filename });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -413,6 +637,17 @@ app.listen(PORT, '0.0.0.0', () => {
     }
   } else {
     console.log(`⚠️  [Excel GM] Aucun fichier Excel configuré`);
+  }
+  const cbcoCfg = dbGet('cbco_excel_config', null);
+  if (cbcoCfg && cbcoCfg.active) {
+    const excelPath = path.join(cbcoCfg.folder, cbcoCfg.filename);
+    if (fs.existsSync(excelPath)) {
+      console.log(`✅ [Excel CBCO] Connecté : ${excelPath}`);
+    } else {
+      console.log(`❌ [Excel CBCO] Fichier introuvable : ${excelPath}`);
+    }
+  } else {
+    console.log(`⚠️  [Excel CBCO] Aucun fichier Excel configuré`);
   }
   console.log('');
 });

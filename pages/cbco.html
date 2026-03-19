@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Indicateurs Bureau d'Étude - Intranet</title>
+  <title>Indicateurs Comercial - Intranet</title>
   <link rel="stylesheet" href="../css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
@@ -26,8 +26,8 @@
     <main class="main-content">
       <!-- SECTION EN-TÊTE -->
       <div class="cbco-header">
-        <h1>CBCO - Bureau d'étude</h1>
-        <p class="subtitle">Suivi chiffre d'affaires et indicateurs commerciaux</p>
+        <h1>CBCO - Indicateurs Comercial</h1>
+        <p class="subtitle">Suivi des indicateurs comercial et du chiffre d'affaires</p>
         <div style="margin-top: 15px;">
           <button onclick="downloadCBCOReport()" class="btn btn-secondary">📥 Télécharger le rapport</button>
         </div>
@@ -69,7 +69,7 @@
 
         <!-- Cadre 2 : Indicateur Commercial -->
         <section class="cbco-card-v2">
-          <header class="cbco-card-title-v2">💼 Taux de réussite commercial CBCO – Mois dernier</header>
+          <header class="cbco-card-title-v2">💼 Taux de réussite commercial – Mois dernier</header>
           <div class="cbco-card-content-v2" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px;">
             <div style="position: relative; width: 200px; height: 200px;">
               <canvas id="commercialTauxChartCBCO"></canvas>
@@ -146,7 +146,7 @@
      * Initialise les checkboxes de filtrage par année pour le graphique
      */
     function initChartYearFilter() {
-      const data = getCBCOData();
+      const data = getCBCODataUpToLatestComplete();
       const years = [...new Set(data.map(e => e.year))].sort((a, b) => b - a);
       
       const container = document.getElementById('chartYearFilterContainer');
@@ -200,13 +200,43 @@
       renderCBCOChart();
     }
 
+    function getLatestCompleteMonthEntry() {
+      const data = getCBCOData().sort(compareByYearMonthDesc);
+      if (!data.length) return null;
+      const today = new Date();
+      const prevMonth = today.getMonth() === 0 ? 12 : today.getMonth();
+      const prevYear = today.getMonth() === 0 ? today.getFullYear() - 1 : today.getFullYear();
+      return data.find(e => e.year === prevYear && e.month === prevMonth) || null;
+    }
+
+    function getCBCODataUpToLatestComplete() {
+      const latest = getLatestCompleteMonthEntry();
+      if (!latest) return [];
+      return getCBCOData().filter(e =>
+        e.year < latest.year || (e.year === latest.year && e.month <= latest.month)
+      );
+    }
+
+    function getCBCOByYearForDisplay() {
+      const data = getCBCODataUpToLatestComplete();
+      const byFiscalYear = {};
+      data.forEach(entry => {
+        const fy = getFiscalYear(entry.year, entry.month);
+        if (!byFiscalYear[fy]) byFiscalYear[fy] = [];
+        byFiscalYear[fy].push(entry);
+      });
+      Object.keys(byFiscalYear).forEach(fy => {
+        byFiscalYear[fy].sort((a, b) => getFiscalMonth(a.month) - getFiscalMonth(b.month));
+      });
+      return byFiscalYear;
+    }
+
     /**
      * Affiche les données en dernier enregistrement
      */
     function displayCurrentData() {
-      const data = getCBCOData().sort(compareByYearMonthDesc);
-      
-      if (data.length === 0) {
+      const current = getLatestCompleteMonthEntry();
+      if (!current) {
         document.getElementById('currentMonthYear').textContent = '—';
         document.getElementById('currentMontantCours').textContent = '0 K€';
         document.getElementById('currentMontantTermines').textContent = '0 K€';
@@ -215,7 +245,6 @@
         return;
       }
 
-      const current = data[0];
       document.getElementById('currentMonthYear').textContent = formatMonthYear(current.month, current.year);
       document.getElementById('currentMontantCours').textContent = formatCBCOCurrency(current.montantChantiersCours);
       document.getElementById('currentMontantTermines').textContent = formatCBCOCurrency(current.montantChantiersTermines);
@@ -230,7 +259,7 @@
      * Génère le graphique en courbes des cumuls annuels
      */
     function renderCBCOChart() {
-      const byYear = getCBCOByYear();
+      const byYear = getCBCOByYearForDisplay();
       const allYears = Object.keys(byYear).sort((a, b) => a - b);
       
       // Filtrer selon les années sélectionnées
@@ -355,7 +384,7 @@
      */
     function renderCurrentYearChart() {
       const currentFiscalYear = getCurrentFiscalYear();
-      const data = getCBCOData()
+      const data = getCBCODataUpToLatestComplete()
         .filter(e => getFiscalYear(e.year, e.month) === currentFiscalYear)
         .sort((a, b) => getFiscalMonth(a.month) - getFiscalMonth(b.month));
       
