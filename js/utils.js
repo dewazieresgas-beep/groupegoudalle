@@ -437,10 +437,10 @@ function getSidebar() {
     // Pointer vers la première page accessible dans la section production
     let productionHref = `${base}pages/gm.html`;
     if (!Auth.canViewGM()) {
-      if (Auth.hasAccess('production_general')) productionHref = `${base}pages/indicateurs-generale.html`;
-      else if (Auth.hasAccess('cbco_usine')) productionHref = `${base}pages/cbco-usine.html`;
+      if (Auth.hasAccess('cbco_usine')) productionHref = `${base}pages/cbco-usine.html`;
       else if (Auth.hasAccess('gm_saisie')) productionHref = `${base}pages/gm-saisie.html`;
       else if (Auth.hasAccess('cbco_productivite_saisie')) productionHref = `${base}pages/cbco-productivite-saisie.html`;
+      else if (Auth.hasAccess('production_general')) productionHref = `${base}pages/indicateurs-generale.html`;
     }
     items += `<a href="${productionHref}" class="sidebar-item${productionActive}">🏭 Production</a>`;
   }
@@ -579,7 +579,7 @@ function injectProductionSecondaryBar() {
 
   let secondaryItems = '';
 
-  if (Auth.hasAccess('production_general') || Auth.canViewGM() || Auth.hasAccess('gm_saisie') || Auth.hasAccess('cbco_usine') || Auth.hasAccess('cbco_productivite_saisie')) {
+  if (Auth.hasAccess('production_general')) {
     const generaleActive = currentPage === 'indicateurs-generale.html' ? ' active' : '';
     secondaryItems += `<a href="${base}pages/indicateurs-generale.html" class="sidebar-item${generaleActive}">📈 Indicateures générale</a>`;
   }
