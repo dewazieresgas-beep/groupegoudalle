@@ -203,9 +203,6 @@
         selectedChartYears = new Set(years.slice(0, 3));
       } else {
         selectedChartYears = new Set([...selectedChartYears].filter(y => years.includes(y)));
-        if (!selectedChartYears.size && years.length) {
-          selectedChartYears = new Set(years.slice(0, 3));
-        }
       }
       
       const container = document.getElementById('chartYearFilterContainer');
@@ -309,9 +306,7 @@
       // Filtrer selon les années sélectionnées
       const selectedYears = [...(selectedChartYears || [])].map(String);
       
-      const years = selectedYears.length > 0 
-        ? allYears.filter(y => selectedYears.includes(y))
-        : allYears;
+      const years = allYears.filter(y => selectedYears.includes(y));
       
       if (years.length === 0) {
         const ctx = document.getElementById('cbcoChart').getContext('2d');
