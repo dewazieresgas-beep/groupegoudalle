@@ -225,8 +225,8 @@
 
       <div class="card">
         <div class="card-title card-title-row">
-          <h2>Tableau modifiable par mois</h2>
-          <span id="sheetStatus" class="sheet-status">Aucune modification</span>
+          <h2>Tableau synchronisé par mois</h2>
+          <span id="sheetStatus" class="sheet-status saved">Synchronisé automatiquement</span>
         </div>
 
         <div class="card-body">
@@ -237,11 +237,7 @@
               <label for="sheetYear" style="margin-bottom: 4px;">Exercice (début)</label>
               <input id="sheetYear" class="sheet-year-input" type="number" min="2020" max="2100">
             </div>
-              <button class="btn btn-secondary" type="button" onclick="loadYearFromInput()">Charger l'exercice</button>
-            <button id="undoBtn" class="btn btn-secondary" type="button" onclick="undoChange()" disabled>↶ Revenir</button>
-            <button id="redoBtn" class="btn btn-secondary" type="button" onclick="redoChange()" disabled>↷ Avancer</button>
-            <button id="saveBtn" class="btn btn-primary" type="button" onclick="saveSpreadsheet()" disabled>💾 Sauvegarder</button>
-            <button id="discardBtn" class="btn btn-warning" type="button" onclick="discardChanges()" disabled>Annuler les modifications</button>
+            <button class="btn btn-secondary" type="button" onclick="loadYearFromInput()">Charger l'exercice</button>
           </div>
 
           <div class="sheet-wrapper">
@@ -253,7 +249,6 @@
                   <th>Montant chantier estimé terminé (K€)</th>
                   <th>Total mensuel (K€)</th>
                   <th>Cumul exercice (K€)</th>
-                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody id="sheetBody"></tbody>
@@ -262,8 +257,6 @@
 
           <div class="sheet-footer-tools">
             <div style="display:flex; gap:10px; flex-wrap:wrap;">
-              <button class="btn btn-secondary" type="button" onclick="copyFromPreviousYear()">Copier N-1</button>
-              <button class="btn btn-danger" type="button" onclick="clearYear()">Vider l'exercice</button>
               <button class="btn btn-secondary" type="button" onclick="exportYearCsv()">Exporter CSV</button>
               <button class="btn btn-secondary" type="button" onclick="goToCBCO()">Retour dashboard</button>
             </div>
@@ -271,7 +264,7 @@
           </div>
 
           <div class="sheet-hint">
-            Astuces: double-cliquez dans une cellule pour éditer, utilisez <strong>Entrée</strong> ou les flèches pour naviguer, puis <strong>Sauvegarder</strong> pour enregistrer les modifications.
+            Les données affichées proviennent uniquement du fichier Excel connecté et se mettent à jour automatiquement lors des synchronisations.
           </div>
         </div>
       </div>
@@ -493,45 +486,23 @@
     function refreshHistoryButtons() {
       const undoBtn = document.getElementById('undoBtn');
       const redoBtn = document.getElementById('redoBtn');
-      undoBtn.disabled = sheetState.historyIndex <= 0;
-      redoBtn.disabled = sheetState.historyIndex >= sheetState.history.length - 1;
+      if (undoBtn) undoBtn.disabled = true;
+      if (redoBtn) redoBtn.disabled = true;
     }
 
     function refreshDirtyState() {
-      sheetState.isDirty = !areRowsEqual(sheetState.rows, sheetState.savedRows);
+      sheetState.isDirty = false;
 
       const status = document.getElementById('sheetStatus');
       status.className = 'sheet-status';
-      if (sheetState.isDirty) {
-        status.textContent = 'Modifications non enregistrées';
-        status.classList.add('dirty');
-      } else {
-        status.textContent = 'Données sauvegardées';
-        status.classList.add('saved');
-      }
+      status.textContent = 'Synchronisé automatiquement';
+      status.classList.add('saved');
 
-      document.getElementById('saveBtn').disabled = !sheetState.isDirty;
-      document.getElementById('discardBtn').disabled = !sheetState.isDirty;
       paintDirtyRows();
     }
 
     function paintDirtyRows() {
-      const tbody = document.getElementById('sheetBody');
-      const savedByMonth = {};
-      sheetState.savedRows.forEach(row => {
-        savedByMonth[row.month] = row;
-      });
-
-      [...tbody.querySelectorAll('tr[data-month]')].forEach(tr => {
-        const month = parseInt(tr.getAttribute('data-month'), 10);
-        const current = sheetState.rows[month - 1];
-        const saved = savedByMonth[month];
-        const changed = !saved ||
-          normalizeNumber(current.montantChantiersCours) !== normalizeNumber(saved.montantChantiersCours) ||
-          normalizeNumber(current.montantChantiersTermines) !== normalizeNumber(saved.montantChantiersTermines);
-
-        tr.classList.toggle('sheet-row-dirty', changed);
-      });
+      // Mode lecture seule : pas de marquage "dirty"
     }
 
     function renderTableRows() {
@@ -539,37 +510,13 @@
       tbody.innerHTML = sheetState.rows.map(row => `
         <tr data-month="${row.month}">
           <td class="sheet-month">${MONTH_NAMES[row.calendarMonth]} <span style="font-size:0.82em;color:#888;">${row.calendarYear}</span></td>
-          <td>
-            <input
-              class="sheet-input"
-              type="text"
-              inputmode="decimal"
-              data-month="${row.month}"
-              data-field="montantChantiersCours"
-              value="${row.montantChantiersCours || ''}"
-              placeholder="0"
-            >
-          </td>
-          <td>
-            <input
-              class="sheet-input"
-              type="text"
-              inputmode="decimal"
-              data-month="${row.month}"
-              data-field="montantChantiersTermines"
-              value="${row.montantChantiersTermines || ''}"
-              placeholder="0"
-            >
-          </td>
+          <td class="sheet-cell-total">${formatCurrency(normalizeNumber(row.montantChantiersCours))}</td>
+          <td class="sheet-cell-total">${formatCurrency(normalizeNumber(row.montantChantiersTermines))}</td>
           <td id="sheetTotal-${row.month}" class="sheet-cell-total">0 K€</td>
           <td id="sheetCumul-${row.month}" class="sheet-cell-cumul">0 K€</td>
-          <td>
-            <button class="btn btn-small btn-secondary" type="button" onclick="resetRow(${row.month})">Reset ligne</button>
-          </td>
         </tr>
       `).join('');
 
-      bindInputEvents();
       updateComputedColumns();
       paintDirtyRows();
     }
