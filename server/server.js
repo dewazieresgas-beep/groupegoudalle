@@ -514,6 +514,27 @@ function applyExcelDataToCBCO(data) {
     }
   }
 
+  // Recalculer le cumul annuel en exercice fiscal (octobre -> septembre)
+  const fiscalMonth = (month) => (month >= 10 ? month - 9 : month + 3); // oct=1 ... sep=12
+  const fiscalYear = (year, month) => (month >= 10 ? year : year - 1);
+  kept.sort((a, b) => {
+    const fyA = fiscalYear(a.year, a.month);
+    const fyB = fiscalYear(b.year, b.month);
+    if (fyA !== fyB) return fyA - fyB;
+    return fiscalMonth(a.month) - fiscalMonth(b.month);
+  });
+  let currentFy = null;
+  let cumul = 0;
+  kept.forEach((entry) => {
+    const fy = fiscalYear(entry.year, entry.month);
+    if (fy !== currentFy) {
+      currentFy = fy;
+      cumul = 0;
+    }
+    cumul += Number(entry.montantTotal) || 0;
+    entry.cumulAnnuel = cumul;
+  });
+
   dbSet('cbco', kept);
   return { added, updated, removed };
 }
