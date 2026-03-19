@@ -98,7 +98,13 @@
 
         <!-- Cadre 4 : Graphique année en cours -->
         <section class="cbco-card-v2">
-          <header class="cbco-card-title-v2">Détail mensuel de l'année en cours</header>
+          <header class="cbco-card-title-v2" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+            <span>Détail mensuel</span>
+            <span style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600;">
+              <span>Exercice :</span>
+              <select id="detailYearSelect" style="min-width:110px; padding:4px 6px; border-radius:4px; border:1px solid #d4ccc3; background:#fff; color:#3d3429;"></select>
+            </span>
+          </header>
           <div class="cbco-card-content-v2">
             <div class="cbco-chart-container">
               <canvas id="currentYearChart"></canvas>
@@ -151,10 +157,7 @@
     }
 
     function getFiscalMonthLabelsWithYear(startYear) {
-      return FISCAL_MONTH_NAMES.map((monthName, idx) => {
-        const yy = idx < 3 ? toShortYear(startYear) : toShortYear(startYear + 1);
-        return `${monthName} ${yy}`;
-      });
+      return FISCAL_MONTH_NAMES;
     }
 
     /**
@@ -405,7 +408,8 @@
      * Génère le graphique des montants mensuels pour l'année en cours
      */
     function renderCurrentYearChart() {
-      const currentFiscalYear = getCurrentFiscalYear();
+      const selectedYear = parseInt(document.getElementById('detailYearSelect')?.value, 10);
+      const currentFiscalYear = Number.isFinite(selectedYear) ? selectedYear : getCurrentFiscalYear();
       const data = getCBCODataUpToLatestComplete()
         .filter(e => getFiscalYear(e.year, e.month) === currentFiscalYear)
         .sort((a, b) => getFiscalMonth(a.month) - getFiscalMonth(b.month));
@@ -453,19 +457,6 @@
               pointRadius: 3,
               pointHoverRadius: 5,
               spanGaps: false
-            },
-            {
-              label: 'Total mensuel (K€)',
-              data: montantTotal,
-              borderColor: '#e74c3c',
-              backgroundColor: '#e74c3c',
-              borderWidth: 3,
-              borderDash: [5, 5],
-              tension: 0,
-              fill: false,
-              pointRadius: 4,
-              pointHoverRadius: 6,
-              spanGaps: false
             }
           ]
         },
@@ -507,6 +498,18 @@
           }
         }
       });
+    }
+
+    function initDetailYearSelect() {
+      const byYear = getCBCOByYearForDisplay();
+      const years = Object.keys(byYear).map(y => parseInt(y, 10)).filter(Number.isFinite).sort((a, b) => b - a);
+      const select = document.getElementById('detailYearSelect');
+      if (!select) return;
+      select.innerHTML = years.map(y => `<option value="${y}">${getShortFiscalYearLabel(y)}</option>`).join('');
+      const current = getCurrentFiscalYear();
+      if (years.includes(current)) select.value = String(current);
+      else if (years.length) select.value = String(years[0]);
+      select.onchange = renderCurrentYearChart;
     }
 
     /**
@@ -636,6 +639,7 @@
       injectCommercialSecondaryBar();
       
       initChartYearFilter();
+      initDetailYearSelect();
       displayCurrentData();
       renderCBCOChart();
       renderCurrentYearChart();
