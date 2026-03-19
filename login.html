@@ -343,7 +343,7 @@
       const sections = [];
       const commercial = ['cbco', 'cbco_saisie', 'cbco_commercial'];
       const compta = ['sylve', 'sylve_saisie', 'gc_paiement', 'gm_paiement', 'cbco_paiement'];
-      const production = ['gm', 'gm_saisie', 'cbco_usine', 'cbco_productivite_saisie'];
+      const production = ['production_general', 'gm', 'gm_saisie', 'cbco_usine', 'cbco_productivite_saisie'];
       if (commercial.some(k => perms.includes(k))) sections.push('Commercial');
       if (compta.some(k => perms.includes(k))) sections.push('Comptabilité');
       if (production.some(k => perms.includes(k))) sections.push('Production');

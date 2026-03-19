@@ -84,7 +84,8 @@
 
   <script>
     function hasProductionAccess() {
-      return Auth.canViewGM() ||
+      return Auth.hasAccess('production_general') ||
+        Auth.canViewGM() ||
         Auth.hasAccess('gm_saisie') ||
         Auth.hasAccess('cbco_usine') ||
         Auth.hasAccess('cbco_productivite_saisie');

@@ -24,9 +24,9 @@ const Auth = {
 
   // Permissions par rôle - définit ce que chaque rôle peut faire
   PERMISSIONS: {
-    direction: ['gm', 'gm_saisie', 'gm_paiement', 'gc', 'gc_saisie', 'gc_paiement', 'cbco', 'cbco_usine', 'cbco_saisie', 'cbco_productivite_saisie', 'cbco_paiement', 'cbco_commercial', 'sylve', 'sylve_saisie', 'users_admin', 'thresholds'],
-    referent: ['gm', 'gm_saisie', 'gm_paiement', 'thresholds'],
-    referent_cbco: ['cbco', 'cbco_usine', 'cbco_saisie', 'cbco_productivite_saisie', 'cbco_paiement', 'cbco_commercial'],
+    direction: ['gm', 'gm_saisie', 'gm_paiement', 'gc', 'gc_saisie', 'gc_paiement', 'cbco', 'cbco_usine', 'cbco_saisie', 'cbco_productivite_saisie', 'cbco_paiement', 'cbco_commercial', 'sylve', 'sylve_saisie', 'users_admin', 'thresholds', 'production_general'],
+    referent: ['gm', 'gm_saisie', 'gm_paiement', 'thresholds', 'production_general'],
+    referent_cbco: ['cbco', 'cbco_usine', 'cbco_saisie', 'cbco_productivite_saisie', 'cbco_paiement', 'cbco_commercial', 'production_general'],
     referent_sylve: ['sylve', 'sylve_saisie'],
     referent_gc: ['gc', 'gc_saisie', 'gc_paiement'],
     lecture: ['gm']
@@ -254,7 +254,9 @@ const Auth = {
     // même si une permission n'a pas encore été ajoutée dans la liste.
     if (effectiveRole === this.ROLES.DIRECTION) return true;
 
-    const aliasMap = {};
+    const aliasMap = {
+      production_general: ['gm', 'gm_saisie', 'cbco_usine', 'cbco_productivite_saisie']
+    };
 
     // Si l'utilisateur a des permissions personnalisées, les utiliser
     if (currentUser && Array.isArray(currentUser.customPermissions)) {
