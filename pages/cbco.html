@@ -142,6 +142,21 @@
       }).format(value) + ' K€';
     }
 
+    function toShortYear(year) {
+      return String(year).slice(-2);
+    }
+
+    function getShortFiscalYearLabel(startYear) {
+      return `${toShortYear(startYear)}/${toShortYear(startYear + 1)}`;
+    }
+
+    function getFiscalMonthLabelsWithYear(startYear) {
+      return FISCAL_MONTH_NAMES.map((monthName, idx) => {
+        const yy = idx < 3 ? toShortYear(startYear) : toShortYear(startYear + 1);
+        return `${monthName} ${yy}`;
+      });
+    }
+
     /**
      * Initialise les checkboxes de filtrage par année pour le graphique
      */
@@ -319,7 +334,7 @@
 
         const color = colors[idx % colors.length];
         datasets.push({
-          label: getFiscalYearLabel(parseInt(year)),
+          label: getShortFiscalYearLabel(parseInt(year, 10)),
           data: cumulValues,
           borderColor: color.border,
           backgroundColor: color.border,
@@ -335,8 +350,8 @@
       const ctx = document.getElementById('cbcoChart').getContext('2d');
       if (cbcoChart) cbcoChart.destroy();
 
-      // Toujours afficher Octobre à Septembre (exercice fiscal)
-      const labels = FISCAL_MONTH_NAMES;
+      // Afficher mois + année courte sur l'axe (ex: Oct 25, Jan 26)
+      const labels = getFiscalMonthLabelsWithYear(getCurrentFiscalYear());
 
       cbcoChart = new Chart(ctx, {
         type: 'line',
@@ -362,6 +377,12 @@
             }
           },
           scales: {
+            x: {
+              ticks: {
+                maxRotation: 0,
+                minRotation: 0
+              }
+            },
             y: {
               beginAtZero: true,
               ticks: {
@@ -403,7 +424,7 @@
       const ctx = document.getElementById('currentYearChart').getContext('2d');
       if (currentYearChart) currentYearChart.destroy();
       
-      const labels = FISCAL_MONTH_NAMES;
+      const labels = getFiscalMonthLabelsWithYear(currentFiscalYear);
       
       currentYearChart = new Chart(ctx, {
         type: 'line',
@@ -465,10 +486,16 @@
             },
             title: {
               display: true,
-              text: `Exercice ${getFiscalYearLabel(currentFiscalYear)}`
+              text: `Exercice ${getShortFiscalYearLabel(currentFiscalYear)}`
             }
           },
           scales: {
+            x: {
+              ticks: {
+                maxRotation: 0,
+                minRotation: 0
+              }
+            },
             y: {
               beginAtZero: true,
               ticks: {
