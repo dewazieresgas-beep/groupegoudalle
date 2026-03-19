@@ -388,7 +388,7 @@ function parseCBCOMonthCell(value) {
   }
 
   if (typeof value === 'number') {
-    const parsed = XLSX.SSF.parse_date_code(value);
+    const parsed = XLSX.SSF.parse_date_code(value, { date1904: true });
     if (parsed && parsed.y && parsed.m) {
       return { month: parsed.m, year: parsed.y };
     }
@@ -426,7 +426,9 @@ function parseCBCOMonthCell(value) {
 
 function parseCBCOKiloValue(value) {
   if (value === null || value === undefined || value === '') return 0;
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  // Les cellules sont formatées en K€ mais stockées en valeur brute (EUR) dans l'XLS:
+  // convertir systématiquement les numériques en K€ pour rester cohérent avec l'UI.
+  if (typeof value === 'number' && Number.isFinite(value)) return value / 1000;
   const cleaned = String(value)
     .replace(/\s/g, '')
     .replace(/[kK€]/g, '')
