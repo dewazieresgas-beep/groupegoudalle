@@ -254,9 +254,7 @@ const Auth = {
     // même si une permission n'a pas encore été ajoutée dans la liste.
     if (effectiveRole === this.ROLES.DIRECTION) return true;
 
-    const aliasMap = {
-      production_general: ['gm', 'gm_saisie', 'cbco_usine', 'cbco_productivite_saisie']
-    };
+    const aliasMap = {};
 
     // Si l'utilisateur a des permissions personnalisées, les utiliser
     if (currentUser && Array.isArray(currentUser.customPermissions)) {
