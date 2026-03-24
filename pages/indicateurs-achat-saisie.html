@@ -112,9 +112,9 @@
       <div class="card">
         <div class="card-title"><h2>Bloc 1 - Import du fichier</h2></div>
         <div class="card-body">
-          <input id="inputFichiersAchat" type="file" accept=".txt" multiple style="display:none;">
+          <input id="inputFichiersAchat" type="file" accept=".pdf,application/pdf" multiple style="display:none;">
           <div id="dropzoneAchat" class="achat-dropzone">
-            <div><strong>Déposez vos fichiers .txt ONAYA ici</strong></div>
+            <div><strong>Déposez vos fichiers ONAYA (.pdf) ici</strong></div>
             <div style="margin-top:8px; color:#666;">ou cliquez pour sélectionner un ou plusieurs fichiers</div>
           </div>
 
@@ -273,19 +273,27 @@
       { id: 'bois_lvl', famille: 'Bois structure', sousFamille: 'LVL', keywords: ['lvl'], points: 5 },
       { id: 'bois_massif_douglas', famille: 'Bois massif', sousFamille: 'Douglas massif', keywords: ['douglas', 'bois massif'], points: 4 },
       { id: 'bois_massif_sapin', famille: 'Bois massif', sousFamille: 'Sapin rouge', keywords: ['sapin rouge', 'epicea', 'épicéa', 'massif'], points: 4 },
-      { id: 'bardage', famille: 'Bardage bois', sousFamille: 'Bardage Douglas', keywords: ['bardage'], points: 4 },
-      { id: 'panneaux', famille: 'Panneaux bois', sousFamille: 'Panneaux 3 plis', keywords: ['panneau 3 plis', 'panneaux 3 plis', '3 plis'], points: 4 },
+      { id: 'bardage', famille: 'Bardage bois', sousFamille: 'Bardage Douglas', keywords: ['bardage', 'planch'], points: 4 },
+      { id: 'panneaux', famille: 'Panneaux bois', sousFamille: 'Panneaux 3 plis', keywords: ['panneau 3 plis', 'panneaux 3 plis', '3 plis', 'steico'], points: 4 },
       { id: 'transport_bois', famille: 'Transport', sousFamille: 'Transport bois', keywords: ['transport du panneau', 'tportclt', 'transport bois'], points: 5 },
       { id: 'transport', famille: 'Transport', sousFamille: 'Transport général', keywords: ['transport', 'forfait transport', 'appro chantier', 'transport intra', 'prix de transport'], points: 4 },
       { id: 'quincaillerie_vis', famille: 'Quincaillerie / fixations', sousFamille: 'Vis bois', keywords: ['vis', 'colorvis'], points: 4 },
-      { id: 'quincaillerie_boulon', famille: 'Quincaillerie / fixations', sousFamille: 'Boulonnerie', keywords: ['boulon', 'rondelle', 'goujon', 'clou', 'cavalier'], points: 4 },
-      { id: 'quincaillerie_sabot', famille: 'Quincaillerie / fixations', sousFamille: 'Sabots / connecteurs', keywords: ['sabot', 'connecteur'], points: 4 },
-      { id: 'metal_tole', famille: 'Métal / tôle / pliage', sousFamille: 'Tôle bac acier', keywords: ['tole', 'tôle', 'bac acier', 'couvertine'], points: 4 },
+      { id: 'quincaillerie_boulon', famille: 'Quincaillerie / fixations', sousFamille: 'Boulonnerie', keywords: ['boulon', 'rondelle', 'goujon', 'clou', 'cavalier', 'ferrure'], points: 4 },
+      { id: 'quincaillerie_sabot', famille: 'Quincaillerie / fixations', sousFamille: 'Sabots / connecteurs', keywords: ['sabot', 'connecteur', 'ancrage'], points: 4 },
+      { id: 'metal_tole', famille: 'Métal / tôle / pliage', sousFamille: 'Tôle bac acier', keywords: ['tole', 'tôle', 'bac acier', 'couvertine', 'fibro', 'faitiere', 'faîtière'], points: 4 },
       { id: 'metal_pliage', famille: 'Métal / tôle / pliage', sousFamille: 'Pliage', keywords: ['pliage'], points: 4 },
       { id: 'traitement_autoclave', famille: 'Traitement / finition', sousFamille: 'Traitement autoclave', keywords: ['traitement', 'autoclave', 'classe iv'], points: 4 },
       { id: 'traitement_saturateur', famille: 'Traitement / finition', sousFamille: 'Saturateur', keywords: ['saturateur', 'rubio'], points: 4 },
-      { id: 'ajustement_ecart', famille: 'Prestations / divers', sousFamille: 'Écart arrondi', keywords: ['ecart', 'écart'], points: 5 },
-      { id: 'ajustement_eco', famille: 'Prestations / divers', sousFamille: 'Éco-contribution', keywords: ['eco', 'éco', 'ecocontribution', 'éco-contribution', 'contribution verte'], points: 5 }
+      { id: 'conso_carburant', famille: 'Consommables / atelier', sousFamille: 'Carburant', keywords: ['gnr', 'totalenergie', 'total energie'], points: 4 },
+      { id: 'conso_epi', famille: 'Consommables / atelier', sousFamille: 'EPI / atelier', keywords: ['gant', 'film', 'bobine', 'papier'], points: 3 },
+      { id: 'outillage_foret', famille: 'Outillage / maintenance', sousFamille: 'Forets / perçage', keywords: ['foret', 'forêt', 'hss', 'sds'], points: 4 },
+      { id: 'outillage_materiel', famille: 'Outillage / maintenance', sousFamille: 'Matériel chantier', keywords: ['laser', 'pack trepied', 'trépied', 'mire'], points: 4 },
+      { id: 'outillage_maintenance', famille: 'Outillage / maintenance', sousFamille: 'Maintenance / réparation', keywords: ['reparation', 'réparation', 'interrupteur', 'fin de course', 'controle periodique', 'contrôle périodique', 'autosur', 'hmc'], points: 5 },
+      { id: 'prestations_location', famille: 'Prestations / divers', sousFamille: 'Location / intervention', keywords: ['location', 'intervention', 'implantation', 'demolition', 'démolition', 'pose poteaux'], points: 4 },
+      { id: 'prestations_maconnerie', famille: 'Prestations / divers', sousFamille: 'Prestations chantier', keywords: ['go udalle maconnerie', 'go udalle', 'poteau beton', 'poteau béton'], points: 3 },
+      { id: 'ajustement_ecart', famille: 'Prestations / divers', sousFamille: 'Écart arrondi', keywords: ['ecart', 'écart', 'remise commerciale'], points: 5 },
+      { id: 'ajustement_eco', famille: 'Prestations / divers', sousFamille: 'Éco-contribution', keywords: ['eco', 'éco', 'ecocontribution', 'éco-contribution', 'contribution verte', 'taxe'], points: 5 },
+      { id: 'fallback_divers', famille: 'Prestations / divers', sousFamille: 'Divers', keywords: ['fact', 'ligne'], points: 1 }
     ];
 
     const state = {
@@ -322,11 +330,107 @@
       return String(str || '')
         .replace(/œ/g, 'oe')
         .replace(/æ/g, 'ae')
+        .replace(/[™®©]/g, '')
+        .replace(/[|¦]/g, 'l')
+        .replace(/[`´’]/g, "'")
+        .replace(/[“”]/g, '"')
+        .replace(/[%]/g, ' ')
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
         .replace(/\s+/g, ' ')
         .trim()
         .toLowerCase();
+    }
+
+    function toAlphaNumTokens(str) {
+      const cleaned = normalizeText(str)
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      return cleaned ? cleaned.split(' ') : [];
+    }
+
+    function levenshteinDistanceBounded(a, b, maxDistance = 2) {
+      if (a === b) return 0;
+      if (!a || !b) return Math.max(a.length, b.length);
+      if (Math.abs(a.length - b.length) > maxDistance) return maxDistance + 1;
+
+      const dp = new Array(b.length + 1);
+      for (let j = 0; j <= b.length; j++) dp[j] = j;
+
+      for (let i = 1; i <= a.length; i++) {
+        let prev = dp[0];
+        dp[0] = i;
+        let minRow = dp[0];
+
+        for (let j = 1; j <= b.length; j++) {
+          const temp = dp[j];
+          const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+          dp[j] = Math.min(
+            dp[j] + 1,
+            dp[j - 1] + 1,
+            prev + cost
+          );
+          prev = temp;
+          if (dp[j] < minRow) minRow = dp[j];
+        }
+
+        if (minRow > maxDistance) return maxDistance + 1;
+      }
+      return dp[b.length];
+    }
+
+    function fuzzyTokenSimilarity(token, keywordToken) {
+      if (!token || !keywordToken) return 0;
+      if (token === keywordToken) return 1;
+      if (token.length < 4 || keywordToken.length < 4) return 0;
+      if (token.includes(keywordToken) || keywordToken.includes(token)) return 0.92;
+
+      const maxDistance = Math.min(2, Math.floor(Math.min(token.length, keywordToken.length) / 3));
+      if (maxDistance < 1) return 0;
+      const dist = levenshteinDistanceBounded(token, keywordToken, maxDistance);
+      if (dist > maxDistance) return 0;
+      if (dist === 1) return 0.82;
+      if (dist === 2) return 0.64;
+      return 0;
+    }
+
+    function scoreKeyword(baseText, baseTokens, keyword) {
+      const kNorm = normalizeText(keyword);
+      if (!kNorm) return { scoreFactor: 0, exact: false, fuzzy: false };
+      if (baseText.includes(kNorm)) return { scoreFactor: 1.25, exact: true, fuzzy: false };
+
+      const kwTokens = toAlphaNumTokens(kNorm);
+      if (!kwTokens.length) return { scoreFactor: 0, exact: false, fuzzy: false };
+
+      let matched = 0;
+      let fuzzyTotal = 0;
+      for (const kwToken of kwTokens) {
+        let best = 0;
+        for (const token of baseTokens) {
+          const sim = fuzzyTokenSimilarity(token, kwToken);
+          if (sim > best) best = sim;
+          if (best >= 0.95) break;
+        }
+        if (best >= 0.64) {
+          matched++;
+          fuzzyTotal += best;
+        }
+      }
+
+      if (matched !== kwTokens.length) return { scoreFactor: 0, exact: false, fuzzy: false };
+      const avg = fuzzyTotal / kwTokens.length;
+      return { scoreFactor: avg, exact: false, fuzzy: true };
+    }
+
+    function mergeRulesWithDefaults(existingRules) {
+      if (!Array.isArray(existingRules) || !existingRules.length) return [...DEFAULT_REGLES];
+      const byId = new Map(existingRules.map((r) => [String(r.id || ''), r]));
+      const merged = [...existingRules];
+      for (const def of DEFAULT_REGLES) {
+        if (!byId.has(def.id)) merged.push(def);
+      }
+      return merged;
     }
 
     function formatMoney(v) {
@@ -367,28 +471,70 @@
       return /total\s+(bon|chantier|fournisseur)/i.test(parts.join(' '));
     }
 
-    function decodeTextFile(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onerror = () => reject(new Error('Impossible de lire le fichier.'));
-        reader.onload = () => {
-          const buffer = reader.result;
-          const decoders = ['windows-1252', 'iso-8859-1', 'utf-8'];
-          for (const enc of decoders) {
-            try {
-              const txt = new TextDecoder(enc, { fatal: false }).decode(buffer);
-              if (txt && txt.length > 0) {
-                resolve(txt);
-                return;
-              }
-            } catch (e) {
-              // Ignore et essaie l'encodage suivant.
-            }
-          }
-          resolve(new TextDecoder('utf-8').decode(buffer));
-        };
-        reader.readAsArrayBuffer(file);
+    async function decodePdfFile(file) {
+      const buffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      let binary = '';
+      const chunkSize = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        const chunk = bytes.subarray(i, i + chunkSize);
+        binary += String.fromCharCode.apply(null, chunk);
+      }
+      const base64 = btoa(binary);
+      const res = await fetch(SERVER_URL + '/achats-parse-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileName: file.name, contentBase64: base64 })
       });
+      const payload = await res.json();
+      if (!res.ok || !payload.success) {
+        throw new Error(payload.error || 'Extraction PDF impossible.');
+      }
+      return String(payload.text || '');
+    }
+
+    function parseArticleLineFlexible(parts, fallbackLine) {
+      const tokens = parts.filter(Boolean);
+      if (!tokens.length) return null;
+      const numericAt = [];
+      for (let i = 0; i < tokens.length; i++) {
+        if (toNumberFr(tokens[i]) != null) numericAt.push(i);
+      }
+      if (!numericAt.length) return null;
+      const idxMontant = numericAt[numericAt.length - 1];
+      const idxPu = numericAt.length > 1 ? numericAt[numericAt.length - 2] : -1;
+      const idxQte = numericAt.length > 2 ? numericAt[numericAt.length - 3] : -1;
+
+      let idxUnite = -1;
+      const uniteCandidates = ['U', 'ML', 'M2', 'M3', 'ENS', 'KG'];
+      for (let i = 0; i < tokens.length; i++) {
+        if (uniteCandidates.includes(String(tokens[i] || '').toUpperCase())) {
+          if (idxQte < 0 || i < idxQte) idxUnite = i;
+        }
+      }
+
+      const resource = tokens[0] || null;
+      const bl = tokens.find((t) => /^(BL|BC)[\w-]+$/i.test(t)) || null;
+      const arc = tokens.find((t) => /^\d{2}-\d{4,}$/.test(t)) || null;
+
+      const startDesignation = Math.max(
+        1,
+        bl ? tokens.indexOf(bl) + 1 : 1,
+        arc ? tokens.indexOf(arc) + 1 : 1
+      );
+      const endDesignation = idxUnite > startDesignation ? idxUnite : (idxQte > startDesignation ? idxQte : idxMontant);
+      const designation = tokens.slice(startDesignation, Math.max(endDesignation, startDesignation)).join(' ') || fallbackLine || null;
+
+      return {
+        resource,
+        bl,
+        arc,
+        designation,
+        unite: idxUnite >= 0 ? tokens[idxUnite] : null,
+        quantite: idxQte >= 0 ? toNumberFr(tokens[idxQte]) : null,
+        prixUnitaire: idxPu >= 0 ? toNumberFr(tokens[idxPu]) : null,
+        montantLigne: idxMontant >= 0 ? toNumberFr(tokens[idxMontant]) : null
+      };
     }
 
     function parserFichierOnaya(contenuBrut, nomFichier) {
@@ -405,18 +551,20 @@
         if (!line) continue;
         const parts = splitByTabs(ligneBrute);
         const partsNonVides = parts.filter(Boolean);
+        const partsSmart = partsNonVides.length > 1 ? parts : String(line).split(/\s{2,}/).map((p) => p.trim());
+        const workingParts = partsSmart.filter(Boolean);
         if (!partsNonVides.length) continue;
 
-        if (isHeaderFacture(parts)) {
+        if (isHeaderFacture(workingParts)) {
           compteurFacture++;
           ordreLigne = 0;
-          const dateFacture = parts[0] || null;
-          const numeroFacture = parts[1] || null;
-          const journal = parts[3] || null;
-          const fournisseurCode = parts[4] || null;
-          const chantier = parts[5] || null;
-          const libelleFacture = parts[6] || null;
-          const montantFacture = toNumberFr(parts[7] || null);
+          const dateFacture = workingParts[0] || null;
+          const numeroFacture = workingParts[1] || null;
+          const journal = workingParts[3] || null;
+          const fournisseurCode = workingParts[4] || null;
+          const chantier = workingParts[5] || null;
+          const libelleFacture = workingParts[6] || null;
+          const montantFacture = toNumberFr(workingParts[7] || null);
           const idFacture = `fac_${Date.now()}_${compteurFacture}_${Math.random().toString(36).slice(2, 8)}`;
           const hashControle = [
             toIsoDate(dateFacture) || '',
@@ -447,11 +595,11 @@
           continue;
         }
 
-        if (isHeaderColonnes(parts)) continue;
+        if (isHeaderColonnes(workingParts)) continue;
 
-        if (isTotalLine(parts)) {
+        if (isTotalLine(workingParts)) {
           if (factureCourante) {
-            const joined = parts.join(' ');
+            const joined = workingParts.join(' ');
             const montantTotalLine = toNumberFr(joined);
             lignesTotauxControle.push({
               idFacture: factureCourante.idFacture,
@@ -465,14 +613,28 @@
 
         if (!factureCourante) continue;
 
-        const resource = parts[0] || null;
-        const bl = parts[1] || null;
-        const arc = parts[2] || null;
-        const designation = parts[4] || null;
-        const unite = parts[5] || null;
-        const quantite = toNumberFr(parts[6] || null);
-        const prixUnitaire = toNumberFr(parts[7] || null);
-        const montantLigne = toNumberFr(parts[8] || null);
+        let resource = workingParts[0] || null;
+        let bl = workingParts[1] || null;
+        let arc = workingParts[2] || null;
+        let designation = workingParts[4] || null;
+        let unite = workingParts[5] || null;
+        let quantite = toNumberFr(workingParts[6] || null);
+        let prixUnitaire = toNumberFr(workingParts[7] || null);
+        let montantLigne = toNumberFr(workingParts[8] || null);
+
+        if (montantLigne == null || (!designation && workingParts.length < 8)) {
+          const parsedFlex = parseArticleLineFlexible(workingParts, line);
+          if (parsedFlex) {
+            resource = parsedFlex.resource;
+            bl = parsedFlex.bl;
+            arc = parsedFlex.arc;
+            designation = parsedFlex.designation;
+            unite = parsedFlex.unite;
+            quantite = parsedFlex.quantite;
+            prixUnitaire = parsedFlex.prixUnitaire;
+            montantLigne = parsedFlex.montantLigne;
+          }
+        }
         ordreLigne++;
 
         const ligne = {
@@ -520,7 +682,13 @@
       }
       try {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length) return parsed;
+        if (Array.isArray(parsed) && parsed.length) {
+          const merged = mergeRulesWithDefaults(parsed);
+          if (merged.length !== parsed.length) {
+            localStorage.setItem(STORAGE_KEYS.regles, JSON.stringify(merged));
+          }
+          return merged;
+        }
       } catch {
         // fallback plus bas.
       }
@@ -536,16 +704,23 @@
         ligne.unite,
         ligne.fournisseur
       ].filter(Boolean).join(' '));
+      const baseTokens = toAlphaNumTokens(baseTexte);
 
       const correspondances = [];
       for (const regle of regles) {
         let score = 0;
+        let exactHits = 0;
+        let fuzzyHits = 0;
         for (const kw of regle.keywords || []) {
-          const k = normalizeText(kw);
-          if (k && baseTexte.includes(k)) score += (regle.points || 1);
+          const hit = scoreKeyword(baseTexte, baseTokens, kw);
+          if (hit.scoreFactor > 0) {
+            score += (regle.points || 1) * hit.scoreFactor;
+            if (hit.exact) exactHits++;
+            if (hit.fuzzy) fuzzyHits++;
+          }
         }
         if (score > 0) {
-          correspondances.push({ regle, score });
+          correspondances.push({ regle, score, exactHits, fuzzyHits });
         }
       }
 
@@ -554,18 +729,24 @@
       const second = correspondances[1];
 
       if (!best) {
-        ligne.familleAchat = 'Non classé';
+        ligne.familleAchat = 'Prestations / divers';
         ligne.sousCategorieAutomatique = 'Divers';
-        ligne.categorieAutomatique = 'Non classé';
-        ligne.statutConfianceClassement = 'non classé';
+        ligne.categorieAutomatique = 'Prestations / divers';
+        ligne.statutConfianceClassement = 'faible';
         return ligne;
       }
 
       ligne.familleAchat = best.regle.famille;
       ligne.categorieAutomatique = best.regle.famille;
       ligne.sousCategorieAutomatique = best.regle.sousFamille || 'Divers';
-      ligne.statutConfianceClassement = (!second || best.score >= (second.score + 2)) ? 'élevée' : 'moyenne';
-      if (best.score <= 2) ligne.statutConfianceClassement = 'faible';
+      const netGap = second ? (best.score - second.score) : best.score;
+      if (best.exactHits >= 1 && netGap >= 2) {
+        ligne.statutConfianceClassement = 'élevée';
+      } else if (best.fuzzyHits >= 1 || netGap >= 1) {
+        ligne.statutConfianceClassement = 'moyenne';
+      } else {
+        ligne.statutConfianceClassement = 'faible';
+      }
 
       const txt = baseTexte;
       ligne.drapeauTransport = txt.includes('transport');
@@ -574,6 +755,8 @@
       ligne.drapeauTraitement = txt.includes('traitement') || txt.includes('autoclave') || txt.includes('saturateur');
       ligne.drapeauBois = /(bois|klh|clt|lvl|lamelle|douglas|sapin|epicea|bardage|panneau)/.test(txt);
       ligne.drapeauQuincaillerie = /(vis|boulon|goujon|rondelle|clou|sabot|colorvis)/.test(txt);
+      if (!ligne.familleAchat) ligne.familleAchat = 'Prestations / divers';
+      if (!ligne.sousCategorieAutomatique) ligne.sousCategorieAutomatique = 'Divers';
       return ligne;
     }
 
@@ -893,7 +1076,7 @@
     async function analyserFichiers() {
       clearMessage();
       if (!state.fichiers.length) {
-        showMessage('Veuillez d’abord sélectionner au moins un fichier .txt', 'warning');
+        showMessage('Veuillez d’abord sélectionner au moins un fichier .pdf', 'warning');
         return;
       }
 
@@ -904,7 +1087,7 @@
       const fichiersInfo = [];
 
       for (const file of state.fichiers) {
-        const contenu = await decodeTextFile(file);
+        const contenu = await decodePdfFile(file);
         const parsed = parserFichierOnaya(contenu, file.name);
         factures.push(...parsed.factures);
         lignes.push(...parsed.lignes);
@@ -1102,7 +1285,7 @@
 
       dropzone.addEventListener('click', () => input.click());
       input.addEventListener('change', () => {
-        state.fichiers = [...state.fichiers, ...Array.from(input.files || [])].filter((f) => /\.txt$/i.test(f.name));
+        state.fichiers = [...state.fichiers, ...Array.from(input.files || [])].filter((f) => /\.pdf$/i.test(f.name));
         input.value = '';
         renderFichiers();
         resetUIAnalyse();
@@ -1116,7 +1299,7 @@
       dropzone.addEventListener('drop', (e) => {
         e.preventDefault();
         dropzone.classList.remove('dragover');
-        const files = Array.from(e.dataTransfer.files || []).filter((f) => /\.txt$/i.test(f.name));
+        const files = Array.from(e.dataTransfer.files || []).filter((f) => /\.pdf$/i.test(f.name));
         state.fichiers = [...state.fichiers, ...files];
         renderFichiers();
         resetUIAnalyse();

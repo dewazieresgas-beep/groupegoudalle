@@ -13,6 +13,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const XLSX = require('xlsx');
+const pdfParse = require('pdf-parse');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -240,6 +241,22 @@ app.get('/api/achats-regles', (req, res) => {
 app.put('/api/achats-regles', (req, res) => {
   dbSet('achats_regles', req.body);
   res.json({ success: true });
+});
+
+app.post('/api/achats-parse-pdf', async (req, res) => {
+  try {
+    const contentBase64 = String(req.body?.contentBase64 || '');
+    if (!contentBase64) {
+      return res.status(400).json({ success: false, error: 'Champ contentBase64 manquant.' });
+    }
+
+    const buffer = Buffer.from(contentBase64, 'base64');
+    const parsed = await pdfParse(buffer);
+    const text = String(parsed?.text || '').replace(/\r/g, '');
+    res.json({ success: true, text, pages: parsed?.numpages || null });
+  } catch (e) {
+    res.status(500).json({ success: false, error: `Erreur parsing PDF: ${e.message}` });
+  }
 });
 
 // ─── EXCEL GOUDALLE MAÇONNERIE : CONFIG + WATCHER + AUTO-IMPORT ─────────────────
