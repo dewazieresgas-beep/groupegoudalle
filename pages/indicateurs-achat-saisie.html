@@ -537,6 +537,180 @@
       };
     }
 
+    function dedupeRepeatedLine(line) {
+      let out = String(line || '').replace(/\s+/g, ' ').trim();
+      if (!out) return out;
+
+      // Cas fréquent PDF: "xxx xxx" (même texte répété deux fois).
+      const doubled = out.match(/^(.+?)\s+\1$/i);
+      if (doubled) out = doubled[1].trim();
+
+      // Cas "Total Bon" répété avec même montant.
+      out = out.replace(/^(.+?total\s+(?:bon|chantier|fournisseur))\s+\1$/i, '$1').trim();
+      return out;
+    }
+
+    function parsePdfHeaderLine(line) {
+      const clean = dedupeRepeatedLine(line);
+      const m = clean.match(/^(\d{2}\/\d{2}\/\d{4})\s+(FR[\w-]+)\s+([A-Z]{1,3})\s+(0\S+)\s+(.*?)\s+(-?\d[\d ]*,\d{2})$/i);
+      if (!m) return null;
+
+      const [, dateFacture, numeroFacture, journal, fournisseurCode, middleRaw, montantRaw] = m;
+      const middle = String(middleRaw || '').trim();
+      const tokens = middle ? middle.split(/\s+/) : [];
+
+      let chantier = null;
+      let libelleFacture = middle;
+      if (tokens.length && !/^fact$/i.test(tokens[0])) {
+        chantier = tokens[0];
+        libelleFacture = tokens.slice(1).join(' ').trim() || 'Fact';
+      }
+
+      return {
+        dateFacture,
+        numeroFacture,
+        journalOuType: journal,
+        fournisseurCode,
+        chantierOuAffaire: chantier,
+        libelleFacture,
+        montantTotalFacture: toNumberFr(montantRaw)
+      };
+    }
+
+    function parsePdfArticleLine(line) {
+      const clean = dedupeRepeatedLine(line);
+      const m = clean.match(/^(.*?)(?:\s+(U|ML|M2|M3|ENS|KG))?\s+(-?\d[\d ]*,\d{3})\s+(-?\d[\d ]*,\d{2})\s+(-?\d[\d ]*,\d{2})$/i);
+      if (!m) return null;
+      const prefix = m[1] || '';
+      const unit = m[2] || null;
+      const qte = toNumberFr(m[3]);
+      const pu = toNumberFr(m[4]);
+      const montant = toNumberFr(m[5]);
+
+      const tokens = prefix.split(/\s+/).filter(Boolean);
+      const parsedFlex = parseArticleLineFlexible(tokens, prefix);
+      if (!parsedFlex) return null;
+
+      return {
+        ...parsedFlex,
+        unite: parsedFlex.unite || unit,
+        quantite: parsedFlex.quantite != null ? parsedFlex.quantite : qte,
+        prixUnitaire: parsedFlex.prixUnitaire != null ? parsedFlex.prixUnitaire : pu,
+        montantLigne: parsedFlex.montantLigne != null ? parsedFlex.montantLigne : montant,
+        texteBrut: clean
+      };
+    }
+
+    function parserFichierOnayaPdf(contenuBrut, nomFichier) {
+      const rawLines = String(contenuBrut || '').split(/\r?\n/);
+      const factures = [];
+      const lignes = [];
+      const lignesTotauxControle = [];
+      let factureCourante = null;
+      let compteurFacture = 0;
+      let ordreLigne = 0;
+
+      for (let raw of rawLines) {
+        raw = dedupeRepeatedLine(raw);
+        if (!raw) continue;
+        if (/^--\s*\d+\s+of\s+\d+\s*--$/i.test(raw)) continue;
+        const normalized = normalizeText(raw);
+        if (!normalized) continue;
+        if (normalized.includes('montantressource') || normalized.startsWith('libellen')) continue;
+        if (normalized === 'p.u bl n°' || normalized === 'p.u bl n') continue;
+
+        const h = parsePdfHeaderLine(raw);
+        if (h) {
+          compteurFacture++;
+          ordreLigne = 0;
+          const idFacture = `fac_${Date.now()}_${compteurFacture}_${Math.random().toString(36).slice(2, 8)}`;
+          const hashControle = [
+            toIsoDate(h.dateFacture) || '',
+            normalizeText(h.numeroFacture || ''),
+            normalizeText(h.fournisseurCode || ''),
+            h.montantTotalFacture != null ? h.montantTotalFacture.toFixed(2) : '',
+            nomFichier
+          ].join('|');
+
+          factureCourante = {
+            idFacture,
+            nomFichierImporte: nomFichier,
+            dateImport: new Date().toISOString(),
+            dateFacture: h.dateFacture,
+            numeroFacture: h.numeroFacture,
+            journalOuType: h.journalOuType,
+            fournisseurCode: h.fournisseurCode,
+            fournisseurLibelle: h.fournisseurCode ? h.fournisseurCode.replace(/^0/, '') : null,
+            chantierOuAffaire: h.chantierOuAffaire,
+            centreCout: null,
+            libelleFacture: h.libelleFacture,
+            montantTotalFacture: h.montantTotalFacture,
+            nombreLignes: 0,
+            hashControle,
+            sommeLignes: 0
+          };
+          factures.push(factureCourante);
+          continue;
+        }
+
+        if (!factureCourante) continue;
+
+        if (/total\s+(bon|chantier|fournisseur)/i.test(raw)) {
+          const montantTotalLine = toNumberFr(raw);
+          lignesTotauxControle.push({
+            idFacture: factureCourante.idFacture,
+            texte: raw,
+            typeTotal: /total\s+fournisseur/i.test(raw) ? 'Total Fournisseur' : /total\s+chantier/i.test(raw) ? 'Total Chantier' : 'Total Bon',
+            montantTotalLigne: montantTotalLine
+          });
+          continue;
+        }
+
+        const article = parsePdfArticleLine(raw);
+        if (!article) continue;
+
+        ordreLigne++;
+        const ligne = {
+          idLigne: `lig_${factureCourante.idFacture}_${ordreLigne}`,
+          idFactureParente: factureCourante.idFacture,
+          ordreLigne,
+          montantLigne: article.montantLigne,
+          ressource: article.resource,
+          bl: article.bl,
+          arc: article.arc,
+          unite: article.unite,
+          quantite: article.quantite,
+          prixUnitaire: article.prixUnitaire,
+          designation: article.designation,
+          chantierOuAffaireLigne: factureCourante.chantierOuAffaire,
+          fournisseur: factureCourante.fournisseurCode,
+          dateFacture: factureCourante.dateFacture,
+          numeroFacture: factureCourante.numeroFacture,
+          texteBrutLigne: article.texteBrut || raw,
+          categorieAutomatique: null,
+          sousCategorieAutomatique: null,
+          familleAchat: 'Non classé',
+          drapeauTransport: false,
+          drapeauEcart: false,
+          drapeauEcoContribution: false,
+          drapeauTraitement: false,
+          drapeauBois: false,
+          drapeauQuincaillerie: false,
+          statutConfianceClassement: 'non classé'
+        };
+        lignes.push(ligne);
+        factureCourante.nombreLignes += 1;
+        factureCourante.sommeLignes += ligne.montantLigne || 0;
+      }
+
+      return {
+        factures,
+        lignes,
+        lignesTotauxControle,
+        lignesBrutesCount: rawLines.length
+      };
+    }
+
     function parserFichierOnaya(contenuBrut, nomFichier) {
       const lignesBrutes = contenuBrut.split(/\r?\n/).filter((l) => l != null);
       const factures = [];
@@ -1088,7 +1262,7 @@
 
       for (const file of state.fichiers) {
         const contenu = await decodePdfFile(file);
-        const parsed = parserFichierOnaya(contenu, file.name);
+        const parsed = parserFichierOnayaPdf(contenu, file.name);
         factures.push(...parsed.factures);
         lignes.push(...parsed.lignes);
         lignesTotauxControle.push(...parsed.lignesTotauxControle);
