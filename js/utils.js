@@ -135,6 +135,11 @@ function isCommercialPage() {
   return page === 'cbco.html' || page === 'cbco-saisie.html' || page === 'cbco-commercial.html';
 }
 
+function isAchatPage() {
+  const page = getCurrentPage();
+  return page === 'indicateurs-achat.html' || page === 'indicateurs-achat-saisie.html';
+}
+
 function isComptaPage() {
   const page = getCurrentPage();
   return page === 'sylve-support.html' || page === 'sylve-support-saisie.html' || page === 'gc-paiement.html' || page === 'gm-paiement.html' || page === 'cbco-paiement.html';
@@ -459,7 +464,7 @@ function getSidebar() {
 
   // ===== ACHAT (direction seulement - placeholder) =====
   if (isDirection) {
-    const achatActive = currentPage === 'indicateurs-achat.html' ? ' active' : '';
+    const achatActive = isAchatPage() ? ' active' : '';
     items += `<a href="${base}pages/indicateurs-achat.html" class="sidebar-item${achatActive}">🛒 Achat</a>`;
   }
 
@@ -912,6 +917,49 @@ function injectComptaSecondaryBar() {
   }
 }
 
+/**
+ * Génère et injecte la barre de navigation secondaire Achats
+ * À appeler sur les pages achats (indicateurs-achat.html, indicateurs-achat-saisie.html)
+ */
+function injectAchatSecondaryBar() {
+  const session = Auth.getSession();
+  if (!session) return;
+  if (document.getElementById('achatSidebar')) return;
+
+  const base = getBasePath();
+  const currentPage = getCurrentPage();
+
+  const indicateursActive = currentPage === 'indicateurs-achat.html' ? ' active' : '';
+  const saisieActive = currentPage === 'indicateurs-achat-saisie.html' ? ' active' : '';
+
+  const secondaryItems = `
+    <a href="${base}pages/indicateurs-achat.html" class="sidebar-item${indicateursActive}">🛒 Indicateurs achat</a>
+    <a href="${base}pages/indicateurs-achat-saisie.html" class="sidebar-item${saisieActive}">✏️ Saisie indicateurs achats</a>
+  `;
+
+  const barHTML = `
+    <aside class="sidebar-secondary" id="achatSidebar">
+      <div class="sidebar-secondary-content">
+        <div class="sidebar-secondary-title">🛒 Indicateurs Achats</div>
+        <button class="sidebar-secondary-close" onclick="toggleAchatSidebar();">✕</button>
+        <nav class="sidebar-secondary-nav">
+          ${secondaryItems}
+        </nav>
+      </div>
+    </aside>
+  `;
+
+  const sidebar = document.querySelector('.sidebar');
+  if (sidebar) {
+    sidebar.insertAdjacentHTML('afterend', barHTML);
+  }
+
+  const achatSidebar = document.getElementById('achatSidebar');
+  if (achatSidebar) {
+    achatSidebar.classList.add('open');
+  }
+}
+
 function isUsersPage() {
   const page = getCurrentPage();
   return page === 'users-admin.html' || page === 'users-code.html' || page === 'users-reminders.html';
@@ -1049,6 +1097,22 @@ function toggleUsersSidebar(event) {
 }
 
 /**
+ * Toggle la barre de navigation secondaire Achats
+ */
+function toggleAchatSidebar(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  const achatSidebar = document.getElementById('achatSidebar');
+  if (!achatSidebar) return;
+
+  const isOpen = achatSidebar.classList.toggle('open');
+  localStorage.setItem('achat_sidebar_state', isOpen ? 'open' : 'closed');
+}
+
+/**
  * Restaure l'état de la barre de navigation secondaire depuis localStorage
  * Appelé automatiquement au chargement de la page
  */
@@ -1086,6 +1150,15 @@ function restoreSubMenuStates() {
     const usersSidebar = document.getElementById('usersSidebar');
     if (usersSidebar) {
       usersSidebar.classList.add('open');
+    }
+  }
+
+  // Restaurer l'état du sidebar secondaire Achats
+  const achatState = localStorage.getItem('achat_sidebar_state');
+  if (achatState === 'open') {
+    const achatSidebar = document.getElementById('achatSidebar');
+    if (achatSidebar) {
+      achatSidebar.classList.add('open');
     }
   }
 }

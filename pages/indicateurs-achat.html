@@ -25,18 +25,70 @@
 
       <div class="card">
         <div class="card-title">
-          <h2>En cours de développement</h2>
+          <h2>Sous-pages Achats</h2>
         </div>
         <div class="card-body">
-          <p style="color: #666;">Cette section est en cours de développement. Le contenu sera ajouté prochainement.</p>
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px;">
+            <a class="btn btn-primary" href="./indicateurs-achat-saisie.html">🧾 Saisie indicateurs achats</a>
+          </div>
+          <p style="margin-top: 12px; color: #666;">
+            Cette sous-page permet l'import ONAYA, la pré-analyse, la classification, la gestion des doublons et la validation des lignes d'achats.
+          </p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <h2>Journal des imports achats</h2>
+        </div>
+        <div class="card-body">
+          <table id="tableImportsAchats">
+            <thead>
+              <tr>
+                <th>Date import</th>
+                <th>Utilisateur</th>
+                <th>Fichier(s)</th>
+                <th>Factures</th>
+                <th>Lignes</th>
+                <th>Statut</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="6" style="text-align:center;">Chargement...</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </main>
   </div>
 
   <script>
+    function renderJournalImports() {
+      const tbody = document.querySelector('#tableImportsAchats tbody');
+      const imports = JSON.parse(localStorage.getItem('goudalle_achats_imports') || '[]')
+        .sort((a, b) => String(b.dateImport || '').localeCompare(String(a.dateImport || '')));
+
+      if (!imports.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Aucun import enregistré</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = imports.slice(0, 200).map((imp) => `
+        <tr>
+          <td>${imp.dateImport ? new Date(imp.dateImport).toLocaleString('fr-FR') : '—'}</td>
+          <td>${escapeHtml(imp.utilisateur || '—')}</td>
+          <td>${escapeHtml(imp.nomFichier || '—')}</td>
+          <td>${Number(imp.nombreFactures || 0)}</td>
+          <td>${Number(imp.nombreLignes || 0)}</td>
+          <td>${escapeHtml(imp.statut || '—')}</td>
+        </tr>
+      `).join('');
+    }
+
     function init() {
       document.getElementById('sidebar').innerHTML = getSidebar();
+      injectAchatSecondaryBar();
+      renderJournalImports();
     }
 
     window.onServerReady(init);

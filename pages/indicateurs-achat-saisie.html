@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Saisie indicateurs achats - Intranet Goudalle</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .achat-dropzone {
+      border: 2px dashed var(--accent-dark);
+      border-radius: 8px;
+      background: var(--lighter);
+      padding: 24px;
+      text-align: center;
+      transition: 0.2s ease;
+      cursor: pointer;
+    }
+    .achat-dropzone.dragover {
+      border-color: var(--success);
+      background: #eef7ee;
+    }
+    .achat-kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .achat-kpi-card {
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+      background: #fff;
+      padding: 12px;
+    }
+    .achat-kpi-card .label {
+      font-size: 12px;
+      color: var(--text-light);
+      margin-bottom: 4px;
+    }
+    .achat-kpi-card .value {
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .achat-table-wrap {
+      overflow-x: auto;
+    }
+    .achat-chip {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      background: var(--light);
+      border: 1px solid var(--border-light);
+      color: var(--primary);
+    }
+    .achat-chip-ok { background: #d4edda; border-color: #c3e6cb; color: #155724; }
+    .achat-chip-ko { background: #f8d7da; border-color: #f5c6cb; color: #721c24; }
+    .achat-flex {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .achat-file-list {
+      margin-top: 14px;
+      display: grid;
+      gap: 8px;
+    }
+    .achat-file-item {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 8px;
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+      background: white;
+      padding: 10px;
+      align-items: center;
+    }
+    .achat-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+    .achat-anomalies {
+      margin: 0;
+      padding-left: 18px;
+    }
+    .achat-anomalies li {
+      margin-bottom: 6px;
+    }
+  </style>
+</head>
+<body>
+  <script src="../js/api.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+  <script>
+    Auth.requireAuth();
+  </script>
+
+  <div class="app-container">
+    <div id="sidebar"></div>
+
+    <main class="main-content">
+      <div class="d-flex justify-between items-center mb-3" style="gap:12px; flex-wrap:wrap;">
+        <h1 class="mb-0">Saisie indicateurs achats</h1>
+      </div>
+
+      <div id="pageMessage" class="alert" style="display:none;"></div>
+
+      <div class="card">
+        <div class="card-title"><h2>Bloc 1 - Import du fichier</h2></div>
+        <div class="card-body">
+          <input id="inputFichiersAchat" type="file" accept=".txt" multiple style="display:none;">
+          <div id="dropzoneAchat" class="achat-dropzone">
+            <div><strong>Déposez vos fichiers .txt ONAYA ici</strong></div>
+            <div style="margin-top:8px; color:#666;">ou cliquez pour sélectionner un ou plusieurs fichiers</div>
+          </div>
+
+          <div id="listeFichiers" class="achat-file-list"></div>
+
+          <div class="achat-actions">
+            <button class="btn btn-primary" id="btnAnalyser">🔎 Analyser le fichier</button>
+            <button class="btn btn-success" id="btnValider" disabled>✅ Valider l'import</button>
+            <button class="btn btn-danger" id="btnAnnuler">❌ Annuler</button>
+            <button class="btn btn-secondary" id="btnExporterControle" disabled>📤 Exporter le contrôle CSV</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><h2>Bloc 2 - Pré-analyse</h2></div>
+        <div class="card-body">
+          <div class="achat-kpi-grid" id="kpiPreAnalyse"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><h2>Bloc 3 - Répartition par typologie</h2></div>
+        <div class="card-body achat-table-wrap">
+          <table id="tableFamilles">
+            <thead>
+              <tr>
+                <th>Typologie</th>
+                <th>Factures</th>
+                <th>Lignes</th>
+                <th>Montant total</th>
+                <th>Part du total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="5" style="text-align:center;">Aucune analyse</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><h2>Bloc 4 - Aperçu des lignes</h2></div>
+        <div class="card-body">
+          <div class="achat-flex" style="margin-bottom:10px;">
+            <input id="filtreTexte" type="text" placeholder="Filtrer (facture, fournisseur, ressource, désignation...)">
+            <select id="filtreFamille">
+              <option value="">Toutes les familles</option>
+            </select>
+            <select id="filtreStatut">
+              <option value="">Tous les statuts</option>
+              <option value="élevée">Confiance élevée</option>
+              <option value="moyenne">Confiance moyenne</option>
+              <option value="faible">Confiance faible</option>
+              <option value="non classé">Non classé</option>
+            </select>
+          </div>
+
+          <div class="achat-table-wrap">
+            <table id="tableLignesApercu">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Facture</th>
+                  <th>Fournisseur</th>
+                  <th>Chantier</th>
+                  <th>Ressource</th>
+                  <th>Désignation</th>
+                  <th>Unité</th>
+                  <th>Qté</th>
+                  <th>PU</th>
+                  <th>Montant</th>
+                  <th>Famille</th>
+                  <th>Sous-famille</th>
+                  <th>Classification</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="13" style="text-align:center;">Aucune ligne</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><h2>Bloc 5 - Anomalies</h2></div>
+        <div class="card-body">
+          <ul class="achat-anomalies" id="listeAnomalies">
+            <li>Aucune anomalie</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><h2>Bloc 6 - Validation</h2></div>
+        <div class="card-body">
+          <div class="achat-flex">
+            <label for="strategieDoublons" style="margin:0;">Gestion des doublons :</label>
+            <select id="strategieDoublons" style="max-width:320px;">
+              <option value="ignorer">Ignorer les doublons (recommandé)</option>
+              <option value="remplacer">Remplacer les doublons existants</option>
+              <option value="importer">Importer même en doublon</option>
+            </select>
+            <button class="btn btn-warning" id="btnRecalculer">♻️ Recalculer les classifications</button>
+            <button class="btn btn-secondary" id="btnExporterHistoriqueCsv">📥 Export CSV lignes importées</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><h2>Bonus - Gestion des règles de typologie</h2></div>
+        <div class="card-body">
+          <div class="achat-table-wrap">
+            <table id="tableRegles">
+              <thead>
+                <tr>
+                  <th>Famille</th>
+                  <th>Sous-famille</th>
+                  <th>Mots-clés (séparés par virgule)</th>
+                  <th>Poids</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="4" style="text-align:center;">Chargement...</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px; margin-top:10px;">
+            <input type="text" id="newRegleFamille" placeholder="Famille achat">
+            <input type="text" id="newRegleSousFamille" placeholder="Sous-famille">
+            <input type="text" id="newRegleKeywords" placeholder="Mots-clés (ex: vis, boulon, colorvis)">
+            <input type="number" id="newReglePoids" placeholder="Poids" value="3" min="1" max="10">
+          </div>
+          <div class="achat-actions">
+            <button class="btn btn-primary" id="btnAjouterRegle">➕ Ajouter règle</button>
+            <button class="btn btn-secondary" id="btnResetRegles">↩️ Réinitialiser règles par défaut</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const STORAGE_KEYS = {
+      imports: 'goudalle_achats_imports',
+      factures: 'goudalle_achats_factures',
+      lignes: 'goudalle_achats_lignes',
+      regles: 'goudalle_achats_regles'
+    };
+
+    const DEFAULT_REGLES = [
+      { id: 'bois_lc', famille: 'Bois structure', sousFamille: 'LC', keywords: ['lc', 'lamelle colle', 'lamellé collé', 'lamelle-colle'], points: 5 },
+      { id: 'bois_clt', famille: 'Bois structure', sousFamille: 'CLT / KLH', keywords: ['clt', 'klh', 'panneau klh'], points: 5 },
+      { id: 'bois_lvl', famille: 'Bois structure', sousFamille: 'LVL', keywords: ['lvl'], points: 5 },
+      { id: 'bois_massif_douglas', famille: 'Bois massif', sousFamille: 'Douglas massif', keywords: ['douglas', 'bois massif'], points: 4 },
+      { id: 'bois_massif_sapin', famille: 'Bois massif', sousFamille: 'Sapin rouge', keywords: ['sapin rouge', 'epicea', 'épicéa', 'massif'], points: 4 },
+      { id: 'bardage', famille: 'Bardage bois', sousFamille: 'Bardage Douglas', keywords: ['bardage'], points: 4 },
+      { id: 'panneaux', famille: 'Panneaux bois', sousFamille: 'Panneaux 3 plis', keywords: ['panneau 3 plis', 'panneaux 3 plis', '3 plis'], points: 4 },
+      { id: 'transport_bois', famille: 'Transport', sousFamille: 'Transport bois', keywords: ['transport du panneau', 'tportclt', 'transport bois'], points: 5 },
+      { id: 'transport', famille: 'Transport', sousFamille: 'Transport général', keywords: ['transport', 'forfait transport', 'appro chantier', 'transport intra', 'prix de transport'], points: 4 },
+      { id: 'quincaillerie_vis', famille: 'Quincaillerie / fixations', sousFamille: 'Vis bois', keywords: ['vis', 'colorvis'], points: 4 },
+      { id: 'quincaillerie_boulon', famille: 'Quincaillerie / fixations', sousFamille: 'Boulonnerie', keywords: ['boulon', 'rondelle', 'goujon', 'clou', 'cavalier'], points: 4 },
+      { id: 'quincaillerie_sabot', famille: 'Quincaillerie / fixations', sousFamille: 'Sabots / connecteurs', keywords: ['sabot', 'connecteur'], points: 4 },
+      { id: 'metal_tole', famille: 'Métal / tôle / pliage', sousFamille: 'Tôle bac acier', keywords: ['tole', 'tôle', 'bac acier', 'couvertine'], points: 4 },
+      { id: 'metal_pliage', famille: 'Métal / tôle / pliage', sousFamille: 'Pliage', keywords: ['pliage'], points: 4 },
+      { id: 'traitement_autoclave', famille: 'Traitement / finition', sousFamille: 'Traitement autoclave', keywords: ['traitement', 'autoclave', 'classe iv'], points: 4 },
+      { id: 'traitement_saturateur', famille: 'Traitement / finition', sousFamille: 'Saturateur', keywords: ['saturateur', 'rubio'], points: 4 },
+      { id: 'ajustement_ecart', famille: 'Prestations / divers', sousFamille: 'Écart arrondi', keywords: ['ecart', 'écart'], points: 5 },
+      { id: 'ajustement_eco', famille: 'Prestations / divers', sousFamille: 'Éco-contribution', keywords: ['eco', 'éco', 'ecocontribution', 'éco-contribution', 'contribution verte'], points: 5 }
+    ];
+
+    const state = {
+      fichiers: [],
+      analyse: null,
+      lignesFiltrees: [],
+      regles: []
+    };
+
+    function showMessage(msg, type = 'info') {
+      const el = document.getElementById('pageMessage');
+      el.innerHTML = msg;
+      el.className = `alert alert-${type}`;
+      el.style.display = 'block';
+      window.scrollTo(0, 0);
+    }
+
+    function clearMessage() {
+      const el = document.getElementById('pageMessage');
+      el.style.display = 'none';
+      el.innerHTML = '';
+    }
+
+    function toNumberFr(raw) {
+      if (raw == null) return null;
+      const txt = String(raw).trim();
+      if (!txt) return null;
+      const cleaned = txt.replace(/\s/g, '').replace(/[^\d,\.-]/g, '').replace(',', '.');
+      const n = parseFloat(cleaned);
+      return Number.isFinite(n) ? n : null;
+    }
+
+    function normalizeText(str) {
+      return String(str || '')
+        .replace(/œ/g, 'oe')
+        .replace(/æ/g, 'ae')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+    }
+
+    function formatMoney(v) {
+      return Number(v || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function formatDateFr(isoOrFr) {
+      if (!isoOrFr) return '—';
+      if (/^\d{2}\/\d{2}\/\d{4}$/.test(String(isoOrFr))) return isoOrFr;
+      const d = new Date(isoOrFr);
+      if (Number.isNaN(d.getTime())) return String(isoOrFr);
+      return d.toLocaleDateString('fr-FR');
+    }
+
+    function toIsoDate(frDate) {
+      if (!frDate) return null;
+      const m = String(frDate).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (!m) return null;
+      return `${m[3]}-${m[2]}-${m[1]}`;
+    }
+
+    function splitByTabs(line) {
+      const parts = String(line || '').replace(/\r/g, '').split('\t');
+      return parts.map((p) => p.trim());
+    }
+
+    function isHeaderFacture(parts) {
+      if (!parts || parts.length < 8) return false;
+      return /^\d{2}\/\d{2}\/\d{4}$/.test(parts[0]) && /^FR[\w-]+$/i.test(parts[1]);
+    }
+
+    function isHeaderColonnes(parts) {
+      const full = normalizeText(parts.join(' '));
+      return full.includes('montant') && full.includes('ressource') && full.includes('qt') && full.includes('libelle');
+    }
+
+    function isTotalLine(parts) {
+      return /total\s+(bon|chantier|fournisseur)/i.test(parts.join(' '));
+    }
+
+    function decodeTextFile(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('Impossible de lire le fichier.'));
+        reader.onload = () => {
+          const buffer = reader.result;
+          const decoders = ['windows-1252', 'iso-8859-1', 'utf-8'];
+          for (const enc of decoders) {
+            try {
+              const txt = new TextDecoder(enc, { fatal: false }).decode(buffer);
+              if (txt && txt.length > 0) {
+                resolve(txt);
+                return;
+              }
+            } catch (e) {
+              // Ignore et essaie l'encodage suivant.
+            }
+          }
+          resolve(new TextDecoder('utf-8').decode(buffer));
+        };
+        reader.readAsArrayBuffer(file);
+      });
+    }
+
+    function parserFichierOnaya(contenuBrut, nomFichier) {
+      const lignesBrutes = contenuBrut.split(/\r?\n/).filter((l) => l != null);
+      const factures = [];
+      const lignes = [];
+      const lignesTotauxControle = [];
+      let factureCourante = null;
+      let ordreLigne = 0;
+      let compteurFacture = 0;
+
+      for (const ligneBrute of lignesBrutes) {
+        const line = String(ligneBrute || '').trim();
+        if (!line) continue;
+        const parts = splitByTabs(ligneBrute);
+        const partsNonVides = parts.filter(Boolean);
+        if (!partsNonVides.length) continue;
+
+        if (isHeaderFacture(parts)) {
+          compteurFacture++;
+          ordreLigne = 0;
+          const dateFacture = parts[0] || null;
+          const numeroFacture = parts[1] || null;
+          const journal = parts[3] || null;
+          const fournisseurCode = parts[4] || null;
+          const chantier = parts[5] || null;
+          const libelleFacture = parts[6] || null;
+          const montantFacture = toNumberFr(parts[7] || null);
+          const idFacture = `fac_${Date.now()}_${compteurFacture}_${Math.random().toString(36).slice(2, 8)}`;
+          const hashControle = [
+            toIsoDate(dateFacture) || '',
+            normalizeText(numeroFacture || ''),
+            normalizeText(fournisseurCode || ''),
+            montantFacture != null ? montantFacture.toFixed(2) : '',
+            nomFichier
+          ].join('|');
+
+          factureCourante = {
+            idFacture,
+            nomFichierImporte: nomFichier,
+            dateImport: new Date().toISOString(),
+            dateFacture,
+            numeroFacture,
+            journalOuType: journal,
+            fournisseurCode,
+            fournisseurLibelle: fournisseurCode ? fournisseurCode.replace(/^0/, '') : null,
+            chantierOuAffaire: chantier,
+            centreCout: null,
+            libelleFacture,
+            montantTotalFacture: montantFacture,
+            nombreLignes: 0,
+            hashControle,
+            sommeLignes: 0
+          };
+          factures.push(factureCourante);
+          continue;
+        }
+
+        if (isHeaderColonnes(parts)) continue;
+
+        if (isTotalLine(parts)) {
+          if (factureCourante) {
+            const joined = parts.join(' ');
+            const montantTotalLine = toNumberFr(joined);
+            lignesTotauxControle.push({
+              idFacture: factureCourante.idFacture,
+              texte: joined,
+              typeTotal: /total\s+fournisseur/i.test(joined) ? 'Total Fournisseur' : /total\s+chantier/i.test(joined) ? 'Total Chantier' : 'Total Bon',
+              montantTotalLigne: montantTotalLine
+            });
+          }
+          continue;
+        }
+
+        if (!factureCourante) continue;
+
+        const resource = parts[0] || null;
+        const bl = parts[1] || null;
+        const arc = parts[2] || null;
+        const designation = parts[4] || null;
+        const unite = parts[5] || null;
+        const quantite = toNumberFr(parts[6] || null);
+        const prixUnitaire = toNumberFr(parts[7] || null);
+        const montantLigne = toNumberFr(parts[8] || null);
+        ordreLigne++;
+
+        const ligne = {
+          idLigne: `lig_${factureCourante.idFacture}_${ordreLigne}`,
+          idFactureParente: factureCourante.idFacture,
+          ordreLigne,
+          montantLigne,
+          ressource: resource,
+          bl,
+          arc,
+          unite,
+          quantite,
+          prixUnitaire,
+          designation,
+          chantierOuAffaireLigne: factureCourante.chantierOuAffaire,
+          fournisseur: factureCourante.fournisseurCode,
+          dateFacture: factureCourante.dateFacture,
+          numeroFacture: factureCourante.numeroFacture,
+          texteBrutLigne: ligneBrute,
+          categorieAutomatique: null,
+          sousCategorieAutomatique: null,
+          familleAchat: 'Non classé',
+          drapeauTransport: false,
+          drapeauEcart: false,
+          drapeauEcoContribution: false,
+          drapeauTraitement: false,
+          drapeauBois: false,
+          drapeauQuincaillerie: false,
+          statutConfianceClassement: 'non classé'
+        };
+
+        lignes.push(ligne);
+        factureCourante.nombreLignes += 1;
+        factureCourante.sommeLignes += montantLigne || 0;
+      }
+
+      return { factures, lignes, lignesTotauxControle, lignesBrutesCount: lignesBrutes.length };
+    }
+
+    function chargerReglesClassification() {
+      const raw = localStorage.getItem(STORAGE_KEYS.regles);
+      if (!raw) {
+        localStorage.setItem(STORAGE_KEYS.regles, JSON.stringify(DEFAULT_REGLES));
+        return [...DEFAULT_REGLES];
+      }
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length) return parsed;
+      } catch {
+        // fallback plus bas.
+      }
+      localStorage.setItem(STORAGE_KEYS.regles, JSON.stringify(DEFAULT_REGLES));
+      return [...DEFAULT_REGLES];
+    }
+
+    function classerLigne(ligne, regles) {
+      const baseTexte = normalizeText([
+        ligne.ressource,
+        ligne.designation,
+        ligne.arc,
+        ligne.unite,
+        ligne.fournisseur
+      ].filter(Boolean).join(' '));
+
+      const correspondances = [];
+      for (const regle of regles) {
+        let score = 0;
+        for (const kw of regle.keywords || []) {
+          const k = normalizeText(kw);
+          if (k && baseTexte.includes(k)) score += (regle.points || 1);
+        }
+        if (score > 0) {
+          correspondances.push({ regle, score });
+        }
+      }
+
+      correspondances.sort((a, b) => b.score - a.score);
+      const best = correspondances[0];
+      const second = correspondances[1];
+
+      if (!best) {
+        ligne.familleAchat = 'Non classé';
+        ligne.sousCategorieAutomatique = 'Divers';
+        ligne.categorieAutomatique = 'Non classé';
+        ligne.statutConfianceClassement = 'non classé';
+        return ligne;
+      }
+
+      ligne.familleAchat = best.regle.famille;
+      ligne.categorieAutomatique = best.regle.famille;
+      ligne.sousCategorieAutomatique = best.regle.sousFamille || 'Divers';
+      ligne.statutConfianceClassement = (!second || best.score >= (second.score + 2)) ? 'élevée' : 'moyenne';
+      if (best.score <= 2) ligne.statutConfianceClassement = 'faible';
+
+      const txt = baseTexte;
+      ligne.drapeauTransport = txt.includes('transport');
+      ligne.drapeauEcart = txt.includes('ecart');
+      ligne.drapeauEcoContribution = txt.includes('eco') || txt.includes('contribution');
+      ligne.drapeauTraitement = txt.includes('traitement') || txt.includes('autoclave') || txt.includes('saturateur');
+      ligne.drapeauBois = /(bois|klh|clt|lvl|lamelle|douglas|sapin|epicea|bardage|panneau)/.test(txt);
+      ligne.drapeauQuincaillerie = /(vis|boulon|goujon|rondelle|clou|sabot|colorvis)/.test(txt);
+      return ligne;
+    }
+
+    function detecterDoublons(facturesImport, facturesExistantes) {
+      const index = new Map();
+      for (const f of facturesExistantes) {
+        const cle = [
+          toIsoDate(f.dateFacture) || '',
+          normalizeText(f.numeroFacture || ''),
+          normalizeText(f.fournisseurCode || f.fournisseurLibelle || ''),
+          Number(f.montantTotalFacture || 0).toFixed(2),
+          Number(f.nombreLignes || 0)
+        ].join('|');
+        if (!index.has(cle)) index.set(cle, []);
+        index.get(cle).push(f);
+      }
+
+      const doublons = [];
+      for (const f of facturesImport) {
+        const cle = [
+          toIsoDate(f.dateFacture) || '',
+          normalizeText(f.numeroFacture || ''),
+          normalizeText(f.fournisseurCode || f.fournisseurLibelle || ''),
+          Number(f.montantTotalFacture || 0).toFixed(2),
+          Number(f.nombreLignes || 0)
+        ].join('|');
+        const matches = index.get(cle) || [];
+        if (matches.length) {
+          doublons.push({
+            idFactureImport: f.idFacture,
+            cle,
+            factureImport: f,
+            facturesExistantes: matches
+          });
+        }
+      }
+      return doublons;
+    }
+
+    function construireSynthese(analyse) {
+      const lignes = analyse.lignes;
+      const factures = analyse.factures;
+
+      const lignesClassees = lignes.filter((l) => l.familleAchat && l.familleAchat !== 'Non classé').length;
+      const lignesNonClassees = lignes.length - lignesClassees;
+      const montantTotalDetecte = factures.reduce((acc, f) => acc + (f.montantTotalFacture || 0), 0);
+
+      const repartitionFamilleMap = new Map();
+      const repartitionSousFamilleMap = new Map();
+
+      for (const ligne of lignes) {
+        const famille = ligne.familleAchat || 'Non classé';
+        const sousFamille = ligne.sousCategorieAutomatique || 'Divers';
+        const montant = ligne.montantLigne || 0;
+
+        if (!repartitionFamilleMap.has(famille)) {
+          repartitionFamilleMap.set(famille, { typologie: famille, facturesSet: new Set(), nombreLignes: 0, montantTotal: 0 });
+        }
+        const fam = repartitionFamilleMap.get(famille);
+        fam.facturesSet.add(ligne.idFactureParente);
+        fam.nombreLignes += 1;
+        fam.montantTotal += montant;
+
+        if (!repartitionSousFamilleMap.has(sousFamille)) {
+          repartitionSousFamilleMap.set(sousFamille, { sousFamille, nombreLignes: 0, montantTotal: 0 });
+        }
+        const sf = repartitionSousFamilleMap.get(sousFamille);
+        sf.nombreLignes += 1;
+        sf.montantTotal += montant;
+      }
+
+      const repartitionFamille = [...repartitionFamilleMap.values()]
+        .map((f) => ({
+          typologie: f.typologie,
+          nombreFactures: f.facturesSet.size,
+          nombreLignes: f.nombreLignes,
+          montantTotal: f.montantTotal,
+          partTotal: montantTotalDetecte ? (f.montantTotal / montantTotalDetecte) : 0
+        }))
+        .sort((a, b) => b.montantTotal - a.montantTotal);
+
+      const repartitionSousFamille = [...repartitionSousFamilleMap.values()].sort((a, b) => b.montantTotal - a.montantTotal);
+
+      const alertes = [];
+      const facturesSansFournisseur = factures.filter((f) => !f.fournisseurCode);
+      const lignesSansDesignation = lignes.filter((l) => !l.designation);
+      const lignesSansMontant = lignes.filter((l) => l.montantLigne == null);
+      const lignesNonClasseesListe = lignes.filter((l) => l.familleAchat === 'Non classé');
+      const facturesIncoherentes = factures.filter((f) => {
+        const ecart = Math.abs((f.sommeLignes || 0) - (f.montantTotalFacture || 0));
+        return ecart > 0.05;
+      });
+
+      if (facturesSansFournisseur.length) alertes.push(`${facturesSansFournisseur.length} facture(s) sans fournisseur`);
+      if (lignesSansDesignation.length) alertes.push(`${lignesSansDesignation.length} ligne(s) sans désignation`);
+      if (lignesSansMontant.length) alertes.push(`${lignesSansMontant.length} ligne(s) sans montant`);
+      if (lignesNonClasseesListe.length) alertes.push(`${lignesNonClasseesListe.length} ligne(s) non classée(s)`);
+      if (analyse.doublons.length) alertes.push(`${analyse.doublons.length} facture(s) déjà importée(s)`);
+      if (facturesIncoherentes.length) alertes.push(`${facturesIncoherentes.length} facture(s) avec écart total/somme lignes`);
+      if (!alertes.length) alertes.push('Aucune anomalie détectée');
+
+      return {
+        resumeGeneral: {
+          nomFichiers: analyse.fichiers.map((f) => f.nom).join(', '),
+          nombreFactures: factures.length,
+          nombreLignes: lignes.length,
+          montantTotalDetecte,
+          lignesClassees,
+          lignesNonClassees,
+          doublonsPotentiels: analyse.doublons.length
+        },
+        repartitionFamille,
+        repartitionSousFamille,
+        alertes
+      };
+    }
+
+    function renderFichiers() {
+      const container = document.getElementById('listeFichiers');
+      if (!state.fichiers.length) {
+        container.innerHTML = '<div style="color:#666;">Aucun fichier sélectionné</div>';
+        return;
+      }
+      container.innerHTML = state.fichiers.map((f, idx) => `
+        <div class="achat-file-item">
+          <div><strong>${escapeHtml(f.name)}</strong></div>
+          <div>${(f.size / 1024).toFixed(1)} Ko</div>
+          <button class="btn btn-secondary btn-small" onclick="retirerFichier(${idx})">Retirer</button>
+        </div>
+      `).join('');
+    }
+
+    function retirerFichier(index) {
+      state.fichiers.splice(index, 1);
+      renderFichiers();
+      document.getElementById('btnValider').disabled = true;
+      document.getElementById('btnExporterControle').disabled = true;
+      state.analyse = null;
+    }
+
+    window.retirerFichier = retirerFichier;
+
+    function renderKpisPreAnalyse() {
+      const wrap = document.getElementById('kpiPreAnalyse');
+      if (!state.analyse) {
+        wrap.innerHTML = `
+          <div class="achat-kpi-card"><div class="label">Factures détectées</div><div class="value">0</div></div>
+          <div class="achat-kpi-card"><div class="label">Lignes détectées</div><div class="value">0</div></div>
+          <div class="achat-kpi-card"><div class="label">Montant total</div><div class="value">0,00</div></div>
+          <div class="achat-kpi-card"><div class="label">Taux lignes classées</div><div class="value">0%</div></div>
+        `;
+        return;
+      }
+      const r = state.analyse.synthese.resumeGeneral;
+      const taux = r.nombreLignes ? ((r.lignesClassees / r.nombreLignes) * 100) : 0;
+      wrap.innerHTML = `
+        <div class="achat-kpi-card"><div class="label">Factures détectées</div><div class="value">${r.nombreFactures}</div></div>
+        <div class="achat-kpi-card"><div class="label">Lignes détectées</div><div class="value">${r.nombreLignes}</div></div>
+        <div class="achat-kpi-card"><div class="label">Montant total</div><div class="value">${formatMoney(r.montantTotalDetecte)}</div></div>
+        <div class="achat-kpi-card"><div class="label">Taux lignes classées</div><div class="value">${taux.toFixed(1)}%</div></div>
+        <div class="achat-kpi-card"><div class="label">Lignes non classées</div><div class="value">${r.lignesNonClassees}</div></div>
+        <div class="achat-kpi-card"><div class="label">Doublons potentiels</div><div class="value">${r.doublonsPotentiels}</div></div>
+      `;
+    }
+
+    function renderTableFamilles() {
+      const tbody = document.querySelector('#tableFamilles tbody');
+      if (!state.analyse) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Aucune analyse</td></tr>';
+        return;
+      }
+      const rows = state.analyse.synthese.repartitionFamille;
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Aucune donnée</td></tr>';
+        return;
+      }
+      tbody.innerHTML = rows.map((r) => `
+        <tr>
+          <td>${escapeHtml(r.typologie)}</td>
+          <td>${r.nombreFactures}</td>
+          <td>${r.nombreLignes}</td>
+          <td>${formatMoney(r.montantTotal)}</td>
+          <td>${(r.partTotal * 100).toFixed(1)}%</td>
+        </tr>
+      `).join('');
+    }
+
+    function appliquerFiltresLignes() {
+      if (!state.analyse) {
+        state.lignesFiltrees = [];
+        renderTableLignes();
+        return;
+      }
+      const txt = normalizeText(document.getElementById('filtreTexte').value);
+      const famille = document.getElementById('filtreFamille').value;
+      const statut = document.getElementById('filtreStatut').value;
+      state.lignesFiltrees = state.analyse.lignes.filter((l) => {
+        if (famille && l.familleAchat !== famille) return false;
+        if (statut && l.statutConfianceClassement !== statut) return false;
+        if (!txt) return true;
+        const blob = normalizeText([
+          l.dateFacture, l.numeroFacture, l.fournisseur, l.chantierOuAffaireLigne, l.ressource, l.designation, l.familleAchat, l.sousCategorieAutomatique
+        ].filter(Boolean).join(' '));
+        return blob.includes(txt);
+      });
+      renderTableLignes();
+    }
+
+    function renderTableLignes() {
+      const tbody = document.querySelector('#tableLignesApercu tbody');
+      const lignes = state.lignesFiltrees || [];
+      if (!lignes.length) {
+        tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;">Aucune ligne</td></tr>';
+        return;
+      }
+      tbody.innerHTML = lignes.slice(0, 2000).map((l) => {
+        const cls = l.statutConfianceClassement === 'élevée' ? 'achat-chip-ok' : l.statutConfianceClassement === 'non classé' ? 'achat-chip-ko' : '';
+        return `
+          <tr>
+            <td>${formatDateFr(l.dateFacture)}</td>
+            <td>${escapeHtml(l.numeroFacture || '')}</td>
+            <td>${escapeHtml(l.fournisseur || '')}</td>
+            <td>${escapeHtml(l.chantierOuAffaireLigne || '')}</td>
+            <td>${escapeHtml(l.ressource || '')}</td>
+            <td>${escapeHtml(l.designation || '')}</td>
+            <td>${escapeHtml(l.unite || '')}</td>
+            <td>${l.quantite != null ? formatMoney(l.quantite) : '—'}</td>
+            <td>${l.prixUnitaire != null ? formatMoney(l.prixUnitaire) : '—'}</td>
+            <td>${l.montantLigne != null ? formatMoney(l.montantLigne) : '—'}</td>
+            <td>${escapeHtml(l.familleAchat || 'Non classé')}</td>
+            <td>${escapeHtml(l.sousCategorieAutomatique || 'Divers')}</td>
+            <td><span class="achat-chip ${cls}">${escapeHtml(l.statutConfianceClassement || 'non classé')}</span></td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderAnomalies() {
+      const ul = document.getElementById('listeAnomalies');
+      if (!state.analyse) {
+        ul.innerHTML = '<li>Aucune anomalie</li>';
+        return;
+      }
+      ul.innerHTML = state.analyse.synthese.alertes.map((a) => `<li>${escapeHtml(a)}</li>`).join('');
+    }
+
+    function renderRegles() {
+      const tbody = document.querySelector('#tableRegles tbody');
+      if (!state.regles.length) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Aucune règle</td></tr>';
+        return;
+      }
+      tbody.innerHTML = state.regles.map((r) => `
+        <tr>
+          <td>${escapeHtml(r.famille || '')}</td>
+          <td>${escapeHtml(r.sousFamille || '')}</td>
+          <td>${escapeHtml((r.keywords || []).join(', '))}</td>
+          <td>${Number(r.points || 0)}</td>
+        </tr>
+      `).join('');
+    }
+
+    function ajouterRegleDepuisForm() {
+      const famille = document.getElementById('newRegleFamille').value.trim();
+      const sousFamille = document.getElementById('newRegleSousFamille').value.trim();
+      const keywordsRaw = document.getElementById('newRegleKeywords').value.trim();
+      const points = Number(document.getElementById('newReglePoids').value || 3);
+
+      if (!famille || !keywordsRaw) {
+        showMessage('Famille et mots-clés sont obligatoires pour ajouter une règle.', 'warning');
+        return;
+      }
+
+      const regle = {
+        id: `regle_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        famille,
+        sousFamille: sousFamille || 'Divers',
+        keywords: keywordsRaw.split(',').map((x) => x.trim()).filter(Boolean),
+        points: Number.isFinite(points) && points > 0 ? points : 3
+      };
+      state.regles.push(regle);
+      localStorage.setItem(STORAGE_KEYS.regles, JSON.stringify(state.regles));
+      renderRegles();
+      showMessage('✅ Règle ajoutée.', 'success');
+    }
+
+    function resetReglesDefaut() {
+      state.regles = [...DEFAULT_REGLES];
+      localStorage.setItem(STORAGE_KEYS.regles, JSON.stringify(state.regles));
+      renderRegles();
+      showMessage('✅ Règles réinitialisées avec le dictionnaire par défaut.', 'success');
+    }
+
+    function renderFiltresFamille() {
+      const select = document.getElementById('filtreFamille');
+      if (!state.analyse) {
+        select.innerHTML = '<option value="">Toutes les familles</option>';
+        return;
+      }
+      const familles = [...new Set(state.analyse.lignes.map((l) => l.familleAchat || 'Non classé'))].sort();
+      select.innerHTML = '<option value="">Toutes les familles</option>' +
+        familles.map((f) => `<option value="${escapeHtml(f)}">${escapeHtml(f)}</option>`).join('');
+    }
+
+    function resetUIAnalyse() {
+      state.analyse = null;
+      state.lignesFiltrees = [];
+      renderKpisPreAnalyse();
+      renderTableFamilles();
+      renderTableLignes();
+      renderAnomalies();
+      renderFiltresFamille();
+      document.getElementById('btnValider').disabled = true;
+      document.getElementById('btnExporterControle').disabled = true;
+    }
+
+    async function analyserFichiers() {
+      clearMessage();
+      if (!state.fichiers.length) {
+        showMessage('Veuillez d’abord sélectionner au moins un fichier .txt', 'warning');
+        return;
+      }
+
+      const facturesExistantes = JSON.parse(localStorage.getItem(STORAGE_KEYS.factures) || '[]');
+      const factures = [];
+      const lignes = [];
+      const lignesTotauxControle = [];
+      const fichiersInfo = [];
+
+      for (const file of state.fichiers) {
+        const contenu = await decodeTextFile(file);
+        const parsed = parserFichierOnaya(contenu, file.name);
+        factures.push(...parsed.factures);
+        lignes.push(...parsed.lignes);
+        lignesTotauxControle.push(...parsed.lignesTotauxControle);
+        fichiersInfo.push({
+          nom: file.name,
+          taille: file.size,
+          dateAnalyse: new Date().toISOString(),
+          lignesBrutes: parsed.lignesBrutesCount
+        });
+      }
+
+      for (const ligne of lignes) {
+        classerLigne(ligne, state.regles);
+      }
+
+      const doublons = detecterDoublons(factures, facturesExistantes);
+      const analyse = {
+        idAnalyse: `analyse_${Date.now()}`,
+        dateAnalyse: new Date().toISOString(),
+        fichiers: fichiersInfo,
+        factures,
+        lignes,
+        lignesTotauxControle,
+        doublons
+      };
+      analyse.synthese = construireSynthese(analyse);
+
+      state.analyse = analyse;
+      state.lignesFiltrees = [...analyse.lignes];
+      renderKpisPreAnalyse();
+      renderTableFamilles();
+      renderTableLignes();
+      renderAnomalies();
+      renderFiltresFamille();
+      document.getElementById('btnValider').disabled = false;
+      document.getElementById('btnExporterControle').disabled = false;
+      showMessage('✅ Analyse terminée. Vérifiez le contrôle avant validation.', 'success');
+    }
+
+    function exportControleCsv() {
+      if (!state.analyse) return;
+      const rows = [];
+      rows.push('date_facture;numero_facture;fournisseur;ressource;designation;quantite;pu;montant;famille;sous_famille;confiance');
+      for (const l of state.analyse.lignes) {
+        rows.push([
+          l.dateFacture || '',
+          l.numeroFacture || '',
+          l.fournisseur || '',
+          l.ressource || '',
+          (l.designation || '').replace(/;/g, ','),
+          l.quantite != null ? String(l.quantite).replace('.', ',') : '',
+          l.prixUnitaire != null ? String(l.prixUnitaire).replace('.', ',') : '',
+          l.montantLigne != null ? String(l.montantLigne).replace('.', ',') : '',
+          l.familleAchat || '',
+          l.sousCategorieAutomatique || '',
+          l.statutConfianceClassement || ''
+        ].join(';'));
+      }
+      const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `controle_import_achats_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportHistoriqueLignesCsv() {
+      const lignes = JSON.parse(localStorage.getItem(STORAGE_KEYS.lignes) || '[]');
+      if (!lignes.length) {
+        showMessage('Aucune ligne importée à exporter.', 'warning');
+        return;
+      }
+      const rows = [];
+      rows.push('id_ligne;date_facture;numero_facture;fournisseur;ressource;designation;quantite;pu;montant;famille;sous_famille;confiance');
+      for (const l of lignes) {
+        rows.push([
+          l.idLigne || '',
+          l.dateFacture || '',
+          l.numeroFacture || '',
+          l.fournisseur || '',
+          l.ressource || '',
+          (l.designation || '').replace(/;/g, ','),
+          l.quantite != null ? String(l.quantite).replace('.', ',') : '',
+          l.prixUnitaire != null ? String(l.prixUnitaire).replace('.', ',') : '',
+          l.montantLigne != null ? String(l.montantLigne).replace('.', ',') : '',
+          l.familleAchat || '',
+          l.sousCategorieAutomatique || '',
+          l.statutConfianceClassement || ''
+        ].join(';'));
+      }
+      const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `lignes_achats_importees_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function recalculerClassifications() {
+      const lignes = JSON.parse(localStorage.getItem(STORAGE_KEYS.lignes) || '[]');
+      if (!lignes.length) {
+        showMessage('Aucune ligne importée à recalculer.', 'warning');
+        return;
+      }
+      for (const ligne of lignes) {
+        classerLigne(ligne, state.regles);
+      }
+      localStorage.setItem(STORAGE_KEYS.lignes, JSON.stringify(lignes));
+      showMessage(`✅ Recalcul terminé sur ${lignes.length} ligne(s).`, 'success');
+    }
+
+    function validerImport() {
+      if (!state.analyse) {
+        showMessage('Aucune analyse à valider.', 'warning');
+        return;
+      }
+
+      const strategie = document.getElementById('strategieDoublons').value;
+      const imports = JSON.parse(localStorage.getItem(STORAGE_KEYS.imports) || '[]');
+      let factures = JSON.parse(localStorage.getItem(STORAGE_KEYS.factures) || '[]');
+      let lignes = JSON.parse(localStorage.getItem(STORAGE_KEYS.lignes) || '[]');
+
+      const idsDoublons = new Set(state.analyse.doublons.map((d) => d.idFactureImport));
+      const facturesAInserer = [];
+      const lignesAInserer = [];
+      const journal = [];
+
+      const lignesByFacture = new Map();
+      for (const ligne of state.analyse.lignes) {
+        if (!lignesByFacture.has(ligne.idFactureParente)) lignesByFacture.set(ligne.idFactureParente, []);
+        lignesByFacture.get(ligne.idFactureParente).push(ligne);
+      }
+
+      for (const facture of state.analyse.factures) {
+        const isDoublon = idsDoublons.has(facture.idFacture);
+        if (isDoublon && strategie === 'ignorer') {
+          journal.push(`Facture ${facture.numeroFacture} ignorée (doublon).`);
+          continue;
+        }
+        if (isDoublon && strategie === 'remplacer') {
+          const match = state.analyse.doublons.find((d) => d.idFactureImport === facture.idFacture);
+          const existingIds = (match?.facturesExistantes || []).map((f) => f.idFacture);
+          if (existingIds.length) {
+            factures = factures.filter((f) => !existingIds.includes(f.idFacture));
+            lignes = lignes.filter((l) => !existingIds.includes(l.idFactureParente));
+            journal.push(`Facture ${facture.numeroFacture} remplacée (${existingIds.length} ancienne(s) version(s) supprimée(s)).`);
+          }
+        }
+
+        facturesAInserer.push(facture);
+        lignesAInserer.push(...(lignesByFacture.get(facture.idFacture) || []));
+      }
+
+      factures = [...factures, ...facturesAInserer];
+      lignes = [...lignes, ...lignesAInserer];
+
+      const importRecord = {
+        idImport: `imp_${Date.now()}`,
+        dateImport: new Date().toISOString(),
+        utilisateur: Auth.getSession()?.username || 'inconnu',
+        nomFichier: state.analyse.fichiers.map((f) => f.nom).join(', '),
+        nombreFactures: facturesAInserer.length,
+        nombreLignes: lignesAInserer.length,
+        statut: facturesAInserer.length ? 'importé' : 'partiellement importé',
+        journalAnomalies: state.analyse.synthese.alertes,
+        journalOperations: journal
+      };
+      imports.push(importRecord);
+
+      localStorage.setItem(STORAGE_KEYS.imports, JSON.stringify(imports));
+      localStorage.setItem(STORAGE_KEYS.factures, JSON.stringify(factures));
+      localStorage.setItem(STORAGE_KEYS.lignes, JSON.stringify(lignes));
+
+      showMessage(`✅ Import validé : ${facturesAInserer.length} facture(s), ${lignesAInserer.length} ligne(s) enregistrée(s).`, 'success');
+      resetUIAnalyse();
+    }
+
+    function annulerImport() {
+      state.fichiers = [];
+      renderFichiers();
+      resetUIAnalyse();
+      showMessage('Import annulé.', 'info');
+    }
+
+    function bindEvents() {
+      const input = document.getElementById('inputFichiersAchat');
+      const dropzone = document.getElementById('dropzoneAchat');
+
+      dropzone.addEventListener('click', () => input.click());
+      input.addEventListener('change', () => {
+        state.fichiers = [...state.fichiers, ...Array.from(input.files || [])].filter((f) => /\.txt$/i.test(f.name));
+        input.value = '';
+        renderFichiers();
+        resetUIAnalyse();
+      });
+
+      dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('dragover');
+      });
+      dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+      dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+        const files = Array.from(e.dataTransfer.files || []).filter((f) => /\.txt$/i.test(f.name));
+        state.fichiers = [...state.fichiers, ...files];
+        renderFichiers();
+        resetUIAnalyse();
+      });
+
+      document.getElementById('btnAnalyser').addEventListener('click', () => analyserFichiers().catch((e) => showMessage(`❌ Erreur analyse: ${e.message}`, 'danger')));
+      document.getElementById('btnValider').addEventListener('click', validerImport);
+      document.getElementById('btnAnnuler').addEventListener('click', annulerImport);
+      document.getElementById('btnExporterControle').addEventListener('click', exportControleCsv);
+      document.getElementById('btnRecalculer').addEventListener('click', recalculerClassifications);
+      document.getElementById('btnExporterHistoriqueCsv').addEventListener('click', exportHistoriqueLignesCsv);
+      document.getElementById('btnAjouterRegle').addEventListener('click', ajouterRegleDepuisForm);
+      document.getElementById('btnResetRegles').addEventListener('click', resetReglesDefaut);
+
+      document.getElementById('filtreTexte').addEventListener('input', appliquerFiltresLignes);
+      document.getElementById('filtreFamille').addEventListener('change', appliquerFiltresLignes);
+      document.getElementById('filtreStatut').addEventListener('change', appliquerFiltresLignes);
+    }
+
+    function init() {
+      document.getElementById('sidebar').innerHTML = getSidebar();
+      injectAchatSecondaryBar();
+      state.regles = chargerReglesClassification();
+      renderRegles();
+      renderFichiers();
+      resetUIAnalyse();
+      bindEvents();
+    }
+
+    window.onServerReady(init);
+  </script>
+
+  <footer class="site-footer"></footer>
+</body>
+</html>

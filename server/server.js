@@ -204,6 +204,44 @@ app.put('/api/reminders-sent', (req, res) => {
   res.json({ success: true });
 });
 
+// ─── ROUTES : ACHATS (IMPORTS ONAYA) ──────────────────────────────────────────────
+
+app.get('/api/achats-imports', (req, res) => {
+  res.json(dbGet('achats_imports', []));
+});
+
+app.put('/api/achats-imports', (req, res) => {
+  dbSet('achats_imports', req.body);
+  res.json({ success: true });
+});
+
+app.get('/api/achats-factures', (req, res) => {
+  res.json(dbGet('achats_factures', []));
+});
+
+app.put('/api/achats-factures', (req, res) => {
+  dbSet('achats_factures', req.body);
+  res.json({ success: true });
+});
+
+app.get('/api/achats-lignes', (req, res) => {
+  res.json(dbGet('achats_lignes', []));
+});
+
+app.put('/api/achats-lignes', (req, res) => {
+  dbSet('achats_lignes', req.body);
+  res.json({ success: true });
+});
+
+app.get('/api/achats-regles', (req, res) => {
+  res.json(dbGet('achats_regles', []));
+});
+
+app.put('/api/achats-regles', (req, res) => {
+  dbSet('achats_regles', req.body);
+  res.json({ success: true });
+});
+
 // ─── EXCEL GOUDALLE MAÇONNERIE : CONFIG + WATCHER + AUTO-IMPORT ─────────────────
 
 // Fonction qui parse le fichier Excel et retourne les données

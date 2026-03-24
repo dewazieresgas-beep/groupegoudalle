@@ -46,6 +46,10 @@ const KEY_TO_ENDPOINT = {
   'goudalle_sylve_paiements_attente':'/sylve-paiements',
   'goudalle_reminder_config':        '/reminders-config',
   'goudalle_reminders_sent':         '/reminders-sent',
+  'goudalle_achats_imports':         '/achats-imports',
+  'goudalle_achats_factures':        '/achats-factures',
+  'goudalle_achats_lignes':          '/achats-lignes',
+  'goudalle_achats_regles':          '/achats-regles',
 };
 
 // Clés qui restent dans localStorage (état UI local, session)
@@ -103,6 +107,10 @@ async function loadAllFromServer() {
     ['/sylve-paiements', 'goudalle_sylve_paiements_attente'],
     ['/reminders-config','goudalle_reminder_config'],
     ['/reminders-sent',  'goudalle_reminders_sent'],
+    ['/achats-imports',  'goudalle_achats_imports'],
+    ['/achats-factures', 'goudalle_achats_factures'],
+    ['/achats-lignes',   'goudalle_achats_lignes'],
+    ['/achats-regles',   'goudalle_achats_regles'],
   ];
 
   await Promise.all(endpoints.map(async ([endpoint, key]) => {
