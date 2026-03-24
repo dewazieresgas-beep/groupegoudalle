@@ -536,6 +536,39 @@
       return out;
     }
 
+    function isPdfFactureColumnsHeader(line) {
+      const txt = normalizeText(line);
+      return txt.includes('date') &&
+        txt.includes('fact') &&
+        txt.includes('journal') &&
+        txt.includes('fournisseur') &&
+        txt.includes('chantier') &&
+        txt.includes('libelle') &&
+        txt.includes('montant');
+    }
+
+    function isPdfDetailColumnsHeader(line) {
+      const txt = normalizeText(line);
+      return txt.includes('ressource') &&
+        txt.includes('arc') &&
+        txt.includes('libelle') &&
+        txt.includes('unite') &&
+        txt.includes('qte') &&
+        txt.includes('montant');
+    }
+
+    function parsePdfTotalLine(line) {
+      const clean = dedupeRepeatedLine(line);
+      if (!/total\s+(bon|chantier|fournisseur)/i.test(clean)) return null;
+      const allAmounts = clean.match(/-?\d[\d ]*,\d{2}/g) || [];
+      const amountRaw = allAmounts.length ? allAmounts[allAmounts.length - 1] : null;
+      return {
+        typeTotal: /total\s+fournisseur/i.test(clean) ? 'Total Fournisseur' : /total\s+chantier/i.test(clean) ? 'Total Chantier' : 'Total Bon',
+        montantTotalLigne: amountRaw ? toNumberFr(amountRaw) : null,
+        texte: clean
+      };
+    }
+
     function parsePdfHeaderLine(line) {
       const clean = dedupeRepeatedLine(line);
       const compact = String(clean || '').replace(/\s+/g, ' ').trim();
@@ -552,6 +585,7 @@
       let journal = null;
       let fournisseurCode = null;
       let rest = [];
+      let avoir = null;
 
       // En-tête ONAYA: [Avoir?] [Journal?] [Fournisseur] [Chantier...] [Fact/Avoir ...]
       // Le fournisseur est généralement le premier token commençant par "0".
@@ -560,6 +594,8 @@
         fournisseurCode = tokens[idxSupplier];
         const beforeSupplier = tokens.slice(0, idxSupplier);
         rest = tokens.slice(idxSupplier + 1);
+        const avoirToken = beforeSupplier.find((t) => /^(avoir|av)$/i.test(t));
+        if (avoirToken) avoir = 'AVOIR';
 
         // Journal = dernier code court alpha avant fournisseur (AC/OD/...),
         // en excluant les marqueurs d'avoir.
@@ -593,6 +629,7 @@
       return {
         dateFacture,
         numeroFacture,
+        avoir,
         journalOuType: journal,
         fournisseurCode,
         chantierOuAffaire: chantier,
@@ -614,8 +651,8 @@
       const tokens = prefix.split(/\s+/).filter(Boolean);
       if (!tokens.length) return null;
 
-      const isArcFirstToken = (t) => /^\d{2,4}$/.test(t) || /^[A-Z]{2,}[A-Z0-9_-]*-\d+$/i.test(t);
-      const isArcSecondToken = (t) => /^\d{2}-\d{3,}$/.test(t);
+      const isArcToken = (t) => /^\d{2,4}$/.test(t) || /^[A-Z]{2,}[A-Z0-9_-]*-\d+$/i.test(t);
+      const isChantierToken = (t) => /^\d{2}-\d{3,}$/.test(t);
 
       // Le code ressource peut contenir des espaces ("KLH 2F ISI").
       const idxBl = tokens.findIndex((t) => /^(BL|BC)[A-Z0-9-]+$/i.test(t));
@@ -627,8 +664,9 @@
         resourceTokens = tokens.slice(0, idxBl);
         tailTokens = tokens.slice(idxBl + 1);
       } else {
-        // Sans BL, on coupe au début de l'A.R.C (ex: "CABLE 230 ...", "CONTROLE 630 ...").
-        const arcStart = tokens.findIndex((t, i) => i > 0 && isArcFirstToken(t));
+        // Sans BL, on coupe au début du code article/chantier
+        // (ex: "CABLE 230 ...", "INTERVENTION 230 23-2524 ...").
+        const arcStart = tokens.findIndex((t, i) => i > 0 && (isArcToken(t) || isChantierToken(t)));
         if (arcStart > 0) {
           resourceTokens = tokens.slice(0, arcStart);
           tailTokens = tokens.slice(arcStart);
@@ -642,21 +680,22 @@
       }
       const resource = resourceTokens.join(' ').trim() || null;
 
-      const meta = [];
-      if (tailTokens.length && isArcFirstToken(tailTokens[0])) {
-        meta.push(tailTokens.shift());
-        if (tailTokens.length && isArcSecondToken(tailTokens[0])) {
-          meta.push(tailTokens.shift());
-        }
+      let arc = null;
+      let chantierLigne = null;
+      if (tailTokens.length && isArcToken(tailTokens[0])) {
+        arc = tailTokens.shift();
+      }
+      if (tailTokens.length && isChantierToken(tailTokens[0])) {
+        chantierLigne = tailTokens.shift();
       }
 
       const designation = tailTokens.join(' ').trim() || prefix || null;
-      const arc = meta.join(' ') || null;
 
       return {
         resource,
         bl,
         arc,
+        chantierLigne,
         designation,
         unite: unit,
         quantite: qte,
@@ -674,6 +713,7 @@
       let factureCourante = null;
       let compteurFacture = 0;
       let ordreLigne = 0;
+      let factureOuverte = false;
 
       for (let raw of rawLines) {
         raw = dedupeRepeatedLine(raw);
@@ -681,11 +721,16 @@
         if (/^--\s*\d+\s+of\s+\d+\s*--$/i.test(raw)) continue;
         const normalized = normalizeText(raw);
         if (!normalized) continue;
-        if (normalized.includes('montantressource') || normalized.startsWith('libellen')) continue;
+        if (isPdfFactureColumnsHeader(raw) || isPdfDetailColumnsHeader(raw)) continue;
         if (/^(p\.?\s*u|bl|n[°o])/.test(normalized)) continue;
 
         const h = parsePdfHeaderLine(raw);
         if (h) {
+          // Nouvelle entête rencontrée: on ferme implicitement le bloc précédent
+          // s'il n'a pas eu de "Total Bon" explicite.
+          if (factureCourante && factureOuverte) {
+            factureOuverte = false;
+          }
           compteurFacture++;
           ordreLigne = 0;
           const idFacture = `fac_${Date.now()}_${compteurFacture}_${Math.random().toString(36).slice(2, 8)}`;
@@ -703,6 +748,7 @@
             dateImport: new Date().toISOString(),
             dateFacture: h.dateFacture,
             numeroFacture: h.numeroFacture,
+            avoir: h.avoir || null,
             journalOuType: h.journalOuType,
             fournisseurCode: h.fournisseurCode,
             fournisseurLibelle: h.fournisseurCode ? h.fournisseurCode.replace(/^0/, '') : null,
@@ -715,19 +761,24 @@
             sommeLignes: 0
           };
           factures.push(factureCourante);
+          factureOuverte = true;
           continue;
         }
 
-        if (!factureCourante) continue;
+        if (!factureCourante || !factureOuverte) continue;
 
-        if (/total\s+(bon|chantier|fournisseur)/i.test(raw)) {
-          const montantTotalLine = toNumberFr(raw);
+        const totalInfo = parsePdfTotalLine(raw);
+        if (totalInfo) {
           lignesTotauxControle.push({
             idFacture: factureCourante.idFacture,
-            texte: raw,
-            typeTotal: /total\s+fournisseur/i.test(raw) ? 'Total Fournisseur' : /total\s+chantier/i.test(raw) ? 'Total Chantier' : 'Total Bon',
-            montantTotalLigne: montantTotalLine
+            texte: totalInfo.texte,
+            typeTotal: totalInfo.typeTotal,
+            montantTotalLigne: totalInfo.montantTotalLigne
           });
+          if (totalInfo.typeTotal === 'Total Bon') {
+            factureOuverte = false;
+            factureCourante = null;
+          }
           continue;
         }
 
@@ -743,11 +794,11 @@
           ressource: article.resource,
           bl: article.bl,
           arc: article.arc,
+          chantierOuAffaireLigne: article.chantierLigne || factureCourante.chantierOuAffaire,
           unite: article.unite,
           quantite: article.quantite,
           prixUnitaire: article.prixUnitaire,
           designation: article.designation,
-          chantierOuAffaireLigne: factureCourante.chantierOuAffaire,
           fournisseur: factureCourante.fournisseurCode,
           dateFacture: factureCourante.dateFacture,
           numeroFacture: factureCourante.numeroFacture,
