@@ -161,16 +161,6 @@
         <div class="card-body">
           <div class="achat-flex" style="margin-bottom:10px;">
             <input id="filtreTexte" type="text" placeholder="Filtrer (facture, fournisseur, ressource, désignation...)">
-            <select id="filtreFamille">
-              <option value="">Toutes les familles</option>
-            </select>
-            <select id="filtreStatut">
-              <option value="">Tous les statuts</option>
-              <option value="élevée">Confiance élevée</option>
-              <option value="moyenne">Confiance moyenne</option>
-              <option value="faible">Confiance faible</option>
-              <option value="non classé">Non classé</option>
-            </select>
           </div>
 
           <div class="achat-table-wrap">
@@ -216,6 +206,7 @@
             </select>
             <button class="btn btn-warning" id="btnRecalculer">♻️ Recalculer les classifications</button>
             <button class="btn btn-secondary" id="btnExporterHistoriqueCsv">📥 Export CSV lignes importées</button>
+            <button class="btn btn-danger" id="btnViderHistoriqueImports">🗑️ Supprimer l'historique d'import</button>
           </div>
         </div>
       </div>
@@ -1202,14 +1193,10 @@
         return;
       }
       const txt = normalizeText(document.getElementById('filtreTexte').value);
-      const famille = document.getElementById('filtreFamille').value;
-      const statut = document.getElementById('filtreStatut').value;
       state.lignesFiltrees = state.analyse.lignes.filter((l) => {
-        if (famille && l.familleAchat !== famille) return false;
-        if (statut && l.statutConfianceClassement !== statut) return false;
         if (!txt) return true;
         const blob = normalizeText([
-          l.dateFacture, l.numeroFacture, l.fournisseur, l.chantierOuAffaireLigne, l.ressource, l.designation, l.familleAchat, l.sousCategorieAutomatique
+          l.dateFacture, l.numeroFacture, l.fournisseur, l.chantierOuAffaireLigne, l.ressource, l.designation
         ].filter(Boolean).join(' '));
         return blob.includes(txt);
       });
@@ -1326,17 +1313,6 @@
       showMessage('✅ Règles réinitialisées avec le dictionnaire par défaut.', 'success');
     }
 
-    function renderFiltresFamille() {
-      const select = document.getElementById('filtreFamille');
-      if (!state.analyse) {
-        select.innerHTML = '<option value="">Toutes les familles</option>';
-        return;
-      }
-      const familles = [...new Set(state.analyse.lignes.map((l) => l.familleAchat || 'Non classé'))].sort();
-      select.innerHTML = '<option value="">Toutes les familles</option>' +
-        familles.map((f) => `<option value="${escapeHtml(f)}">${escapeHtml(f)}</option>`).join('');
-    }
-
     function resetUIAnalyse() {
       state.analyse = null;
       state.lignesFiltrees = [];
@@ -1344,7 +1320,6 @@
       renderTableFamilles();
       renderTableLignes();
       renderAnomalies();
-      renderFiltresFamille();
       document.getElementById('btnValider').disabled = true;
       document.getElementById('btnExporterControle').disabled = true;
     }
@@ -1399,7 +1374,6 @@
       renderTableFamilles();
       renderTableLignes();
       renderAnomalies();
-      renderFiltresFamille();
       document.getElementById('btnValider').disabled = false;
       document.getElementById('btnExporterControle').disabled = false;
       showMessage('✅ Analyse terminée. Vérifiez le contrôle avant validation.', 'success');
@@ -1408,7 +1382,7 @@
     function exportControleCsv() {
       if (!state.analyse) return;
       const rows = [];
-      rows.push('date_facture;numero_facture;fournisseur;ressource;designation;quantite;pu;montant;famille;sous_famille;confiance');
+      rows.push('date_facture;numero_facture;fournisseur;ressource;designation;quantite;pu;montant');
       for (const l of state.analyse.lignes) {
         rows.push([
           l.dateFacture || '',
@@ -1418,10 +1392,7 @@
           (l.designation || '').replace(/;/g, ','),
           l.quantite != null ? String(l.quantite).replace('.', ',') : '',
           l.prixUnitaire != null ? String(l.prixUnitaire).replace('.', ',') : '',
-          l.montantLigne != null ? String(l.montantLigne).replace('.', ',') : '',
-          l.familleAchat || '',
-          l.sousCategorieAutomatique || '',
-          l.statutConfianceClassement || ''
+          l.montantLigne != null ? String(l.montantLigne).replace('.', ',') : ''
         ].join(';'));
       }
       const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
@@ -1442,7 +1413,7 @@
         return;
       }
       const rows = [];
-      rows.push('id_ligne;date_facture;numero_facture;fournisseur;ressource;designation;quantite;pu;montant;famille;sous_famille;confiance');
+      rows.push('id_ligne;date_facture;numero_facture;fournisseur;ressource;designation;quantite;pu;montant');
       for (const l of lignes) {
         rows.push([
           l.idLigne || '',
@@ -1453,10 +1424,7 @@
           (l.designation || '').replace(/;/g, ','),
           l.quantite != null ? String(l.quantite).replace('.', ',') : '',
           l.prixUnitaire != null ? String(l.prixUnitaire).replace('.', ',') : '',
-          l.montantLigne != null ? String(l.montantLigne).replace('.', ',') : '',
-          l.familleAchat || '',
-          l.sousCategorieAutomatique || '',
-          l.statutConfianceClassement || ''
+          l.montantLigne != null ? String(l.montantLigne).replace('.', ',') : ''
         ].join(';'));
       }
       const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
@@ -1557,6 +1525,20 @@
       showMessage('Import annulé.', 'info');
     }
 
+    function supprimerHistoriqueImports() {
+      const ok = window.confirm("Confirmer la suppression de l'historique des imports ? Cette action supprimera les imports, factures et lignes enregistrés.");
+      if (!ok) return;
+
+      localStorage.setItem(STORAGE_KEYS.imports, JSON.stringify([]));
+      localStorage.setItem(STORAGE_KEYS.factures, JSON.stringify([]));
+      localStorage.setItem(STORAGE_KEYS.lignes, JSON.stringify([]));
+
+      state.fichiers = [];
+      renderFichiers();
+      resetUIAnalyse();
+      showMessage("✅ Historique d'import supprimé.", 'success');
+    }
+
     function bindEvents() {
       const input = document.getElementById('inputFichiersAchat');
       const dropzone = document.getElementById('dropzoneAchat');
@@ -1589,12 +1571,11 @@
       document.getElementById('btnExporterControle').addEventListener('click', exportControleCsv);
       document.getElementById('btnRecalculer').addEventListener('click', recalculerClassifications);
       document.getElementById('btnExporterHistoriqueCsv').addEventListener('click', exportHistoriqueLignesCsv);
+      document.getElementById('btnViderHistoriqueImports').addEventListener('click', supprimerHistoriqueImports);
       document.getElementById('btnAjouterRegle').addEventListener('click', ajouterRegleDepuisForm);
       document.getElementById('btnResetRegles').addEventListener('click', resetReglesDefaut);
 
       document.getElementById('filtreTexte').addEventListener('input', appliquerFiltresLignes);
-      document.getElementById('filtreFamille').addEventListener('change', appliquerFiltresLignes);
-      document.getElementById('filtreStatut').addEventListener('change', appliquerFiltresLignes);
     }
 
     let _achatsInitDone = false;
