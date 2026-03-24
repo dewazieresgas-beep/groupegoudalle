@@ -177,23 +177,18 @@
             <table id="tableLignesApercu">
               <thead>
                 <tr>
-                  <th>Date</th>
-                  <th>Facture</th>
-                  <th>Fournisseur</th>
-                  <th>Chantier</th>
                   <th>Ressource</th>
+                  <th>BL N°</th>
+                  <th>A.R.C</th>
                   <th>Désignation</th>
                   <th>Unité</th>
                   <th>Qté</th>
                   <th>PU</th>
                   <th>Montant</th>
-                  <th>Famille</th>
-                  <th>Sous-famille</th>
-                  <th>Classification</th>
                 </tr>
               </thead>
               <tbody>
-                <tr><td colspan="13" style="text-align:center;">Aucune ligne</td></tr>
+                <tr><td colspan="8" style="text-align:center;">Aucune ligne</td></tr>
               </tbody>
             </table>
           </div>
@@ -1072,6 +1067,41 @@
       };
     }
 
+    function rattacherLignesAnnexesAuxProduits(lignes) {
+      const byFacture = new Map();
+      for (const l of lignes) {
+        if (!byFacture.has(l.idFactureParente)) byFacture.set(l.idFactureParente, []);
+        byFacture.get(l.idFactureParente).push(l);
+      }
+
+      for (const arr of byFacture.values()) {
+        for (const ligne of arr) {
+          const estAnnexe = ligne.drapeauTransport || ligne.drapeauEcoContribution;
+          if (!estAnnexe) continue;
+
+          let cible = null;
+          if (ligne.bl) {
+            cible = arr.find((x) => x.idLigne !== ligne.idLigne && !x.drapeauTransport && !x.drapeauEcoContribution && x.bl && x.bl === ligne.bl);
+          }
+          if (!cible && ligne.arc) {
+            cible = arr.find((x) => x.idLigne !== ligne.idLigne && !x.drapeauTransport && !x.drapeauEcoContribution && x.arc && x.arc === ligne.arc);
+          }
+          if (!cible) {
+            cible = arr.find((x) => x.idLigne !== ligne.idLigne && !x.drapeauTransport && !x.drapeauEcoContribution);
+          }
+          if (!cible) continue;
+
+          ligne.familleAchat = cible.familleAchat || ligne.familleAchat;
+          ligne.categorieAutomatique = cible.categorieAutomatique || ligne.categorieAutomatique;
+          const prefix = ligne.drapeauTransport ? 'Transport lié' : 'Éco-contribution liée';
+          ligne.sousCategorieAutomatique = `${prefix} - ${cible.sousCategorieAutomatique || cible.familleAchat || 'Divers'}`;
+          ligne.statutConfianceClassement = 'moyenne';
+          ligne.idProduitRattache = cible.idLigne;
+          ligne.designationProduitRattache = cible.designation || cible.ressource || '';
+        }
+      }
+    }
+
     function renderFichiers() {
       const container = document.getElementById('listeFichiers');
       if (!state.fichiers.length) {
@@ -1167,29 +1197,54 @@
       const tbody = document.querySelector('#tableLignesApercu tbody');
       const lignes = state.lignesFiltrees || [];
       if (!lignes.length) {
-        tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;">Aucune ligne</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Aucune ligne</td></tr>';
         return;
       }
-      tbody.innerHTML = lignes.slice(0, 2000).map((l) => {
-        const cls = l.statutConfianceClassement === 'élevée' ? 'achat-chip-ok' : l.statutConfianceClassement === 'non classé' ? 'achat-chip-ko' : '';
+
+      const groupes = new Map();
+      for (const l of lignes) {
+        if (!groupes.has(l.idFactureParente)) groupes.set(l.idFactureParente, []);
+        groupes.get(l.idFactureParente).push(l);
+      }
+
+      const facturesById = new Map((state.analyse?.factures || []).map((f) => [f.idFacture, f]));
+      const blocs = [];
+      for (const [idFacture, lignesFacture] of groupes.entries()) {
+        lignesFacture.sort((a, b) => (a.ordreLigne || 0) - (b.ordreLigne || 0));
+        const f = facturesById.get(idFacture);
+        blocs.push(`
+          <tr style="background:#f3f6f3;">
+            <td colspan="8"><strong>${escapeHtml(f?.dateFacture || '')} ${escapeHtml(f?.numeroFacture || '')}</strong> — ${escapeHtml(f?.fournisseurCode || '')} — ${escapeHtml(f?.libelleFacture || '')}</td>
+          </tr>
+          <tr style="background:#fafafa;">
+            <td><strong>Ressource</strong></td>
+            <td><strong>BL N°</strong></td>
+            <td><strong>A.R.C</strong></td>
+            <td><strong>Libellé</strong></td>
+            <td><strong>Unité</strong></td>
+            <td><strong>Qté</strong></td>
+            <td><strong>P.U</strong></td>
+            <td><strong>Montant</strong></td>
+          </tr>
+        `);
+
+        blocs.push(lignesFacture.map((l) => {
+        const transportHint = l.idProduitRattache ? ` <small style="color:#666;">↳ ${escapeHtml(l.designationProduitRattache || '')}</small>` : '';
         return `
           <tr>
-            <td>${formatDateFr(l.dateFacture)}</td>
-            <td>${escapeHtml(l.numeroFacture || '')}</td>
-            <td>${escapeHtml(l.fournisseur || '')}</td>
-            <td>${escapeHtml(l.chantierOuAffaireLigne || '')}</td>
             <td>${escapeHtml(l.ressource || '')}</td>
-            <td>${escapeHtml(l.designation || '')}</td>
+            <td>${escapeHtml(l.bl || '')}</td>
+            <td>${escapeHtml(l.arc || '')}</td>
+            <td>${escapeHtml(l.designation || '')}${transportHint}</td>
             <td>${escapeHtml(l.unite || '')}</td>
             <td>${l.quantite != null ? formatMoney(l.quantite) : '—'}</td>
             <td>${l.prixUnitaire != null ? formatMoney(l.prixUnitaire) : '—'}</td>
             <td>${l.montantLigne != null ? formatMoney(l.montantLigne) : '—'}</td>
-            <td>${escapeHtml(l.familleAchat || 'Non classé')}</td>
-            <td>${escapeHtml(l.sousCategorieAutomatique || 'Divers')}</td>
-            <td><span class="achat-chip ${cls}">${escapeHtml(l.statutConfianceClassement || 'non classé')}</span></td>
           </tr>
         `;
-      }).join('');
+      }).join(''));
+      }
+      tbody.innerHTML = blocs.join('');
     }
 
     function renderAnomalies() {
@@ -1301,6 +1356,7 @@
       for (const ligne of lignes) {
         classerLigne(ligne, state.regles);
       }
+      rattacherLignesAnnexesAuxProduits(lignes);
 
       const doublons = detecterDoublons(factures, facturesExistantes);
       const analyse = {
@@ -1400,6 +1456,7 @@
       for (const ligne of lignes) {
         classerLigne(ligne, state.regles);
       }
+      rattacherLignesAnnexesAuxProduits(lignes);
       localStorage.setItem(STORAGE_KEYS.lignes, JSON.stringify(lignes));
       showMessage(`✅ Recalcul terminé sur ${lignes.length} ligne(s).`, 'success');
     }
