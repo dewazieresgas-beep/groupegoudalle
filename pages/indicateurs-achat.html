@@ -22,11 +22,34 @@
       <div class="d-flex justify-between items-center mb-3" style="gap: 12px; flex-wrap: wrap;">
         <h1 class="mb-0">Indicateurs Achat</h1>
       </div>
+
+      <div class="card">
+        <div class="card-title">
+          <h2>Accès rapides Achats</h2>
+        </div>
+        <div class="card-body">
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px;">
+            <a class="btn btn-primary" href="./indicateurs-achat-saisie.html">🧾 Saisie indicateurs achats</a>
+          </div>
+          <p style="margin-top: 12px; color: #666;">
+            Les indicateurs de cette page seront définis plus tard.
+          </p>
+        </div>
+      </div>
     </main>
   </div>
 
   <script>
-    function init() {
+    let _achatsPageInitDone = false;
+    async function init() {
+      if (_achatsPageInitDone) return;
+      _achatsPageInitDone = true;
+
+      if (typeof window.loadServerKeys === 'function') {
+        await window.loadServerKeys([
+          'goudalle_achats_imports'
+        ]);
+      }
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectAchatSecondaryBar();
     }

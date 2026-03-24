@@ -1136,7 +1136,19 @@
       document.getElementById('filtreStatut').addEventListener('change', appliquerFiltresLignes);
     }
 
-    function init() {
+    let _achatsInitDone = false;
+    async function init() {
+      if (_achatsInitDone) return;
+      _achatsInitDone = true;
+
+      if (typeof window.loadServerKeys === 'function') {
+        await window.loadServerKeys([
+          'goudalle_achats_imports',
+          'goudalle_achats_factures',
+          'goudalle_achats_lignes',
+          'goudalle_achats_regles'
+        ]);
+      }
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectAchatSecondaryBar();
       state.regles = chargerReglesClassification();

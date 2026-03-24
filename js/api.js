@@ -107,10 +107,6 @@ async function loadAllFromServer() {
     ['/sylve-paiements', 'goudalle_sylve_paiements_attente'],
     ['/reminders-config','goudalle_reminder_config'],
     ['/reminders-sent',  'goudalle_reminders_sent'],
-    ['/achats-imports',  'goudalle_achats_imports'],
-    ['/achats-factures', 'goudalle_achats_factures'],
-    ['/achats-lignes',   'goudalle_achats_lignes'],
-    ['/achats-regles',   'goudalle_achats_regles'],
   ];
 
   await Promise.all(endpoints.map(async ([endpoint, key]) => {
@@ -135,6 +131,37 @@ async function loadAllFromServer() {
   }));
 
   console.log('[API] Données chargées depuis le serveur ✅');
+  return true;
+}
+
+/**
+ * Charge explicitement un sous-ensemble de clés serveur (lazy loading).
+ * Utile pour les collections volumineuses (ex: Achats) afin d'éviter
+ * de ralentir toutes les pages.
+ * @param {string[]} keys
+ * @returns {Promise<boolean>}
+ */
+async function loadKeysFromServer(keys = []) {
+  const available = await checkServerAvailable();
+  if (!available) return false;
+
+  const uniqueKeys = [...new Set(keys)].filter(Boolean);
+  await Promise.all(uniqueKeys.map(async (key) => {
+    const endpoint = KEY_TO_ENDPOINT[key];
+    if (!endpoint) return;
+    try {
+      const signal = createTimeoutSignal(7000);
+      const res = await fetch(
+        SERVER_URL + endpoint,
+        signal ? { method: 'GET', signal, cache: 'no-store' } : { method: 'GET', cache: 'no-store' }
+      );
+      if (res.ok) {
+        _cache[key] = await res.json();
+      }
+    } catch (e) {
+      console.warn(`[API] Impossible de charger la clé ${key}:`, e.message);
+    }
+  }));
   return true;
 }
 
@@ -258,6 +285,9 @@ window.onServerReady = function(fn) {
   });
   window.addEventListener('serverDataRefreshed', () => fn());
 };
+
+// API utilitaire exposée aux pages pour lazy-loading ciblé
+window.loadServerKeys = loadKeysFromServer;
 
 // ─── RAFRAÎCHISSEMENT AUTOMATIQUE TOUTES LES MINUTES ────────────────────────
 setInterval(async () => {
