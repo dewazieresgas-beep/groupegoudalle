@@ -556,15 +556,11 @@
       if (!m) return null;
 
       const [, dateFacture, numeroFacture, journal, fournisseurCode, middleRaw, montantRaw] = m;
-      const middle = String(middleRaw || '').trim();
-      const tokens = middle ? middle.split(/\s+/) : [];
-
-      let chantier = null;
-      let libelleFacture = middle;
-      if (tokens.length && !/^fact$/i.test(tokens[0])) {
-        chantier = tokens[0];
-        libelleFacture = tokens.slice(1).join(' ').trim() || 'Fact';
-      }
+      const middle = String(middleRaw || '').replace(/\s+/g, ' ').trim();
+      const tokens = middle ? middle.split(' ') : [];
+      const idxFact = tokens.findIndex((t) => /^fact$/i.test(t) || /^avoir$/i.test(t));
+      const chantier = idxFact > 0 ? tokens.slice(0, idxFact).join(' ').trim() : null;
+      const libelleFacture = idxFact >= 0 ? tokens.slice(idxFact).join(' ').trim() : middle;
 
       return {
         dateFacture,
@@ -581,22 +577,47 @@
       const clean = dedupeRepeatedLine(line);
       const m = clean.match(/^(.*?)(?:\s+(U|ML|M2|M3|ENS|KG))?\s+(-?\d[\d ]*,\d{3})\s+(-?\d[\d ]*,\d{2})\s+(-?\d[\d ]*,\d{2})$/i);
       if (!m) return null;
-      const prefix = m[1] || '';
+      const prefix = String(m[1] || '').trim();
       const unit = m[2] || null;
       const qte = toNumberFr(m[3]);
       const pu = toNumberFr(m[4]);
       const montant = toNumberFr(m[5]);
 
       const tokens = prefix.split(/\s+/).filter(Boolean);
-      const parsedFlex = parseArticleLineFlexible(tokens, prefix);
-      if (!parsedFlex) return null;
+      if (!tokens.length) return null;
+
+      let resource = tokens.shift() || null;
+      let bl = null;
+      if (tokens.length && /^(BL|BC)[A-Z0-9-]+$/i.test(tokens[0])) {
+        bl = tokens.shift();
+      }
+
+      const meta = [];
+      while (tokens.length) {
+        const t = tokens[0];
+        const isNumericArc = /^\d{2,4}$/.test(t);
+        const isChantierArc = /^\d{2}-\d{3,}$/.test(t);
+        const isCodeArc = /^[A-Z]{2,}[A-Z0-9_-]*-\d+$/i.test(t);
+        if (isNumericArc || isChantierArc || isCodeArc) {
+          meta.push(tokens.shift());
+          if (meta.length >= 2) break;
+        } else {
+          break;
+        }
+      }
+
+      const designation = tokens.join(' ').trim() || prefix || null;
+      const arc = meta.join(' ') || null;
 
       return {
-        ...parsedFlex,
-        unite: parsedFlex.unite || unit,
-        quantite: parsedFlex.quantite != null ? parsedFlex.quantite : qte,
-        prixUnitaire: parsedFlex.prixUnitaire != null ? parsedFlex.prixUnitaire : pu,
-        montantLigne: parsedFlex.montantLigne != null ? parsedFlex.montantLigne : montant,
+        resource,
+        bl,
+        arc,
+        designation,
+        unite: unit,
+        quantite: qte,
+        prixUnitaire: pu,
+        montantLigne: montant,
         texteBrut: clean
       };
     }
@@ -617,7 +638,7 @@
         const normalized = normalizeText(raw);
         if (!normalized) continue;
         if (normalized.includes('montantressource') || normalized.startsWith('libellen')) continue;
-        if (normalized === 'p.u bl n°' || normalized === 'p.u bl n') continue;
+        if (/^(p\.?\s*u|bl|n[°o])/.test(normalized)) continue;
 
         const h = parsePdfHeaderLine(raw);
         if (h) {
