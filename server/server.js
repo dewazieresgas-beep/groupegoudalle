@@ -13,7 +13,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const XLSX = require('xlsx');
-const pdfParse = require('pdf-parse');
+const { PDFParse } = require('pdf-parse');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -251,9 +251,12 @@ app.post('/api/achats-parse-pdf', async (req, res) => {
     }
 
     const buffer = Buffer.from(contentBase64, 'base64');
-    const parsed = await pdfParse(buffer);
+    const parser = new PDFParse({ data: buffer });
+    await parser.load();
+    const parsed = await parser.getText();
     const text = String(parsed?.text || '').replace(/\r/g, '');
-    res.json({ success: true, text, pages: parsed?.numpages || null });
+    await parser.destroy();
+    res.json({ success: true, text, pages: Array.isArray(parsed?.pages) ? parsed.pages.length : null });
   } catch (e) {
     res.status(500).json({ success: false, error: `Erreur parsing PDF: ${e.message}` });
   }
