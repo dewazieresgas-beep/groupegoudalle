@@ -5,6 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Indicateurs Achat - Intranet Goudalle</title>
   <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .achat-table-wrap {
+      overflow-x: auto;
+    }
+    .note-muted {
+      margin-top: 10px;
+      color: #666;
+      font-size: 13px;
+    }
+  </style>
 </head>
 <body>
   <script src="../js/api.js"></script>
@@ -25,21 +35,182 @@
 
       <div class="card">
         <div class="card-title">
+          <h2>Indicateurs mensuels CLT / LC</h2>
+        </div>
+        <div class="card-body">
+          <div class="achat-table-wrap">
+            <table id="tableIndicateursMensuels">
+              <thead>
+                <tr>
+                  <th>Mois</th>
+                  <th>V CLT (m³)</th>
+                  <th>V LC (m³)</th>
+                  <th>Prix moyen LC (€/m³)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="4" style="text-align:center;">Chargement...</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p class="note-muted" id="indicateursNote"></p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
           <h2>Accès rapides Achats</h2>
         </div>
         <div class="card-body">
           <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px;">
             <a class="btn btn-primary" href="./indicateurs-achat-saisie.html">🧾 Saisie indicateurs achats</a>
           </div>
-          <p style="margin-top: 12px; color: #666;">
-            Les indicateurs de cette page seront définis plus tard.
-          </p>
         </div>
       </div>
     </main>
   </div>
 
   <script>
+    const STORAGE_KEYS = {
+      lignes: 'goudalle_achats_lignes'
+    };
+
+    function normalizeText(str) {
+      return String(str || '')
+        .replace(/œ/g, 'oe')
+        .replace(/æ/g, 'ae')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+    }
+
+    function toIsoMonth(frDate) {
+      const m = String(frDate || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (!m) return null;
+      return `${m[3]}-${m[2]}`;
+    }
+
+    function formatMonthFr(isoMonth) {
+      const m = String(isoMonth || '').match(/^(\d{4})-(\d{2})$/);
+      if (!m) return isoMonth || '—';
+      const year = Number(m[1]);
+      const month = Number(m[2]) - 1;
+      const d = new Date(Date.UTC(year, month, 1));
+      const label = d.toLocaleString('fr-FR', { month: 'short', timeZone: 'UTC' }).replace('.', '');
+      return `${label}-${String(year).slice(-2)}`;
+    }
+
+    function extractThicknessMeters(text) {
+      const norm = normalizeText(text);
+      const mmMatch = norm.match(/(\d{2,3}(?:[.,]\d+)?)\s*mm\b/);
+      if (mmMatch) {
+        const mm = parseFloat(mmMatch[1].replace(',', '.'));
+        if (Number.isFinite(mm) && mm > 0) return mm / 1000;
+      }
+      return null;
+    }
+
+    function computeLineVolumeM3(line) {
+      const unite = String(line.unite || '').toUpperCase();
+      const qte = Number(line.quantite);
+      if (!Number.isFinite(qte) || qte <= 0) return null;
+      if (unite === 'M3') return qte;
+      if (unite === 'M2') {
+        const ep = extractThicknessMeters([line.designation, line.ressource].filter(Boolean).join(' '));
+        if (!ep) return null;
+        return qte * ep;
+      }
+      return null;
+    }
+
+    function isCltLine(line) {
+      const txt = normalizeText([line.ressource, line.designation].filter(Boolean).join(' '));
+      return /\b(clt|klh)\b/.test(txt);
+    }
+
+    function isLcLine(line) {
+      const txt = normalizeText([line.ressource, line.designation].filter(Boolean).join(' '));
+      if (/\b(clt|klh)\b/.test(txt)) return false;
+      return /\b(lc|lamelle colle|lamelle-colle|lamelle colle|lamelle|lamelle-colle|lamelle-colle|lamelle-colle|lamelle)\b/.test(txt);
+    }
+
+    function formatNumber(v, digits = 0) {
+      return Number(v || 0).toLocaleString('fr-FR', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+    }
+
+    function buildMonthlyIndicators(lignes) {
+      const byMonth = new Map();
+      let lignesSansVolume = 0;
+
+      for (const line of lignes) {
+        const month = toIsoMonth(line.dateFacture);
+        if (!month) continue;
+
+        const clt = isCltLine(line);
+        const lc = isLcLine(line);
+        if (!clt && !lc) continue;
+
+        if (!byMonth.has(month)) {
+          byMonth.set(month, { month, vClt: 0, vLc: 0, lcMontant: 0 });
+        }
+        const agg = byMonth.get(month);
+        const vol = computeLineVolumeM3(line);
+
+        if (clt) {
+          if (vol != null) agg.vClt += vol;
+          else lignesSansVolume++;
+        }
+        if (lc) {
+          if (vol != null) {
+            agg.vLc += vol;
+            agg.lcMontant += Number(line.montantLigne) || 0;
+          } else {
+            lignesSansVolume++;
+          }
+        }
+      }
+
+      const rows = [...byMonth.values()]
+        .sort((a, b) => a.month.localeCompare(b.month))
+        .map((r) => ({
+          mois: formatMonthFr(r.month),
+          vClt: r.vClt,
+          vLc: r.vLc,
+          prixMoyenLc: r.vLc > 0 ? (r.lcMontant / r.vLc) : null
+        }));
+
+      return { rows, lignesSansVolume };
+    }
+
+    function renderIndicators() {
+      const tbody = document.querySelector('#tableIndicateursMensuels tbody');
+      const note = document.getElementById('indicateursNote');
+      const lignes = JSON.parse(localStorage.getItem(STORAGE_KEYS.lignes) || '[]');
+      const { rows, lignesSansVolume } = buildMonthlyIndicators(lignes);
+
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Aucune donnée CLT/LC disponible</td></tr>';
+        note.textContent = "Ajoute d'abord des imports depuis la page de saisie pour alimenter ce tableau.";
+        return;
+      }
+
+      tbody.innerHTML = rows.map((r) => `
+        <tr>
+          <td>${r.mois}</td>
+          <td>${formatNumber(r.vClt, 0)}</td>
+          <td>${formatNumber(r.vLc, 0)}</td>
+          <td>${r.prixMoyenLc != null ? formatNumber(r.prixMoyenLc, 0) : '—'}</td>
+        </tr>
+      `).join('');
+
+      note.textContent = lignesSansVolume
+        ? `${lignesSansVolume} ligne(s) CLT/LC ignorée(s) pour le calcul volume (épaisseur ou unité manquante).`
+        : 'Volumes calculés en m³ (M3 direct, ou M2 × épaisseur détectée en mm).';
+    }
+
     let _achatsPageInitDone = false;
     async function init() {
       if (_achatsPageInitDone) return;
@@ -47,11 +218,13 @@
 
       if (typeof window.loadServerKeys === 'function') {
         await window.loadServerKeys([
-          'goudalle_achats_imports'
+          'goudalle_achats_imports',
+          'goudalle_achats_lignes'
         ]);
       }
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectAchatSecondaryBar();
+      renderIndicators();
     }
 
     window.onServerReady(init);
