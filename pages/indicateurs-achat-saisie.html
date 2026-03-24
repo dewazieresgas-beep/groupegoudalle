@@ -549,21 +549,40 @@
       const tokens = middle.split(' ').filter(Boolean);
       if (!tokens.length) return null;
 
-      let cursor = 0;
       let journal = null;
       let fournisseurCode = null;
+      let rest = [];
 
-      // Journal optionnel ("AC", "OD", etc.). Sur certains exports il est absent.
-      if (tokens.length >= 2 && /^[A-Z]{1,3}$/.test(tokens[0]) && !/^fact$/i.test(tokens[0]) && !/^avoir$/i.test(tokens[0])) {
-        journal = tokens[0];
-        cursor = 1;
+      // En-tête ONAYA: [Avoir?] [Journal?] [Fournisseur] [Chantier...] [Fact/Avoir ...]
+      // Le fournisseur est généralement le premier token commençant par "0".
+      const idxSupplier = tokens.findIndex((t) => /^0\S+$/i.test(t));
+      if (idxSupplier >= 0) {
+        fournisseurCode = tokens[idxSupplier];
+        const beforeSupplier = tokens.slice(0, idxSupplier);
+        rest = tokens.slice(idxSupplier + 1);
+
+        // Journal = dernier code court alpha avant fournisseur (AC/OD/...),
+        // en excluant les marqueurs d'avoir.
+        for (let i = beforeSupplier.length - 1; i >= 0; i--) {
+          const t = beforeSupplier[i];
+          if (/^(avoir|av)$/i.test(t)) continue;
+          if (/^[A-Z]{1,3}$/.test(t)) {
+            journal = t;
+            break;
+          }
+        }
+      } else {
+        // Fallback défensif si format atypique.
+        let cursor = 0;
+        if (tokens.length >= 2 && /^[A-Z]{1,3}$/.test(tokens[0]) && !/^fact$/i.test(tokens[0]) && !/^avoir$/i.test(tokens[0])) {
+          journal = tokens[0];
+          cursor = 1;
+        }
+        fournisseurCode = tokens[cursor] || null;
+        if (!fournisseurCode) return null;
+        rest = tokens.slice(cursor + 1);
       }
 
-      fournisseurCode = tokens[cursor] || null;
-      if (!fournisseurCode) return null;
-      cursor += 1;
-
-      const rest = tokens.slice(cursor);
       const idxFact = rest.findIndex((t) => /^fact$/i.test(t) || /^avoir$/i.test(t));
       const chantier = idxFact > 0 ? rest.slice(0, idxFact).join(' ').trim() : null;
       const libelleFacture = idxFact >= 0 ? rest.slice(idxFact).join(' ').trim() : rest.join(' ').trim();
@@ -595,27 +614,43 @@
       const tokens = prefix.split(/\s+/).filter(Boolean);
       if (!tokens.length) return null;
 
-      let resource = tokens.shift() || null;
+      const isArcFirstToken = (t) => /^\d{2,4}$/.test(t) || /^[A-Z]{2,}[A-Z0-9_-]*-\d+$/i.test(t);
+      const isArcSecondToken = (t) => /^\d{2}-\d{3,}$/.test(t);
+
+      // Le code ressource peut contenir des espaces ("KLH 2F ISI").
+      const idxBl = tokens.findIndex((t) => /^(BL|BC)[A-Z0-9-]+$/i.test(t));
       let bl = null;
-      if (tokens.length && /^(BL|BC)[A-Z0-9-]+$/i.test(tokens[0])) {
-        bl = tokens.shift();
+      let resourceTokens = [];
+      let tailTokens = [];
+      if (idxBl >= 0) {
+        bl = tokens[idxBl];
+        resourceTokens = tokens.slice(0, idxBl);
+        tailTokens = tokens.slice(idxBl + 1);
+      } else {
+        // Sans BL, on coupe au début de l'A.R.C (ex: "CABLE 230 ...", "CONTROLE 630 ...").
+        const arcStart = tokens.findIndex((t, i) => i > 0 && isArcFirstToken(t));
+        if (arcStart > 0) {
+          resourceTokens = tokens.slice(0, arcStart);
+          tailTokens = tokens.slice(arcStart);
+        } else {
+          resourceTokens = [tokens[0]];
+          tailTokens = tokens.slice(1);
+        }
       }
+      if (!resourceTokens.length && tailTokens.length) {
+        resourceTokens = [tailTokens.shift()];
+      }
+      const resource = resourceTokens.join(' ').trim() || null;
 
       const meta = [];
-      while (tokens.length) {
-        const t = tokens[0];
-        const isNumericArc = /^\d{2,4}$/.test(t);
-        const isChantierArc = /^\d{2}-\d{3,}$/.test(t);
-        const isCodeArc = /^[A-Z]{2,}[A-Z0-9_-]*-\d+$/i.test(t);
-        if (isNumericArc || isChantierArc || isCodeArc) {
-          meta.push(tokens.shift());
-          if (meta.length >= 2) break;
-        } else {
-          break;
+      if (tailTokens.length && isArcFirstToken(tailTokens[0])) {
+        meta.push(tailTokens.shift());
+        if (tailTokens.length && isArcSecondToken(tailTokens[0])) {
+          meta.push(tailTokens.shift());
         }
       }
 
-      const designation = tokens.join(' ').trim() || prefix || null;
+      const designation = tailTokens.join(' ').trim() || prefix || null;
       const arc = meta.join(' ') || null;
 
       return {
