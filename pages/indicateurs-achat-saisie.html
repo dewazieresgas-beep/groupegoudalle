@@ -997,7 +997,10 @@
 
       const lignesClassees = lignes.filter((l) => l.familleAchat && l.familleAchat !== 'Non classé').length;
       const lignesNonClassees = lignes.length - lignesClassees;
-      const montantTotalDetecte = factures.reduce((acc, f) => acc + (f.montantTotalFacture || 0), 0);
+      // Base unique pour l'analyse de répartition: somme des montants de lignes.
+      // Cela évite les écarts de base (totaux facture vs lignes classées) et garantit
+      // une somme des parts proche de 100%.
+      const montantTotalLignes = lignes.reduce((acc, l) => acc + (l.montantLigne || 0), 0);
 
       const repartitionFamilleMap = new Map();
       const repartitionSousFamilleMap = new Map();
@@ -1029,7 +1032,7 @@
           nombreFactures: f.facturesSet.size,
           nombreLignes: f.nombreLignes,
           montantTotal: f.montantTotal,
-          partTotal: montantTotalDetecte ? (f.montantTotal / montantTotalDetecte) : 0
+          partTotal: montantTotalLignes ? (f.montantTotal / montantTotalLignes) : 0
         }))
         .sort((a, b) => b.montantTotal - a.montantTotal);
 
@@ -1058,7 +1061,7 @@
           nomFichiers: analyse.fichiers.map((f) => f.nom).join(', '),
           nombreFactures: factures.length,
           nombreLignes: lignes.length,
-          montantTotalDetecte,
+          montantTotalDetecte: montantTotalLignes,
           lignesClassees,
           lignesNonClassees,
           doublonsPotentiels: analyse.doublons.length
