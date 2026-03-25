@@ -65,7 +65,7 @@
         <div class="card-body">
           <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px;">
             <a class="btn btn-primary" href="./indicateurs-achat-saisie.html">🧾 Saisie indicateurs achats</a>
-            <a class="btn btn-secondary" href="./indicateurs-achat-controle.html">🧪 Contrôle imports v2</a>
+            <a class="btn btn-secondary" href="./indicateurs-achat-controle.html">🧪 Contrôle imports</a>
           </div>
         </div>
       </div>
@@ -179,7 +179,7 @@
     async function fetchMonthlyIndicatorsV2() {
       const res = await fetch(window.location.origin + '/api/achats-v2/indicators-monthly', { method: 'GET' });
       const payload = await res.json();
-      if (!res.ok || !payload.success) throw new Error(payload.error || 'Indicateurs v2 indisponibles');
+      if (!res.ok || !payload.success) throw new Error(payload.error || 'Indicateurs imports indisponibles');
       return payload.rows || [];
     }
 
@@ -187,13 +187,13 @@
       const tbody = document.querySelector('#tableIndicateursMensuels tbody');
       const note = document.getElementById('indicateursNote');
       let rows = [];
-      let mode = 'v2';
+      let mode = 'server';
       try {
         rows = await fetchMonthlyIndicatorsV2();
       } catch (e) {
         mode = 'local';
         rows = buildMonthlyIndicatorsFromLocal(JSON.parse(localStorage.getItem('goudalle_achats_lignes') || '[]'));
-        note.textContent = `Indicateurs v2 indisponibles (${e.message}). Affichage fallback local.`;
+        note.textContent = `Indicateurs imports indisponibles (${e.message}). Affichage fallback local.`;
       }
       if (!rows.length) {
         const localRows = buildMonthlyIndicatorsFromLocal(JSON.parse(localStorage.getItem('goudalle_achats_lignes') || '[]'));
@@ -217,8 +217,8 @@
           <td>${r.prix_moyen_lc_eur_m3 != null ? formatNumber(r.prix_moyen_lc_eur_m3, 0) : '—'}</td>
         </tr>
       `).join('');
-      note.textContent = mode === 'v2'
-        ? 'Calcul v2 par lignes retraitées actives (stock exclu, ventilation BL appliquée).'
+      note.textContent = mode === 'server'
+        ? 'Calcul serveur par lignes retraitées actives (stock exclu, ventilation BL appliquée).'
         : 'Mode fallback local: calcul basé sur les lignes validées de la page de saisie.';
     }
 

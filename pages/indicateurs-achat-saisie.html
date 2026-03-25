@@ -1689,20 +1689,20 @@
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ fileName: file.name, contentBase64: base64 })
             },
-            `Import V2 (${file.name})`
+            `Import (${file.name})`
           );
           if (!importRes.ok || !importPayload.success) {
-            throw new Error(importPayload?.error || `Import V2 impossible (${file.name}).`);
+            throw new Error(importPayload?.error || `Import impossible (${file.name}).`);
           }
           if (Array.isArray(importPayload.warnings)) warnings.push(...importPayload.warnings);
 
           const { res: controlRes, payload: controlPayload } = await fetchJsonSafe(
             SERVER_URL + `/achats-v2/control/${encodeURIComponent(importPayload.batch_id)}`,
             { method: 'GET' },
-            `Contrôle V2 (${file.name})`
+            `Contrôle (${file.name})`
           );
           if (!controlRes.ok || !controlPayload.success) {
-            throw new Error(controlPayload?.error || `Contrôle V2 introuvable (${file.name}).`);
+            throw new Error(controlPayload?.error || `Contrôle introuvable (${file.name}).`);
           }
 
           const mapped = mapV2ControlToAnalyse(controlPayload, fileMetaByName, facturesExistantes);
@@ -1769,7 +1769,7 @@
         ? ` ${analyse.nbFacturesStockExclues} facture(s) de stock/sortie de stock ont été exclues.`
         : '';
       const warningsMsg = warnings.length ? ` ${warnings.length} avertissement(s) de parsing.` : '';
-      const modeMsg = usedV2 && usedLegacy ? ' Mode mixte v2+fallback.' : (usedLegacy ? ' Mode fallback local.' : '');
+      const modeMsg = usedV2 && usedLegacy ? ' Mode mixte serveur+fallback.' : (usedLegacy ? ' Mode fallback local.' : '');
       showMessage(`✅ Analyse terminée. Vérifiez le contrôle avant validation.${excludedMsg}${warningsMsg}${modeMsg}`, 'success');
     }
 
@@ -1952,20 +1952,20 @@
           }, 'Suppression lignes legacy')
         ]);
 
-        // Purge v2 obligatoire pour que les imports ne soient plus sélectionnables.
+        // Purge serveur obligatoire pour que les imports ne soient plus sélectionnables.
         const { res: v2Res, payload: v2Payload } = await fetchJsonSafe(
           SERVER_URL + '/achats-v2/history',
           { method: 'DELETE' },
-          'Suppression historique v2'
+          'Suppression historique imports'
         );
         if (!v2Res.ok || !v2Payload?.success) {
-          throw new Error(v2Payload?.error || `Suppression v2 refusée (${v2Res.status}).`);
+          throw new Error(v2Payload?.error || `Suppression serveur refusée (${v2Res.status}).`);
         }
 
         state.fichiers = [];
         renderFichiers();
         resetUIAnalyse();
-        showMessage("✅ Historique d'import supprimé (local + v2).", 'success');
+        showMessage("✅ Historique d'import supprimé (local + serveur).", 'success');
       } catch (e) {
         showMessage(`❌ Suppression incomplète: ${e.message}. Vérifie que le serveur est bien redémarré avec les dernières routes API.`, 'danger');
       }

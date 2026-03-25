@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Contrôle imports achats v2 - Intranet Goudalle</title>
+  <title>Contrôle imports achats - Intranet Goudalle</title>
   <link rel="stylesheet" href="../css/style.css">
   <style>
     .achat-table-wrap { overflow-x: auto; }
@@ -89,7 +89,7 @@
     <div id="sidebar"></div>
     <main class="main-content">
       <div class="d-flex justify-between items-center mb-3" style="gap:12px; flex-wrap:wrap;">
-        <h1 class="mb-0">Contrôle imports achats v2</h1>
+        <h1 class="mb-0">Contrôle imports achats</h1>
       </div>
 
       <div id="pageMessage" class="alert" style="display:none;"></div>
@@ -379,12 +379,12 @@
           renderReconstructionFromData(invoices, lines);
           document.getElementById('batchInfo').textContent =
             `Mode fallback local | Factures: ${invoices.length} | Lignes: ${lines.length}`;
-          showMessage('⚠️ API v2 indisponible. Affichage fallback des données validées locales.', 'warning');
+          showMessage('⚠️ API imports indisponible. Affichage fallback des données validées locales.', 'warning');
           return;
         }
-        select.innerHTML = '<option value="">Aucun import v2</option>';
+        select.innerHTML = '<option value="">Aucun import</option>';
         document.getElementById('renderPreview').innerHTML = '<p class="muted">Aucune reconstruction disponible.</p>';
-        if (localMode) showMessage('⚠️ API v2 indisponible et aucun historique local trouvé.', 'warning');
+        if (localMode) showMessage('⚠️ API imports indisponible et aucun historique local trouvé.', 'warning');
         return;
       }
 
