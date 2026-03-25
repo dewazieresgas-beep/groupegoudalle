@@ -627,6 +627,18 @@ app.get('/api/achats-v2/anomalies', (req, res) => {
   res.json(dbGet('achats_v2_anomaly_logs', []));
 });
 
+app.delete('/api/achats-v2/history', (req, res) => {
+  dbSet('achats_v2_import_batches', []);
+  dbSet('achats_v2_raw_invoices', []);
+  dbSet('achats_v2_raw_invoice_lines', []);
+  dbSet('achats_v2_normalized_invoice_lines', []);
+  dbSet('achats_v2_allocated_invoice_lines', []);
+  dbSet('achats_v2_invoice_render_cache', []);
+  dbSet('achats_v2_invoice_versions', []);
+  dbSet('achats_v2_anomaly_logs', []);
+  res.json({ success: true, message: 'Historique achats v2 supprimé.' });
+});
+
 app.get('/api/achats-v2/control/:batchId', (req, res) => {
   const batchId = String(req.params.batchId || '');
   const batch = dbGet('achats_v2_import_batches', []).find((b) => b.id === batchId);

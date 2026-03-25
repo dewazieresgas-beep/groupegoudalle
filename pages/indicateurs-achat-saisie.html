@@ -1923,18 +1923,35 @@
       showMessage('Import annulé.', 'info');
     }
 
-    function supprimerHistoriqueImports() {
+    async function supprimerHistoriqueImports() {
       const ok = window.confirm("Confirmer la suppression de l'historique des imports ? Cette action supprimera les imports, factures et lignes enregistrés.");
       if (!ok) return;
 
-      localStorage.setItem(STORAGE_KEYS.imports, JSON.stringify([]));
-      localStorage.setItem(STORAGE_KEYS.factures, JSON.stringify([]));
-      localStorage.setItem(STORAGE_KEYS.lignes, JSON.stringify([]));
+      try {
+        localStorage.setItem(STORAGE_KEYS.imports, JSON.stringify([]));
+        localStorage.setItem(STORAGE_KEYS.factures, JSON.stringify([]));
+        localStorage.setItem(STORAGE_KEYS.lignes, JSON.stringify([]));
+        if (typeof window.apiSet === 'function') {
+          await Promise.all([
+            window.apiSet(STORAGE_KEYS.imports, []),
+            window.apiSet(STORAGE_KEYS.factures, []),
+            window.apiSet(STORAGE_KEYS.lignes, [])
+          ]);
+        }
 
-      state.fichiers = [];
-      renderFichiers();
-      resetUIAnalyse();
-      showMessage("✅ Historique d'import supprimé.", 'success');
+        try {
+          await fetch(SERVER_URL + '/achats-v2/history', { method: 'DELETE' });
+        } catch (_) {
+          // fallback local déjà appliqué
+        }
+
+        state.fichiers = [];
+        renderFichiers();
+        resetUIAnalyse();
+        showMessage("✅ Historique d'import supprimé (local + v2).", 'success');
+      } catch (e) {
+        showMessage(`❌ Suppression incomplète: ${e.message}`, 'danger');
+      }
     }
 
     function bindEvents() {
