@@ -227,7 +227,17 @@ function apiSetItem(key, value) {
   }
 
   // Toujours aussi écrire en localStorage natif (double sécurité / fallback)
-  _origSet(key, value);
+  try {
+    _origSet(key, value);
+  } catch (e) {
+    // Jeux de données volumineux (ex: achats) peuvent dépasser le quota navigateur.
+    // On conserve alors la donnée en cache + serveur sans bloquer l'interface.
+    if (e && (e.name === 'QuotaExceededError' || /quota/i.test(String(e.message || '')))) {
+      console.warn(`[API] Quota localStorage atteint pour ${key}, conservation via cache/serveur uniquement.`);
+      return;
+    }
+    throw e;
+  }
 }
 
 /**

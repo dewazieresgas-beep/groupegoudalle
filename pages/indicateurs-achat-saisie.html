@@ -1807,69 +1807,73 @@
     }
 
     function validerImport() {
-      if (!state.analyse) {
-        showMessage('Aucune analyse à valider.', 'warning');
-        return;
-      }
-
-      const strategie = document.getElementById('strategieDoublons').value;
-      const imports = JSON.parse(localStorage.getItem(STORAGE_KEYS.imports) || '[]');
-      let factures = JSON.parse(localStorage.getItem(STORAGE_KEYS.factures) || '[]');
-      let lignes = JSON.parse(localStorage.getItem(STORAGE_KEYS.lignes) || '[]');
-
-      const idsDoublons = new Set(state.analyse.doublons.map((d) => d.idFactureImport));
-      const facturesAInserer = [];
-      const lignesAInserer = [];
-      const journal = [];
-
-      const lignesByFacture = new Map();
-      for (const ligne of state.analyse.lignes) {
-        if (!lignesByFacture.has(ligne.idFactureParente)) lignesByFacture.set(ligne.idFactureParente, []);
-        lignesByFacture.get(ligne.idFactureParente).push(ligne);
-      }
-
-      for (const facture of state.analyse.factures) {
-        const isDoublon = idsDoublons.has(facture.idFacture);
-        if (isDoublon && strategie === 'ignorer') {
-          journal.push(`Facture ${facture.numeroFacture} ignorée (doublon).`);
-          continue;
+      try {
+        if (!state.analyse) {
+          showMessage('Aucune analyse à valider.', 'warning');
+          return;
         }
-        if (isDoublon && strategie === 'remplacer') {
-          const match = state.analyse.doublons.find((d) => d.idFactureImport === facture.idFacture);
-          const existingIds = (match?.facturesExistantes || []).map((f) => f.idFacture);
-          if (existingIds.length) {
-            factures = factures.filter((f) => !existingIds.includes(f.idFacture));
-            lignes = lignes.filter((l) => !existingIds.includes(l.idFactureParente));
-            journal.push(`Facture ${facture.numeroFacture} remplacée (${existingIds.length} ancienne(s) version(s) supprimée(s)).`);
+
+        const strategie = document.getElementById('strategieDoublons').value;
+        const imports = JSON.parse(localStorage.getItem(STORAGE_KEYS.imports) || '[]');
+        let factures = JSON.parse(localStorage.getItem(STORAGE_KEYS.factures) || '[]');
+        let lignes = JSON.parse(localStorage.getItem(STORAGE_KEYS.lignes) || '[]');
+
+        const idsDoublons = new Set(state.analyse.doublons.map((d) => d.idFactureImport));
+        const facturesAInserer = [];
+        const lignesAInserer = [];
+        const journal = [];
+
+        const lignesByFacture = new Map();
+        for (const ligne of state.analyse.lignes) {
+          if (!lignesByFacture.has(ligne.idFactureParente)) lignesByFacture.set(ligne.idFactureParente, []);
+          lignesByFacture.get(ligne.idFactureParente).push(ligne);
+        }
+
+        for (const facture of state.analyse.factures) {
+          const isDoublon = idsDoublons.has(facture.idFacture);
+          if (isDoublon && strategie === 'ignorer') {
+            journal.push(`Facture ${facture.numeroFacture} ignorée (doublon).`);
+            continue;
           }
+          if (isDoublon && strategie === 'remplacer') {
+            const match = state.analyse.doublons.find((d) => d.idFactureImport === facture.idFacture);
+            const existingIds = (match?.facturesExistantes || []).map((f) => f.idFacture);
+            if (existingIds.length) {
+              factures = factures.filter((f) => !existingIds.includes(f.idFacture));
+              lignes = lignes.filter((l) => !existingIds.includes(l.idFactureParente));
+              journal.push(`Facture ${facture.numeroFacture} remplacée (${existingIds.length} ancienne(s) version(s) supprimée(s)).`);
+            }
+          }
+
+          facturesAInserer.push(facture);
+          lignesAInserer.push(...(lignesByFacture.get(facture.idFacture) || []));
         }
 
-        facturesAInserer.push(facture);
-        lignesAInserer.push(...(lignesByFacture.get(facture.idFacture) || []));
+        factures = [...factures, ...facturesAInserer];
+        lignes = [...lignes, ...lignesAInserer];
+
+        const importRecord = {
+          idImport: `imp_${Date.now()}`,
+          dateImport: new Date().toISOString(),
+          utilisateur: Auth.getSession()?.username || 'inconnu',
+          nomFichier: state.analyse.fichiers.map((f) => f.nom).join(', '),
+          nombreFactures: facturesAInserer.length,
+          nombreLignes: lignesAInserer.length,
+          statut: facturesAInserer.length ? 'importé' : 'partiellement importé',
+          journalAnomalies: state.analyse.synthese.alertes,
+          journalOperations: journal
+        };
+        imports.push(importRecord);
+
+        localStorage.setItem(STORAGE_KEYS.imports, JSON.stringify(imports));
+        localStorage.setItem(STORAGE_KEYS.factures, JSON.stringify(factures));
+        localStorage.setItem(STORAGE_KEYS.lignes, JSON.stringify(lignes));
+
+        showMessage(`✅ Import validé : ${facturesAInserer.length} facture(s), ${lignesAInserer.length} ligne(s) enregistrée(s).`, 'success');
+        resetUIAnalyse();
+      } catch (e) {
+        showMessage(`❌ Erreur validation import: ${e.message}`, 'danger');
       }
-
-      factures = [...factures, ...facturesAInserer];
-      lignes = [...lignes, ...lignesAInserer];
-
-      const importRecord = {
-        idImport: `imp_${Date.now()}`,
-        dateImport: new Date().toISOString(),
-        utilisateur: Auth.getSession()?.username || 'inconnu',
-        nomFichier: state.analyse.fichiers.map((f) => f.nom).join(', '),
-        nombreFactures: facturesAInserer.length,
-        nombreLignes: lignesAInserer.length,
-        statut: facturesAInserer.length ? 'importé' : 'partiellement importé',
-        journalAnomalies: state.analyse.synthese.alertes,
-        journalOperations: journal
-      };
-      imports.push(importRecord);
-
-      localStorage.setItem(STORAGE_KEYS.imports, JSON.stringify(imports));
-      localStorage.setItem(STORAGE_KEYS.factures, JSON.stringify(factures));
-      localStorage.setItem(STORAGE_KEYS.lignes, JSON.stringify(lignes));
-
-      showMessage(`✅ Import validé : ${facturesAInserer.length} facture(s), ${lignesAInserer.length} ligne(s) enregistrée(s).`, 'success');
-      resetUIAnalyse();
     }
 
     function annulerImport() {
