@@ -86,15 +86,36 @@
     .num { text-align:center; font-variant-numeric: tabular-nums; }
     .mono { font-family: Consolas, monospace; }
     .invoice-summary { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .imports-list { display:flex; flex-direction:column; gap:8px; }
-    .imports-row {
-      display:grid; grid-template-columns: 1fr auto; gap:10px; align-items:center;
-      border:1px solid #e2e7e2; border-radius:10px; background:#fff; padding:10px 12px;
+    .imports-list { display:flex; flex-direction:column; gap:10px; }
+    .imports-header {
+      display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;
+      background: linear-gradient(180deg, #f7f9f7 0%, #eef4ef 100%);
+      border:1px solid #dce6dc; border-radius:10px; padding:10px 12px;
     }
-    .imports-row.active { border-color:#9ec2a1; background:#f3faf3; }
+    .imports-title { margin:0; font-weight:700; color:#2f4632; }
+    .imports-subtitle { margin:2px 0 0 0; color:#687468; font-size:13px; }
+    .imports-count {
+      display:inline-flex; align-items:center; justify-content:center;
+      min-width:30px; height:24px; padding:0 10px; border-radius:999px;
+      border:1px solid #c6d8c8; background:#eaf4eb; color:#2f5434; font-weight:700; font-size:12px;
+    }
+    .imports-row {
+      display:grid; grid-template-columns: 1fr auto; gap:12px; align-items:center;
+      border:1px solid #e0e8e0; border-radius:12px; background:#fff; padding:12px 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+    .imports-row.active { border-color:#8fbe95; background:#f2fbf2; box-shadow: 0 4px 12px rgba(79,123,87,0.12); }
     .imports-meta { min-width:0; }
-    .imports-meta strong { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .imports-meta span { color:#666; font-size:12px; }
+    .imports-meta strong {
+      display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      color:#233325; font-size:18px; line-height:1.2;
+    }
+    .imports-meta span { color:#5f6c5f; font-size:12px; display:block; margin-top:4px; }
+    .imports-stats { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+    .imports-stat {
+      display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:999px;
+      background:#f3f6f3; border:1px solid #e0e5e0; color:#3f4b3f; font-size:12px;
+    }
     .detail-placeholder { padding:8px; }
     .period-filters {
       display:grid; grid-template-columns: 220px 220px; gap:12px;
@@ -129,9 +150,11 @@
       <div class="card">
         <div class="card-title"><h2>Imports effectués</h2></div>
         <div class="card-body">
-          <div class="d-flex justify-between items-center mb-2" style="gap:8px; flex-wrap:wrap;">
-            <p class="muted" style="margin:0;">Sélectionne un import pour afficher ses factures, ou supprime-le définitivement.</p>
-            <button id="btnReload" class="btn btn-secondary">🔄 Recharger</button>
+          <div class="imports-header mb-2">
+            <div>
+              <p class="imports-title">Historique des imports</p>
+              <p class="imports-subtitle">Sélectionne un import pour afficher ses factures, ou supprime-le définitivement.</p>
+            </div>
           </div>
           <div id="importsList" class="imports-list"></div>
           <p class="muted" id="batchInfo"></p>
@@ -528,18 +551,29 @@
         root.innerHTML = '<p class="muted">Aucun import disponible.</p>';
         return;
       }
-      root.innerHTML = batches.map((b) => `
+      root.innerHTML = `
+        <div class="d-flex justify-between items-center" style="margin:2px 0 4px 0;">
+          <span class="muted">Liste des imports disponibles</span>
+          <span class="imports-count">${batches.length}</span>
+        </div>
+        ${batches.map((b) => `
         <div class="imports-row ${String(b.id) === String(activeBatchId) ? 'active' : ''}" data-batch-id="${esc(b.id)}">
           <div class="imports-meta">
             <strong>${esc(b.nom_fichier || b.id)}</strong>
             <span>ID: ${esc(b.id)} • ${esc(String(b.date_import || '').replace('T', ' ').slice(0, 19))}</span>
+            <div class="imports-stats">
+              <span class="imports-stat">📄 Factures: ${Number(b.total_factures_detectees || 0)}</span>
+              <span class="imports-stat">📑 Lignes: ${Number(b.total_lignes_extraites || 0)}</span>
+              <span class="imports-stat">🚫 Stock exclu: ${Number(b.total_lignes_exclues_stock || 0)}</span>
+            </div>
           </div>
           <div class="d-flex" style="gap:8px; justify-content:flex-end;">
             <button class="btn btn-secondary btn-open-batch" data-batch-id="${esc(b.id)}">Afficher</button>
             <button class="btn btn-danger btn-delete-batch" data-batch-id="${esc(b.id)}">Supprimer</button>
           </div>
         </div>
-      `).join('');
+      `).join('')}
+      `;
     }
 
     async function initPage() {
@@ -616,7 +650,6 @@
           await initPage();
         }
       });
-      document.getElementById('btnReload').addEventListener('click', () => initPage());
     }
 
     let _initDone = false;
