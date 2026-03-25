@@ -536,6 +536,19 @@
       return out;
     }
 
+    function isStockRelatedText(raw) {
+      const txt = normalizeText(raw);
+      if (!txt) return false;
+      return txt.includes('etat de stock') ||
+        txt.includes('etat stock') ||
+        txt.includes('sortie de stock') ||
+        txt.includes('sortie stock') ||
+        txt.includes('sorties de stock') ||
+        txt.includes('sorties stock') ||
+        txt.includes('liste de sortie de stock') ||
+        txt.includes('liste sortie stock');
+    }
+
     function isPdfFactureColumnsHeader(line) {
       const txt = normalizeText(line);
       return txt.includes('date') &&
@@ -799,6 +812,7 @@
           quantite: article.quantite,
           prixUnitaire: article.prixUnitaire,
           designation: article.designation,
+          libelleFacture: factureCourante.libelleFacture,
           fournisseur: factureCourante.fournisseurCode,
           dateFacture: factureCourante.dateFacture,
           numeroFacture: factureCourante.numeroFacture,
@@ -809,9 +823,11 @@
           drapeauTransport: false,
           drapeauEcart: false,
           drapeauEcoContribution: false,
+          drapeauTaxe: false,
           drapeauTraitement: false,
           drapeauBois: false,
           drapeauQuincaillerie: false,
+          drapeauStock: isStockRelatedText([factureCourante.libelleFacture, article.designation, article.resource, article.texteBrut || raw].join(' ')),
           statutConfianceClassement: 'non classé'
         };
         lignes.push(ligne);
@@ -939,6 +955,7 @@
           quantite,
           prixUnitaire,
           designation,
+          libelleFacture: factureCourante.libelleFacture,
           chantierOuAffaireLigne: factureCourante.chantierOuAffaire,
           fournisseur: factureCourante.fournisseurCode,
           dateFacture: factureCourante.dateFacture,
@@ -950,9 +967,11 @@
           drapeauTransport: false,
           drapeauEcart: false,
           drapeauEcoContribution: false,
+          drapeauTaxe: false,
           drapeauTraitement: false,
           drapeauBois: false,
           drapeauQuincaillerie: false,
+          drapeauStock: isStockRelatedText([factureCourante.libelleFacture, designation, resource, ligneBrute].join(' ')),
           statutConfianceClassement: 'non classé'
         };
 
@@ -1042,9 +1061,16 @@
       ligne.drapeauTransport = txt.includes('transport');
       ligne.drapeauEcart = txt.includes('ecart');
       ligne.drapeauEcoContribution = txt.includes('eco') || txt.includes('contribution');
+      ligne.drapeauTaxe = txt.includes('taxe') || txt.includes('tva') || txt.includes('parafiscale') || txt.includes('fiscale');
       ligne.drapeauTraitement = txt.includes('traitement') || txt.includes('autoclave') || txt.includes('saturateur');
       ligne.drapeauBois = /(bois|klh|clt|lvl|lamelle|douglas|sapin|epicea|bardage|panneau)/.test(txt);
       ligne.drapeauQuincaillerie = /(vis|boulon|goujon|rondelle|clou|sabot|colorvis)/.test(txt);
+      ligne.drapeauStock = ligne.drapeauStock || isStockRelatedText([
+        ligne.libelleFacture,
+        ligne.designation,
+        ligne.ressource,
+        ligne.texteBrutLigne
+      ].filter(Boolean).join(' '));
       if (!ligne.familleAchat) ligne.familleAchat = 'Prestations / divers';
       if (!ligne.sousCategorieAutomatique) ligne.sousCategorieAutomatique = 'Divers';
       return ligne;
@@ -1084,6 +1110,44 @@
         }
       }
       return doublons;
+    }
+
+    function exclureStocksDeAnalyse(factures, lignes, lignesTotauxControle) {
+      const lignesSansStock = (lignes || []).filter((l) => !l.drapeauStock);
+      const facturesStockSet = new Set(
+        (lignes || [])
+          .filter((l) => l.drapeauStock)
+          .map((l) => l.idFactureParente)
+      );
+
+      const lignesByFacture = new Map();
+      for (const l of lignesSansStock) {
+        if (!lignesByFacture.has(l.idFactureParente)) lignesByFacture.set(l.idFactureParente, []);
+        lignesByFacture.get(l.idFactureParente).push(l);
+      }
+
+      const facturesSansStock = (factures || [])
+        .map((f) => {
+          const ls = lignesByFacture.get(f.idFacture) || [];
+          if (!ls.length) return null;
+          const somme = ls.reduce((acc, l) => acc + (l.montantLigne || 0), 0);
+          return {
+            ...f,
+            nombreLignes: ls.length,
+            sommeLignes: somme
+          };
+        })
+        .filter(Boolean);
+
+      const facturesIds = new Set(facturesSansStock.map((f) => f.idFacture));
+      const totauxSansStock = (lignesTotauxControle || []).filter((t) => facturesIds.has(t.idFacture));
+
+      return {
+        factures: facturesSansStock,
+        lignes: lignesSansStock,
+        lignesTotauxControle: totauxSansStock,
+        nbFacturesStockExclues: facturesStockSet.size
+      };
     }
 
     function construireSynthese(analyse) {
@@ -1176,24 +1240,24 @@
 
       for (const arr of byFacture.values()) {
         for (const ligne of arr) {
-          const estAnnexe = ligne.drapeauTransport || ligne.drapeauEcoContribution;
+          const estAnnexe = ligne.drapeauTransport || ligne.drapeauEcoContribution || ligne.drapeauTaxe;
           if (!estAnnexe) continue;
 
           let cible = null;
           if (ligne.bl) {
-            cible = arr.find((x) => x.idLigne !== ligne.idLigne && !x.drapeauTransport && !x.drapeauEcoContribution && x.bl && x.bl === ligne.bl);
+            cible = arr.find((x) => x.idLigne !== ligne.idLigne && !x.drapeauTransport && !x.drapeauEcoContribution && !x.drapeauTaxe && x.bl && x.bl === ligne.bl);
           }
           if (!cible && ligne.arc) {
-            cible = arr.find((x) => x.idLigne !== ligne.idLigne && !x.drapeauTransport && !x.drapeauEcoContribution && x.arc && x.arc === ligne.arc);
+            cible = arr.find((x) => x.idLigne !== ligne.idLigne && !x.drapeauTransport && !x.drapeauEcoContribution && !x.drapeauTaxe && x.arc && x.arc === ligne.arc);
           }
           if (!cible) {
-            cible = arr.find((x) => x.idLigne !== ligne.idLigne && !x.drapeauTransport && !x.drapeauEcoContribution);
+            cible = arr.find((x) => x.idLigne !== ligne.idLigne && !x.drapeauTransport && !x.drapeauEcoContribution && !x.drapeauTaxe);
           }
           if (!cible) continue;
 
           ligne.familleAchat = cible.familleAchat || ligne.familleAchat;
           ligne.categorieAutomatique = cible.categorieAutomatique || ligne.categorieAutomatique;
-          const prefix = ligne.drapeauTransport ? 'Transport lié' : 'Éco-contribution liée';
+          const prefix = ligne.drapeauTransport ? 'Transport lié' : (ligne.drapeauEcoContribution ? 'Éco-contribution liée' : 'Taxe liée');
           ligne.sousCategorieAutomatique = `${prefix} - ${cible.sousCategorieAutomatique || cible.familleAchat || 'Divers'}`;
           ligne.statutConfianceClassement = 'moyenne';
           ligne.idProduitRattache = cible.idLigne;
@@ -1442,15 +1506,17 @@
       }
       rattacherLignesAnnexesAuxProduits(lignes);
 
-      const doublons = detecterDoublons(factures, facturesExistantes);
+      const sansStock = exclureStocksDeAnalyse(factures, lignes, lignesTotauxControle);
+      const doublons = detecterDoublons(sansStock.factures, facturesExistantes);
       const analyse = {
         idAnalyse: `analyse_${Date.now()}`,
         dateAnalyse: new Date().toISOString(),
         fichiers: fichiersInfo,
-        factures,
-        lignes,
-        lignesTotauxControle,
-        doublons
+        factures: sansStock.factures,
+        lignes: sansStock.lignes,
+        lignesTotauxControle: sansStock.lignesTotauxControle,
+        doublons,
+        nbFacturesStockExclues: sansStock.nbFacturesStockExclues
       };
       analyse.synthese = construireSynthese(analyse);
 
@@ -1462,7 +1528,10 @@
       renderAnomalies();
       document.getElementById('btnValider').disabled = false;
       document.getElementById('btnExporterControle').disabled = false;
-      showMessage('✅ Analyse terminée. Vérifiez le contrôle avant validation.', 'success');
+      const excludedMsg = analyse.nbFacturesStockExclues
+        ? ` ${analyse.nbFacturesStockExclues} facture(s) de stock/sortie de stock ont été exclues.`
+        : '';
+      showMessage(`✅ Analyse terminée. Vérifiez le contrôle avant validation.${excludedMsg}`, 'success');
     }
 
     function exportControleCsv() {

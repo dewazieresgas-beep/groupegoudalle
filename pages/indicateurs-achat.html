@@ -144,28 +144,58 @@
     function buildMonthlyIndicators(lignes) {
       const byMonth = new Map();
       let lignesSansVolume = 0;
+      const lignesById = new Map((lignes || []).map((l) => [l.idLigne, l]));
+
+      function isStockLine(line) {
+        const txt = normalizeText([
+          line.libelleFacture,
+          line.designation,
+          line.ressource,
+          line.texteBrutLigne
+        ].filter(Boolean).join(' '));
+        return Boolean(line.drapeauStock) ||
+          txt.includes('etat de stock') ||
+          txt.includes('etat stock') ||
+          txt.includes('sortie de stock') ||
+          txt.includes('sortie stock') ||
+          txt.includes('sorties de stock') ||
+          txt.includes('sorties stock') ||
+          txt.includes('liste de sortie de stock') ||
+          txt.includes('liste sortie stock');
+      }
+
+      function isAnnexeLine(line) {
+        return Boolean(line.drapeauTransport || line.drapeauEcoContribution || line.drapeauTaxe);
+      }
 
       for (const line of lignes) {
+        if (isStockLine(line)) continue;
         const month = toIsoMonth(line.dateFacture);
         if (!month) continue;
 
-        const clt = isCltLine(line);
-        const lc = isLcLine(line);
+        const annexe = isAnnexeLine(line);
+        if (annexe && !line.idProduitRattache) continue;
+
+        const baseLine = annexe ? (lignesById.get(line.idProduitRattache) || null) : line;
+        if (!baseLine || isStockLine(baseLine)) continue;
+
+        const clt = isCltLine(baseLine);
+        const lc = isLcLine(baseLine);
         if (!clt && !lc) continue;
 
         if (!byMonth.has(month)) {
           byMonth.set(month, { month, vClt: 0, vLc: 0, lcMontant: 0 });
         }
         const agg = byMonth.get(month);
-        const vol = computeLineVolumeM3(line);
+        const vol = computeLineVolumeM3(baseLine);
 
         if (clt) {
-          if (vol != null) agg.vClt += vol;
+          if (vol != null && !annexe) agg.vClt += vol;
           else lignesSansVolume++;
         }
         if (lc) {
           if (vol != null) {
-            agg.vLc += vol;
+            if (!annexe) agg.vLc += vol;
             agg.lcMontant += Number(line.montantLigne) || 0;
           } else {
             lignesSansVolume++;
