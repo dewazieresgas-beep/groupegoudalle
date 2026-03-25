@@ -1928,21 +1928,38 @@
       if (!ok) return;
 
       try {
-        localStorage.setItem(STORAGE_KEYS.imports, JSON.stringify([]));
-        localStorage.setItem(STORAGE_KEYS.factures, JSON.stringify([]));
-        localStorage.setItem(STORAGE_KEYS.lignes, JSON.stringify([]));
-        if (typeof window.apiSet === 'function') {
-          await Promise.all([
-            window.apiSet(STORAGE_KEYS.imports, []),
-            window.apiSet(STORAGE_KEYS.factures, []),
-            window.apiSet(STORAGE_KEYS.lignes, [])
-          ]);
-        }
+        const empty = JSON.stringify([]);
+        localStorage.setItem(STORAGE_KEYS.imports, empty);
+        localStorage.setItem(STORAGE_KEYS.factures, empty);
+        localStorage.setItem(STORAGE_KEYS.lignes, empty);
 
-        try {
-          await fetch(SERVER_URL + '/achats-v2/history', { method: 'DELETE' });
-        } catch (_) {
-          // fallback local déjà appliqué
+        // Forcer la purge côté serveur legacy (pas seulement cache local).
+        await Promise.all([
+          fetchJsonSafe(SERVER_URL + '/achats-imports', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: empty
+          }, 'Suppression imports legacy'),
+          fetchJsonSafe(SERVER_URL + '/achats-factures', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: empty
+          }, 'Suppression factures legacy'),
+          fetchJsonSafe(SERVER_URL + '/achats-lignes', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: empty
+          }, 'Suppression lignes legacy')
+        ]);
+
+        // Purge v2 obligatoire pour que les imports ne soient plus sélectionnables.
+        const { res: v2Res, payload: v2Payload } = await fetchJsonSafe(
+          SERVER_URL + '/achats-v2/history',
+          { method: 'DELETE' },
+          'Suppression historique v2'
+        );
+        if (!v2Res.ok || !v2Payload?.success) {
+          throw new Error(v2Payload?.error || `Suppression v2 refusée (${v2Res.status}).`);
         }
 
         state.fichiers = [];
@@ -1950,7 +1967,7 @@
         resetUIAnalyse();
         showMessage("✅ Historique d'import supprimé (local + v2).", 'success');
       } catch (e) {
-        showMessage(`❌ Suppression incomplète: ${e.message}`, 'danger');
+        showMessage(`❌ Suppression incomplète: ${e.message}. Vérifie que le serveur est bien redémarré avec les dernières routes API.`, 'danger');
       }
     }
 
@@ -1986,7 +2003,9 @@
       document.getElementById('btnExporterControle').addEventListener('click', exportControleCsv);
       document.getElementById('btnRecalculer').addEventListener('click', recalculerClassifications);
       document.getElementById('btnExporterHistoriqueCsv').addEventListener('click', exportHistoriqueLignesCsv);
-      document.getElementById('btnViderHistoriqueImports').addEventListener('click', supprimerHistoriqueImports);
+      document.getElementById('btnViderHistoriqueImports').addEventListener('click', () => {
+        supprimerHistoriqueImports().catch((e) => showMessage(`❌ Erreur suppression: ${e.message}`, 'danger'));
+      });
       document.getElementById('btnAjouterRegle').addEventListener('click', ajouterRegleDepuisForm);
       document.getElementById('btnResetRegles').addEventListener('click', resetReglesDefaut);
 
