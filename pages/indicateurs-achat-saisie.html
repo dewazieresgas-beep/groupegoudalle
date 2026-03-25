@@ -802,8 +802,11 @@
       const tokens = prefix.split(/\s+/).filter(Boolean);
       if (!tokens.length) return null;
 
-      const isArcToken = (t) => /^\d{2,4}$/.test(t) || /^[A-Z]{2,}[A-Z0-9_-]*-\d+$/i.test(t);
-      const isChantierToken = (t) => /^\d{2}-\d{3,}$/.test(t);
+      const isChantierToken = (t) => /^\d{2}-\d{3,}$/.test(t) || /^[A-Z]{2}\d+[A-Z0-9]*-\d+$/i.test(t);
+      const isArcToken = (t) => (
+        /^\d{2,4}$/.test(t) ||
+        (/^[A-Z]{2,}[A-Z0-9_-]*-\d+$/i.test(t) && !isChantierToken(t))
+      );
 
       // Le code ressource peut contenir des espaces ("KLH 2F ISI").
       const idxBl = tokens.findIndex((t) => /^(BL|BC)[A-Z0-9-]+$/i.test(t));
@@ -833,11 +836,11 @@
 
       let arc = null;
       let chantierLigne = null;
-      if (tailTokens.length && isArcToken(tailTokens[0])) {
-        arc = tailTokens.shift();
-      }
       if (tailTokens.length && isChantierToken(tailTokens[0])) {
         chantierLigne = tailTokens.shift();
+      }
+      if (tailTokens.length && isArcToken(tailTokens[0])) {
+        arc = tailTokens.shift();
       }
 
       const designation = tailTokens.join(' ').trim() || prefix || null;

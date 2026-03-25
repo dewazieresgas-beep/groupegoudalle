@@ -137,8 +137,11 @@ function parsePdfArticleLine(line) {
   const tokens = prefix.split(/\s+/).filter(Boolean);
   if (!tokens.length) return null;
 
-  const isArcToken = (t) => /^\d{2,4}$/.test(t) || /^[A-Z]{2,}[A-Z0-9_-]*-\d+$/i.test(t);
-  const isChantierToken = (t) => /^\d{2}-\d{3,}$/.test(t);
+  const isChantierToken = (t) => /^\d{2}-\d{3,}$/.test(t) || /^[A-Z]{2}\d+[A-Z0-9]*-\d+$/i.test(t);
+  const isArcToken = (t) => (
+    /^\d{2,4}$/.test(t) ||
+    (/^[A-Z]{2,}[A-Z0-9_-]*-\d+$/i.test(t) && !isChantierToken(t))
+  );
   const idxBl = tokens.findIndex((t) => /^(BL|BC)[A-Z0-9-]+$/i.test(t));
 
   let bl = null;
@@ -161,8 +164,8 @@ function parsePdfArticleLine(line) {
 
   let arc = null;
   let chantierLigne = null;
-  if (tail.length && isArcToken(tail[0])) arc = tail.shift();
   if (tail.length && isChantierToken(tail[0])) chantierLigne = tail.shift();
+  if (tail.length && isArcToken(tail[0])) arc = tail.shift();
   const libelle = tail.join(' ').trim() || prefix || null;
 
   return {
