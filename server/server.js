@@ -358,6 +358,10 @@ function isLcLineFromNorm(line) {
   return /\b(lc|lamelle colle|lamelle-colle|lamelle)\b/.test(txt);
 }
 
+function isCbcoSupplier(raw) {
+  return normalizeText(raw).includes('cbco');
+}
+
 function computeVolumeM3FromNorm(line) {
   const qte = Number(line.qte_fact);
   if (!Number.isFinite(qte) || qte <= 0) return null;
@@ -1019,6 +1023,7 @@ app.get('/api/achats-v2/indicators-monthly', (req, res) => {
     if (Number(n.excluded_from_indicators || 0)) continue;
     const inv = invoiceById.get(a.raw_invoice_id);
     if (!inv) continue;
+    if (isCbcoSupplier(inv.fournisseur)) continue;
     if (excludedInvoiceIds.has(inv.id)) continue;
     const ver = versionByInvoice.get(inv.id);
     if (ver && (ver.status === 'neutralized' || ver.status === 'avoir')) continue;

@@ -137,6 +137,10 @@
       return /\b(lc|lamelle colle|lamelle-colle|lamelle colle|lamelle|lamelle-colle|lamelle-colle|lamelle-colle|lamelle)\b/.test(txt);
     }
 
+    function isCbcoSupplier(raw) {
+      return normalizeText(raw).includes('cbco');
+    }
+
     function formatNumber(v, digits = 0) {
       return Number(v || 0).toLocaleString('fr-FR', { minimumFractionDigits: digits, maximumFractionDigits: digits });
     }
@@ -147,6 +151,7 @@
 
       for (const line of (lignes || [])) {
         if (line.drapeauStock) continue;
+        if (isCbcoSupplier(line.fournisseur)) continue;
         const month = toIsoMonth(line.dateFacture);
         if (!month) continue;
 

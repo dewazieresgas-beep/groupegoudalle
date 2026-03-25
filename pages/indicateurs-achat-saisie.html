@@ -89,6 +89,78 @@
     .achat-anomalies li {
       margin-bottom: 6px;
     }
+    #renderPreviewSaisie { overflow-x:auto; }
+    .invoice-list {
+      border:1px solid #d9d9d9;
+      border-radius:12px;
+      overflow:hidden;
+      background:#fff;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+      min-width: 980px;
+    }
+    .invoice-item { border-bottom:1px solid #e6e6e6; background:#fff; }
+    .invoice-item:last-child { border-bottom:none; }
+    .invoice-row {
+      width:100%; border:none; background:#fff; padding:0; cursor:pointer;
+      text-align:left; font:inherit;
+    }
+    .invoice-row:hover { background:#f8fbf8; }
+    .invoice-row-grid {
+      display:grid;
+      grid-template-columns: 46px 108px 200px 140px 1fr 150px;
+      gap:8px;
+      padding:12px 14px;
+      align-items:center;
+      color:#1f2a1f;
+    }
+    .invoice-row-grid.head {
+      background:linear-gradient(180deg, #f6f6ef 0%, #efefe7 100%);
+      font-weight:700;
+      cursor:default;
+    }
+    .invoice-item.open .invoice-row-grid { background:#f3faf3; }
+    .invoice-item.open .invoice-summary { font-weight:700; }
+    .invoice-row-grid > div { min-width:0; }
+    .invoice-montant {
+      white-space:nowrap;
+      overflow:visible;
+      text-overflow:clip;
+      font-weight:700;
+      color:#102710;
+    }
+    .invoice-toggle {
+      display:inline-flex; align-items:center; justify-content:center;
+      width:24px; height:24px; border-radius:999px; border:1px solid #d7ded7; background:#fff;
+      color:#3d5540; font-size:12px; transition: transform .2s ease, background-color .2s ease;
+    }
+    .invoice-item.open .invoice-toggle { transform: rotate(90deg); background:#e9f3e9; }
+    .line-count {
+      display:inline-flex; align-items:center; justify-content:center;
+      min-width:24px; height:22px; padding:0 8px; border-radius:999px;
+      border:1px solid #d0d7d0; background:#f4f8f4; color:#38503b; font-size:12px;
+    }
+    .invoice-detail {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.25s ease;
+      background:#fcfcfc;
+    }
+    .invoice-detail.open { border-top:1px solid #e5e5e5; }
+    .invoice-detail-inner { padding:12px 14px 14px; }
+    .invoice-detail table { width:100%; border-collapse:collapse; table-layout:fixed; background:#fff; }
+    .invoice-detail th {
+      text-align:left; padding:8px 6px; border-bottom:1px solid #d9d9d9; background:#f2f4f2; color:#2a2a2a;
+    }
+    .invoice-detail td {
+      padding:8px 6px; border-bottom:1px solid #ececec; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#222;
+    }
+    .invoice-detail th, .invoice-detail td { box-sizing:border-box; }
+    .invoice-detail .montant-col { white-space:nowrap; overflow:visible; text-overflow:clip; font-weight:700; }
+    .invoice-detail tr:last-child td { border-bottom:none; }
+    .num { text-align:center; font-variant-numeric: tabular-nums; }
+    .mono { font-family: Consolas, monospace; }
+    .invoice-summary { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .detail-placeholder { padding:8px; }
   </style>
 </head>
 <body>
@@ -162,26 +234,7 @@
           <div class="achat-flex" style="margin-bottom:10px;">
             <input id="filtreTexte" type="text" placeholder="Filtrer (facture, fournisseur, ressource, désignation...)">
           </div>
-
-          <div class="achat-table-wrap">
-            <table id="tableLignesApercu">
-              <thead>
-                <tr>
-                  <th>Ressource</th>
-                  <th>BL N°</th>
-                  <th>A.R.C</th>
-                  <th>Désignation</th>
-                  <th>Unité</th>
-                  <th>Qté</th>
-                  <th>PU</th>
-                  <th>Montant</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr><td colspan="8" style="text-align:center;">Aucune ligne</td></tr>
-              </tbody>
-            </table>
-          </div>
+          <div id="renderPreviewSaisie"></div>
         </div>
       </div>
 
@@ -225,6 +278,42 @@
           </div>
         </div>
       </div>
+
+      <div class="card">
+        <div class="card-title"><h2>Bonus - Dictionnaire A.R.C (modifiable)</h2></div>
+        <div class="card-body">
+          <p class="muted" style="margin:0 0 10px 0;">Les règles A.R.C sont prioritaires sur les mots-clés pour classer les lignes.</p>
+          <div class="achat-table-wrap">
+            <table id="tableArcRules">
+              <thead>
+                <tr>
+                  <th>Code A.R.C</th>
+                  <th>Désignation</th>
+                  <th>Famille</th>
+                  <th>Sous-famille</th>
+                  <th>Poids</th>
+                  <th>Priorité</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="6" style="text-align:center;">Chargement...</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px; margin-top:10px;">
+            <input type="text" id="newArcCode" placeholder="Code A.R.C (ex: 204)">
+            <input type="text" id="newArcDesignation" placeholder="Désignation">
+            <input type="text" id="newArcFamille" placeholder="Famille">
+            <input type="text" id="newArcSousFamille" placeholder="Sous-famille">
+            <input type="number" id="newArcPoids" placeholder="Poids" value="8" min="1" max="20">
+            <input type="number" id="newArcPriority" placeholder="Priorité" value="20" min="1" max="99">
+          </div>
+          <div class="achat-actions">
+            <button class="btn btn-primary" id="btnAjouterArcRegle">➕ Ajouter règle A.R.C</button>
+            <button class="btn btn-secondary" id="btnResetArcRegles">↩️ Réinitialiser A.R.C par défaut</button>
+          </div>
+        </div>
+      </div>
     </main>
   </div>
 
@@ -233,43 +322,66 @@
       imports: 'goudalle_achats_imports',
       factures: 'goudalle_achats_factures',
       lignes: 'goudalle_achats_lignes',
-      regles: 'goudalle_achats_regles'
+      regles: 'goudalle_achats_regles',
+      arcRules: 'goudalle_achats_arc_rules'
     };
 
     const DEFAULT_REGLES = [
-      { id: 'bois_lc', famille: 'Bois structure', sousFamille: 'LC', keywords: ['lc', 'lamelle colle', 'lamellé collé', 'lamelle-colle'], points: 5 },
-      { id: 'bois_clt', famille: 'Bois structure', sousFamille: 'CLT / KLH', keywords: ['clt', 'klh', 'panneau klh'], points: 5 },
-      { id: 'bois_lvl', famille: 'Bois structure', sousFamille: 'LVL', keywords: ['lvl'], points: 5 },
-      { id: 'bois_massif_douglas', famille: 'Bois massif', sousFamille: 'Douglas massif', keywords: ['douglas', 'bois massif'], points: 4 },
-      { id: 'bois_massif_sapin', famille: 'Bois massif', sousFamille: 'Sapin rouge', keywords: ['sapin rouge', 'epicea', 'épicéa', 'massif'], points: 4 },
-      { id: 'bardage', famille: 'Bardage bois', sousFamille: 'Bardage Douglas', keywords: ['bardage', 'planch'], points: 4 },
-      { id: 'panneaux', famille: 'Panneaux bois', sousFamille: 'Panneaux 3 plis', keywords: ['panneau 3 plis', 'panneaux 3 plis', '3 plis', 'steico'], points: 4 },
-      { id: 'transport_bois', famille: 'Transport', sousFamille: 'Transport bois', keywords: ['transport du panneau', 'tportclt', 'transport bois'], points: 5 },
-      { id: 'transport', famille: 'Transport', sousFamille: 'Transport général', keywords: ['transport', 'forfait transport', 'appro chantier', 'transport intra', 'prix de transport'], points: 4 },
-      { id: 'quincaillerie_vis', famille: 'Quincaillerie / fixations', sousFamille: 'Vis bois', keywords: ['vis', 'colorvis'], points: 4 },
-      { id: 'quincaillerie_boulon', famille: 'Quincaillerie / fixations', sousFamille: 'Boulonnerie', keywords: ['boulon', 'rondelle', 'goujon', 'clou', 'cavalier', 'ferrure'], points: 4 },
-      { id: 'quincaillerie_sabot', famille: 'Quincaillerie / fixations', sousFamille: 'Sabots / connecteurs', keywords: ['sabot', 'connecteur', 'ancrage'], points: 4 },
-      { id: 'metal_tole', famille: 'Métal / tôle / pliage', sousFamille: 'Tôle bac acier', keywords: ['tole', 'tôle', 'bac acier', 'couvertine', 'fibro', 'faitiere', 'faîtière'], points: 4 },
-      { id: 'metal_pliage', famille: 'Métal / tôle / pliage', sousFamille: 'Pliage', keywords: ['pliage'], points: 4 },
-      { id: 'traitement_autoclave', famille: 'Traitement / finition', sousFamille: 'Traitement autoclave', keywords: ['traitement', 'autoclave', 'classe iv'], points: 4 },
-      { id: 'traitement_saturateur', famille: 'Traitement / finition', sousFamille: 'Saturateur', keywords: ['saturateur', 'rubio'], points: 4 },
-      { id: 'conso_carburant', famille: 'Consommables / atelier', sousFamille: 'Carburant', keywords: ['gnr', 'totalenergie', 'total energie'], points: 4 },
-      { id: 'conso_epi', famille: 'Consommables / atelier', sousFamille: 'EPI / atelier', keywords: ['gant', 'film', 'bobine', 'papier'], points: 3 },
-      { id: 'outillage_foret', famille: 'Outillage / maintenance', sousFamille: 'Forets / perçage', keywords: ['foret', 'forêt', 'hss', 'sds'], points: 4 },
-      { id: 'outillage_materiel', famille: 'Outillage / maintenance', sousFamille: 'Matériel chantier', keywords: ['laser', 'pack trepied', 'trépied', 'mire'], points: 4 },
-      { id: 'outillage_maintenance', famille: 'Outillage / maintenance', sousFamille: 'Maintenance / réparation', keywords: ['reparation', 'réparation', 'interrupteur', 'fin de course', 'controle periodique', 'contrôle périodique', 'autosur', 'hmc'], points: 5 },
-      { id: 'prestations_location', famille: 'Prestations / divers', sousFamille: 'Location / intervention', keywords: ['location', 'intervention', 'implantation', 'demolition', 'démolition', 'pose poteaux'], points: 4 },
-      { id: 'prestations_maconnerie', famille: 'Prestations / divers', sousFamille: 'Prestations chantier', keywords: ['go udalle maconnerie', 'go udalle', 'poteau beton', 'poteau béton'], points: 3 },
-      { id: 'ajustement_ecart', famille: 'Prestations / divers', sousFamille: 'Écart arrondi', keywords: ['ecart', 'écart', 'remise commerciale'], points: 5 },
-      { id: 'ajustement_eco', famille: 'Prestations / divers', sousFamille: 'Éco-contribution', keywords: ['eco', 'éco', 'ecocontribution', 'éco-contribution', 'contribution verte', 'taxe'], points: 5 },
-      { id: 'fallback_divers', famille: 'Prestations / divers', sousFamille: 'Divers', keywords: ['fact', 'ligne'], points: 1 }
+      { id: 'bois_lc_blc', famille: 'Bois structure', sousFamille: 'LC / BLC', keywords: ['lc', 'blc', 'lamelle colle', 'lamellé collé', 'gl24', 'gl28'], points: 5, priority: 40 },
+      { id: 'bois_clt_klh_lvl', famille: 'Bois structure', sousFamille: 'CLT / KLH / LVL', keywords: ['clt', 'klh', 'lvl', 'panneau klh'], points: 5, priority: 40 },
+      { id: 'bois_massif', famille: 'Bois secondaire', sousFamille: 'Bois massif', keywords: ['douglas', 'sapin', 'epicea', 'épicéa', 'madrier', 'bastaing', 'chevron', 'liteau', 'demi-liteau', 'solivette'], points: 4, priority: 45 },
+      { id: 'bois_panneaux', famille: 'Bois secondaire', sousFamille: 'Panneaux bois', keywords: ['panneau 3 plis', '3 plis', 'osb', 'ctbh', 'panneau bois'], points: 4, priority: 45 },
+      { id: 'bois_bardage', famille: 'Bois secondaire', sousFamille: 'Bardage bois', keywords: ['bardage', 'clin bois'], points: 4, priority: 45 },
+      { id: 'bois_isolants', famille: 'Bois secondaire', sousFamille: 'Isolants / membranes', keywords: ['steico', 'knauf', 'irexpan', 'majpell', 'majvest', 'pare pluie'], points: 4, priority: 45 },
+      { id: 'bois_struct_interne', famille: 'Bois secondaire', sousFamille: 'Éléments structure interne', keywords: ['charpente', 'caisson', 'caissons', 'mur ossature bois'], points: 5, priority: 45 },
+      { id: 'transport_bois', famille: 'Transport', sousFamille: 'Transport bois', keywords: ['tportclt', 'transport clt', 'transport panneau'], points: 5, priority: 30 },
+      { id: 'transport_general', famille: 'Transport', sousFamille: 'Transport général', keywords: ['transport', 'forfait transport', 'appro chantier'], points: 4, priority: 30 },
+      { id: 'quinc_vis', famille: 'Quincaillerie / fixations', sousFamille: 'Vis bois', keywords: ['vis', 'colorvis', 'zacrovis'], points: 4, priority: 50 },
+      { id: 'quinc_boulon', famille: 'Quincaillerie / fixations', sousFamille: 'Boulonnerie', keywords: ['boulon', 'rondelle', 'goujon', 'ecrou', 'tige filetée'], points: 4, priority: 50 },
+      { id: 'quinc_fix_diverses', famille: 'Quincaillerie / fixations', sousFamille: 'Fixations diverses', keywords: ['clou', 'cavalier'], points: 4, priority: 50 },
+      { id: 'quinc_ferrures', famille: 'Quincaillerie / fixations', sousFamille: 'Ferrures', keywords: ['sabot', 'connecteur', 'ferrure', 'ferrures'], points: 4, priority: 50 },
+      { id: 'metal_tole', famille: 'Métal / tôle / pliage', sousFamille: 'Tôle bac acier', keywords: ['tole', 'tôle', 'bac acier', 'couvertine'], points: 4, priority: 55 },
+      { id: 'metal_pliage', famille: 'Métal / tôle / pliage', sousFamille: 'Pliage', keywords: ['pliage'], points: 4, priority: 55 },
+      { id: 'traitement_bois', famille: 'Traitement / finition', sousFamille: 'Traitement bois', keywords: ['traitement', 'autoclave', 'classe iv'], points: 4, priority: 60 },
+      { id: 'finition_bois', famille: 'Traitement / finition', sousFamille: 'Finition bois', keywords: ['saturateur', 'rubio', 'lasure'], points: 4, priority: 60 },
+      { id: 'conso_carburant', famille: 'Consommables / atelier', sousFamille: 'Carburant', keywords: ['gnr', 'gasoil', 'totalenergie'], points: 4, priority: 65 },
+      { id: 'conso_atelier', famille: 'Consommables / atelier', sousFamille: 'Consommables atelier', keywords: ['gant', 'film', 'bobine', 'papier'], points: 3, priority: 65 },
+      { id: 'outillage', famille: 'Outillage / maintenance', sousFamille: 'Outillage', keywords: ['foret', 'forêt', 'hss', 'sds', 'laser', 'trepied', 'mire'], points: 4, priority: 70 },
+      { id: 'maintenance', famille: 'Outillage / maintenance', sousFamille: 'Maintenance', keywords: ['reparation', 'réparation', 'controle periodique', 'autosur', 'hmc'], points: 5, priority: 70 },
+      { id: 'prest_gros_oeuvre', famille: 'Prestations chantier', sousFamille: 'Gros œuvre', keywords: ['implantation', 'demolition', 'démolition', 'poteau beton', 'maçonnerie'], points: 4, priority: 75 },
+      { id: 'prest_interventions', famille: 'Prestations chantier', sousFamille: 'Interventions', keywords: ['location', 'intervention'], points: 4, priority: 75 },
+      { id: 'prest_materiel', famille: 'Prestations chantier', sousFamille: 'Matériel chantier', keywords: ['nacelle', 'chariot', 'telescopique', 'container', 'wc chimique'], points: 4, priority: 75 },
+      { id: 'prest_materiaux', famille: 'Prestations chantier', sousFamille: 'Matériaux chantier', keywords: ['sable', 'granulat', '0/31.5'], points: 3, priority: 75 },
+      { id: 'prest_tech', famille: 'Prestations techniques', sousFamille: 'Études / ingénierie', keywords: ['etude', 'étude', 'test etancheite', 'test étanchéité'], points: 4, priority: 72 },
+      { id: 'ajustements', famille: 'Ajustements', sousFamille: 'Ajustements', keywords: ['ecart', 'écart', 'remise'], points: 5, priority: 20 },
+      { id: 'ajustements_eco', famille: 'Ajustements', sousFamille: 'Éco / taxes', keywords: ['eco', 'éco', 'contribution verte', 'taxe'], points: 5, priority: 20 },
+      { id: 'admin', famille: 'Administratif', sousFamille: 'Administratif', keywords: ['carte grise'], points: 3, priority: 80 },
+      { id: 'fallback_divers', famille: 'Divers', sousFamille: 'Divers', keywords: ['fact', 'ligne'], points: 1, priority: 99 }
+    ];
+    const LEGACY_RULE_IDS = new Set([
+      'bois_lc', 'bois_clt', 'bois_lvl', 'bois_massif_douglas', 'bois_massif_sapin',
+      'bardage', 'panneaux', 'transport', 'quincaillerie_vis', 'quincaillerie_boulon',
+      'quincaillerie_sabot', 'metal_pliage', 'traitement_autoclave', 'traitement_saturateur',
+      'conso_epi', 'outillage_foret', 'outillage_materiel', 'outillage_maintenance',
+      'prestations_location', 'prestations_maconnerie', 'ajustement_ecart', 'ajustement_eco'
+    ]);
+    const DEFAULT_ARC_RULES = [
+      { code: '204', designation: 'Achats BOIS CLT', famille: 'Bois structure', sousFamille: 'CLT / KLH / LVL', points: 10, priority: 10 },
+      { code: '206', designation: 'Achats BOIS Lamellé collé', famille: 'Bois structure', sousFamille: 'LC / BLC', points: 10, priority: 10 },
+      { code: '285', designation: 'Transport achats Matière 1ere', famille: 'Transport', sousFamille: 'Transport général', points: 8, priority: 20 },
+      { code: '290', designation: 'Transport sur achats', famille: 'Transport', sousFamille: 'Transport général', points: 8, priority: 20 },
+      { code: '295', designation: 'Transport sur achats intra', famille: 'Transport', sousFamille: 'Transport général', points: 8, priority: 20 },
+      { code: '350', designation: 'Moyens transport - Appro chantier', famille: 'Transport', sousFamille: 'Transport général', points: 8, priority: 20 },
+      { code: '500', designation: 'ST CBCO BE', famille: 'Prestations internes', sousFamille: 'CBCO (taille / étude / fabrication)', points: 10, priority: 5 },
+      { code: '501', designation: 'ST CBCO CUB', famille: 'Prestations internes', sousFamille: 'CBCO (taille / étude / fabrication)', points: 10, priority: 5 }
     ];
 
     const state = {
       fichiers: [],
       analyse: null,
       lignesFiltrees: [],
-      regles: []
+      regles: [],
+      arcRules: []
     };
 
     function showMessage(msg, type = 'info') {
@@ -394,6 +506,16 @@
 
     function mergeRulesWithDefaults(existingRules) {
       if (!Array.isArray(existingRules) || !existingRules.length) return [...DEFAULT_REGLES];
+      const hasLegacy = existingRules.some((r) => LEGACY_RULE_IDS.has(String(r?.id || '')));
+      if (hasLegacy) {
+        const defaultIds = new Set(DEFAULT_REGLES.map((d) => String(d.id || '')));
+        const customRules = existingRules.filter((r) => {
+          const id = String(r?.id || '');
+          if (!id) return true;
+          return !LEGACY_RULE_IDS.has(id) && !defaultIds.has(id);
+        });
+        return [...DEFAULT_REGLES, ...customRules];
+      }
       const byId = new Map(existingRules.map((r) => [String(r.id || ''), r]));
       const merged = [...existingRules];
       for (const def of DEFAULT_REGLES) {
@@ -1208,6 +1330,22 @@
       return [...DEFAULT_REGLES];
     }
 
+    function chargerArcRules() {
+      const raw = localStorage.getItem(STORAGE_KEYS.arcRules);
+      if (!raw) {
+        localStorage.setItem(STORAGE_KEYS.arcRules, JSON.stringify(DEFAULT_ARC_RULES));
+        return [...DEFAULT_ARC_RULES];
+      }
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length) return parsed;
+      } catch {
+        // fallback plus bas
+      }
+      localStorage.setItem(STORAGE_KEYS.arcRules, JSON.stringify(DEFAULT_ARC_RULES));
+      return [...DEFAULT_ARC_RULES];
+    }
+
     function classerLigne(ligne, regles) {
       const baseTexte = normalizeText([
         ligne.ressource,
@@ -1217,6 +1355,34 @@
         ligne.fournisseur
       ].filter(Boolean).join(' '));
       const baseTokens = toAlphaNumTokens(baseTexte);
+      const arcTxt = normalizeText(ligne.arc || '');
+
+      const arcMatches = (state.arcRules || []).filter((r) => {
+        const code = normalizeText(r.code || '');
+        return code && arcTxt === code;
+      });
+      if (arcMatches.length) {
+        arcMatches.sort((a, b) => {
+          const pa = Number(a.priority ?? 50);
+          const pb = Number(b.priority ?? 50);
+          if (pa !== pb) return pa - pb;
+          return Number(b.points ?? 0) - Number(a.points ?? 0);
+        });
+        const bestArc = arcMatches[0];
+        ligne.familleAchat = bestArc.famille || 'Non classé';
+        ligne.categorieAutomatique = bestArc.famille || 'Non classé';
+        ligne.sousCategorieAutomatique = bestArc.sousFamille || 'Non classé';
+        ligne.statutConfianceClassement = 'élevée';
+        ligne.classificationDebug = {
+          matchedRuleId: `arc_${bestArc.code}`,
+          mode: 'arc_override',
+          score: Number(bestArc.points || 0),
+          arc: ligne.arc || '',
+          matchedKeywords: [String(bestArc.code || '')],
+          rule: bestArc
+        };
+        return ligne;
+      }
 
       const correspondances = [];
       for (const regle of regles) {
@@ -1236,7 +1402,32 @@
         }
       }
 
-      correspondances.sort((a, b) => b.score - a.score);
+      const fournisseurTxt = normalizeText(ligne.fournisseur || '');
+      if (fournisseurTxt.includes('cbco')) {
+        ligne.familleAchat = 'Prestations internes';
+        ligne.categorieAutomatique = 'Prestations internes';
+        ligne.sousCategorieAutomatique = 'CBCO (taille / étude / fabrication)';
+        ligne.statutConfianceClassement = 'élevée';
+        ligne.classificationDebug = {
+          matchedRuleId: 'override_supplier_cbco',
+          mode: 'supplier_override',
+          fournisseur: ligne.fournisseur || '',
+          score: 999,
+          matchedKeywords: ['cbco'],
+          reason: 'Priorité fournisseur CBCO'
+        };
+        return ligne;
+      }
+
+      correspondances.sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        const aPriority = Number(a.regle?.priority ?? 50);
+        const bPriority = Number(b.regle?.priority ?? 50);
+        if (aPriority !== bPriority) return aPriority - bPriority;
+        const aPoints = Number(a.regle?.points ?? 0);
+        const bPoints = Number(b.regle?.points ?? 0);
+        return bPoints - aPoints;
+      });
       const best = correspondances[0];
       const second = correspondances[1];
 
@@ -1265,6 +1456,13 @@
         ligne.sousCategorieAutomatique = 'Non classé';
         ligne.categorieAutomatique = 'Non classé';
         ligne.statutConfianceClassement = 'faible';
+        ligne.classificationDebug = {
+          matchedRuleId: null,
+          mode: 'no_match',
+          score: 0,
+          netGap: 0,
+          matchedKeywords: []
+        };
         return ligne;
       }
 
@@ -1282,12 +1480,31 @@
 
       if (!ligne.drapeauTransport && !ligne.drapeauEcoContribution && !ligne.drapeauTaxe) {
         if (hasPrestationHint && !boisPrioritaire) {
-          ligne.familleAchat = 'Prestations / divers';
-          ligne.categorieAutomatique = 'Prestations / divers';
+          ligne.familleAchat = 'Prestations chantier';
+          ligne.categorieAutomatique = 'Prestations chantier';
           ligne.sousCategorieAutomatique = 'Divers';
           ligne.statutConfianceClassement = 'moyenne';
         }
       }
+
+      ligne.classificationDebug = {
+        matchedRuleId: best.regle.id || null,
+        mode: 'rule_scoring',
+        score: Number(best.score || 0),
+        netGap: Number(netGap || 0),
+        exactHits: Number(best.exactHits || 0),
+        fuzzyHits: Number(best.fuzzyHits || 0),
+        matchedKeywords: (best.regle.keywords || []).filter((kw) => scoreKeyword(baseTexte, baseTokens, kw).scoreFactor > 0),
+        fournisseur: ligne.fournisseur || '',
+        topCandidates: correspondances.slice(0, 3).map((c) => ({
+          id: c.regle.id,
+          famille: c.regle.famille,
+          sousFamille: c.regle.sousFamille,
+          score: Number(c.score || 0),
+          priority: Number(c.regle.priority ?? 50),
+          points: Number(c.regle.points || 0)
+        }))
+      };
 
       if (!ligne.familleAchat) ligne.familleAchat = 'Non classé';
       if (!ligne.sousCategorieAutomatique) ligne.sousCategorieAutomatique = 'Non classé';
@@ -1573,58 +1790,146 @@
       renderTableLignes();
     }
 
+    function renderInvoiceDetailTableSaisie(lignesFacture) {
+      return `
+        <table>
+          <colgroup>
+            <col style="width:12%;">
+            <col style="width:11%;">
+            <col style="width:8%;">
+            <col style="width:11%;">
+            <col style="width:28%;">
+            <col style="width:6%;">
+            <col style="width:10%;">
+            <col style="width:7%;">
+            <col style="width:7%;">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Ressource</th>
+              <th>BL N°</th>
+              <th>A.R.C</th>
+              <th>Chantier</th>
+              <th>Libellé</th>
+              <th class="num">Unité</th>
+              <th class="num">Qté Fact.</th>
+              <th class="num">P.U</th>
+              <th class="num">Montant</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${lignesFacture.map((l) => {
+              const transportHint = l.idProduitRattache ? ` <small style="color:#666;">↳ ${escapeHtml(l.designationProduitRattache || '')}</small>` : '';
+              return `
+                <tr>
+                  <td>${escapeHtml(l.ressource || '')}</td>
+                  <td class="mono">${escapeHtml(l.bl || '')}</td>
+                  <td class="mono">${escapeHtml(l.arc || '')}</td>
+                  <td class="mono">${escapeHtml(l.chantierOuAffaireLigne || '')}</td>
+                  <td>${escapeHtml(l.designation || '')}${transportHint}</td>
+                  <td class="num">${escapeHtml(l.unite || '')}</td>
+                  <td class="num">${l.quantite != null ? formatMoney(l.quantite) : '—'}</td>
+                  <td class="num">${l.prixUnitaire != null ? formatMoney(l.prixUnitaire) : '—'}</td>
+                  <td class="num montant-col">${l.montantLigne != null ? formatMoney(l.montantLigne) : '—'}</td>
+                </tr>
+              `;
+            }).join('') || '<tr><td colspan="9" class="muted">Aucune ligne</td></tr>'}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function bindInvoiceAccordionSaisie(root, linesByInvoice) {
+      const facturesById = new Map((window.__facturesApercu || []).map((f) => [String(f.idFacture), f]));
+      const rows = root.querySelectorAll('.invoice-row[data-invoice-id]');
+      rows.forEach((row) => {
+        row.addEventListener('click', () => {
+          const invoiceId = row.getAttribute('data-invoice-id');
+          const item = root.querySelector(`.invoice-item[data-invoice-id="${invoiceId}"]`);
+          const detail = root.querySelector(`.invoice-detail[data-invoice-id="${invoiceId}"]`);
+          if (!item || !detail) return;
+          const willOpen = !detail.classList.contains('open');
+          if (willOpen) {
+            root.querySelectorAll('.invoice-detail.open').forEach((d) => {
+              if (d !== detail) {
+                d.classList.remove('open');
+                d.style.maxHeight = '0px';
+              }
+            });
+            root.querySelectorAll('.invoice-item.open').forEach((i) => {
+              if (i !== item) i.classList.remove('open');
+            });
+            if (detail.dataset.loaded !== '1') {
+              const inv = facturesById.get(String(invoiceId));
+              const invLines = (linesByInvoice.get(String(invoiceId)) || []).sort((a, b) => (a.ordreLigne || 0) - (b.ordreLigne || 0));
+              if (inv) detail.querySelector('.invoice-detail-inner').innerHTML = renderInvoiceDetailTableSaisie(invLines);
+              detail.dataset.loaded = '1';
+            }
+          }
+          detail.classList.toggle('open');
+          item.classList.toggle('open');
+          if (willOpen) {
+            detail.style.maxHeight = `${detail.scrollHeight}px`;
+          } else {
+            detail.style.maxHeight = '0px';
+          }
+        });
+      });
+    }
+
     function renderTableLignes() {
-      const tbody = document.querySelector('#tableLignesApercu tbody');
+      const root = document.getElementById('renderPreviewSaisie');
       const lignes = state.lignesFiltrees || [];
       if (!lignes.length) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Aucune ligne</td></tr>';
+        root.innerHTML = '<p class="muted">Aucune ligne pour le filtre actuel.</p>';
         return;
       }
 
-      const groupes = new Map();
+      const linesByInvoice = new Map();
       for (const l of lignes) {
-        if (!groupes.has(l.idFactureParente)) groupes.set(l.idFactureParente, []);
-        groupes.get(l.idFactureParente).push(l);
+        const id = String(l.idFactureParente || '');
+        if (!id) continue;
+        if (!linesByInvoice.has(id)) linesByInvoice.set(id, []);
+        linesByInvoice.get(id).push(l);
       }
 
-      const facturesById = new Map((state.analyse?.factures || []).map((f) => [f.idFacture, f]));
-      const blocs = [];
-      for (const [idFacture, lignesFacture] of groupes.entries()) {
-        lignesFacture.sort((a, b) => (a.ordreLigne || 0) - (b.ordreLigne || 0));
-        const f = facturesById.get(idFacture);
-        blocs.push(`
-          <tr style="background:#f3f6f3;">
-            <td colspan="8"><strong>${escapeHtml(f?.dateFacture || '')} ${escapeHtml(f?.numeroFacture || '')}</strong> — ${escapeHtml(f?.fournisseurCode || '')} — ${escapeHtml(f?.libelleFacture || '')}</td>
-          </tr>
-          <tr style="background:#fafafa;">
-            <td><strong>Ressource</strong></td>
-            <td><strong>BL N°</strong></td>
-            <td><strong>A.R.C</strong></td>
-            <td><strong>Libellé</strong></td>
-            <td><strong>Unité</strong></td>
-            <td><strong>Qté</strong></td>
-            <td><strong>P.U</strong></td>
-            <td><strong>Montant</strong></td>
-          </tr>
-        `);
-
-        blocs.push(lignesFacture.map((l) => {
-        const transportHint = l.idProduitRattache ? ` <small style="color:#666;">↳ ${escapeHtml(l.designationProduitRattache || '')}</small>` : '';
-        return `
-          <tr>
-            <td>${escapeHtml(l.ressource || '')}</td>
-            <td>${escapeHtml(l.bl || '')}</td>
-            <td>${escapeHtml(l.arc || '')}</td>
-            <td>${escapeHtml(l.designation || '')}${transportHint}</td>
-            <td>${escapeHtml(l.unite || '')}</td>
-            <td>${l.quantite != null ? formatMoney(l.quantite) : '—'}</td>
-            <td>${l.prixUnitaire != null ? formatMoney(l.prixUnitaire) : '—'}</td>
-            <td>${l.montantLigne != null ? formatMoney(l.montantLigne) : '—'}</td>
-          </tr>
-        `;
-      }).join(''));
-      }
-      tbody.innerHTML = blocs.join('');
+      const factures = (state.analyse?.factures || []).filter((f) => linesByInvoice.has(String(f.idFacture)));
+      window.__facturesApercu = factures;
+      root.innerHTML = `
+        <div class="invoice-list">
+          <div class="invoice-row-grid head">
+            <div></div>
+            <div>Date</div>
+            <div>Fournisseur</div>
+            <div>Chantier</div>
+            <div>Libellé</div>
+            <div class="num">Montant H.T</div>
+          </div>
+          ${factures.map((f) => {
+            const count = (linesByInvoice.get(String(f.idFacture)) || []).length;
+            return `
+              <section class="invoice-item" data-invoice-id="${escapeHtml(f.idFacture)}">
+                <button type="button" class="invoice-row" data-invoice-id="${escapeHtml(f.idFacture)}">
+                  <div class="invoice-row-grid">
+                    <div><span class="invoice-toggle">▶</span></div>
+                    <div>${escapeHtml(f.dateFacture || '')}</div>
+                    <div>${escapeHtml(f.fournisseurCode || '')}</div>
+                    <div class="mono">${escapeHtml(f.chantierOuAffaire || '')}</div>
+                    <div class="invoice-summary">${escapeHtml(f.libelleFacture || '')} <span class="line-count">${count}</span></div>
+                    <div class="num invoice-montant">${formatMoney(f.montantTotalFacture)}</div>
+                  </div>
+                </button>
+                <div class="invoice-detail" data-invoice-id="${escapeHtml(f.idFacture)}" data-loaded="0">
+                  <div class="invoice-detail-inner">
+                    <div class="detail-placeholder muted">Clique pour charger le détail de cette facture.</div>
+                  </div>
+                </div>
+              </section>
+            `;
+          }).join('')}
+        </div>
+      `;
+      bindInvoiceAccordionSaisie(root, linesByInvoice);
     }
 
     function renderAnomalies() {
@@ -1648,6 +1953,24 @@
           <td>${escapeHtml(r.sousFamille || '')}</td>
           <td>${escapeHtml((r.keywords || []).join(', '))}</td>
           <td>${Number(r.points || 0)}</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderArcRules() {
+      const tbody = document.querySelector('#tableArcRules tbody');
+      if (!state.arcRules.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Aucune règle A.R.C</td></tr>';
+        return;
+      }
+      tbody.innerHTML = state.arcRules.map((r) => `
+        <tr>
+          <td>${escapeHtml(r.code || '')}</td>
+          <td>${escapeHtml(r.designation || '')}</td>
+          <td>${escapeHtml(r.famille || '')}</td>
+          <td>${escapeHtml(r.sousFamille || '')}</td>
+          <td>${Number(r.points || 0)}</td>
+          <td>${Number(r.priority || 0)}</td>
         </tr>
       `).join('');
     }
@@ -1681,6 +2004,39 @@
       localStorage.setItem(STORAGE_KEYS.regles, JSON.stringify(state.regles));
       renderRegles();
       showMessage('✅ Règles réinitialisées avec le dictionnaire par défaut.', 'success');
+    }
+
+    function ajouterArcRegleDepuisForm() {
+      const code = document.getElementById('newArcCode').value.trim();
+      const designation = document.getElementById('newArcDesignation').value.trim();
+      const famille = document.getElementById('newArcFamille').value.trim();
+      const sousFamille = document.getElementById('newArcSousFamille').value.trim();
+      const points = Number(document.getElementById('newArcPoids').value || 8);
+      const priority = Number(document.getElementById('newArcPriority').value || 20);
+      if (!code || !famille) {
+        showMessage('Code A.R.C et famille sont obligatoires.', 'warning');
+        return;
+      }
+      const entry = {
+        code,
+        designation,
+        famille,
+        sousFamille: sousFamille || 'Divers',
+        points: Number.isFinite(points) && points > 0 ? points : 8,
+        priority: Number.isFinite(priority) && priority > 0 ? priority : 20
+      };
+      state.arcRules = state.arcRules.filter((r) => String(r.code || '').trim() !== code);
+      state.arcRules.push(entry);
+      localStorage.setItem(STORAGE_KEYS.arcRules, JSON.stringify(state.arcRules));
+      renderArcRules();
+      showMessage('✅ Règle A.R.C ajoutée/mise à jour.', 'success');
+    }
+
+    function resetArcRulesDefaut() {
+      state.arcRules = [...DEFAULT_ARC_RULES];
+      localStorage.setItem(STORAGE_KEYS.arcRules, JSON.stringify(state.arcRules));
+      renderArcRules();
+      showMessage('✅ Règles A.R.C réinitialisées.', 'success');
     }
 
     function resetUIAnalyse() {
@@ -2045,6 +2401,8 @@
       document.getElementById('btnExporterControle').addEventListener('click', exportControleCsv);
       document.getElementById('btnAjouterRegle').addEventListener('click', ajouterRegleDepuisForm);
       document.getElementById('btnResetRegles').addEventListener('click', resetReglesDefaut);
+      document.getElementById('btnAjouterArcRegle').addEventListener('click', ajouterArcRegleDepuisForm);
+      document.getElementById('btnResetArcRegles').addEventListener('click', resetArcRulesDefaut);
 
       document.getElementById('filtreTexte').addEventListener('input', appliquerFiltresLignes);
     }
@@ -2065,7 +2423,9 @@
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectAchatSecondaryBar();
       state.regles = chargerReglesClassification();
+      state.arcRules = chargerArcRules();
       renderRegles();
+      renderArcRules();
       renderFichiers();
       resetUIAnalyse();
       bindEvents();

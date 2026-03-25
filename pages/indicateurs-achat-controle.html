@@ -584,6 +584,16 @@
       }
       let activeBatchId = null;
       if (!Array.isArray(batches) || !batches.length) {
+        // Si l'API répond mais qu'il n'y a plus d'imports, on n'affiche pas le fallback local
+        // pour éviter de montrer d'anciennes données après suppression serveur.
+        if (!localMode) {
+          controlState.factures = [];
+          renderPeriodFilters([]);
+          document.getElementById('importsList').innerHTML = '<p class="muted">Aucun import.</p>';
+          document.getElementById('batchInfo').textContent = 'Aucun import disponible.';
+          document.getElementById('renderPreview').innerHTML = '<p class="muted">Aucune reconstruction disponible.</p>';
+          return;
+        }
         const localInvoices = JSON.parse(localStorage.getItem('goudalle_achats_factures') || '[]');
         const localLines = JSON.parse(localStorage.getItem('goudalle_achats_lignes') || '[]');
         if (localInvoices.length || localLines.length) {
