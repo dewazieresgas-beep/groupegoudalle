@@ -1240,10 +1240,30 @@
       const best = correspondances[0];
       const second = correspondances[1];
 
+      const txt = baseTexte;
+      ligne.drapeauTransport = txt.includes('transport');
+      ligne.drapeauEcart = txt.includes('ecart');
+      ligne.drapeauEcoContribution = txt.includes('eco') || txt.includes('contribution');
+      ligne.drapeauTaxe = txt.includes('taxe') || txt.includes('tva') || txt.includes('parafiscale') || txt.includes('fiscale');
+      ligne.drapeauTraitement = txt.includes('traitement') || txt.includes('autoclave') || txt.includes('saturateur');
+      ligne.drapeauBois = /(bois|klh|clt|lvl|lamelle|douglas|sapin|epicea|bardage|panneau)/.test(txt);
+      ligne.drapeauQuincaillerie = /(vis|boulon|goujon|rondelle|clou|sabot|colorvis)/.test(txt);
+      ligne.drapeauStock = ligne.drapeauStock || isStockRelatedText([
+        ligne.libelleFacture,
+        ligne.designation,
+        ligne.ressource,
+        ligne.texteBrutLigne
+      ].filter(Boolean).join(' '));
+
+      const unite = String(ligne.unite || '').toUpperCase();
+      const hasPrestationHint = /(prestation|reparation|implantation|reprofilage|coupe|intervention|controle periodique|controle périodique)/.test(txt);
+      const hasBoisHint = /(bois|klh|clt|lc|lamelle|douglas|sapin|epicea|lvl|massif|bardage|panneau)/.test(txt);
+      const boisPrioritaire = hasBoisHint && (unite === 'M2' || unite === 'M3');
+
       if (!best) {
-        ligne.familleAchat = 'Prestations / divers';
-        ligne.sousCategorieAutomatique = 'Divers';
-        ligne.categorieAutomatique = 'Prestations / divers';
+        ligne.familleAchat = 'Non classé';
+        ligne.sousCategorieAutomatique = 'Non classé';
+        ligne.categorieAutomatique = 'Non classé';
         ligne.statutConfianceClassement = 'faible';
         return ligne;
       }
@@ -1260,22 +1280,17 @@
         ligne.statutConfianceClassement = 'faible';
       }
 
-      const txt = baseTexte;
-      ligne.drapeauTransport = txt.includes('transport');
-      ligne.drapeauEcart = txt.includes('ecart');
-      ligne.drapeauEcoContribution = txt.includes('eco') || txt.includes('contribution');
-      ligne.drapeauTaxe = txt.includes('taxe') || txt.includes('tva') || txt.includes('parafiscale') || txt.includes('fiscale');
-      ligne.drapeauTraitement = txt.includes('traitement') || txt.includes('autoclave') || txt.includes('saturateur');
-      ligne.drapeauBois = /(bois|klh|clt|lvl|lamelle|douglas|sapin|epicea|bardage|panneau)/.test(txt);
-      ligne.drapeauQuincaillerie = /(vis|boulon|goujon|rondelle|clou|sabot|colorvis)/.test(txt);
-      ligne.drapeauStock = ligne.drapeauStock || isStockRelatedText([
-        ligne.libelleFacture,
-        ligne.designation,
-        ligne.ressource,
-        ligne.texteBrutLigne
-      ].filter(Boolean).join(' '));
-      if (!ligne.familleAchat) ligne.familleAchat = 'Prestations / divers';
-      if (!ligne.sousCategorieAutomatique) ligne.sousCategorieAutomatique = 'Divers';
+      if (!ligne.drapeauTransport && !ligne.drapeauEcoContribution && !ligne.drapeauTaxe) {
+        if (hasPrestationHint && !boisPrioritaire) {
+          ligne.familleAchat = 'Prestations / divers';
+          ligne.categorieAutomatique = 'Prestations / divers';
+          ligne.sousCategorieAutomatique = 'Divers';
+          ligne.statutConfianceClassement = 'moyenne';
+        }
+      }
+
+      if (!ligne.familleAchat) ligne.familleAchat = 'Non classé';
+      if (!ligne.sousCategorieAutomatique) ligne.sousCategorieAutomatique = 'Non classé';
       return ligne;
     }
 
@@ -1442,6 +1457,8 @@
       }
 
       for (const arr of byFacture.values()) {
+        const blSet = new Set(arr.filter((x) => !x.drapeauTransport && !x.drapeauEcoContribution && !x.drapeauTaxe).map((x) => String(x.bl || '').trim()).filter(Boolean));
+        const hasMultiBL = blSet.size > 1;
         for (const ligne of arr) {
           const estAnnexe = ligne.drapeauTransport || ligne.drapeauEcoContribution || ligne.drapeauTaxe;
           if (!estAnnexe) continue;
@@ -1450,10 +1467,10 @@
           if (ligne.bl) {
             cible = arr.find((x) => x.idLigne !== ligne.idLigne && !x.drapeauTransport && !x.drapeauEcoContribution && !x.drapeauTaxe && x.bl && x.bl === ligne.bl);
           }
-          if (!cible && ligne.arc) {
+          if (!cible && ligne.arc && !hasMultiBL) {
             cible = arr.find((x) => x.idLigne !== ligne.idLigne && !x.drapeauTransport && !x.drapeauEcoContribution && !x.drapeauTaxe && x.arc && x.arc === ligne.arc);
           }
-          if (!cible) {
+          if (!cible && !hasMultiBL) {
             cible = arr.find((x) => x.idLigne !== ligne.idLigne && !x.drapeauTransport && !x.drapeauEcoContribution && !x.drapeauTaxe);
           }
           if (!cible) continue;

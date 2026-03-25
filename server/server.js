@@ -334,6 +334,11 @@ function isServiceText(raw) {
     txt.includes('coupe');
 }
 
+function isWoodLikeText(raw) {
+  const txt = normalizeText(raw);
+  return /\b(clt|klh|lc|lamelle|douglas|sapin|epicea|bois|lvl|massif|bardage|panneau)\b/.test(txt);
+}
+
 function extractThicknessMeters(raw) {
   const txt = normalizeText(raw);
   const m = txt.match(/(\d{2,3}(?:[.,]\d+)?)\s*mm\b/);
@@ -367,54 +372,59 @@ function computeVolumeM3FromNorm(line) {
 }
 
 function allocateInvoiceLinesByBL(normalizedInvoiceLines, batchId, invoiceId) {
-  const grouped = new Map();
-  for (const l of normalizedInvoiceLines) {
-    const key = l.bl_numero || `NO_BL_${invoiceId}`;
-    if (!grouped.has(key)) grouped.set(key, []);
-    grouped.get(key).push(l);
-  }
+  const lines = [...(normalizedInvoiceLines || [])];
+  const products = lines.filter((l) => l.type_technique === 'product');
+  const annexes = lines.filter((l) => l.type_technique === 'annexe');
+  const extrasByProductId = new Map(products.map((p) => [p.id, 0]));
+  const blSet = new Set(products.map((p) => String(p.bl_numero || '').trim()).filter(Boolean));
+  const hasMultiBL = blSet.size > 1;
 
-  const results = [];
-  for (const [bl, lines] of grouped.entries()) {
-    const products = lines.filter((l) => l.type_technique === 'product');
-    const annexes = lines.filter((l) => l.type_technique === 'annexe');
-    const extraByProductId = new Map(products.map((p) => [p.id, 0]));
+  for (const annexe of annexes) {
+    const amount = Number(annexe.montant) || 0;
+    if (!products.length || amount === 0) continue;
 
-    for (const annexe of annexes) {
-      const amount = Number(annexe.montant) || 0;
-      if (!products.length || amount === 0) continue;
-
-      const volWeights = products.map((p) => ({ id: p.id, w: computeVolumeM3FromNorm(p) || 0 })).filter((x) => x.w > 0);
-      const qtyWeights = products.map((p) => ({ id: p.id, w: Number(p.qte_fact) || 0 })).filter((x) => x.w > 0);
-      const weights = volWeights.length ? volWeights : (qtyWeights.length ? qtyWeights : products.map((p) => ({ id: p.id, w: 1 })));
-      const sumW = weights.reduce((a, b) => a + b.w, 0) || 1;
-
-      for (const w of weights) {
-        const part = amount * (w.w / sumW);
-        extraByProductId.set(w.id, (extraByProductId.get(w.id) || 0) + part);
-      }
+    const annexeBL = String(annexe.bl_numero || '').trim();
+    let targets = [];
+    if (annexeBL) {
+      targets = products.filter((p) => String(p.bl_numero || '').trim() === annexeBL);
+    } else if (!hasMultiBL) {
+      // Sans BL explicite sur facture mono-BL: on autorise une ventilation.
+      targets = products;
+    } else {
+      // Règle métier: transport/annexe sans BL sur facture multi-BL = non ventilé.
+      targets = [];
     }
+    if (!targets.length) continue;
 
-    for (const l of lines) {
-      const extra = extraByProductId.get(l.id) || 0;
-      const base = Number(l.montant) || 0;
-      const isProduct = l.type_technique === 'product';
-      results.push({
-        id: `alloc_${l.id}`,
-        normalized_line_id: l.id,
-        raw_invoice_id: invoiceId,
-        batch_id: batchId,
-        allocated_montant: isProduct ? (base + extra) : base,
-        base_montant: base,
-        allocated_extra: isProduct ? extra : 0,
-        allocation_key: annexes.length ? 'BL' : 'none',
-        allocation_details: annexes.length ? `BL=${bl}; annexes=${annexes.length}` : null,
-        volume_m3: computeVolumeM3FromNorm(l),
-        active_for_indicators: Number(l.excluded_from_indicators || 0) ? 0 : (l.type_technique === 'annexe' ? 0 : 1)
-      });
+    const volWeights = targets.map((p) => ({ id: p.id, w: computeVolumeM3FromNorm(p) || 0 })).filter((x) => x.w > 0);
+    const qtyWeights = targets.map((p) => ({ id: p.id, w: Number(p.qte_fact) || 0 })).filter((x) => x.w > 0);
+    const weights = volWeights.length ? volWeights : (qtyWeights.length ? qtyWeights : targets.map((p) => ({ id: p.id, w: 1 })));
+    const sumW = weights.reduce((a, b) => a + b.w, 0) || 1;
+
+    for (const w of weights) {
+      const part = amount * (w.w / sumW);
+      extrasByProductId.set(w.id, (extrasByProductId.get(w.id) || 0) + part);
     }
   }
-  return results;
+
+  return lines.map((l) => {
+    const base = Number(l.montant) || 0;
+    const isProduct = l.type_technique === 'product';
+    const extra = isProduct ? (extrasByProductId.get(l.id) || 0) : 0;
+    return {
+      id: `alloc_${l.id}`,
+      normalized_line_id: l.id,
+      raw_invoice_id: invoiceId,
+      batch_id: batchId,
+      allocated_montant: isProduct ? (base + extra) : base,
+      base_montant: base,
+      allocated_extra: extra,
+      allocation_key: annexes.length ? 'BL' : 'none',
+      allocation_details: annexes.length ? `annexes=${annexes.length}; multi_bl=${hasMultiBL ? 1 : 0}` : null,
+      volume_m3: computeVolumeM3FromNorm(l),
+      active_for_indicators: Number(l.excluded_from_indicators || 0) ? 0 : (l.type_technique === 'annexe' ? 0 : 1)
+    };
+  });
 }
 
 // ─── MIDDLEWARES ────────────────────────────────────────────────────────────────
@@ -858,8 +868,11 @@ app.post('/api/achats-v2/import-pdf', async (req, res) => {
           is_taxe: /(taxe|tva|parafiscale|fiscale)/i.test(line.libelle_ligne || '') ? 1 : 0
         };
         const normText = normalizeText([normLine.ressource, normLine.libelle_ligne].filter(Boolean).join(' '));
+        const upperUnite = String(normLine.unite || '').toUpperCase();
         const isAnnexe = isAnnexeText(normText);
-        const isService = !isAnnexe && isServiceText(normText);
+        const serviceHint = isServiceText(normText);
+        const woodHint = isWoodLikeText(normText);
+        const isService = !isAnnexe && (serviceHint && !(woodHint && (upperUnite === 'M2' || upperUnite === 'M3')));
         normLine.type_technique = isAnnexe ? 'annexe' : (isService ? 'service' : 'product');
         normLine.categorie_technique = isAnnexe ? 'charge_annexe' : (isService ? 'service_non_ventilable' : 'matiere');
         normalizedLines.push(normLine);
@@ -982,6 +995,14 @@ app.get('/api/achats-v2/indicators-monthly', (req, res) => {
   const versionByInvoice = new Map(versions.map((v) => [v.raw_invoice_id, v]));
   const invoiceById = new Map(rawInvoices.map((i) => [i.id, i]));
   const normById = new Map(norm.map((n) => [n.id, n]));
+  const excludedInvoiceIds = new Set();
+  for (const v of versions) {
+    if (v.status === 'avoir') {
+      excludedInvoiceIds.add(v.raw_invoice_id);
+      if (v.linked_invoice_id) excludedInvoiceIds.add(v.linked_invoice_id);
+    }
+    if (v.status === 'neutralized') excludedInvoiceIds.add(v.raw_invoice_id);
+  }
 
   function toIsoMonth(frDate) {
     const m = String(frDate || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
@@ -998,8 +1019,9 @@ app.get('/api/achats-v2/indicators-monthly', (req, res) => {
     if (Number(n.excluded_from_indicators || 0)) continue;
     const inv = invoiceById.get(a.raw_invoice_id);
     if (!inv) continue;
+    if (excludedInvoiceIds.has(inv.id)) continue;
     const ver = versionByInvoice.get(inv.id);
-    if (ver && ver.status === 'neutralized') continue;
+    if (ver && (ver.status === 'neutralized' || ver.status === 'avoir')) continue;
     const month = toIsoMonth(inv.date);
     if (!month) continue;
 
@@ -1026,6 +1048,7 @@ app.get('/api/achats-v2/indicators-monthly', (req, res) => {
       v_lc_m3: r.v_lc_m3,
       prix_moyen_lc_eur_m3: r.v_lc_m3 > 0 ? (r.lc_amount / r.v_lc_m3) : null
     }));
+  
   res.json({ success: true, rows });
 });
 

@@ -116,6 +116,9 @@
       if (!Number.isFinite(qte) || qte <= 0) return null;
       if (unite === 'M3') return qte;
       if (unite === 'M2') {
+        const txt = normalizeText([line.designation, line.ressource].filter(Boolean).join(' '));
+        const isService = /(prestation|reparation|implantation|reprofilage|coupe|intervention|controle periodique|controle périodique)/.test(txt);
+        if (isService) return null;
         const ep = extractThicknessMeters([line.designation, line.ressource].filter(Boolean).join(' '));
         if (!ep) return null;
         return qte * ep;
