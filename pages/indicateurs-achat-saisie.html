@@ -457,6 +457,19 @@
       return /total\s+(bon|chantier|fournisseur)/i.test(parts.join(' '));
     }
 
+    async function fetchJsonSafe(url, options, contextLabel) {
+      const res = await fetch(url, options);
+      const raw = await res.text();
+      let payload = null;
+      try {
+        payload = raw ? JSON.parse(raw) : null;
+      } catch {
+        const sample = String(raw || '').slice(0, 80).replace(/\s+/g, ' ');
+        throw new Error(`${contextLabel}: réponse non JSON (${res.status}). ${sample.startsWith('<') ? 'Le serveur semble renvoyer une page HTML.' : sample}`);
+      }
+      return { res, payload };
+    }
+
     async function decodePdfFile(file) {
       const buffer = await file.arrayBuffer();
       const bytes = new Uint8Array(buffer);
@@ -467,12 +480,11 @@
         binary += String.fromCharCode.apply(null, chunk);
       }
       const base64 = btoa(binary);
-      const res = await fetch(SERVER_URL + '/achats-parse-pdf', {
+      const { res, payload } = await fetchJsonSafe(SERVER_URL + '/achats-parse-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fileName: file.name, contentBase64: base64 })
-      });
-      const payload = await res.json();
+      }, `Extraction PDF (${file.name})`);
       if (!res.ok || !payload.success) {
         throw new Error(payload.error || 'Extraction PDF impossible.');
       }
@@ -1612,6 +1624,11 @@
       const fileMetaByName = new Map();
       let analyse = null;
       const warnings = [];
+      const legacyFactures = [];
+      const legacyLignes = [];
+      const legacyTotaux = [];
+      let usedV2 = false;
+      let usedLegacy = false;
 
       for (const file of state.fichiers) {
         const meta = {
@@ -1623,37 +1640,81 @@
         fichiersInfo.push(meta);
         fileMetaByName.set(file.name, meta);
 
-        const base64 = await toBase64(file);
-        const importRes = await fetch(SERVER_URL + '/achats-v2/import-pdf', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fileName: file.name, contentBase64: base64 })
-        });
-        const importPayload = await importRes.json();
-        if (!importRes.ok || !importPayload.success) {
-          throw new Error(importPayload.error || `Import V2 impossible (${file.name}).`);
-        }
-        if (Array.isArray(importPayload.warnings)) warnings.push(...importPayload.warnings);
+        try {
+          const base64 = await toBase64(file);
+          const { res: importRes, payload: importPayload } = await fetchJsonSafe(
+            SERVER_URL + '/achats-v2/import-pdf',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ fileName: file.name, contentBase64: base64 })
+            },
+            `Import V2 (${file.name})`
+          );
+          if (!importRes.ok || !importPayload.success) {
+            throw new Error(importPayload?.error || `Import V2 impossible (${file.name}).`);
+          }
+          if (Array.isArray(importPayload.warnings)) warnings.push(...importPayload.warnings);
 
-        const controlRes = await fetch(SERVER_URL + `/achats-v2/control/${encodeURIComponent(importPayload.batch_id)}`, { method: 'GET' });
-        const controlPayload = await controlRes.json();
-        if (!controlRes.ok || !controlPayload.success) {
-          throw new Error(controlPayload.error || `Contrôle V2 introuvable (${file.name}).`);
+          const { res: controlRes, payload: controlPayload } = await fetchJsonSafe(
+            SERVER_URL + `/achats-v2/control/${encodeURIComponent(importPayload.batch_id)}`,
+            { method: 'GET' },
+            `Contrôle V2 (${file.name})`
+          );
+          if (!controlRes.ok || !controlPayload.success) {
+            throw new Error(controlPayload?.error || `Contrôle V2 introuvable (${file.name}).`);
+          }
+
+          const mapped = mapV2ControlToAnalyse(controlPayload, fileMetaByName, facturesExistantes);
+          if (!analyse) {
+            analyse = {
+              ...mapped,
+              doublons: []
+            };
+          } else {
+            analyse.factures.push(...mapped.factures);
+            analyse.lignes.push(...mapped.lignes);
+            analyse.lignesTotauxControle.push(...mapped.lignesTotauxControle);
+            analyse.nbFacturesStockExclues += mapped.nbFacturesStockExclues || 0;
+          }
+          usedV2 = true;
+        } catch (e) {
+          usedLegacy = true;
+          warnings.push(`Fallback parser local (${file.name}): ${e.message}`);
+          const contenu = await decodePdfFile(file);
+          const parsed = parserFichierOnayaPdf(contenu, file.name);
+          legacyFactures.push(...parsed.factures);
+          legacyLignes.push(...parsed.lignes);
+          legacyTotaux.push(...parsed.lignesTotauxControle);
         }
-        const mapped = mapV2ControlToAnalyse(controlPayload, fileMetaByName, facturesExistantes);
+      }
+
+      if (legacyFactures.length || legacyLignes.length) {
+        for (const ligne of legacyLignes) classerLigne(ligne, state.regles);
+        rattacherLignesAnnexesAuxProduits(legacyLignes);
+        const sansStockLegacy = exclureStocksDeAnalyse(legacyFactures, legacyLignes, legacyTotaux);
         if (!analyse) {
-          analyse = mapped;
+          analyse = {
+            idAnalyse: `analyse_${Date.now()}`,
+            dateAnalyse: new Date().toISOString(),
+            fichiers: [],
+            factures: sansStockLegacy.factures,
+            lignes: sansStockLegacy.lignes,
+            lignesTotauxControle: sansStockLegacy.lignesTotauxControle,
+            doublons: [],
+            nbFacturesStockExclues: sansStockLegacy.nbFacturesStockExclues || 0
+          };
         } else {
-          analyse.factures.push(...mapped.factures);
-          analyse.lignes.push(...mapped.lignes);
-          analyse.lignesTotauxControle.push(...mapped.lignesTotauxControle);
-          analyse.doublons.push(...mapped.doublons);
-          analyse.nbFacturesStockExclues += mapped.nbFacturesStockExclues || 0;
+          analyse.factures.push(...sansStockLegacy.factures);
+          analyse.lignes.push(...sansStockLegacy.lignes);
+          analyse.lignesTotauxControle.push(...sansStockLegacy.lignesTotauxControle);
+          analyse.nbFacturesStockExclues += sansStockLegacy.nbFacturesStockExclues || 0;
         }
       }
 
       if (!analyse) throw new Error('Aucune donnée analysée.');
       analyse.fichiers = fichiersInfo;
+      analyse.doublons = detecterDoublons(analyse.factures, facturesExistantes);
       analyse.synthese = construireSynthese(analyse);
 
       state.analyse = analyse;
@@ -1668,7 +1729,8 @@
         ? ` ${analyse.nbFacturesStockExclues} facture(s) de stock/sortie de stock ont été exclues.`
         : '';
       const warningsMsg = warnings.length ? ` ${warnings.length} avertissement(s) de parsing.` : '';
-      showMessage(`✅ Analyse terminée. Vérifiez le contrôle avant validation.${excludedMsg}${warningsMsg}`, 'success');
+      const modeMsg = usedV2 && usedLegacy ? ' Mode mixte v2+fallback.' : (usedLegacy ? ' Mode fallback local.' : '');
+      showMessage(`✅ Analyse terminée. Vérifiez le contrôle avant validation.${excludedMsg}${warningsMsg}${modeMsg}`, 'success');
     }
 
     function exportControleCsv() {
