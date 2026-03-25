@@ -137,9 +137,62 @@
 
     async function apiGet(path) {
       const res = await fetch(API + path, { method: 'GET' });
-      const payload = await res.json();
+      const raw = await res.text();
+      let payload = null;
+      try {
+        payload = raw ? JSON.parse(raw) : null;
+      } catch {
+        throw new Error(`Réponse non JSON sur ${path}.`);
+      }
       if (!res.ok) throw new Error(payload.error || `Erreur API ${path}`);
       return payload;
+    }
+
+    function toLocalControlPayload() {
+      const invoicesSrc = JSON.parse(localStorage.getItem('goudalle_achats_factures') || '[]');
+      const linesSrc = JSON.parse(localStorage.getItem('goudalle_achats_lignes') || '[]');
+      const invById = new Map(invoicesSrc.map((i) => [i.idFacture, i]));
+      const invoices = invoicesSrc.map((i) => ({
+        id: i.idFacture,
+        date: i.dateFacture,
+        numero_facture: i.numeroFacture,
+        fournisseur: i.fournisseurCode,
+        chantier: i.chantierOuAffaire,
+        libelle_facture: i.libelleFacture,
+        montant_ht: i.montantTotalFacture,
+        excluded_from_indicators: i.drapeauStock ? 1 : 0
+      }));
+      const lines = linesSrc.map((l) => ({
+        raw_invoice_id: l.idFactureParente,
+        line_order: l.ordreLigne,
+        ressource: l.ressource,
+        bl_numero: l.bl,
+        arc: l.arc,
+        libelle_ligne: l.designation,
+        unite: l.unite,
+        qte_fact: l.quantite,
+        pu: l.prixUnitaire,
+        montant: l.montantLigne,
+        excluded_from_indicators: l.drapeauStock ? 1 : 0
+      }));
+      return {
+        success: true,
+        batch: {
+          id: 'local-fallback',
+          nom_fichier: 'Historique local',
+          total_factures_detectees: invoices.length,
+          total_lignes_extraites: lines.length,
+          total_lignes_exclues_stock: lines.filter((x) => Number(x.excluded_from_indicators || 0)).length
+        },
+        invoices,
+        lines,
+        normalized: [],
+        allocated: [],
+        versions: [],
+        anomalies: [],
+        _local: true,
+        _invById: invById
+      };
     }
 
     function renderInvoices(rows) {
@@ -305,13 +358,39 @@
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectAchatSecondaryBar();
 
-      const batches = await apiGet('/achats-v2/import-batches');
+      let batches = [];
+      let localMode = false;
+      try {
+        batches = await apiGet('/achats-v2/import-batches');
+      } catch {
+        localMode = true;
+      }
       const select = document.getElementById('batchSelect');
       if (!Array.isArray(batches) || !batches.length) {
+        const localInvoices = JSON.parse(localStorage.getItem('goudalle_achats_factures') || '[]');
+        const localLines = JSON.parse(localStorage.getItem('goudalle_achats_lignes') || '[]');
+        if (localInvoices.length || localLines.length) {
+          localMode = true;
+          select.innerHTML = '<option value="local-fallback">local-fallback — Historique local validé</option>';
+          const payload = toLocalControlPayload();
+          const invoices = payload.invoices || [];
+          const lines = payload.lines || [];
+          const invoicesById = new Map(invoices.map(i => [i.id, i]));
+          renderInvoices(invoices);
+          renderRawLines(lines, invoicesById);
+          renderNormalized([], invoicesById);
+          renderAllocated([], invoicesById, new Map());
+          document.getElementById('renderPreview').innerHTML = '<p class="muted">Reconstruction v2 indisponible en mode fallback local.</p>';
+          document.getElementById('batchInfo').textContent =
+            `Mode fallback local | Factures: ${invoices.length} | Lignes: ${lines.length}`;
+          showMessage('⚠️ API v2 indisponible. Affichage fallback des données validées locales.', 'warning');
+          return;
+        }
         select.innerHTML = '<option value="">Aucun import v2</option>';
         document.querySelector('#tableInvoices tbody').innerHTML = '<tr><td colspan="7" style="text-align:center;">Aucune donnée</td></tr>';
         document.querySelector('#tableRawLines tbody').innerHTML = '<tr><td colspan="11" style="text-align:center;">Aucune donnée</td></tr>';
         document.getElementById('renderPreview').innerHTML = '<p class="muted">Aucune reconstruction disponible.</p>';
+        if (localMode) showMessage('⚠️ API v2 indisponible et aucun historique local trouvé.', 'warning');
         return;
       }
 

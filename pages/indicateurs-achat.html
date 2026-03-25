@@ -138,6 +138,44 @@
       return Number(v || 0).toLocaleString('fr-FR', { minimumFractionDigits: digits, maximumFractionDigits: digits });
     }
 
+    function buildMonthlyIndicatorsFromLocal(lignes) {
+      const byMonth = new Map();
+      const byId = new Map((lignes || []).map((l) => [l.idLigne, l]));
+
+      for (const line of (lignes || [])) {
+        if (line.drapeauStock) continue;
+        const month = toIsoMonth(line.dateFacture);
+        if (!month) continue;
+
+        const isAnnexe = Boolean(line.drapeauTransport || line.drapeauEcoContribution || line.drapeauTaxe);
+        const base = isAnnexe ? byId.get(line.idProduitRattache) : line;
+        if (!base || base.drapeauStock) continue;
+
+        const clt = isCltLine(base);
+        const lc = isLcLine(base);
+        if (!clt && !lc) continue;
+
+        if (!byMonth.has(month)) byMonth.set(month, { month, v_clt_m3: 0, v_lc_m3: 0, lc_amount: 0 });
+        const row = byMonth.get(month);
+        const vol = computeLineVolumeM3(base);
+
+        if (clt && vol != null && !isAnnexe) row.v_clt_m3 += vol;
+        if (lc && vol != null) {
+          if (!isAnnexe) row.v_lc_m3 += vol;
+          row.lc_amount += Number(line.montantLigne) || 0;
+        }
+      }
+
+      return [...byMonth.values()]
+        .sort((a, b) => a.month.localeCompare(b.month))
+        .map((r) => ({
+          month: r.month,
+          v_clt_m3: r.v_clt_m3,
+          v_lc_m3: r.v_lc_m3,
+          prix_moyen_lc_eur_m3: r.v_lc_m3 > 0 ? (r.lc_amount / r.v_lc_m3) : null
+        }));
+    }
+
     async function fetchMonthlyIndicatorsV2() {
       const res = await fetch(window.location.origin + '/api/achats-v2/indicators-monthly', { method: 'GET' });
       const payload = await res.json();
@@ -149,10 +187,20 @@
       const tbody = document.querySelector('#tableIndicateursMensuels tbody');
       const note = document.getElementById('indicateursNote');
       let rows = [];
+      let mode = 'v2';
       try {
         rows = await fetchMonthlyIndicatorsV2();
       } catch (e) {
-        note.textContent = `Indicateurs v2 indisponibles (${e.message}).`;
+        mode = 'local';
+        rows = buildMonthlyIndicatorsFromLocal(JSON.parse(localStorage.getItem('goudalle_achats_lignes') || '[]'));
+        note.textContent = `Indicateurs v2 indisponibles (${e.message}). Affichage fallback local.`;
+      }
+      if (!rows.length) {
+        const localRows = buildMonthlyIndicatorsFromLocal(JSON.parse(localStorage.getItem('goudalle_achats_lignes') || '[]'));
+        if (localRows.length) {
+          rows = localRows;
+          mode = 'local';
+        }
       }
 
       if (!rows.length) {
@@ -169,7 +217,9 @@
           <td>${r.prix_moyen_lc_eur_m3 != null ? formatNumber(r.prix_moyen_lc_eur_m3, 0) : '—'}</td>
         </tr>
       `).join('');
-      note.textContent = 'Calcul v2 par lignes retraitées actives (stock exclu, ventilation BL appliquée).';
+      note.textContent = mode === 'v2'
+        ? 'Calcul v2 par lignes retraitées actives (stock exclu, ventilation BL appliquée).'
+        : 'Mode fallback local: calcul basé sur les lignes validées de la page de saisie.';
     }
 
     let _achatsPageInitDone = false;
