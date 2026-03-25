@@ -14,28 +14,69 @@
       display:inline-block; padding:2px 8px; border-radius:999px;
       border:1px solid #cfd8cf; background:#f4f7f4; font-size:12px;
     }
-    .pdf-batch { display:flex; flex-direction:column; gap:18px; }
-    .pdf-invoice { border:1px solid #d9d9d9; background:#fff; }
-    .pdf-invoice table { width:100%; border-collapse:collapse; table-layout:fixed; }
-    .pdf-head th {
-      background:#f2f2eb; text-align:left; border-bottom:1px solid #d9d9d9;
-      padding:6px; font-weight:700;
+    .invoice-list {
+      border:1px solid #d9d9d9;
+      border-radius:12px;
+      overflow:hidden;
+      background:#fff;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.05);
     }
-    .pdf-head td {
-      padding:6px; border-bottom:1px solid #d9d9d9;
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    .invoice-item { border-bottom:1px solid #e6e6e6; background:#fff; }
+    .invoice-item:last-child { border-bottom:none; }
+    .invoice-row {
+      width:100%; border:none; background:#fff; padding:0; cursor:pointer;
+      text-align:left; font:inherit;
     }
-    .pdf-lines th {
-      text-align:left; padding:6px; border-bottom:1px solid #d9d9d9; font-weight:700;
-      background:#fafafa;
+    .invoice-row:hover { background:#f8fbf8; }
+    .invoice-row-grid {
+      display:grid;
+      grid-template-columns: 5% 9% 18% 13% 43% 12%;
+      gap:8px;
+      padding:12px 14px;
+      align-items:center;
     }
-    .pdf-lines td {
-      padding:6px; border-bottom:1px solid #ececec;
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    .invoice-row-grid.head {
+      background:linear-gradient(180deg, #f6f6ef 0%, #efefe7 100%);
+      font-weight:700;
+      cursor:default;
     }
-    .pdf-lines tr:last-child td { border-bottom:none; }
+    .invoice-item.open .invoice-row-grid { background:#f3faf3; }
+    .invoice-item.open .invoice-summary { font-weight:700; }
+    .invoice-toggle {
+      display:inline-flex; align-items:center; justify-content:center;
+      width:24px; height:24px; border-radius:999px; border:1px solid #d7ded7; background:#fff;
+      color:#3d5540; font-size:12px; transition: transform .2s ease, background-color .2s ease;
+    }
+    .invoice-item.open .invoice-toggle { transform: rotate(90deg); background:#e9f3e9; }
+    .line-count {
+      display:inline-flex; align-items:center; justify-content:center;
+      min-width:24px; height:22px; padding:0 8px; border-radius:999px;
+      border:1px solid #d0d7d0; background:#f4f8f4; color:#38503b; font-size:12px;
+    }
+    .invoice-detail {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.25s ease;
+      background:#fcfcfc;
+    }
+    .invoice-detail.open { border-top:1px solid #e5e5e5; }
+    .invoice-detail-inner { padding:12px 14px 14px; }
+    .invoice-detail table { width:100%; border-collapse:collapse; table-layout:fixed; background:#fff; }
+    .invoice-detail th {
+      text-align:left; padding:8px 6px; border-bottom:1px solid #d9d9d9; background:#f8f8f8;
+    }
+    .invoice-detail td {
+      padding:8px 6px; border-bottom:1px solid #ececec; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .invoice-detail tr:last-child td { border-bottom:none; }
+    .hidden { display:none !important; }
     .num { text-align:right; font-variant-numeric: tabular-nums; }
     .mono { font-family: Consolas, monospace; }
+    .invoice-summary { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    @media (max-width: 980px) {
+      .invoice-row-grid { grid-template-columns: 7% 17% 24% 16% 22% 14%; font-size:12px; }
+      .invoice-detail table { font-size:12px; }
+    }
   </style>
 </head>
 <body>
@@ -162,12 +203,19 @@
       };
     }
 
-    function renderReconstructionFromData(invoices, lines) {
-      const root = document.getElementById('renderPreview');
-      if (!invoices.length) {
-        root.innerHTML = '<p class="muted">Aucune facture disponible.</p>';
-        return;
-      }
+    function applyChantierInheritance(factures) {
+      return (factures || []).map((facture) => ({
+        ...facture,
+        lignes: (facture.lignes || []).map((ligne) => ({
+          ...ligne,
+          chantier: (ligne.chantier == null || String(ligne.chantier).trim() === '')
+            ? (facture.chantier || '')
+            : ligne.chantier
+        }))
+      }));
+    }
+
+    function composeFactures(invoices, lines) {
       const linesByInvoice = new Map();
       for (const l of (lines || [])) {
         if (!linesByInvoice.has(l.raw_invoice_id)) linesByInvoice.set(l.raw_invoice_id, []);
@@ -176,80 +224,123 @@
       for (const arr of linesByInvoice.values()) {
         arr.sort((a, b) => (a.line_order || 0) - (b.line_order || 0));
       }
-
-      const sortedInvoices = [...invoices].sort((a, b) => {
+      const orderedInvoices = [...(invoices || [])].sort((a, b) => {
         const d = String(a.date || '').localeCompare(String(b.date || ''));
         if (d !== 0) return d;
         return String(a.numero_facture || '').localeCompare(String(b.numero_facture || ''));
       });
+      const factures = orderedInvoices.map((inv) => ({
+        id: inv.id,
+        date: inv.date || '',
+        fournisseur: inv.fournisseur || '',
+        chantier: inv.chantier || '',
+        montant: inv.montant_ht,
+        libelle: inv.libelle_facture || '',
+        lignes: (linesByInvoice.get(inv.id) || []).map((l) => ({
+          ressource: l.ressource || '',
+          bl_numero: l.bl_numero || '',
+          arc: l.arc || '',
+          chantier: l.chantier_ligne || '',
+          libelle_ligne: l.libelle_ligne || '',
+          unite: l.unite || '',
+          qte: l.qte_fact,
+          pu: l.pu,
+          montant: l.montant
+        }))
+      }));
+      return applyChantierInheritance(factures);
+    }
 
+    function bindInvoiceAccordion(root) {
+      const rows = root.querySelectorAll('.invoice-row[data-invoice-id]');
+      rows.forEach((row) => {
+        row.addEventListener('click', () => {
+          const invoiceId = row.getAttribute('data-invoice-id');
+          const item = root.querySelector(`.invoice-item[data-invoice-id="${invoiceId}"]`);
+          const detail = root.querySelector(`.invoice-detail[data-invoice-id="${invoiceId}"]`);
+          if (!item || !detail) return;
+          const willOpen = !detail.classList.contains('open');
+          detail.classList.toggle('open');
+          item.classList.toggle('open');
+          if (willOpen) {
+            detail.style.maxHeight = `${detail.scrollHeight}px`;
+          } else {
+            detail.style.maxHeight = '0px';
+          }
+        });
+      });
+    }
+
+    function renderReconstructionFromData(invoices, lines) {
+      const root = document.getElementById('renderPreview');
+      const factures = composeFactures(invoices, lines);
+      if (!factures.length) {
+        root.innerHTML = '<p class="muted">Aucune facture disponible.</p>';
+        return;
+      }
       root.innerHTML = `
-        <div class="pdf-batch">
-          ${sortedInvoices.map(inv => {
-            const invLines = linesByInvoice.get(inv.id) || [];
+        <div class="invoice-list">
+          <div class="invoice-row-grid head">
+            <div></div>
+            <div>Date</div>
+            <div>Fournisseur</div>
+            <div>Chantier</div>
+            <div>Libellé</div>
+            <div class="num">Montant H.T</div>
+          </div>
+          ${factures.map((inv) => {
             return `
-              <section class="pdf-invoice">
-                <table class="pdf-head">
-                  <thead>
-                    <tr>
-                      <th style="width:8%;">Date</th>
-                      <th style="width:8%;">N° Fact.</th>
-                      <th style="width:5%;">Avoir</th>
-                      <th style="width:8%;">Journal</th>
-                      <th style="width:16%;">Fournisseur</th>
-                      <th style="width:12%;">Chantier</th>
-                      <th style="width:31%;">Libellé</th>
-                      <th class="num" style="width:12%;">Montant H.T</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>${esc(inv.date || '')}</td>
-                      <td class="mono">${esc(inv.numero_facture || '')}</td>
-                      <td>${esc(inv.avoir || '')}</td>
-                      <td>${esc(inv.journal || '')}</td>
-                      <td>${esc(inv.fournisseur || '')}</td>
-                      <td>${esc(inv.chantier || '')}</td>
-                      <td>${esc(inv.libelle_facture || '')}</td>
-                      <td class="num">${fmt(inv.montant_ht)}</td>
-                    </tr>
-                  </tbody>
-                </table>
-                <table class="pdf-lines">
-                  <thead>
-                    <tr>
-                      <th style="width:12%;">Ressource</th>
-                      <th style="width:11%;">BL N°</th>
-                      <th style="width:8%;">A.R.C</th>
-                      <th style="width:11%;">Chantier</th>
-                      <th style="width:28%;">Libellé</th>
-                      <th style="width:6%;">Unité</th>
-                      <th class="num" style="width:10%;">Qté Fact.</th>
-                      <th class="num" style="width:7%;">P.U</th>
-                      <th class="num" style="width:7%;">Montant</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${invLines.map(l => `
-                      <tr>
-                        <td>${esc(l.ressource || '')}</td>
-                        <td class="mono">${esc(l.bl_numero || '')}</td>
-                        <td class="mono">${esc(l.arc || '')}</td>
-                        <td class="mono">${esc(l.chantier_ligne || '')}</td>
-                        <td>${esc(l.libelle_ligne || '')}</td>
-                        <td>${esc(l.unite || '')}</td>
-                        <td class="num">${l.qte_fact != null ? fmt(l.qte_fact) : '—'}</td>
-                        <td class="num">${l.pu != null ? fmt(l.pu) : '—'}</td>
-                        <td class="num">${l.montant != null ? fmt(l.montant) : '—'}</td>
-                      </tr>
-                    `).join('') || '<tr><td colspan="9" class="muted">Aucune ligne</td></tr>'}
-                  </tbody>
-                </table>
+              <section class="invoice-item" data-invoice-id="${esc(inv.id)}">
+                <button type="button" class="invoice-row" data-invoice-id="${esc(inv.id)}">
+                  <div class="invoice-row-grid">
+                    <div><span class="invoice-toggle">▶</span></div>
+                    <div>${esc(inv.date)}</div>
+                    <div>${esc(inv.fournisseur)}</div>
+                    <div class="mono">${esc(inv.chantier)}</div>
+                    <div class="invoice-summary">${esc(inv.libelle)} <span class="line-count">${inv.lignes.length}</span></div>
+                    <div class="num"><strong>${fmt(inv.montant)}</strong></div>
+                  </div>
+                </button>
+                <div class="invoice-detail" data-invoice-id="${esc(inv.id)}">
+                  <div class="invoice-detail-inner">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th style="width:12%;">Ressource</th>
+                          <th style="width:11%;">BL N°</th>
+                          <th style="width:8%;">A.R.C</th>
+                          <th style="width:11%;">Chantier</th>
+                          <th style="width:28%;">Libellé</th>
+                          <th style="width:6%;">Unité</th>
+                          <th class="num" style="width:10%;">Qté Fact.</th>
+                          <th class="num" style="width:7%;">P.U</th>
+                          <th class="num" style="width:7%;">Montant</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${inv.lignes.map((l) => `
+                          <tr>
+                            <td>${esc(l.ressource)}</td>
+                            <td class="mono">${esc(l.bl_numero)}</td>
+                            <td class="mono">${esc(l.arc)}</td>
+                            <td class="mono">${esc(l.chantier)}</td>
+                            <td>${esc(l.libelle_ligne)}</td>
+                            <td>${esc(l.unite)}</td>
+                            <td class="num">${l.qte != null ? fmt(l.qte) : '—'}</td>
+                            <td class="num">${l.pu != null ? fmt(l.pu) : '—'}</td>
+                            <td class="num">${l.montant != null ? fmt(l.montant) : '—'}</td>
+                          </tr>
+                        `).join('') || '<tr><td colspan="9" class="muted">Aucune ligne</td></tr>'}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </section>
             `;
           }).join('')}
         </div>
       `;
+      bindInvoiceAccordion(root);
     }
 
     async function loadControl(batchId) {
