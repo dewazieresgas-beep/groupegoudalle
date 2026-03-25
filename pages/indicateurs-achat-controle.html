@@ -79,10 +79,11 @@
     .invoice-detail td {
       padding:8px 6px; border-bottom:1px solid #ececec; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#222;
     }
+    .invoice-detail th, .invoice-detail td { box-sizing:border-box; }
     .invoice-detail .montant-col { white-space:nowrap; overflow:visible; text-overflow:clip; font-weight:700; }
     .invoice-detail tr:last-child td { border-bottom:none; }
     .hidden { display:none !important; }
-    .num { text-align:right; font-variant-numeric: tabular-nums; }
+    .num { text-align:center; font-variant-numeric: tabular-nums; }
     .mono { font-family: Consolas, monospace; }
     .invoice-summary { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .imports-list { display:flex; flex-direction:column; gap:8px; }
@@ -94,11 +95,19 @@
     .imports-meta { min-width:0; }
     .imports-meta strong { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .imports-meta span { color:#666; font-size:12px; }
+    .detail-placeholder { padding:8px; }
+    .period-filters {
+      display:grid; grid-template-columns: 220px 220px; gap:12px;
+      margin-bottom:12px; align-items:end;
+    }
+    .period-filters label { display:block; margin-bottom:6px; font-weight:600; color:#3a3a3a; }
+    .period-filters select { width:100%; }
     @media (max-width: 980px) {
       .invoice-list { min-width: 900px; }
       .invoice-row-grid { grid-template-columns: 42px 98px 160px 130px 1fr 130px; font-size:12px; }
       .invoice-detail table { font-size:12px; }
       .imports-row { grid-template-columns: 1fr; }
+      .period-filters { grid-template-columns: 1fr 1fr; }
     }
   </style>
 </head>
@@ -131,13 +140,31 @@
 
       <div class="card">
         <div class="card-title"><h2>Reconstruction visuelle PDF</h2></div>
-        <div class="card-body" id="renderPreview"></div>
+        <div class="card-body">
+          <div class="period-filters">
+            <div>
+              <label for="filterYear">Année</label>
+              <select id="filterYear"></select>
+            </div>
+            <div>
+              <label for="filterMonth">Mois</label>
+              <select id="filterMonth"></select>
+            </div>
+          </div>
+          <div id="renderPreview"></div>
+        </div>
       </div>
     </main>
   </div>
 
   <script>
     const API = window.location.origin + '/api';
+    const MONTHS_FR = ['01 - Janvier', '02 - Février', '03 - Mars', '04 - Avril', '05 - Mai', '06 - Juin', '07 - Juillet', '08 - Août', '09 - Septembre', '10 - Octobre', '11 - Novembre', '12 - Décembre'];
+    const controlState = {
+      factures: [],
+      selectedYear: '',
+      selectedMonth: ''
+    };
 
     function showMessage(msg, type='info') {
       const el = document.getElementById('pageMessage');
@@ -247,6 +274,15 @@
       }));
     }
 
+    function computeSafeInvoiceTotal(headerTotal, lines) {
+      const h = Number.isFinite(Number(headerTotal)) ? Number(headerTotal) : null;
+      const s = (lines || []).reduce((acc, l) => acc + (Number(l.montant) || 0), 0);
+      if (h == null) return s;
+      const ratio = s !== 0 ? Math.abs(h / s) : null;
+      const mismatch = ratio != null && (ratio > 100 || ratio < 0.01 || Math.abs(h - s) > Math.max(5000, Math.abs(s) * 0.9));
+      return mismatch ? s : h;
+    }
+
     function composeFactures(invoices, lines) {
       const linesByInvoice = new Map();
       for (const l of (lines || [])) {
@@ -256,12 +292,8 @@
       for (const arr of linesByInvoice.values()) {
         arr.sort((a, b) => (a.line_order || 0) - (b.line_order || 0));
       }
-      const orderedInvoices = [...(invoices || [])].sort((a, b) => {
-        const d = String(a.date || '').localeCompare(String(b.date || ''));
-        if (d !== 0) return d;
-        return String(a.numero_facture || '').localeCompare(String(b.numero_facture || ''));
-      });
-      const factures = orderedInvoices.map((inv) => ({
+      // On conserve l'ordre d'apparition du PDF (ordre parser/API), sans re-tri UI.
+      const factures = [...(invoices || [])].map((inv) => ({
         id: inv.id,
         date: inv.date || '',
         fournisseur: inv.fournisseur || '',
@@ -280,10 +312,115 @@
           montant: l.montant
         }))
       }));
-      return applyChantierInheritance(factures);
+      const withChantier = applyChantierInheritance(factures);
+      return withChantier.map((f) => ({ ...f, montant: computeSafeInvoiceTotal(f.montant, f.lignes) }));
+    }
+
+    function extractYearMonth(rawDate) {
+      const txt = String(rawDate || '').trim();
+      let m = txt.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (m) return { year: m[3], month: m[2] };
+      m = txt.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (m) return { year: m[1], month: m[2] };
+      return null;
+    }
+
+    function buildPeriodIndex(factures) {
+      const byYear = new Map();
+      for (const f of (factures || [])) {
+        const ym = extractYearMonth(f.date);
+        if (!ym) continue;
+        if (!byYear.has(ym.year)) byYear.set(ym.year, new Set());
+        byYear.get(ym.year).add(ym.month);
+      }
+      return byYear;
+    }
+
+    function renderPeriodFilters(factures) {
+      const yearSel = document.getElementById('filterYear');
+      const monthSel = document.getElementById('filterMonth');
+      const idx = buildPeriodIndex(factures);
+      const years = [...idx.keys()].sort((a, b) => Number(b) - Number(a));
+
+      if (!years.length) {
+        yearSel.innerHTML = '<option value="">Aucune année</option>';
+        monthSel.innerHTML = '<option value="">Aucun mois</option>';
+        controlState.selectedYear = '';
+        controlState.selectedMonth = '';
+        yearSel.disabled = true;
+        monthSel.disabled = true;
+        return;
+      }
+      yearSel.disabled = false;
+      monthSel.disabled = false;
+
+      if (!years.includes(controlState.selectedYear)) controlState.selectedYear = years[0];
+      yearSel.innerHTML = years.map((y) => `<option value="${esc(y)}"${y === controlState.selectedYear ? ' selected' : ''}>${esc(y)}</option>`).join('');
+
+      const months = [...(idx.get(controlState.selectedYear) || [])].sort((a, b) => Number(a) - Number(b));
+      if (!months.includes(controlState.selectedMonth)) controlState.selectedMonth = months[0] || '';
+      monthSel.innerHTML = months.map((m) => {
+        const label = MONTHS_FR[Number(m) - 1] || m;
+        return `<option value="${esc(m)}"${m === controlState.selectedMonth ? ' selected' : ''}>${esc(label)}</option>`;
+      }).join('');
+    }
+
+    function getFilteredFactures(factures) {
+      return (factures || []).filter((f) => {
+        const ym = extractYearMonth(f.date);
+        if (!ym) return false;
+        return ym.year === controlState.selectedYear && ym.month === controlState.selectedMonth;
+      });
+    }
+
+    function renderInvoiceDetailTable(inv) {
+      return `
+        <table>
+          <colgroup>
+            <col style="width:12%;">
+            <col style="width:11%;">
+            <col style="width:8%;">
+            <col style="width:11%;">
+            <col style="width:28%;">
+            <col style="width:6%;">
+            <col style="width:10%;">
+            <col style="width:7%;">
+            <col style="width:7%;">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Ressource</th>
+              <th>BL N°</th>
+              <th>A.R.C</th>
+              <th>Chantier</th>
+              <th>Libellé</th>
+              <th class="num">Unité</th>
+              <th class="num">Qté Fact.</th>
+              <th class="num">P.U</th>
+              <th class="num">Montant</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${inv.lignes.map((l) => `
+              <tr>
+                <td>${esc(l.ressource)}</td>
+                <td class="mono">${esc(l.bl_numero)}</td>
+                <td class="mono">${esc(l.arc)}</td>
+                <td class="mono">${esc(l.chantier)}</td>
+                <td>${esc(l.libelle_ligne)}</td>
+                <td class="num">${esc(l.unite)}</td>
+                <td class="num">${l.qte != null ? fmt(l.qte) : '—'}</td>
+                <td class="num">${l.pu != null ? fmt(l.pu) : '—'}</td>
+                <td class="num montant-col">${l.montant != null ? fmt(l.montant) : '—'}</td>
+              </tr>
+            `).join('') || '<tr><td colspan="9" class="muted">Aucune ligne</td></tr>'}
+          </tbody>
+        </table>
+      `;
     }
 
     function bindInvoiceAccordion(root) {
+      const facturesById = new Map((window.__facturesControle || []).map((f) => [String(f.id), f]));
       const rows = root.querySelectorAll('.invoice-row[data-invoice-id]');
       rows.forEach((row) => {
         row.addEventListener('click', () => {
@@ -292,6 +429,22 @@
           const detail = root.querySelector(`.invoice-detail[data-invoice-id="${invoiceId}"]`);
           if (!item || !detail) return;
           const willOpen = !detail.classList.contains('open');
+          if (willOpen) {
+            root.querySelectorAll('.invoice-detail.open').forEach((d) => {
+              if (d !== detail) {
+                d.classList.remove('open');
+                d.style.maxHeight = '0px';
+              }
+            });
+            root.querySelectorAll('.invoice-item.open').forEach((i) => {
+              if (i !== item) i.classList.remove('open');
+            });
+            if (detail.dataset.loaded !== '1') {
+              const inv = facturesById.get(String(invoiceId));
+              if (inv) detail.querySelector('.invoice-detail-inner').innerHTML = renderInvoiceDetailTable(inv);
+              detail.dataset.loaded = '1';
+            }
+          }
           detail.classList.toggle('open');
           item.classList.toggle('open');
           if (willOpen) {
@@ -303,11 +456,11 @@
       });
     }
 
-    function renderReconstructionFromData(invoices, lines) {
+    function renderReconstructionList(factures) {
       const root = document.getElementById('renderPreview');
-      const factures = composeFactures(invoices, lines);
+      window.__facturesControle = factures;
       if (!factures.length) {
-        root.innerHTML = '<p class="muted">Aucune facture disponible.</p>';
+        root.innerHTML = '<p class="muted">Aucune facture disponible pour la période sélectionnée.</p>';
         return;
       }
       root.innerHTML = `
@@ -333,38 +486,9 @@
                     <div class="num invoice-montant">${fmt(inv.montant)}</div>
                   </div>
                 </button>
-                <div class="invoice-detail" data-invoice-id="${esc(inv.id)}">
+                <div class="invoice-detail" data-invoice-id="${esc(inv.id)}" data-loaded="0">
                   <div class="invoice-detail-inner">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th style="width:12%;">Ressource</th>
-                          <th style="width:11%;">BL N°</th>
-                          <th style="width:8%;">A.R.C</th>
-                          <th style="width:11%;">Chantier</th>
-                          <th style="width:28%;">Libellé</th>
-                          <th style="width:6%;">Unité</th>
-                          <th class="num" style="width:10%;">Qté Fact.</th>
-                          <th class="num" style="width:7%;">P.U</th>
-                          <th class="num" style="width:7%;">Montant</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        ${inv.lignes.map((l) => `
-                          <tr>
-                            <td>${esc(l.ressource)}</td>
-                            <td class="mono">${esc(l.bl_numero)}</td>
-                            <td class="mono">${esc(l.arc)}</td>
-                            <td class="mono">${esc(l.chantier)}</td>
-                            <td>${esc(l.libelle_ligne)}</td>
-                            <td>${esc(l.unite)}</td>
-                            <td class="num">${l.qte != null ? fmt(l.qte) : '—'}</td>
-                            <td class="num">${l.pu != null ? fmt(l.pu) : '—'}</td>
-                            <td class="num montant-col">${l.montant != null ? fmt(l.montant) : '—'}</td>
-                          </tr>
-                        `).join('') || '<tr><td colspan="9" class="muted">Aucune ligne</td></tr>'}
-                      </tbody>
-                    </table>
+                    <div class="detail-placeholder muted">Clique pour charger le détail de cette facture.</div>
                   </div>
                 </div>
               </section>
@@ -373,6 +497,17 @@
         </div>
       `;
       bindInvoiceAccordion(root);
+    }
+
+    function refreshFilteredView() {
+      renderPeriodFilters(controlState.factures);
+      const filtered = getFilteredFactures(controlState.factures);
+      renderReconstructionList(filtered);
+    }
+
+    function renderReconstructionFromData(invoices, lines) {
+      controlState.factures = composeFactures(invoices, lines);
+      refreshFilteredView();
     }
 
     async function loadControl(batchId) {
@@ -444,6 +579,17 @@
       activeBatchId = ordered[0]?.id || null;
       renderImportsList(ordered, activeBatchId);
       if (activeBatchId) await loadControl(activeBatchId);
+
+      const yearSel = document.getElementById('filterYear');
+      const monthSel = document.getElementById('filterMonth');
+      yearSel.onchange = () => {
+        controlState.selectedYear = yearSel.value;
+        refreshFilteredView();
+      };
+      monthSel.onchange = () => {
+        controlState.selectedMonth = monthSel.value;
+        refreshFilteredView();
+      };
 
       const root = document.getElementById('importsList');
       root.addEventListener('click', async (e) => {

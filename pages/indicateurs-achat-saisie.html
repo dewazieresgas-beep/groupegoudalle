@@ -533,6 +533,7 @@
             montantTotalLigne: Number(inv.total_bon)
           });
         }
+        const totalBonFacture = inv.total_bon != null ? Number(inv.total_bon) : null;
 
         const invLines = (linesByInvoice.get(inv.id) || []).sort((a, b) => (a.line_order || 0) - (b.line_order || 0));
         for (const r of invLines) {
@@ -572,6 +573,7 @@
           facture.nombreLignes += 1;
           facture.sommeLignes += ligne.montantLigne || 0;
         }
+        facture.montantTotalFacture = pickRobustInvoiceTotal(facture.montantTotalFacture, totalBonFacture, facture.sommeLignes);
       }
 
       for (const ligne of lignes) classerLigne(ligne, state.regles);
@@ -723,6 +725,34 @@
         montantTotalLigne: amountRaw ? toNumberFr(amountRaw) : null,
         texte: clean
       };
+    }
+
+    function pickRobustInvoiceTotal(headerTotal, totalBon, sumLines) {
+      const h = Number.isFinite(Number(headerTotal)) ? Number(headerTotal) : null;
+      const t = Number.isFinite(Number(totalBon)) ? Number(totalBon) : null;
+      const s = Number.isFinite(Number(sumLines)) ? Number(sumLines) : null;
+
+      const ratio = (a, b) => {
+        if (a == null || b == null || b === 0) return null;
+        return Math.abs(a / b);
+      };
+
+      const hasLargeMismatch = (a, b) => {
+        const r = ratio(a, b);
+        if (r == null) return false;
+        return r > 100 || r < 0.01 || Math.abs(a - b) > Math.max(5000, Math.abs(b) * 0.9);
+      };
+
+      if (t != null) {
+        if (h == null) return t;
+        if (hasLargeMismatch(h, t)) return t;
+        return t;
+      }
+      if (s != null) {
+        if (h == null) return s;
+        if (hasLargeMismatch(h, s)) return s;
+      }
+      return h;
     }
 
     function parsePdfHeaderLine(line) {
@@ -935,6 +965,13 @@
             montantTotalLigne: totalInfo.montantTotalLigne
           });
           if (totalInfo.typeTotal === 'Total Bon') {
+            factureCourante.montantTotalFacture = pickRobustInvoiceTotal(
+              factureCourante.montantTotalFacture,
+              totalInfo.montantTotalLigne,
+              factureCourante.sommeLignes
+            );
+          }
+          if (totalInfo.typeTotal === 'Total Bon') {
             factureOuverte = false;
             factureCourante = null;
           }
@@ -979,6 +1016,11 @@
         lignes.push(ligne);
         factureCourante.nombreLignes += 1;
         factureCourante.sommeLignes += ligne.montantLigne || 0;
+      }
+
+      for (const f of factures) {
+        const totalBon = (lignesTotauxControle || []).find((t) => t.idFacture === f.idFacture && t.typeTotal === 'Total Bon')?.montantTotalLigne;
+        f.montantTotalFacture = pickRobustInvoiceTotal(f.montantTotalFacture, totalBon, f.sommeLignes);
       }
 
       return {

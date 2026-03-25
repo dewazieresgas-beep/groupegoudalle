@@ -63,6 +63,38 @@ function toNumberFr(raw) {
   return Number.isFinite(n) ? n : null;
 }
 
+function pickRobustInvoiceTotal(headerTotal, totalBon, sumLines) {
+  const h = Number.isFinite(Number(headerTotal)) ? Number(headerTotal) : null;
+  const t = Number.isFinite(Number(totalBon)) ? Number(totalBon) : null;
+  const s = Number.isFinite(Number(sumLines)) ? Number(sumLines) : null;
+
+  const ratio = (a, b) => {
+    if (a == null || b == null || b === 0) return null;
+    return Math.abs(a / b);
+  };
+
+  const hasLargeMismatch = (a, b) => {
+    const r = ratio(a, b);
+    if (r == null) return false;
+    return r > 100 || r < 0.01 || Math.abs(a - b) > Math.max(5000, Math.abs(b) * 0.9);
+  };
+
+  // Priorité métier: Total Bon est généralement la valeur la plus fiable.
+  if (t != null) {
+    if (h == null) return t;
+    if (hasLargeMismatch(h, t)) return t;
+    return t;
+  }
+
+  // Sans Total Bon: on corrige un header aberrant avec la somme des lignes.
+  if (s != null) {
+    if (h == null) return s;
+    if (hasLargeMismatch(h, s)) return s;
+  }
+
+  return h;
+}
+
 function dedupeRepeatedLine(line) {
   let out = String(line || '').replace(/\s+/g, ' ').trim();
   if (!out) return out;
@@ -219,6 +251,17 @@ function parsePdfInvoiceBlocks(text) {
     return txt.includes('ressource') && txt.includes('arc') && txt.includes('libelle') && txt.includes('qte') && txt.includes('montant');
   };
 
+  const finalizeInvoice = (inv) => {
+    if (!inv) return null;
+    const sumLines = (inv.lines || []).reduce((acc, l) => acc + (Number(l.montant) || 0), 0);
+    const robustTotal = pickRobustInvoiceTotal(inv.montant_ht, inv.total_bon, sumLines);
+    return {
+      ...inv,
+      montant_ht: robustTotal,
+      total_bon: inv.total_bon != null ? inv.total_bon : null
+    };
+  };
+
   for (const raw of lines) {
     if (/^--\s*\d+\s+of\s+\d+\s*--$/i.test(raw)) continue;
     if (isFactureCols(raw) || isDetailCols(raw)) continue;
@@ -227,7 +270,7 @@ function parsePdfInvoiceBlocks(text) {
     if (header) {
       if (current) {
         warnings.push(`Facture ${current.numero_facture || '(inconnue)'} clôturée sans Total Bon explicite.`);
-        invoices.push(current);
+        invoices.push(finalizeInvoice(current));
       }
       currentOrder = 0;
       current = {
@@ -245,7 +288,7 @@ function parsePdfInvoiceBlocks(text) {
     if (total) {
       if (total.type_total === 'Total Bon') {
         current.total_bon = total.total_value;
-        invoices.push(current);
+        invoices.push(finalizeInvoice(current));
         current = null;
       }
       continue;
@@ -262,7 +305,7 @@ function parsePdfInvoiceBlocks(text) {
 
   if (current) {
     warnings.push(`Facture ${current.numero_facture || '(inconnue)'} en fin de document sans Total Bon.`);
-    invoices.push(current);
+    invoices.push(finalizeInvoice(current));
   }
 
   return { invoices, warnings };
