@@ -639,6 +639,33 @@ app.delete('/api/achats-v2/history', (req, res) => {
   res.json({ success: true, message: 'Historique achats v2 supprimé.' });
 });
 
+app.delete('/api/achats-v2/import-batches/:batchId', (req, res) => {
+  const batchId = String(req.params.batchId || '');
+  if (!batchId) {
+    return res.status(400).json({ success: false, error: 'batchId manquant.' });
+  }
+
+  const importBatches = dbGet('achats_v2_import_batches', []);
+  const batch = importBatches.find((b) => b.id === batchId);
+  if (!batch) {
+    return res.status(404).json({ success: false, error: 'Import introuvable.' });
+  }
+
+  const rawInvoices = dbGet('achats_v2_raw_invoices', []);
+  const rawInvoiceIds = new Set(rawInvoices.filter((r) => r.batch_id === batchId).map((r) => r.id));
+
+  dbSet('achats_v2_import_batches', importBatches.filter((b) => b.id !== batchId));
+  dbSet('achats_v2_raw_invoices', rawInvoices.filter((r) => r.batch_id !== batchId));
+  dbSet('achats_v2_raw_invoice_lines', dbGet('achats_v2_raw_invoice_lines', []).filter((l) => !rawInvoiceIds.has(l.raw_invoice_id)));
+  dbSet('achats_v2_normalized_invoice_lines', dbGet('achats_v2_normalized_invoice_lines', []).filter((l) => !rawInvoiceIds.has(l.raw_invoice_id)));
+  dbSet('achats_v2_allocated_invoice_lines', dbGet('achats_v2_allocated_invoice_lines', []).filter((l) => !rawInvoiceIds.has(l.raw_invoice_id)));
+  dbSet('achats_v2_invoice_render_cache', dbGet('achats_v2_invoice_render_cache', []).filter((r) => r.batch_id !== batchId));
+  dbSet('achats_v2_invoice_versions', dbGet('achats_v2_invoice_versions', []).filter((v) => !rawInvoiceIds.has(v.raw_invoice_id)));
+  dbSet('achats_v2_anomaly_logs', dbGet('achats_v2_anomaly_logs', []).filter((a) => a.batch_id !== batchId));
+
+  return res.json({ success: true, deleted_batch_id: batchId });
+});
+
 app.get('/api/achats-v2/control/:batchId', (req, res) => {
   const batchId = String(req.params.batchId || '');
   const batch = dbGet('achats_v2_import_batches', []).find((b) => b.id === batchId);

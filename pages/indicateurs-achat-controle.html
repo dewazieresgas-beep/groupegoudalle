@@ -73,9 +73,19 @@
     .num { text-align:right; font-variant-numeric: tabular-nums; }
     .mono { font-family: Consolas, monospace; }
     .invoice-summary { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .imports-list { display:flex; flex-direction:column; gap:8px; }
+    .imports-row {
+      display:grid; grid-template-columns: 1fr auto; gap:10px; align-items:center;
+      border:1px solid #e2e7e2; border-radius:10px; background:#fff; padding:10px 12px;
+    }
+    .imports-row.active { border-color:#9ec2a1; background:#f3faf3; }
+    .imports-meta { min-width:0; }
+    .imports-meta strong { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .imports-meta span { color:#666; font-size:12px; }
     @media (max-width: 980px) {
       .invoice-row-grid { grid-template-columns: 7% 17% 24% 16% 22% 14%; font-size:12px; }
       .invoice-detail table { font-size:12px; }
+      .imports-row { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -95,17 +105,13 @@
       <div id="pageMessage" class="alert" style="display:none;"></div>
 
       <div class="card">
-        <div class="card-title"><h2>Batch import</h2></div>
+        <div class="card-title"><h2>Imports effectués</h2></div>
         <div class="card-body">
-          <div class="grid-2">
-            <div>
-              <label for="batchSelect">Sélectionner un import :</label>
-              <select id="batchSelect"></select>
-            </div>
-            <div style="align-self:end;">
-              <button id="btnReload" class="btn btn-secondary">🔄 Recharger</button>
-            </div>
+          <div class="d-flex justify-between items-center mb-2" style="gap:8px; flex-wrap:wrap;">
+            <p class="muted" style="margin:0;">Sélectionne un import pour afficher ses factures, ou supprime-le définitivement.</p>
+            <button id="btnReload" class="btn btn-secondary">🔄 Recharger</button>
           </div>
+          <div id="importsList" class="imports-list"></div>
           <p class="muted" id="batchInfo"></p>
         </div>
       </div>
@@ -152,6 +158,19 @@
         throw new Error(`Réponse non JSON sur ${path}.`);
       }
       if (!res.ok) throw new Error(payload.error || `Erreur API ${path}`);
+      return payload;
+    }
+
+    async function apiDelete(path) {
+      const res = await fetch(API + path, { method: 'DELETE' });
+      const raw = await res.text();
+      let payload = null;
+      try {
+        payload = raw ? JSON.parse(raw) : null;
+      } catch {
+        throw new Error(`Réponse non JSON sur ${path}.`);
+      }
+      if (!res.ok) throw new Error(payload?.error || `Erreur API ${path}`);
       return payload;
     }
 
@@ -355,6 +374,26 @@
         `Fichier: ${b.nom_fichier || '—'} | Factures: ${b.total_factures_detectees || 0} | Lignes: ${b.total_lignes_extraites || 0} | Exclues stock: ${b.total_lignes_exclues_stock || 0}`;
     }
 
+    function renderImportsList(batches, activeBatchId) {
+      const root = document.getElementById('importsList');
+      if (!Array.isArray(batches) || !batches.length) {
+        root.innerHTML = '<p class="muted">Aucun import disponible.</p>';
+        return;
+      }
+      root.innerHTML = batches.map((b) => `
+        <div class="imports-row ${String(b.id) === String(activeBatchId) ? 'active' : ''}" data-batch-id="${esc(b.id)}">
+          <div class="imports-meta">
+            <strong>${esc(b.nom_fichier || b.id)}</strong>
+            <span>ID: ${esc(b.id)} • ${esc(String(b.date_import || '').replace('T', ' ').slice(0, 19))}</span>
+          </div>
+          <div class="d-flex" style="gap:8px; justify-content:flex-end;">
+            <button class="btn btn-secondary btn-open-batch" data-batch-id="${esc(b.id)}">Afficher</button>
+            <button class="btn btn-danger btn-delete-batch" data-batch-id="${esc(b.id)}">Supprimer</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
     async function initPage() {
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectAchatSecondaryBar();
@@ -366,13 +405,13 @@
       } catch {
         localMode = true;
       }
-      const select = document.getElementById('batchSelect');
+      let activeBatchId = null;
       if (!Array.isArray(batches) || !batches.length) {
         const localInvoices = JSON.parse(localStorage.getItem('goudalle_achats_factures') || '[]');
         const localLines = JSON.parse(localStorage.getItem('goudalle_achats_lignes') || '[]');
         if (localInvoices.length || localLines.length) {
           localMode = true;
-          select.innerHTML = '<option value="local-fallback">local-fallback — Historique local validé</option>';
+          document.getElementById('importsList').innerHTML = '<p class="muted">Mode fallback local (sans gestion de suppression ciblée).</p>';
           const payload = toLocalControlPayload();
           const invoices = payload.invoices || [];
           const lines = payload.lines || [];
@@ -382,18 +421,43 @@
           showMessage('⚠️ API imports indisponible. Affichage fallback des données validées locales.', 'warning');
           return;
         }
-        select.innerHTML = '<option value="">Aucun import</option>';
+        document.getElementById('importsList').innerHTML = '<p class="muted">Aucun import.</p>';
         document.getElementById('renderPreview').innerHTML = '<p class="muted">Aucune reconstruction disponible.</p>';
         if (localMode) showMessage('⚠️ API imports indisponible et aucun historique local trouvé.', 'warning');
         return;
       }
 
       const ordered = [...batches].sort((a,b) => String(b.date_import || '').localeCompare(String(a.date_import || '')));
-      select.innerHTML = ordered.map(b => `<option value="${esc(b.id)}">${esc(b.id)} — ${esc(b.nom_fichier || '')}</option>`).join('');
-      const load = () => loadControl(select.value).catch(e => showMessage(`❌ ${e.message}`, 'danger'));
-      select.addEventListener('change', load);
-      document.getElementById('btnReload').addEventListener('click', load);
-      await load();
+      activeBatchId = ordered[0]?.id || null;
+      renderImportsList(ordered, activeBatchId);
+      if (activeBatchId) await loadControl(activeBatchId);
+
+      const root = document.getElementById('importsList');
+      root.addEventListener('click', async (e) => {
+        const openBtn = e.target.closest('.btn-open-batch');
+        const delBtn = e.target.closest('.btn-delete-batch');
+        if (openBtn) {
+          const batchId = openBtn.getAttribute('data-batch-id');
+          if (!batchId) return;
+          activeBatchId = batchId;
+          renderImportsList(ordered, activeBatchId);
+          await loadControl(activeBatchId).catch((err) => showMessage(`❌ ${err.message}`, 'danger'));
+          return;
+        }
+        if (delBtn) {
+          const batchId = delBtn.getAttribute('data-batch-id');
+          if (!batchId) return;
+          const ok = window.confirm('Confirmer la suppression de cet import ?');
+          if (!ok) return;
+          await apiDelete(`/achats-v2/import-batches/${encodeURIComponent(batchId)}`).catch((err) => {
+            showMessage(`❌ ${err.message}`, 'danger');
+            throw err;
+          });
+          showMessage('✅ Import supprimé.', 'success');
+          await initPage();
+        }
+      });
+      document.getElementById('btnReload').addEventListener('click', () => initPage());
     }
 
     let _initDone = false;

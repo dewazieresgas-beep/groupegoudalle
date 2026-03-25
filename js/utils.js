@@ -936,7 +936,7 @@ function injectAchatSecondaryBar() {
   const secondaryItems = `
     <a href="${base}pages/indicateurs-achat.html" class="sidebar-item${indicateursActive}">🛒 Indicateurs achat</a>
     <a href="${base}pages/indicateurs-achat-saisie.html" class="sidebar-item${saisieActive}">✏️ Saisie indicateurs achats</a>
-    <a href="${base}pages/indicateurs-achat-controle.html" class="sidebar-item${controleActive}">🧪 Contrôle imports v2</a>
+    <a href="${base}pages/indicateurs-achat-controle.html" class="sidebar-item${controleActive}">🧪 Contrôle imports</a>
   `;
 
   const barHTML = `

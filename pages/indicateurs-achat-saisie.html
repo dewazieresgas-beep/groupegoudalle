@@ -195,23 +195,6 @@
       </div>
 
       <div class="card">
-        <div class="card-title"><h2>Bloc 6 - Validation</h2></div>
-        <div class="card-body">
-          <div class="achat-flex">
-            <label for="strategieDoublons" style="margin:0;">Gestion des doublons :</label>
-            <select id="strategieDoublons" style="max-width:320px;">
-              <option value="ignorer">Ignorer les doublons (recommandé)</option>
-              <option value="remplacer">Remplacer les doublons existants</option>
-              <option value="importer">Importer même en doublon</option>
-            </select>
-            <button class="btn btn-warning" id="btnRecalculer">♻️ Recalculer les classifications</button>
-            <button class="btn btn-secondary" id="btnExporterHistoriqueCsv">📥 Export CSV lignes importées</button>
-            <button class="btn btn-danger" id="btnViderHistoriqueImports">🗑️ Supprimer l'historique d'import</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
         <div class="card-title"><h2>Bonus - Gestion des règles de typologie</h2></div>
         <div class="card-body">
           <div class="achat-table-wrap">
@@ -1853,7 +1836,7 @@
           return;
         }
 
-        const strategie = document.getElementById('strategieDoublons').value;
+        const strategie = 'ignorer';
         const imports = JSON.parse(localStorage.getItem(STORAGE_KEYS.imports) || '[]');
         let factures = JSON.parse(localStorage.getItem(STORAGE_KEYS.factures) || '[]');
         let lignes = JSON.parse(localStorage.getItem(STORAGE_KEYS.lignes) || '[]');
@@ -2001,11 +1984,6 @@
       document.getElementById('btnValider').addEventListener('click', validerImport);
       document.getElementById('btnAnnuler').addEventListener('click', annulerImport);
       document.getElementById('btnExporterControle').addEventListener('click', exportControleCsv);
-      document.getElementById('btnRecalculer').addEventListener('click', recalculerClassifications);
-      document.getElementById('btnExporterHistoriqueCsv').addEventListener('click', exportHistoriqueLignesCsv);
-      document.getElementById('btnViderHistoriqueImports').addEventListener('click', () => {
-        supprimerHistoriqueImports().catch((e) => showMessage(`❌ Erreur suppression: ${e.message}`, 'danger'));
-      });
       document.getElementById('btnAjouterRegle').addEventListener('click', ajouterRegleDepuisForm);
       document.getElementById('btnResetRegles').addEventListener('click', resetReglesDefaut);
 
