@@ -14,6 +14,28 @@
       display:inline-block; padding:2px 8px; border-radius:999px;
       border:1px solid #cfd8cf; background:#f4f7f4; font-size:12px;
     }
+    .pdf-batch { display:flex; flex-direction:column; gap:18px; }
+    .pdf-invoice { border:1px solid #d9d9d9; background:#fff; }
+    .pdf-invoice table { width:100%; border-collapse:collapse; table-layout:fixed; }
+    .pdf-head th {
+      background:#f2f2eb; text-align:left; border-bottom:1px solid #d9d9d9;
+      padding:6px; font-weight:700;
+    }
+    .pdf-head td {
+      padding:6px; border-bottom:1px solid #d9d9d9;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .pdf-lines th {
+      text-align:left; padding:6px; border-bottom:1px solid #d9d9d9; font-weight:700;
+      background:#fafafa;
+    }
+    .pdf-lines td {
+      padding:6px; border-bottom:1px solid #ececec;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .pdf-lines tr:last-child td { border-bottom:none; }
+    .num { text-align:right; font-variant-numeric: tabular-nums; }
+    .mono { font-family: Consolas, monospace; }
   </style>
 </head>
 <body>
@@ -48,63 +70,7 @@
       </div>
 
       <div class="card">
-        <div class="card-title"><h2>Factures (brut)</h2></div>
-        <div class="card-body achat-table-wrap">
-          <table id="tableInvoices">
-            <thead>
-              <tr>
-                <th>Date</th><th>N°</th><th>Fournisseur</th><th>Chantier</th><th>Libellé</th><th>Montant H.T</th><th>Exclue</th>
-              </tr>
-            </thead>
-            <tbody><tr><td colspan="7" style="text-align:center;">Chargement...</td></tr></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-title"><h2>Lignes extraites (brut)</h2></div>
-        <div class="card-body achat-table-wrap">
-          <table id="tableRawLines">
-            <thead>
-              <tr>
-                <th>Facture</th><th>Ordre</th><th>Ressource</th><th>BL</th><th>A.R.C</th><th>Libellé</th><th>Unité</th><th>Qté</th><th>P.U</th><th>Montant</th><th>Exclue</th>
-              </tr>
-            </thead>
-            <tbody><tr><td colspan="11" style="text-align:center;">Chargement...</td></tr></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-title"><h2>Lignes normalisées</h2></div>
-        <div class="card-body achat-table-wrap">
-          <table id="tableNormLines">
-            <thead>
-              <tr>
-                <th>Facture</th><th>Ordre</th><th>Type technique</th><th>Ressource</th><th>BL</th><th>A.R.C</th><th>Libellé</th><th>Montant</th><th>Exclue</th>
-              </tr>
-            </thead>
-            <tbody><tr><td colspan="9" style="text-align:center;">Chargement...</td></tr></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-title"><h2>Lignes retraitées (ventilation)</h2></div>
-        <div class="card-body achat-table-wrap">
-          <table id="tableAllocLines">
-            <thead>
-              <tr>
-                <th>Facture</th><th>Ligne normalisée</th><th>Base</th><th>Extra ventilé</th><th>Montant retraité</th><th>Clé</th><th>Actif indicateurs</th>
-              </tr>
-            </thead>
-            <tbody><tr><td colspan="7" style="text-align:center;">Chargement...</td></tr></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-title"><h2>Facture reconstruite</h2></div>
+        <div class="card-title"><h2>Reconstruction visuelle PDF</h2></div>
         <div class="card-body" id="renderPreview"></div>
       </div>
     </main>
@@ -168,6 +134,7 @@
         ressource: l.ressource,
         bl_numero: l.bl,
         arc: l.arc,
+        chantier_ligne: l.chantierOuAffaireLigne || (invById.get(l.idFactureParente)?.chantierOuAffaire || ''),
         libelle_ligne: l.designation,
         unite: l.unite,
         qte_fact: l.quantite,
@@ -195,159 +162,102 @@
       };
     }
 
-    function renderInvoices(rows) {
-      const tbody = document.querySelector('#tableInvoices tbody');
-      if (!rows.length) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Aucune facture</td></tr>';
-        return;
-      }
-      tbody.innerHTML = rows.map(r => `
-        <tr>
-          <td>${esc(r.date || '')}</td>
-          <td>${esc(r.numero_facture || '')}</td>
-          <td>${esc(r.fournisseur || '')}</td>
-          <td>${esc(r.chantier || '')}</td>
-          <td>${esc(r.libelle_facture || '')}</td>
-          <td>${fmt(r.montant_ht)}</td>
-          <td>${Number(r.excluded_from_indicators || 0) ? '<span class="chip">Stock</span>' : ''}</td>
-        </tr>
-      `).join('');
-    }
-
-    function renderRawLines(lines, invoicesById) {
-      const tbody = document.querySelector('#tableRawLines tbody');
-      if (!lines.length) {
-        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;">Aucune ligne</td></tr>';
-        return;
-      }
-      const sorted = [...lines].sort((a, b) => {
-        if (a.raw_invoice_id === b.raw_invoice_id) return (a.line_order || 0) - (b.line_order || 0);
-        return String(a.raw_invoice_id).localeCompare(String(b.raw_invoice_id));
-      });
-      tbody.innerHTML = sorted.map(l => {
-        const inv = invoicesById.get(l.raw_invoice_id);
-        return `
-          <tr>
-            <td>${esc(inv?.numero_facture || '')}</td>
-            <td>${l.line_order || ''}</td>
-            <td>${esc(l.ressource || '')}</td>
-            <td>${esc(l.bl_numero || '')}</td>
-            <td>${esc(l.arc || '')}</td>
-            <td>${esc(l.libelle_ligne || '')}</td>
-            <td>${esc(l.unite || '')}</td>
-            <td>${l.qte_fact != null ? fmt(l.qte_fact) : '—'}</td>
-            <td>${l.pu != null ? fmt(l.pu) : '—'}</td>
-            <td>${l.montant != null ? fmt(l.montant) : '—'}</td>
-            <td>${Number(l.excluded_from_indicators || 0) ? '<span class="chip">Stock</span>' : ''}</td>
-          </tr>
-        `;
-      }).join('');
-    }
-
-    function renderReconstruction(renderRows, batchId) {
+    function renderReconstructionFromData(invoices, lines) {
       const root = document.getElementById('renderPreview');
-      const rows = (renderRows || []).filter(r => r.batch_id === batchId);
-      if (!rows.length) {
-        root.innerHTML = '<p class="muted">Aucune reconstruction disponible.</p>';
+      if (!invoices.length) {
+        root.innerHTML = '<p class="muted">Aucune facture disponible.</p>';
         return;
       }
-      const r = rows[0].render_model || {};
-      const header = r.header || {};
-      const blocks = r.blocks || [];
+      const linesByInvoice = new Map();
+      for (const l of (lines || [])) {
+        if (!linesByInvoice.has(l.raw_invoice_id)) linesByInvoice.set(l.raw_invoice_id, []);
+        linesByInvoice.get(l.raw_invoice_id).push(l);
+      }
+      for (const arr of linesByInvoice.values()) {
+        arr.sort((a, b) => (a.line_order || 0) - (b.line_order || 0));
+      }
+
+      const sortedInvoices = [...invoices].sort((a, b) => {
+        const d = String(a.date || '').localeCompare(String(b.date || ''));
+        if (d !== 0) return d;
+        return String(a.numero_facture || '').localeCompare(String(b.numero_facture || ''));
+      });
+
       root.innerHTML = `
-        <div class="achat-table-wrap">
-          <table>
-            <tr style="background:#f3f6f3;"><th>Date</th><th>N°</th><th>Journal</th><th>Fournisseur</th><th>Chantier</th><th>Libellé</th><th>Montant H.T</th></tr>
-            <tr>
-              <td>${esc(header.date || '')}</td>
-              <td>${esc(header.numero_facture || '')}</td>
-              <td>${esc(header.journal || '')}</td>
-              <td>${esc(header.fournisseur || '')}</td>
-              <td>${esc(header.chantier || '')}</td>
-              <td>${esc(header.libelle_facture || '')}</td>
-              <td>${fmt(header.montant_ht)}</td>
-            </tr>
-          </table>
-          <table style="margin-top:10px;">
-            <tr style="background:#fafafa;"><th>Ressource</th><th>BL</th><th>A.R.C</th><th>Libellé</th><th>Unité</th><th>Qté</th><th>P.U</th><th>Montant</th></tr>
-            ${blocks.map(b => `
-              <tr>
-                <td>${esc(b.columns?.ressource || '')}</td>
-                <td>${esc(b.columns?.bl_numero || '')}</td>
-                <td>${esc(b.columns?.arc || '')}</td>
-                <td>${esc(b.columns?.libelle_ligne || '')}</td>
-                <td>${esc(b.columns?.unite || '')}</td>
-                <td>${b.columns?.qte_fact != null ? fmt(b.columns.qte_fact) : '—'}</td>
-                <td>${b.columns?.pu != null ? fmt(b.columns.pu) : '—'}</td>
-                <td>${b.columns?.montant != null ? fmt(b.columns.montant) : '—'}</td>
-              </tr>
-            `).join('')}
-            <tr><td colspan="7" style="text-align:right;"><strong>Total Bon</strong></td><td><strong>${fmt(r.total_bon)}</strong></td></tr>
-          </table>
+        <div class="pdf-batch">
+          ${sortedInvoices.map(inv => {
+            const invLines = linesByInvoice.get(inv.id) || [];
+            return `
+              <section class="pdf-invoice">
+                <table class="pdf-head">
+                  <thead>
+                    <tr>
+                      <th style="width:8%;">Date</th>
+                      <th style="width:8%;">N° Fact.</th>
+                      <th style="width:5%;">Avoir</th>
+                      <th style="width:8%;">Journal</th>
+                      <th style="width:16%;">Fournisseur</th>
+                      <th style="width:12%;">Chantier</th>
+                      <th style="width:31%;">Libellé</th>
+                      <th class="num" style="width:12%;">Montant H.T</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>${esc(inv.date || '')}</td>
+                      <td class="mono">${esc(inv.numero_facture || '')}</td>
+                      <td>${esc(inv.avoir || '')}</td>
+                      <td>${esc(inv.journal || '')}</td>
+                      <td>${esc(inv.fournisseur || '')}</td>
+                      <td>${esc(inv.chantier || '')}</td>
+                      <td>${esc(inv.libelle_facture || '')}</td>
+                      <td class="num">${fmt(inv.montant_ht)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <table class="pdf-lines">
+                  <thead>
+                    <tr>
+                      <th style="width:12%;">Ressource</th>
+                      <th style="width:11%;">BL N°</th>
+                      <th style="width:8%;">A.R.C</th>
+                      <th style="width:11%;">Chantier</th>
+                      <th style="width:28%;">Libellé</th>
+                      <th style="width:6%;">Unité</th>
+                      <th class="num" style="width:10%;">Qté Fact.</th>
+                      <th class="num" style="width:7%;">P.U</th>
+                      <th class="num" style="width:7%;">Montant</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${invLines.map(l => `
+                      <tr>
+                        <td>${esc(l.ressource || '')}</td>
+                        <td class="mono">${esc(l.bl_numero || '')}</td>
+                        <td class="mono">${esc(l.arc || '')}</td>
+                        <td class="mono">${esc(l.chantier_ligne || '')}</td>
+                        <td>${esc(l.libelle_ligne || '')}</td>
+                        <td>${esc(l.unite || '')}</td>
+                        <td class="num">${l.qte_fact != null ? fmt(l.qte_fact) : '—'}</td>
+                        <td class="num">${l.pu != null ? fmt(l.pu) : '—'}</td>
+                        <td class="num">${l.montant != null ? fmt(l.montant) : '—'}</td>
+                      </tr>
+                    `).join('') || '<tr><td colspan="9" class="muted">Aucune ligne</td></tr>'}
+                  </tbody>
+                </table>
+              </section>
+            `;
+          }).join('')}
         </div>
       `;
-    }
-
-    function renderNormalized(rows, invoicesById) {
-      const tbody = document.querySelector('#tableNormLines tbody');
-      if (!rows.length) {
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Aucune ligne normalisée</td></tr>';
-        return;
-      }
-      const sorted = [...rows].sort((a, b) => (a.raw_invoice_id || '').localeCompare(b.raw_invoice_id || '') || ((a.line_order || 0) - (b.line_order || 0)));
-      tbody.innerHTML = sorted.map(r => `
-        <tr>
-          <td>${esc(invoicesById.get(r.raw_invoice_id)?.numero_facture || '')}</td>
-          <td>${r.line_order || ''}</td>
-          <td>${esc(r.type_technique || '')}</td>
-          <td>${esc(r.ressource || '')}</td>
-          <td>${esc(r.bl_numero || '')}</td>
-          <td>${esc(r.arc || '')}</td>
-          <td>${esc(r.libelle_ligne || '')}</td>
-          <td>${r.montant != null ? fmt(r.montant) : '—'}</td>
-          <td>${Number(r.excluded_from_indicators || 0) ? '<span class="chip">Stock</span>' : ''}</td>
-        </tr>
-      `).join('');
-    }
-
-    function renderAllocated(rows, invoicesById, normById) {
-      const tbody = document.querySelector('#tableAllocLines tbody');
-      if (!rows.length) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Aucune ligne retraitée</td></tr>';
-        return;
-      }
-      const sorted = [...rows].sort((a, b) => (a.raw_invoice_id || '').localeCompare(b.raw_invoice_id || ''));
-      tbody.innerHTML = sorted.map(r => {
-        const n = normById.get(r.normalized_line_id);
-        return `
-          <tr>
-            <td>${esc(invoicesById.get(r.raw_invoice_id)?.numero_facture || '')}</td>
-            <td>${esc(n?.libelle_ligne || r.normalized_line_id || '')}</td>
-            <td>${r.base_montant != null ? fmt(r.base_montant) : '—'}</td>
-            <td>${r.allocated_extra != null ? fmt(r.allocated_extra) : '—'}</td>
-            <td>${r.allocated_montant != null ? fmt(r.allocated_montant) : '—'}</td>
-            <td>${esc(r.allocation_key || '')}</td>
-            <td>${Number(r.active_for_indicators || 0) ? '<span class="chip">Oui</span>' : ''}</td>
-          </tr>
-        `;
-      }).join('');
     }
 
     async function loadControl(batchId) {
       clearMessage();
       const payload = await apiGet(`/achats-v2/control/${encodeURIComponent(batchId)}`);
-      const renderRows = await apiGet('/achats-v2/render-cache');
       const invoices = payload.invoices || [];
       const lines = payload.lines || [];
-      const normalized = payload.normalized || [];
-      const allocated = payload.allocated || [];
-      const invoicesById = new Map(invoices.map(i => [i.id, i]));
-      renderInvoices(invoices);
-      renderRawLines(lines, invoicesById);
-      const normById = new Map(normalized.map(n => [n.id, n]));
-      renderNormalized(normalized, invoicesById);
-      renderAllocated(allocated, invoicesById, normById);
-      renderReconstruction(renderRows, batchId);
+      renderReconstructionFromData(invoices, lines);
 
       const b = payload.batch || {};
       document.getElementById('batchInfo').textContent =
@@ -375,20 +285,13 @@
           const payload = toLocalControlPayload();
           const invoices = payload.invoices || [];
           const lines = payload.lines || [];
-          const invoicesById = new Map(invoices.map(i => [i.id, i]));
-          renderInvoices(invoices);
-          renderRawLines(lines, invoicesById);
-          renderNormalized([], invoicesById);
-          renderAllocated([], invoicesById, new Map());
-          document.getElementById('renderPreview').innerHTML = '<p class="muted">Reconstruction v2 indisponible en mode fallback local.</p>';
+          renderReconstructionFromData(invoices, lines);
           document.getElementById('batchInfo').textContent =
             `Mode fallback local | Factures: ${invoices.length} | Lignes: ${lines.length}`;
           showMessage('⚠️ API v2 indisponible. Affichage fallback des données validées locales.', 'warning');
           return;
         }
         select.innerHTML = '<option value="">Aucun import v2</option>';
-        document.querySelector('#tableInvoices tbody').innerHTML = '<tr><td colspan="7" style="text-align:center;">Aucune donnée</td></tr>';
-        document.querySelector('#tableRawLines tbody').innerHTML = '<tr><td colspan="11" style="text-align:center;">Aucune donnée</td></tr>';
         document.getElementById('renderPreview').innerHTML = '<p class="muted">Aucune reconstruction disponible.</p>';
         if (localMode) showMessage('⚠️ API v2 indisponible et aucun historique local trouvé.', 'warning');
         return;

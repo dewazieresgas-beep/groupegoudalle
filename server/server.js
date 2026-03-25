@@ -164,8 +164,8 @@ function parsePdfArticleLine(line) {
 
   let arc = null;
   let chantierLigne = null;
-  if (tail.length && isChantierToken(tail[0])) chantierLigne = tail.shift();
   if (tail.length && isArcToken(tail[0])) arc = tail.shift();
+  if (tail.length && isChantierToken(tail[0])) chantierLigne = tail.shift();
   const libelle = tail.join(' ').trim() || prefix || null;
 
   return {
@@ -736,6 +736,7 @@ app.post('/api/achats-v2/import-pdf', async (req, res) => {
         ].filter(Boolean).join(' '));
         if (isStockLine) totalStockExcluded += 1;
 
+        const lineChantier = line.chantier_ligne || inv.chantier || null;
         rawLines.push({
           id: lineId,
           raw_invoice_id: invoiceId,
@@ -744,7 +745,7 @@ app.post('/api/achats-v2/import-pdf', async (req, res) => {
           ressource: line.ressource || null,
           bl_numero: line.bl_numero || null,
           arc: line.arc || null,
-          chantier_ligne: line.chantier_ligne || null,
+          chantier_ligne: lineChantier,
           libelle_ligne: line.libelle_ligne || null,
           unite: line.unite || null,
           qte_fact: line.qte_fact != null ? line.qte_fact : null,
@@ -761,7 +762,7 @@ app.post('/api/achats-v2/import-pdf', async (req, res) => {
           ressource: line.ressource || null,
           bl_numero: line.bl_numero || null,
           arc: line.arc || null,
-          chantier_ligne: line.chantier_ligne || null,
+          chantier_ligne: lineChantier,
           libelle_ligne: line.libelle_ligne || null,
           unite: line.unite || null,
           qte_fact: line.qte_fact != null ? line.qte_fact : null,

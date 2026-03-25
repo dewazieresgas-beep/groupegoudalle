@@ -637,14 +637,35 @@
         }
       }
 
+      const isChantierToken = (t) => /^\d{2}-\d{3,}$/.test(t) || /^[A-Z]{2}\d+[A-Z0-9]*-\d+$/i.test(t);
+      const isArcToken = (t) => (
+        /^\d{2,4}$/.test(t) ||
+        (/^[A-Z]{2,}[A-Z0-9_-]*-\d+$/i.test(t) && !isChantierToken(t))
+      );
+
       const resource = tokens[0] || null;
       const bl = tokens.find((t) => /^(BL|BC)[\w-]+$/i.test(t)) || null;
-      const arc = tokens.find((t) => /^\d{2}-\d{4,}$/.test(t)) || null;
+      const idxBl = bl ? tokens.indexOf(bl) : -1;
+      const startAfterBl = idxBl >= 0 ? idxBl + 1 : 1;
+      let arc = null;
+      let chantierLigne = null;
+      for (let i = startAfterBl; i < tokens.length; i++) {
+        const tk = tokens[i];
+        if (!arc && isArcToken(tk)) {
+          arc = tk;
+          continue;
+        }
+        if (!chantierLigne && isChantierToken(tk)) {
+          chantierLigne = tk;
+          continue;
+        }
+      }
 
       const startDesignation = Math.max(
         1,
         bl ? tokens.indexOf(bl) + 1 : 1,
-        arc ? tokens.indexOf(arc) + 1 : 1
+        arc ? tokens.indexOf(arc) + 1 : 1,
+        chantierLigne ? tokens.indexOf(chantierLigne) + 1 : 1
       );
       const endDesignation = idxUnite > startDesignation ? idxUnite : (idxQte > startDesignation ? idxQte : idxMontant);
       const designation = tokens.slice(startDesignation, Math.max(endDesignation, startDesignation)).join(' ') || fallbackLine || null;
@@ -653,6 +674,7 @@
         resource,
         bl,
         arc,
+        chantierLigne,
         designation,
         unite: idxUnite >= 0 ? tokens[idxUnite] : null,
         quantite: idxQte >= 0 ? toNumberFr(tokens[idxQte]) : null,
@@ -1063,11 +1085,25 @@
         let resource = workingParts[0] || null;
         let bl = workingParts[1] || null;
         let arc = workingParts[2] || null;
+        let chantierLigne = null;
         let designation = workingParts[4] || null;
         let unite = workingParts[5] || null;
         let quantite = toNumberFr(workingParts[6] || null);
         let prixUnitaire = toNumberFr(workingParts[7] || null);
         let montantLigne = toNumberFr(workingParts[8] || null);
+
+        const numericTail = (parts) => (parts.slice(-3).every((p) => toNumberFr(p) != null));
+        if (workingParts.length >= 9 && numericTail(workingParts)) {
+          const possibles = workingParts.slice(0, workingParts.length - 4);
+          if (possibles.length >= 3) {
+            const maybeArc = possibles[possibles.length - 2];
+            const maybeChantier = possibles[possibles.length - 1];
+            const isChantier = /^\d{2}-\d{3,}$/.test(maybeChantier) || /^[A-Z]{2}\d+[A-Z0-9]*-\d+$/i.test(maybeChantier);
+            const isArc = /^\d{2,4}$/.test(maybeArc) || (/^[A-Z]{2,}[A-Z0-9_-]*-\d+$/i.test(maybeArc) && !isChantier);
+            if (isArc) arc = maybeArc;
+            if (isChantier) chantierLigne = maybeChantier;
+          }
+        }
 
         if (montantLigne == null || (!designation && workingParts.length < 8)) {
           const parsedFlex = parseArticleLineFlexible(workingParts, line);
@@ -1075,6 +1111,7 @@
             resource = parsedFlex.resource;
             bl = parsedFlex.bl;
             arc = parsedFlex.arc;
+            chantierLigne = parsedFlex.chantierLigne || chantierLigne;
             designation = parsedFlex.designation;
             unite = parsedFlex.unite;
             quantite = parsedFlex.quantite;
@@ -1097,7 +1134,7 @@
           prixUnitaire,
           designation,
           libelleFacture: factureCourante.libelleFacture,
-          chantierOuAffaireLigne: factureCourante.chantierOuAffaire,
+          chantierOuAffaireLigne: chantierLigne || factureCourante.chantierOuAffaire,
           fournisseur: factureCourante.fournisseurCode,
           dateFacture: factureCourante.dateFacture,
           numeroFacture: factureCourante.numeroFacture,
