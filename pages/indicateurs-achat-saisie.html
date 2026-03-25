@@ -323,7 +323,8 @@
       factures: 'goudalle_achats_factures',
       lignes: 'goudalle_achats_lignes',
       regles: 'goudalle_achats_regles',
-      arcRules: 'goudalle_achats_arc_rules'
+      arcRules: 'goudalle_achats_arc_rules',
+      arcRulesVersion: 'goudalle_achats_arc_rules_version'
     };
 
     const DEFAULT_REGLES = [
@@ -365,15 +366,83 @@
       'conso_epi', 'outillage_foret', 'outillage_materiel', 'outillage_maintenance',
       'prestations_location', 'prestations_maconnerie', 'ajustement_ecart', 'ajustement_eco'
     ]);
+    const ARC_RULES_VERSION = '2026-03-25-v2';
     const DEFAULT_ARC_RULES = [
+      { code: '100', designation: 'MO Entreprise', famille: 'Main d’œuvre', sousFamille: 'MO entreprise', points: 10, priority: 10 },
+      { code: '102', designation: 'MO Interim', famille: 'Main d’œuvre', sousFamille: 'MO intérim', points: 10, priority: 10 },
+      { code: '110', designation: 'MO Encadrement', famille: 'Main d’œuvre', sousFamille: 'MO encadrement', points: 10, priority: 10 },
+      { code: '120', designation: 'Frais déplacement MO', famille: 'Main d’œuvre', sousFamille: 'Déplacements MO', points: 8, priority: 12 },
+      { code: '150', designation: 'Primes Chantier', famille: 'Main d’œuvre', sousFamille: 'Primes chantier', points: 8, priority: 12 },
+      { code: '160', designation: 'Primes Chantier', famille: 'Main d’œuvre', sousFamille: 'Primes chantier', points: 8, priority: 12 },
+      { code: '2', designation: 'Axe interne', famille: 'Administratif', sousFamille: 'Codification interne', points: 5, priority: 40 },
+      { code: '200', designation: 'Achats BOIS massifs', famille: 'Bois secondaire', sousFamille: 'Bois massif', points: 10, priority: 10 },
+      { code: '201', designation: 'Achats Bois Chêne', famille: 'Bois secondaire', sousFamille: 'Bois massif', points: 10, priority: 10 },
+      { code: '202', designation: 'Achats BOIS Belgique', famille: 'Bois secondaire', sousFamille: 'Bois massif', points: 10, priority: 10 },
+      { code: '203', designation: 'Achats Bois LC - Massif Peuplier', famille: 'Bois structure', sousFamille: 'LC / BLC', points: 10, priority: 10 },
       { code: '204', designation: 'Achats BOIS CLT', famille: 'Bois structure', sousFamille: 'CLT / KLH / LVL', points: 10, priority: 10 },
+      { code: '205', designation: 'Achats FMS - thermolaquage', famille: 'Traitement / finition', sousFamille: 'Traitement bois', points: 8, priority: 18 },
       { code: '206', designation: 'Achats BOIS Lamellé collé', famille: 'Bois structure', sousFamille: 'LC / BLC', points: 10, priority: 10 },
-      { code: '285', designation: 'Transport achats Matière 1ere', famille: 'Transport', sousFamille: 'Transport général', points: 8, priority: 20 },
-      { code: '290', designation: 'Transport sur achats', famille: 'Transport', sousFamille: 'Transport général', points: 8, priority: 20 },
-      { code: '295', designation: 'Transport sur achats intra', famille: 'Transport', sousFamille: 'Transport général', points: 8, priority: 20 },
-      { code: '350', designation: 'Moyens transport - Appro chantier', famille: 'Transport', sousFamille: 'Transport général', points: 8, priority: 20 },
+      { code: '207', designation: 'Achats Bois massif abouté BMA', famille: 'Bois secondaire', sousFamille: 'Bois massif', points: 10, priority: 10 },
+      { code: '208', designation: 'Achats Bardage', famille: 'Bois secondaire', sousFamille: 'Bardage bois', points: 10, priority: 10 },
+      { code: '210', designation: 'Achats Maçonnerie', famille: 'Prestations chantier', sousFamille: 'Gros œuvre', points: 9, priority: 15 },
+      { code: '214', designation: 'Achats PREFA béton', famille: 'Prestations chantier', sousFamille: 'Matériaux chantier', points: 8, priority: 16 },
+      { code: '215', designation: 'Achats Pare-pluie - bachage', famille: 'Bois secondaire', sousFamille: 'Isolants / membranes', points: 8, priority: 16 },
+      { code: '216', designation: 'Achats PREFA béton Belgique', famille: 'Prestations chantier', sousFamille: 'Matériaux chantier', points: 8, priority: 16 },
+      { code: '220', designation: 'Achats Menuiserie', famille: 'Prestations chantier', sousFamille: 'Matériaux chantier', points: 8, priority: 16 },
+      { code: '221', designation: 'Achats CP et panneaux contreventements', famille: 'Bois secondaire', sousFamille: 'Panneaux bois', points: 9, priority: 14 },
+      { code: '230', designation: 'Achats Quincaillerie', famille: 'Quincaillerie / fixations', sousFamille: 'Fixations diverses', points: 10, priority: 12 },
+      { code: '235', designation: 'Achats Isolant', famille: 'Bois secondaire', sousFamille: 'Isolants / membranes', points: 9, priority: 14 },
+      { code: '240', designation: 'Achats Couverture', famille: 'Métal / tôle / pliage', sousFamille: 'Tôle bac acier', points: 8, priority: 18 },
+      { code: '245', designation: 'Achats Etanchéité', famille: 'Traitement / finition', sousFamille: 'Finition bois', points: 8, priority: 18 },
+      { code: '250', designation: 'Lasure et saturateur', famille: 'Traitement / finition', sousFamille: 'Finition bois', points: 9, priority: 16 },
+      { code: '265', designation: 'Consommables et divers', famille: 'Consommables / atelier', sousFamille: 'Consommables atelier', points: 8, priority: 20 },
+      { code: '280', designation: 'Consommables et divers', famille: 'Consommables / atelier', sousFamille: 'Consommables atelier', points: 8, priority: 20 },
+      { code: '285', designation: 'Transport achats Matière 1ere', famille: 'Transport', sousFamille: 'Transport général', points: 10, priority: 8 },
+      { code: '290', designation: 'Transport sur achats', famille: 'Transport', sousFamille: 'Transport général', points: 10, priority: 8 },
+      { code: '295', designation: 'Transport sur achats intra', famille: 'Transport', sousFamille: 'Transport général', points: 10, priority: 8 },
+      { code: '3', designation: 'Axe interne', famille: 'Administratif', sousFamille: 'Codification interne', points: 5, priority: 40 },
+      { code: '300', designation: 'Taille numérique', famille: 'Prestations internes', sousFamille: 'Production interne', points: 9, priority: 12 },
+      { code: '305', designation: 'Raboterie', famille: 'Prestations internes', sousFamille: 'Production interne', points: 9, priority: 12 },
+      { code: '310', designation: 'Assemblage', famille: 'Prestations internes', sousFamille: 'Production interne', points: 9, priority: 12 },
+      { code: '315', designation: 'Collage sous presse', famille: 'Prestations internes', sousFamille: 'Production interne', points: 9, priority: 12 },
+      { code: '320', designation: 'Matériel de finition', famille: 'Traitement / finition', sousFamille: 'Finition bois', points: 7, priority: 20 },
+      { code: '330', designation: 'Matériel de manutention', famille: 'Prestations chantier', sousFamille: 'Matériel chantier', points: 7, priority: 20 },
+      { code: '340', designation: 'Matériel de levage', famille: 'Prestations chantier', sousFamille: 'Matériel chantier', points: 7, priority: 20 },
+      { code: '350', designation: 'Moyens transport - Appro chantier', famille: 'Transport', sousFamille: 'Transport général', points: 10, priority: 8 },
+      { code: '351', designation: 'Moyens transport - Appro chantier', famille: 'Transport', sousFamille: 'Transport général', points: 10, priority: 8 },
+      { code: '370', designation: 'Transport Engins entreprise', famille: 'Transport', sousFamille: 'Transport général', points: 9, priority: 10 },
+      { code: '371', designation: 'Transports entre etab/chantiers', famille: 'Transport', sousFamille: 'Transport général', points: 9, priority: 10 },
+      { code: '380', designation: 'Location de Matériel', famille: 'Prestations chantier', sousFamille: 'Interventions', points: 8, priority: 16 },
+      { code: '390', designation: 'Carburant engins chantier', famille: 'Consommables / atelier', sousFamille: 'Carburant', points: 9, priority: 14 },
+      { code: '4', designation: 'Axe interne', famille: 'Administratif', sousFamille: 'Codification interne', points: 5, priority: 40 },
+      { code: '400', designation: 'Prorata', famille: 'Ajustements', sousFamille: 'Ajustements', points: 9, priority: 12 },
+      { code: '410', designation: 'Honoraires Techniques', famille: 'Prestations techniques', sousFamille: 'Études / ingénierie', points: 9, priority: 12 },
+      { code: '420', designation: "Constat d'huissier", famille: 'Prestations techniques', sousFamille: 'Études / ingénierie', points: 8, priority: 14 },
+      { code: '430', designation: 'Commission sur vente', famille: 'Administratif', sousFamille: 'Administratif', points: 7, priority: 20 },
       { code: '500', designation: 'ST CBCO BE', famille: 'Prestations internes', sousFamille: 'CBCO (taille / étude / fabrication)', points: 10, priority: 5 },
-      { code: '501', designation: 'ST CBCO CUB', famille: 'Prestations internes', sousFamille: 'CBCO (taille / étude / fabrication)', points: 10, priority: 5 }
+      { code: '501', designation: 'ST CBCO CUB', famille: 'Prestations internes', sousFamille: 'CBCO (taille / étude / fabrication)', points: 10, priority: 5 },
+      { code: '510', designation: 'ST Chantier', famille: 'Prestations chantier', sousFamille: 'Interventions', points: 8, priority: 16 },
+      { code: '580', designation: 'ST Autoliquidée', famille: 'Prestations chantier', sousFamille: 'Interventions', points: 8, priority: 16 },
+      { code: '590', designation: 'ST Autre', famille: 'Prestations chantier', sousFamille: 'Interventions', points: 8, priority: 16 },
+      { code: '600', designation: 'FG sur MO', famille: 'Main d’œuvre', sousFamille: 'MO entreprise', points: 8, priority: 14 },
+      { code: '601', designation: 'Assurance Decennale', famille: 'Administratif', sousFamille: 'Administratif', points: 8, priority: 18 },
+      { code: '610', designation: 'Entretien Réparation Petit outillage', famille: 'Outillage / maintenance', sousFamille: 'Maintenance', points: 9, priority: 14 },
+      { code: '620', designation: 'Entretien engins chantier', famille: 'Outillage / maintenance', sousFamille: 'Maintenance', points: 9, priority: 14 },
+      { code: '630', designation: 'Entretien Matériel de transport', famille: 'Outillage / maintenance', sousFamille: 'Maintenance', points: 9, priority: 14 },
+      { code: '670', designation: 'Maintenance', famille: 'Outillage / maintenance', sousFamille: 'Maintenance', points: 9, priority: 14 },
+      { code: '700', designation: 'Vente travaux autoliquidés', famille: 'Hors achats', sousFamille: 'Ventes / hors périmètre', points: 7, priority: 30 },
+      { code: '710', designation: 'Ventes travaux 10 %', famille: 'Hors achats', sousFamille: 'Ventes / hors périmètre', points: 7, priority: 30 },
+      { code: '719', designation: 'Ventes Travaux 19,60%', famille: 'Hors achats', sousFamille: 'Ventes / hors périmètre', points: 7, priority: 30 },
+      { code: '720', designation: 'Ventes travaux 20%', famille: 'Hors achats', sousFamille: 'Ventes / hors périmètre', points: 7, priority: 30 },
+      { code: '755', designation: 'Ventes travaux 5,5%', famille: 'Hors achats', sousFamille: 'Ventes / hors périmètre', points: 7, priority: 30 },
+      { code: '790', designation: 'Vente travaux autres', famille: 'Hors achats', sousFamille: 'Ventes / hors périmètre', points: 7, priority: 30 },
+      { code: '9', designation: 'Axe interne', famille: 'Administratif', sousFamille: 'Codification interne', points: 5, priority: 40 },
+      { code: '999', designation: 'ARC A VENTILER', famille: 'Divers', sousFamille: 'ARC à ventiler', points: 6, priority: 35 },
+      { code: 'ML', designation: 'Unité ML', famille: 'Divers', sousFamille: 'ARC à ventiler', points: 6, priority: 35 },
+      { code: 'MOI', designation: 'Unité MOI', famille: 'Divers', sousFamille: 'ARC à ventiler', points: 6, priority: 35 },
+      { code: 'MOIS', designation: 'Unité MOIS', famille: 'Divers', sousFamille: 'ARC à ventiler', points: 6, priority: 35 },
+      { code: 'U', designation: 'Unité U', famille: 'Divers', sousFamille: 'ARC à ventiler', points: 6, priority: 35 },
+      { code: 'VGZ', designation: 'Code VGZ', famille: 'Divers', sousFamille: 'ARC à ventiler', points: 6, priority: 35 }
     ];
 
     const state = {
@@ -1331,9 +1400,11 @@
     }
 
     function chargerArcRules() {
+      const existingVersion = localStorage.getItem(STORAGE_KEYS.arcRulesVersion);
       const raw = localStorage.getItem(STORAGE_KEYS.arcRules);
-      if (!raw) {
+      if (!raw || existingVersion !== ARC_RULES_VERSION) {
         localStorage.setItem(STORAGE_KEYS.arcRules, JSON.stringify(DEFAULT_ARC_RULES));
+        localStorage.setItem(STORAGE_KEYS.arcRulesVersion, ARC_RULES_VERSION);
         return [...DEFAULT_ARC_RULES];
       }
       try {
@@ -1343,7 +1414,36 @@
         // fallback plus bas
       }
       localStorage.setItem(STORAGE_KEYS.arcRules, JSON.stringify(DEFAULT_ARC_RULES));
+      localStorage.setItem(STORAGE_KEYS.arcRulesVersion, ARC_RULES_VERSION);
       return [...DEFAULT_ARC_RULES];
+    }
+
+    function getArcExpectedProfile(rule) {
+      const famille = normalizeText(rule?.famille || '');
+      const sous = normalizeText(rule?.sousFamille || '');
+      const isCltFamily = famille.includes('bois structure') && (sous.includes('clt') || sous.includes('klh') || sous.includes('lvl'));
+      const isLcFamily = famille.includes('bois structure') && (sous.includes('lc') || sous.includes('blc') || sous.includes('lamelle'));
+      const isPanelFamily = (sous.includes('panneaux') || sous.includes('3 plis') || sous.includes('contrevent'));
+      return { isCltFamily, isLcFamily, isPanelFamily };
+    }
+
+    function isArcOverrideCoherent(rule, ligne, baseText) {
+      const profile = getArcExpectedProfile(rule);
+      if (!profile.isCltFamily && !profile.isLcFamily && !profile.isPanelFamily) return { ok: true, reason: null };
+      const txt = normalizeText(baseText || '');
+      const hasClt = /\b(clt|klh)\b/.test(txt);
+      const hasLc = /\b(lc|lamelle)\b/.test(txt);
+      const hasPanel3Plis = /\b(3 plis|trois plis|panneau|contrevent)\b/.test(txt);
+      if (profile.isCltFamily && hasPanel3Plis && !hasClt) {
+        return { ok: false, reason: 'ARC CLT incohérent avec libellé panneau/3 plis' };
+      }
+      if (profile.isPanelFamily && hasClt && !hasPanel3Plis) {
+        return { ok: false, reason: 'ARC panneaux incohérent avec libellé CLT/KLH' };
+      }
+      if (profile.isLcFamily && hasClt && !hasLc) {
+        return { ok: false, reason: 'ARC LC incohérent avec libellé CLT/KLH' };
+      }
+      return { ok: true, reason: null };
     }
 
     function classerLigne(ligne, regles) {
@@ -1369,19 +1469,30 @@
           return Number(b.points ?? 0) - Number(a.points ?? 0);
         });
         const bestArc = arcMatches[0];
-        ligne.familleAchat = bestArc.famille || 'Non classé';
-        ligne.categorieAutomatique = bestArc.famille || 'Non classé';
-        ligne.sousCategorieAutomatique = bestArc.sousFamille || 'Non classé';
-        ligne.statutConfianceClassement = 'élevée';
+        const coherent = isArcOverrideCoherent(bestArc, ligne, baseTexte);
+        if (coherent.ok) {
+          ligne.familleAchat = bestArc.famille || 'Non classé';
+          ligne.categorieAutomatique = bestArc.famille || 'Non classé';
+          ligne.sousCategorieAutomatique = bestArc.sousFamille || 'Non classé';
+          ligne.statutConfianceClassement = 'élevée';
+          ligne.classificationDebug = {
+            matchedRuleId: `arc_${bestArc.code}`,
+            mode: 'arc_override',
+            score: Number(bestArc.points || 0),
+            arc: ligne.arc || '',
+            matchedKeywords: [String(bestArc.code || '')],
+            rule: bestArc
+          };
+          return ligne;
+        }
         ligne.classificationDebug = {
           matchedRuleId: `arc_${bestArc.code}`,
-          mode: 'arc_override',
+          mode: 'arc_override_rejected',
           score: Number(bestArc.points || 0),
           arc: ligne.arc || '',
-          matchedKeywords: [String(bestArc.code || '')],
+          reason: coherent.reason,
           rule: bestArc
         };
-        return ligne;
       }
 
       const correspondances = [];
@@ -2035,6 +2146,7 @@
     function resetArcRulesDefaut() {
       state.arcRules = [...DEFAULT_ARC_RULES];
       localStorage.setItem(STORAGE_KEYS.arcRules, JSON.stringify(state.arcRules));
+      localStorage.setItem(STORAGE_KEYS.arcRulesVersion, ARC_RULES_VERSION);
       renderArcRules();
       showMessage('✅ Règles A.R.C réinitialisées.', 'success');
     }

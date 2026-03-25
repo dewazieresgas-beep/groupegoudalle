@@ -110,18 +110,64 @@
       return null;
     }
 
+    function extractSectionLengthForUnitPieces(text) {
+      const norm = normalizeText(text);
+      const toN = (v) => parseFloat(String(v).replace(',', '.'));
+      const ok = (v) => Number.isFinite(v) && v > 0;
+      const matches = [];
+
+      const reCmM = /(\d+(?:[.,]\d+)?)\s*[x*]\s*(\d+(?:[.,]\d+)?)\s*cm\b.*?(\d+(?:[.,]\d+)?)\s*m\b/g;
+      for (const m of norm.matchAll(reCmM)) {
+        const a = toN(m[1]) / 100;
+        const b = toN(m[2]) / 100;
+        const l = toN(m[3]);
+        if (ok(a) && ok(b) && ok(l)) matches.push({ sectionM2: a * b, lengthM: l, score: 120 });
+      }
+
+      const reTripMm = /(\d{2,4}(?:[.,]\d+)?)\s*(?:mm)?\s*[x*]\s*(\d{2,4}(?:[.,]\d+)?)\s*(?:mm)?\s*[x*]\s*(\d{3,6}(?:[.,]\d+)?)\s*(?:mm)?\b/g;
+      for (const m of norm.matchAll(reTripMm)) {
+        const a = toN(m[1]) / 1000;
+        const b = toN(m[2]) / 1000;
+        const l = toN(m[3]) / 1000;
+        if (ok(a) && ok(b) && ok(l)) matches.push({ sectionM2: a * b, lengthM: l, score: 110 });
+      }
+
+      const reTrip = /(\d+(?:[.,]\d+)?)\s*[x*]\s*(\d+(?:[.,]\d+)?)\s*[x*]\s*(\d+(?:[.,]\d+)?)/g;
+      for (const m of norm.matchAll(reTrip)) {
+        const v1 = toN(m[1]);
+        const v2 = toN(m[2]);
+        const v3 = toN(m[3]);
+        if (!ok(v1) || !ok(v2) || !ok(v3)) continue;
+        if (v1 > 40 && v2 > 40 && v3 > 200) {
+          matches.push({ sectionM2: (v1 / 1000) * (v2 / 1000), lengthM: v3 / 1000, score: 90 });
+        } else {
+          matches.push({ sectionM2: (v1 / 100) * (v2 / 100), lengthM: v3, score: 80 });
+        }
+      }
+
+      if (!matches.length) return null;
+      matches.sort((a, b) => b.score - a.score);
+      return { sectionM2: matches[0].sectionM2, lengthM: matches[0].lengthM };
+    }
+
     function computeLineVolumeM3(line) {
       const unite = String(line.unite || '').toUpperCase();
       const qte = Number(line.quantite);
       if (!Number.isFinite(qte) || qte <= 0) return null;
+      const txtRaw = [line.designation, line.ressource].filter(Boolean).join(' ');
       if (unite === 'M3') return qte;
       if (unite === 'M2') {
-        const txt = normalizeText([line.designation, line.ressource].filter(Boolean).join(' '));
+        const txt = normalizeText(txtRaw);
         const isService = /(prestation|reparation|implantation|reprofilage|coupe|intervention|controle periodique|controle périodique)/.test(txt);
         if (isService) return null;
-        const ep = extractThicknessMeters([line.designation, line.ressource].filter(Boolean).join(' '));
+        const ep = extractThicknessMeters(txtRaw);
         if (!ep) return null;
         return qte * ep;
+      }
+      if ((unite === 'U' || unite === 'ENS') && (isCltLine(line) || isLcLine(line))) {
+        const dims = extractSectionLengthForUnitPieces(txtRaw);
+        if (!dims) return null;
+        return qte * dims.sectionM2 * dims.lengthM;
       }
       return null;
     }

@@ -347,6 +347,51 @@ function extractThicknessMeters(raw) {
   return Number.isFinite(mm) && mm > 0 ? mm / 1000 : null;
 }
 
+function extractSectionLengthForUnitPieces(raw) {
+  const txt = normalizeText(raw);
+  const toN = (v) => parseFloat(String(v).replace(',', '.'));
+  const ok = (v) => Number.isFinite(v) && v > 0;
+  const matches = [];
+
+  // Forme explicite section + longueur (cm + m): 8*20CM 13M
+  const reCmM = /(\d+(?:[.,]\d+)?)\s*[x*]\s*(\d+(?:[.,]\d+)?)\s*cm\b.*?(\d+(?:[.,]\d+)?)\s*m\b/g;
+  for (const m of txt.matchAll(reCmM)) {
+    const a = toN(m[1]) / 100;
+    const b = toN(m[2]) / 100;
+    const l = toN(m[3]);
+    if (ok(a) && ok(b) && ok(l)) matches.push({ sectionM2: a * b, lengthM: l, score: 120 });
+  }
+
+  // Triplet mm x mm x mm: 200x80x13000 (ou mm explicite)
+  const reTripMm = /(\d{2,4}(?:[.,]\d+)?)\s*(?:mm)?\s*[x*]\s*(\d{2,4}(?:[.,]\d+)?)\s*(?:mm)?\s*[x*]\s*(\d{3,6}(?:[.,]\d+)?)\s*(?:mm)?\b/g;
+  for (const m of txt.matchAll(reTripMm)) {
+    const a = toN(m[1]) / 1000;
+    const b = toN(m[2]) / 1000;
+    const l = toN(m[3]) / 1000;
+    if (ok(a) && ok(b) && ok(l)) matches.push({ sectionM2: a * b, lengthM: l, score: 110 });
+  }
+
+  // Triplet cm x cm x m: 8x20x13 (sans unités)
+  const reTrip = /(\d+(?:[.,]\d+)?)\s*[x*]\s*(\d+(?:[.,]\d+)?)\s*[x*]\s*(\d+(?:[.,]\d+)?)/g;
+  for (const m of txt.matchAll(reTrip)) {
+    const v1 = toN(m[1]);
+    const v2 = toN(m[2]);
+    const v3 = toN(m[3]);
+    if (!ok(v1) || !ok(v2) || !ok(v3)) continue;
+    if (v1 > 40 && v2 > 40 && v3 > 200) {
+      // Heuristique mm
+      matches.push({ sectionM2: (v1 / 1000) * (v2 / 1000), lengthM: v3 / 1000, score: 90 });
+    } else {
+      // Heuristique cm,cm,m
+      matches.push({ sectionM2: (v1 / 100) * (v2 / 100), lengthM: v3, score: 80 });
+    }
+  }
+
+  if (!matches.length) return null;
+  matches.sort((a, b) => b.score - a.score);
+  return { sectionM2: matches[0].sectionM2, lengthM: matches[0].lengthM };
+}
+
 function isCltLineFromNorm(line) {
   const txt = normalizeText([line.ressource, line.libelle_ligne].filter(Boolean).join(' '));
   return /\b(clt|klh)\b/.test(txt);
@@ -366,11 +411,17 @@ function computeVolumeM3FromNorm(line) {
   const qte = Number(line.qte_fact);
   if (!Number.isFinite(qte) || qte <= 0) return null;
   const unite = String(line.unite || '').toUpperCase();
+  const rawText = [line.ressource, line.libelle_ligne].filter(Boolean).join(' ');
   if (unite === 'M3') return qte;
   if (unite === 'M2' && isCltLineFromNorm(line)) {
-    const ep = extractThicknessMeters([line.ressource, line.libelle_ligne].filter(Boolean).join(' '));
+    const ep = extractThicknessMeters(rawText);
     if (!ep) return null;
     return qte * ep;
+  }
+  if ((unite === 'U' || unite === 'ENS') && (isCltLineFromNorm(line) || isLcLineFromNorm(line))) {
+    const dims = extractSectionLengthForUnitPieces(rawText);
+    if (!dims) return null;
+    return qte * dims.sectionM2 * dims.lengthM;
   }
   return null;
 }
