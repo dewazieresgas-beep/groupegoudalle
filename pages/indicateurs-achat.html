@@ -65,6 +65,7 @@
         <div class="card-body">
           <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px;">
             <a class="btn btn-primary" href="./indicateurs-achat-saisie.html">🧾 Saisie indicateurs achats</a>
+            <a class="btn btn-secondary" href="./indicateurs-achat-controle.html">🧪 Contrôle imports v2</a>
           </div>
         </div>
       </div>
@@ -72,10 +73,6 @@
   </div>
 
   <script>
-    const STORAGE_KEYS = {
-      lignes: 'goudalle_achats_lignes'
-    };
-
     function normalizeText(str) {
       return String(str || '')
         .replace(/œ/g, 'oe')
@@ -141,85 +138,22 @@
       return Number(v || 0).toLocaleString('fr-FR', { minimumFractionDigits: digits, maximumFractionDigits: digits });
     }
 
-    function buildMonthlyIndicators(lignes) {
-      const byMonth = new Map();
-      let lignesSansVolume = 0;
-      const lignesById = new Map((lignes || []).map((l) => [l.idLigne, l]));
-
-      function isStockLine(line) {
-        const txt = normalizeText([
-          line.libelleFacture,
-          line.designation,
-          line.ressource,
-          line.texteBrutLigne
-        ].filter(Boolean).join(' '));
-        return Boolean(line.drapeauStock) ||
-          txt.includes('etat de stock') ||
-          txt.includes('etat stock') ||
-          txt.includes('sortie de stock') ||
-          txt.includes('sortie stock') ||
-          txt.includes('sorties de stock') ||
-          txt.includes('sorties stock') ||
-          txt.includes('liste de sortie de stock') ||
-          txt.includes('liste sortie stock');
-      }
-
-      function isAnnexeLine(line) {
-        return Boolean(line.drapeauTransport || line.drapeauEcoContribution || line.drapeauTaxe);
-      }
-
-      for (const line of lignes) {
-        if (isStockLine(line)) continue;
-        const month = toIsoMonth(line.dateFacture);
-        if (!month) continue;
-
-        const annexe = isAnnexeLine(line);
-        if (annexe && !line.idProduitRattache) continue;
-
-        const baseLine = annexe ? (lignesById.get(line.idProduitRattache) || null) : line;
-        if (!baseLine || isStockLine(baseLine)) continue;
-
-        const clt = isCltLine(baseLine);
-        const lc = isLcLine(baseLine);
-        if (!clt && !lc) continue;
-
-        if (!byMonth.has(month)) {
-          byMonth.set(month, { month, vClt: 0, vLc: 0, lcMontant: 0 });
-        }
-        const agg = byMonth.get(month);
-        const vol = computeLineVolumeM3(baseLine);
-
-        if (clt) {
-          if (vol != null && !annexe) agg.vClt += vol;
-          else lignesSansVolume++;
-        }
-        if (lc) {
-          if (vol != null) {
-            if (!annexe) agg.vLc += vol;
-            agg.lcMontant += Number(line.montantLigne) || 0;
-          } else {
-            lignesSansVolume++;
-          }
-        }
-      }
-
-      const rows = [...byMonth.values()]
-        .sort((a, b) => a.month.localeCompare(b.month))
-        .map((r) => ({
-          mois: formatMonthFr(r.month),
-          vClt: r.vClt,
-          vLc: r.vLc,
-          prixMoyenLc: r.vLc > 0 ? (r.lcMontant / r.vLc) : null
-        }));
-
-      return { rows, lignesSansVolume };
+    async function fetchMonthlyIndicatorsV2() {
+      const res = await fetch(window.location.origin + '/api/achats-v2/indicators-monthly', { method: 'GET' });
+      const payload = await res.json();
+      if (!res.ok || !payload.success) throw new Error(payload.error || 'Indicateurs v2 indisponibles');
+      return payload.rows || [];
     }
 
-    function renderIndicators() {
+    async function renderIndicators() {
       const tbody = document.querySelector('#tableIndicateursMensuels tbody');
       const note = document.getElementById('indicateursNote');
-      const lignes = JSON.parse(localStorage.getItem(STORAGE_KEYS.lignes) || '[]');
-      const { rows, lignesSansVolume } = buildMonthlyIndicators(lignes);
+      let rows = [];
+      try {
+        rows = await fetchMonthlyIndicatorsV2();
+      } catch (e) {
+        note.textContent = `Indicateurs v2 indisponibles (${e.message}).`;
+      }
 
       if (!rows.length) {
         tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Aucune donnée CLT/LC disponible</td></tr>';
@@ -229,16 +163,13 @@
 
       tbody.innerHTML = rows.map((r) => `
         <tr>
-          <td>${r.mois}</td>
-          <td>${formatNumber(r.vClt, 0)}</td>
-          <td>${formatNumber(r.vLc, 0)}</td>
-          <td>${r.prixMoyenLc != null ? formatNumber(r.prixMoyenLc, 0) : '—'}</td>
+          <td>${formatMonthFr(r.month)}</td>
+          <td>${formatNumber(r.v_clt_m3, 0)}</td>
+          <td>${formatNumber(r.v_lc_m3, 0)}</td>
+          <td>${r.prix_moyen_lc_eur_m3 != null ? formatNumber(r.prix_moyen_lc_eur_m3, 0) : '—'}</td>
         </tr>
       `).join('');
-
-      note.textContent = lignesSansVolume
-        ? `${lignesSansVolume} ligne(s) CLT/LC ignorée(s) pour le calcul volume (épaisseur ou unité manquante).`
-        : 'Volumes calculés en m³ (M3 direct, ou M2 × épaisseur détectée en mm).';
+      note.textContent = 'Calcul v2 par lignes retraitées actives (stock exclu, ventilation BL appliquée).';
     }
 
     let _achatsPageInitDone = false;
@@ -247,14 +178,11 @@
       _achatsPageInitDone = true;
 
       if (typeof window.loadServerKeys === 'function') {
-        await window.loadServerKeys([
-          'goudalle_achats_imports',
-          'goudalle_achats_lignes'
-        ]);
+        await window.loadServerKeys(['goudalle_achats_imports']);
       }
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectAchatSecondaryBar();
-      renderIndicators();
+      await renderIndicators();
     }
 
     window.onServerReady(init);

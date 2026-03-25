@@ -479,6 +479,132 @@
       return String(payload.text || '');
     }
 
+    function toBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const full = String(reader.result || '');
+          const comma = full.indexOf(',');
+          resolve(comma >= 0 ? full.slice(comma + 1) : full);
+        };
+        reader.onerror = () => reject(new Error('Lecture fichier impossible.'));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function mapV2ControlToAnalyse(control, fileMetaByName, facturesExistantes) {
+      const invoices = control.invoices || [];
+      const rawLines = control.lines || [];
+      const linesByInvoice = new Map();
+      for (const l of rawLines) {
+        if (!linesByInvoice.has(l.raw_invoice_id)) linesByInvoice.set(l.raw_invoice_id, []);
+        linesByInvoice.get(l.raw_invoice_id).push(l);
+      }
+
+      const factures = [];
+      const lignes = [];
+      const lignesTotauxControle = [];
+      let localFactureIdx = 0;
+
+      for (const inv of invoices) {
+        localFactureIdx += 1;
+        const idFacture = `fac_${Date.now()}_${localFactureIdx}_${Math.random().toString(36).slice(2, 8)}`;
+        const fileMeta = fileMetaByName.get(inv.source_file || '') || { nom: inv.source_file || 'import.pdf', taille: 0, dateAnalyse: new Date().toISOString(), lignesBrutes: 0 };
+        const facture = {
+          idFacture,
+          nomFichierImporte: fileMeta.nom,
+          dateImport: control.batch?.date_import || new Date().toISOString(),
+          dateFacture: inv.date || null,
+          numeroFacture: inv.numero_facture || null,
+          journalOuType: inv.journal || null,
+          fournisseurCode: inv.fournisseur || null,
+          fournisseurLibelle: inv.fournisseur ? String(inv.fournisseur).replace(/^0/, '') : null,
+          chantierOuAffaire: inv.chantier || null,
+          centreCout: null,
+          libelleFacture: inv.libelle_facture || null,
+          montantTotalFacture: inv.montant_ht != null ? Number(inv.montant_ht) : null,
+          nombreLignes: 0,
+          hashControle: [toIsoDate(inv.date || null) || '', normalizeText(inv.numero_facture || ''), normalizeText(inv.fournisseur || ''), Number(inv.montant_ht || 0).toFixed(2), fileMeta.nom].join('|'),
+          sommeLignes: 0,
+          drapeauStock: Number(inv.excluded_from_indicators || 0) === 1
+        };
+        factures.push(facture);
+
+        if (inv.total_bon != null) {
+          lignesTotauxControle.push({
+            idFacture,
+            texte: `Total Bon ${inv.total_bon}`,
+            typeTotal: 'Total Bon',
+            montantTotalLigne: Number(inv.total_bon)
+          });
+        }
+
+        const invLines = (linesByInvoice.get(inv.id) || []).sort((a, b) => (a.line_order || 0) - (b.line_order || 0));
+        for (const r of invLines) {
+          const ordre = Number(r.line_order || 0);
+          const ligne = {
+            idLigne: `lig_${idFacture}_${ordre || (facture.nombreLignes + 1)}`,
+            idFactureParente: idFacture,
+            ordreLigne: ordre || (facture.nombreLignes + 1),
+            montantLigne: r.montant != null ? Number(r.montant) : null,
+            ressource: r.ressource || null,
+            bl: r.bl_numero || null,
+            arc: r.arc || null,
+            unite: r.unite || null,
+            quantite: r.qte_fact != null ? Number(r.qte_fact) : null,
+            prixUnitaire: r.pu != null ? Number(r.pu) : null,
+            designation: r.libelle_ligne || null,
+            chantierOuAffaireLigne: r.chantier_ligne || facture.chantierOuAffaire,
+            libelleFacture: facture.libelleFacture,
+            fournisseur: facture.fournisseurCode,
+            dateFacture: facture.dateFacture,
+            numeroFacture: facture.numeroFacture,
+            texteBrutLigne: r.raw_text || '',
+            categorieAutomatique: null,
+            sousCategorieAutomatique: null,
+            familleAchat: 'Non classé',
+            drapeauTransport: false,
+            drapeauEcart: false,
+            drapeauEcoContribution: false,
+            drapeauTaxe: false,
+            drapeauTraitement: false,
+            drapeauBois: false,
+            drapeauQuincaillerie: false,
+            drapeauStock: Number(r.excluded_from_indicators || 0) === 1,
+            statutConfianceClassement: 'non classé'
+          };
+          lignes.push(ligne);
+          facture.nombreLignes += 1;
+          facture.sommeLignes += ligne.montantLigne || 0;
+        }
+      }
+
+      for (const ligne of lignes) classerLigne(ligne, state.regles);
+      rattacherLignesAnnexesAuxProduits(lignes);
+      const sansStock = exclureStocksDeAnalyse(factures, lignes, lignesTotauxControle);
+      const doublons = detecterDoublons(sansStock.factures, facturesExistantes);
+
+      const fichiersInfoMap = new Map();
+      for (const f of factures) {
+        const key = f.nomFichierImporte || 'import.pdf';
+        if (!fichiersInfoMap.has(key)) {
+          const meta = fileMetaByName.get(key) || { nom: key, taille: 0, dateAnalyse: new Date().toISOString(), lignesBrutes: 0 };
+          fichiersInfoMap.set(key, { ...meta });
+        }
+      }
+
+      return {
+        idAnalyse: `analyse_${Date.now()}`,
+        dateAnalyse: new Date().toISOString(),
+        fichiers: [...fichiersInfoMap.values()],
+        factures: sansStock.factures,
+        lignes: sansStock.lignes,
+        lignesTotauxControle: sansStock.lignesTotauxControle,
+        doublons,
+        nbFacturesStockExclues: sansStock.nbFacturesStockExclues
+      };
+    }
+
     function parseArticleLineFlexible(parts, fallbackLine) {
       const tokens = parts.filter(Boolean);
       if (!tokens.length) return null;
@@ -1482,42 +1608,52 @@
       }
 
       const facturesExistantes = JSON.parse(localStorage.getItem(STORAGE_KEYS.factures) || '[]');
-      const factures = [];
-      const lignes = [];
-      const lignesTotauxControle = [];
       const fichiersInfo = [];
+      const fileMetaByName = new Map();
+      let analyse = null;
+      const warnings = [];
 
       for (const file of state.fichiers) {
-        const contenu = await decodePdfFile(file);
-        const parsed = parserFichierOnayaPdf(contenu, file.name);
-        factures.push(...parsed.factures);
-        lignes.push(...parsed.lignes);
-        lignesTotauxControle.push(...parsed.lignesTotauxControle);
-        fichiersInfo.push({
+        const meta = {
           nom: file.name,
           taille: file.size,
           dateAnalyse: new Date().toISOString(),
-          lignesBrutes: parsed.lignesBrutesCount
+          lignesBrutes: 0
+        };
+        fichiersInfo.push(meta);
+        fileMetaByName.set(file.name, meta);
+
+        const base64 = await toBase64(file);
+        const importRes = await fetch(SERVER_URL + '/achats-v2/import-pdf', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fileName: file.name, contentBase64: base64 })
         });
+        const importPayload = await importRes.json();
+        if (!importRes.ok || !importPayload.success) {
+          throw new Error(importPayload.error || `Import V2 impossible (${file.name}).`);
+        }
+        if (Array.isArray(importPayload.warnings)) warnings.push(...importPayload.warnings);
+
+        const controlRes = await fetch(SERVER_URL + `/achats-v2/control/${encodeURIComponent(importPayload.batch_id)}`, { method: 'GET' });
+        const controlPayload = await controlRes.json();
+        if (!controlRes.ok || !controlPayload.success) {
+          throw new Error(controlPayload.error || `Contrôle V2 introuvable (${file.name}).`);
+        }
+        const mapped = mapV2ControlToAnalyse(controlPayload, fileMetaByName, facturesExistantes);
+        if (!analyse) {
+          analyse = mapped;
+        } else {
+          analyse.factures.push(...mapped.factures);
+          analyse.lignes.push(...mapped.lignes);
+          analyse.lignesTotauxControle.push(...mapped.lignesTotauxControle);
+          analyse.doublons.push(...mapped.doublons);
+          analyse.nbFacturesStockExclues += mapped.nbFacturesStockExclues || 0;
+        }
       }
 
-      for (const ligne of lignes) {
-        classerLigne(ligne, state.regles);
-      }
-      rattacherLignesAnnexesAuxProduits(lignes);
-
-      const sansStock = exclureStocksDeAnalyse(factures, lignes, lignesTotauxControle);
-      const doublons = detecterDoublons(sansStock.factures, facturesExistantes);
-      const analyse = {
-        idAnalyse: `analyse_${Date.now()}`,
-        dateAnalyse: new Date().toISOString(),
-        fichiers: fichiersInfo,
-        factures: sansStock.factures,
-        lignes: sansStock.lignes,
-        lignesTotauxControle: sansStock.lignesTotauxControle,
-        doublons,
-        nbFacturesStockExclues: sansStock.nbFacturesStockExclues
-      };
+      if (!analyse) throw new Error('Aucune donnée analysée.');
+      analyse.fichiers = fichiersInfo;
       analyse.synthese = construireSynthese(analyse);
 
       state.analyse = analyse;
@@ -1531,7 +1667,8 @@
       const excludedMsg = analyse.nbFacturesStockExclues
         ? ` ${analyse.nbFacturesStockExclues} facture(s) de stock/sortie de stock ont été exclues.`
         : '';
-      showMessage(`✅ Analyse terminée. Vérifiez le contrôle avant validation.${excludedMsg}`, 'success');
+      const warningsMsg = warnings.length ? ` ${warnings.length} avertissement(s) de parsing.` : '';
+      showMessage(`✅ Analyse terminée. Vérifiez le contrôle avant validation.${excludedMsg}${warningsMsg}`, 'success');
     }
 
     function exportControleCsv() {

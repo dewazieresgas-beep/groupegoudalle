@@ -137,7 +137,7 @@ function isCommercialPage() {
 
 function isAchatPage() {
   const page = getCurrentPage();
-  return page === 'indicateurs-achat.html' || page === 'indicateurs-achat-saisie.html';
+  return page === 'indicateurs-achat.html' || page === 'indicateurs-achat-saisie.html' || page === 'indicateurs-achat-controle.html';
 }
 
 function isComptaPage() {
@@ -919,7 +919,7 @@ function injectComptaSecondaryBar() {
 
 /**
  * Génère et injecte la barre de navigation secondaire Achats
- * À appeler sur les pages achats (indicateurs-achat.html, indicateurs-achat-saisie.html)
+ * À appeler sur les pages achats (indicateurs-achat.html, indicateurs-achat-saisie.html, indicateurs-achat-controle.html)
  */
 function injectAchatSecondaryBar() {
   const session = Auth.getSession();
@@ -931,10 +931,12 @@ function injectAchatSecondaryBar() {
 
   const indicateursActive = currentPage === 'indicateurs-achat.html' ? ' active' : '';
   const saisieActive = currentPage === 'indicateurs-achat-saisie.html' ? ' active' : '';
+  const controleActive = currentPage === 'indicateurs-achat-controle.html' ? ' active' : '';
 
   const secondaryItems = `
     <a href="${base}pages/indicateurs-achat.html" class="sidebar-item${indicateursActive}">🛒 Indicateurs achat</a>
     <a href="${base}pages/indicateurs-achat-saisie.html" class="sidebar-item${saisieActive}">✏️ Saisie indicateurs achats</a>
+    <a href="${base}pages/indicateurs-achat-controle.html" class="sidebar-item${controleActive}">🧪 Contrôle imports v2</a>
   `;
 
   const barHTML = `

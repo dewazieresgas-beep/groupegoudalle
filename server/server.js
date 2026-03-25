@@ -43,6 +43,334 @@ function dbSet(key, value) {
   saveStore();
 }
 
+function normalizeText(str) {
+  return String(str || '')
+    .replace(/œ/g, 'oe')
+    .replace(/æ/g, 'ae')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function toNumberFr(raw) {
+  if (raw == null) return null;
+  const txt = String(raw).trim();
+  if (!txt) return null;
+  const cleaned = txt.replace(/\s/g, '').replace(/[^\d,\.-]/g, '').replace(',', '.');
+  const n = parseFloat(cleaned);
+  return Number.isFinite(n) ? n : null;
+}
+
+function dedupeRepeatedLine(line) {
+  let out = String(line || '').replace(/\s+/g, ' ').trim();
+  if (!out) return out;
+  const doubled = out.match(/^(.+?)\s+\1$/i);
+  if (doubled) out = doubled[1].trim();
+  out = out.replace(/^(.+?total\s+(?:bon|chantier|fournisseur))\s+\1$/i, '$1').trim();
+  return out;
+}
+
+function parsePdfHeaderLine(line) {
+  const clean = dedupeRepeatedLine(line);
+  const compact = String(clean || '').replace(/\s+/g, ' ').trim();
+  const m = compact.match(/^(\d{2}\/\d{2}\/\d{4})\s+(FR[\w-]+)\s+(.*?)\s+(-?\d[\d ]*,\d{2})$/i);
+  if (!m) return null;
+
+  const [, dateFacture, numeroFacture, middleRaw, montantRaw] = m;
+  const tokens = String(middleRaw || '').trim().split(' ').filter(Boolean);
+  if (!tokens.length) return null;
+
+  const idxSupplier = tokens.findIndex((t) => /^0\S+$/i.test(t));
+  let journal = null;
+  let fournisseur = null;
+  let chantier = null;
+  let libelleFacture = null;
+  let avoir = null;
+
+  if (idxSupplier >= 0) {
+    fournisseur = tokens[idxSupplier];
+    const beforeSupplier = tokens.slice(0, idxSupplier);
+    const rest = tokens.slice(idxSupplier + 1);
+    if (beforeSupplier.some((t) => /^(avoir|av)$/i.test(t))) avoir = 'AVOIR';
+    for (let i = beforeSupplier.length - 1; i >= 0; i--) {
+      const t = beforeSupplier[i];
+      if (/^(avoir|av)$/i.test(t)) continue;
+      if (/^[A-Z]{1,3}$/.test(t)) {
+        journal = t;
+        break;
+      }
+    }
+    const idxFact = rest.findIndex((t) => /^fact$/i.test(t) || /^avoir$/i.test(t));
+    chantier = idxFact > 0 ? rest.slice(0, idxFact).join(' ').trim() : null;
+    libelleFacture = idxFact >= 0 ? rest.slice(idxFact).join(' ').trim() : rest.join(' ').trim();
+  } else {
+    return null;
+  }
+
+  if (!libelleFacture || !/(^fact\b|^avoir\b)/i.test(libelleFacture)) return null;
+
+  return {
+    date_facture: dateFacture,
+    numero_facture: numeroFacture,
+    avoir,
+    journal,
+    fournisseur,
+    chantier,
+    libelle_facture: libelleFacture,
+    montant_ht: toNumberFr(montantRaw),
+    header_raw: clean
+  };
+}
+
+function parsePdfArticleLine(line) {
+  const clean = dedupeRepeatedLine(line);
+  const m = clean.match(/^(.*?)(?:\s+(U|ML|M2|M3|ENS|KG))?\s+(-?\d[\d ]*,\d{3})\s+(-?\d[\d ]*,\d{2})\s+(-?\d[\d ]*,\d{2})$/i);
+  if (!m) return null;
+
+  const prefix = String(m[1] || '').trim();
+  const unite = m[2] || null;
+  const qte = toNumberFr(m[3]);
+  const pu = toNumberFr(m[4]);
+  const montant = toNumberFr(m[5]);
+  const tokens = prefix.split(/\s+/).filter(Boolean);
+  if (!tokens.length) return null;
+
+  const isArcToken = (t) => /^\d{2,4}$/.test(t) || /^[A-Z]{2,}[A-Z0-9_-]*-\d+$/i.test(t);
+  const isChantierToken = (t) => /^\d{2}-\d{3,}$/.test(t);
+  const idxBl = tokens.findIndex((t) => /^(BL|BC)[A-Z0-9-]+$/i.test(t));
+
+  let bl = null;
+  let resourceTokens = [];
+  let tail = [];
+  if (idxBl >= 0) {
+    bl = tokens[idxBl];
+    resourceTokens = tokens.slice(0, idxBl);
+    tail = tokens.slice(idxBl + 1);
+  } else {
+    const splitIdx = tokens.findIndex((t, i) => i > 0 && (isArcToken(t) || isChantierToken(t)));
+    if (splitIdx > 0) {
+      resourceTokens = tokens.slice(0, splitIdx);
+      tail = tokens.slice(splitIdx);
+    } else {
+      resourceTokens = [tokens[0]];
+      tail = tokens.slice(1);
+    }
+  }
+
+  let arc = null;
+  let chantierLigne = null;
+  if (tail.length && isArcToken(tail[0])) arc = tail.shift();
+  if (tail.length && isChantierToken(tail[0])) chantierLigne = tail.shift();
+  const libelle = tail.join(' ').trim() || prefix || null;
+
+  return {
+    ressource: resourceTokens.join(' ').trim() || null,
+    bl_numero: bl,
+    arc,
+    chantier_ligne: chantierLigne,
+    libelle_ligne: libelle,
+    unite,
+    qte_fact: qte,
+    pu,
+    montant,
+    raw_text: clean
+  };
+}
+
+function parsePdfTotalLine(line) {
+  const clean = dedupeRepeatedLine(line);
+  if (!/total\s+(bon|chantier|fournisseur)/i.test(clean)) return null;
+  const allAmounts = clean.match(/-?\d[\d ]*,\d{2}/g) || [];
+  const amountRaw = allAmounts.length ? allAmounts[allAmounts.length - 1] : null;
+  return {
+    type_total: /total\s+fournisseur/i.test(clean) ? 'Total Fournisseur' : /total\s+chantier/i.test(clean) ? 'Total Chantier' : 'Total Bon',
+    total_value: amountRaw ? toNumberFr(amountRaw) : null,
+    raw_text: clean
+  };
+}
+
+function isStockRelatedText(raw) {
+  const txt = normalizeText(raw);
+  if (!txt) return false;
+  return txt.includes('goudalle charpente') ||
+    txt.includes('sortie de stock au') ||
+    txt.includes('sortie de stock gc') ||
+    /\bgc\b/.test(txt);
+}
+
+function parsePdfInvoiceBlocks(text) {
+  const lines = String(text || '').split(/\r?\n/).map((l) => dedupeRepeatedLine(l)).filter(Boolean);
+  const invoices = [];
+  let current = null;
+  let currentOrder = 0;
+  let warnings = [];
+
+  const isFactureCols = (raw) => {
+    const txt = normalizeText(raw);
+    return txt.includes('date') && txt.includes('fact') && txt.includes('fournisseur') && txt.includes('montant');
+  };
+  const isDetailCols = (raw) => {
+    const txt = normalizeText(raw);
+    return txt.includes('ressource') && txt.includes('arc') && txt.includes('libelle') && txt.includes('qte') && txt.includes('montant');
+  };
+
+  for (const raw of lines) {
+    if (/^--\s*\d+\s+of\s+\d+\s*--$/i.test(raw)) continue;
+    if (isFactureCols(raw) || isDetailCols(raw)) continue;
+
+    const header = parsePdfHeaderLine(raw);
+    if (header) {
+      if (current) {
+        warnings.push(`Facture ${current.numero_facture || '(inconnue)'} clôturée sans Total Bon explicite.`);
+        invoices.push(current);
+      }
+      currentOrder = 0;
+      current = {
+        ...header,
+        total_bon: null,
+        lines: [],
+        warnings: []
+      };
+      continue;
+    }
+
+    if (!current) continue;
+
+    const total = parsePdfTotalLine(raw);
+    if (total) {
+      if (total.type_total === 'Total Bon') {
+        current.total_bon = total.total_value;
+        invoices.push(current);
+        current = null;
+      }
+      continue;
+    }
+
+    const article = parsePdfArticleLine(raw);
+    if (!article) continue;
+    currentOrder += 1;
+    current.lines.push({
+      ...article,
+      line_order: currentOrder
+    });
+  }
+
+  if (current) {
+    warnings.push(`Facture ${current.numero_facture || '(inconnue)'} en fin de document sans Total Bon.`);
+    invoices.push(current);
+  }
+
+  return { invoices, warnings };
+}
+
+function isAnnexeText(raw) {
+  const txt = normalizeText(raw);
+  return txt.includes('transport') ||
+    txt.includes('eco') ||
+    txt.includes('contribution verte') ||
+    txt.includes('frais') ||
+    txt.includes('recharge') ||
+    txt.includes(' maj') ||
+    txt.includes('remise commerciale') ||
+    txt.includes('ecart arrondi') ||
+    txt.includes('taxe') ||
+    txt.includes('tva');
+}
+
+function isServiceText(raw) {
+  const txt = normalizeText(raw);
+  return txt.includes('prestation') ||
+    txt.includes('reparation') ||
+    txt.includes('implantation') ||
+    txt.includes('reprofilage') ||
+    txt.includes('coupe');
+}
+
+function extractThicknessMeters(raw) {
+  const txt = normalizeText(raw);
+  const m = txt.match(/(\d{2,3}(?:[.,]\d+)?)\s*mm\b/);
+  if (!m) return null;
+  const mm = parseFloat(String(m[1]).replace(',', '.'));
+  return Number.isFinite(mm) && mm > 0 ? mm / 1000 : null;
+}
+
+function isCltLineFromNorm(line) {
+  const txt = normalizeText([line.ressource, line.libelle_ligne].filter(Boolean).join(' '));
+  return /\b(clt|klh)\b/.test(txt);
+}
+
+function isLcLineFromNorm(line) {
+  const txt = normalizeText([line.ressource, line.libelle_ligne].filter(Boolean).join(' '));
+  if (/\b(clt|klh)\b/.test(txt)) return false;
+  return /\b(lc|lamelle colle|lamelle-colle|lamelle)\b/.test(txt);
+}
+
+function computeVolumeM3FromNorm(line) {
+  const qte = Number(line.qte_fact);
+  if (!Number.isFinite(qte) || qte <= 0) return null;
+  const unite = String(line.unite || '').toUpperCase();
+  if (unite === 'M3') return qte;
+  if (unite === 'M2' && isCltLineFromNorm(line)) {
+    const ep = extractThicknessMeters([line.ressource, line.libelle_ligne].filter(Boolean).join(' '));
+    if (!ep) return null;
+    return qte * ep;
+  }
+  return null;
+}
+
+function allocateInvoiceLinesByBL(normalizedInvoiceLines, batchId, invoiceId) {
+  const grouped = new Map();
+  for (const l of normalizedInvoiceLines) {
+    const key = l.bl_numero || `NO_BL_${invoiceId}`;
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(l);
+  }
+
+  const results = [];
+  for (const [bl, lines] of grouped.entries()) {
+    const products = lines.filter((l) => l.type_technique === 'product');
+    const annexes = lines.filter((l) => l.type_technique === 'annexe');
+    const extraByProductId = new Map(products.map((p) => [p.id, 0]));
+
+    for (const annexe of annexes) {
+      const amount = Number(annexe.montant) || 0;
+      if (!products.length || amount === 0) continue;
+
+      const volWeights = products.map((p) => ({ id: p.id, w: computeVolumeM3FromNorm(p) || 0 })).filter((x) => x.w > 0);
+      const qtyWeights = products.map((p) => ({ id: p.id, w: Number(p.qte_fact) || 0 })).filter((x) => x.w > 0);
+      const weights = volWeights.length ? volWeights : (qtyWeights.length ? qtyWeights : products.map((p) => ({ id: p.id, w: 1 })));
+      const sumW = weights.reduce((a, b) => a + b.w, 0) || 1;
+
+      for (const w of weights) {
+        const part = amount * (w.w / sumW);
+        extraByProductId.set(w.id, (extraByProductId.get(w.id) || 0) + part);
+      }
+    }
+
+    for (const l of lines) {
+      const extra = extraByProductId.get(l.id) || 0;
+      const base = Number(l.montant) || 0;
+      const isProduct = l.type_technique === 'product';
+      results.push({
+        id: `alloc_${l.id}`,
+        normalized_line_id: l.id,
+        raw_invoice_id: invoiceId,
+        batch_id: batchId,
+        allocated_montant: isProduct ? (base + extra) : base,
+        base_montant: base,
+        allocated_extra: isProduct ? extra : 0,
+        allocation_key: annexes.length ? 'BL' : 'none',
+        allocation_details: annexes.length ? `BL=${bl}; annexes=${annexes.length}` : null,
+        volume_m3: computeVolumeM3FromNorm(l),
+        active_for_indicators: Number(l.excluded_from_indicators || 0) ? 0 : (l.type_technique === 'annexe' ? 0 : 1)
+      });
+    }
+  }
+  return results;
+}
+
 // ─── MIDDLEWARES ────────────────────────────────────────────────────────────────
 
 app.use(cors());
@@ -260,6 +588,359 @@ app.post('/api/achats-parse-pdf', async (req, res) => {
   } catch (e) {
     res.status(500).json({ success: false, error: `Erreur parsing PDF: ${e.message}` });
   }
+});
+
+// ─── ROUTES : ACHATS V2 (BLOCS FACTURES + BRUT/NORMALISÉ/RETRAITÉ) ─────────────────
+
+app.get('/api/achats-v2/import-batches', (req, res) => {
+  res.json(dbGet('achats_v2_import_batches', []));
+});
+
+app.get('/api/achats-v2/raw-invoices', (req, res) => {
+  res.json(dbGet('achats_v2_raw_invoices', []));
+});
+
+app.get('/api/achats-v2/raw-lines', (req, res) => {
+  res.json(dbGet('achats_v2_raw_invoice_lines', []));
+});
+
+app.get('/api/achats-v2/normalized-lines', (req, res) => {
+  res.json(dbGet('achats_v2_normalized_invoice_lines', []));
+});
+
+app.get('/api/achats-v2/allocated-lines', (req, res) => {
+  res.json(dbGet('achats_v2_allocated_invoice_lines', []));
+});
+
+app.get('/api/achats-v2/render-cache', (req, res) => {
+  res.json(dbGet('achats_v2_invoice_render_cache', []));
+});
+
+app.get('/api/achats-v2/versions', (req, res) => {
+  res.json(dbGet('achats_v2_invoice_versions', []));
+});
+
+app.get('/api/achats-v2/anomalies', (req, res) => {
+  res.json(dbGet('achats_v2_anomaly_logs', []));
+});
+
+app.get('/api/achats-v2/control/:batchId', (req, res) => {
+  const batchId = String(req.params.batchId || '');
+  const batch = dbGet('achats_v2_import_batches', []).find((b) => b.id === batchId);
+  if (!batch) {
+    return res.status(404).json({ success: false, error: 'Batch introuvable.' });
+  }
+  const invoices = dbGet('achats_v2_raw_invoices', []).filter((r) => r.batch_id === batchId);
+  const lines = dbGet('achats_v2_raw_invoice_lines', []).filter((l) => {
+    const inv = invoices.find((i) => i.id === l.raw_invoice_id);
+    return Boolean(inv);
+  });
+  const normalized = dbGet('achats_v2_normalized_invoice_lines', []).filter((l) => {
+    const inv = invoices.find((i) => i.id === l.raw_invoice_id);
+    return Boolean(inv);
+  });
+  const allocated = dbGet('achats_v2_allocated_invoice_lines', []).filter((l) => {
+    const inv = invoices.find((i) => i.id === l.raw_invoice_id);
+    return Boolean(inv);
+  });
+  const versions = dbGet('achats_v2_invoice_versions', []).filter((v) => {
+    const inv = invoices.find((i) => i.id === v.raw_invoice_id);
+    return Boolean(inv);
+  });
+  const anomalies = dbGet('achats_v2_anomaly_logs', []).filter((a) => a.batch_id === batchId);
+  return res.json({
+    success: true,
+    batch,
+    invoices,
+    lines,
+    normalized,
+    allocated,
+    versions,
+    anomalies
+  });
+});
+
+app.post('/api/achats-v2/import-pdf', async (req, res) => {
+  try {
+    const fileName = String(req.body?.fileName || 'import.pdf');
+    const contentBase64 = String(req.body?.contentBase64 || '');
+    if (!contentBase64) {
+      return res.status(400).json({ success: false, error: 'Champ contentBase64 manquant.' });
+    }
+
+    const buffer = Buffer.from(contentBase64, 'base64');
+    const parser = new PDFParse({ data: buffer });
+    await parser.load();
+    const parsed = await parser.getText();
+    const text = String(parsed?.text || '').replace(/\r/g, '');
+    await parser.destroy();
+
+    const blockParsed = parsePdfInvoiceBlocks(text);
+    const now = new Date().toISOString();
+    const batchId = `impv2_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+    const importBatches = dbGet('achats_v2_import_batches', []);
+    const rawInvoices = dbGet('achats_v2_raw_invoices', []);
+    const rawLines = dbGet('achats_v2_raw_invoice_lines', []);
+    const normalizedLines = dbGet('achats_v2_normalized_invoice_lines', []);
+    const allocatedLines = dbGet('achats_v2_allocated_invoice_lines', []);
+    const renderCache = dbGet('achats_v2_invoice_render_cache', []);
+    const versions = dbGet('achats_v2_invoice_versions', []);
+    const anomalyLogs = dbGet('achats_v2_anomaly_logs', []);
+
+    let totalLines = 0;
+    let totalStockExcluded = 0;
+
+    for (const inv of blockParsed.invoices) {
+      const invoiceId = `rawinv_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const invoiceRawText = [inv.header_raw || '', ...inv.lines.map((l) => l.raw_text || ''), inv.total_bon != null ? `Total Bon ${inv.total_bon}` : '']
+        .filter(Boolean)
+        .join('\n');
+      const invNormText = normalizeText([inv.fournisseur, inv.libelle_facture, inv.chantier].filter(Boolean).join(' '));
+      const isStockInvoice = isStockRelatedText(invNormText);
+
+      rawInvoices.push({
+        id: invoiceId,
+        batch_id: batchId,
+        date_import: now,
+        source_file: fileName,
+        date: inv.date_facture || null,
+        numero_facture: inv.numero_facture || null,
+        avoir: inv.avoir || null,
+        journal: inv.journal || null,
+        fournisseur: inv.fournisseur || null,
+        chantier: inv.chantier || null,
+        libelle_facture: inv.libelle_facture || null,
+        montant_ht: inv.montant_ht != null ? inv.montant_ht : null,
+        total_bon: inv.total_bon != null ? inv.total_bon : null,
+        header_raw: inv.header_raw || null,
+        raw_text: invoiceRawText,
+        excluded_from_indicators: isStockInvoice ? 1 : 0,
+        parse_warnings: inv.warnings || []
+      });
+
+      const normalizedForAllocation = [];
+
+      const renderBlocks = [];
+      for (const line of inv.lines) {
+        const lineId = `rawline_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        const isStockLine = isStockInvoice || isStockRelatedText([
+          inv.fournisseur,
+          inv.libelle_facture,
+          line.libelle_ligne,
+          line.ressource,
+          line.raw_text
+        ].filter(Boolean).join(' '));
+        if (isStockLine) totalStockExcluded += 1;
+
+        rawLines.push({
+          id: lineId,
+          raw_invoice_id: invoiceId,
+          line_order: line.line_order,
+          raw_text: line.raw_text || null,
+          ressource: line.ressource || null,
+          bl_numero: line.bl_numero || null,
+          arc: line.arc || null,
+          chantier_ligne: line.chantier_ligne || null,
+          libelle_ligne: line.libelle_ligne || null,
+          unite: line.unite || null,
+          qte_fact: line.qte_fact != null ? line.qte_fact : null,
+          pu: line.pu != null ? line.pu : null,
+          montant: line.montant != null ? line.montant : null,
+          excluded_from_indicators: isStockLine ? 1 : 0
+        });
+
+        const normLine = {
+          id: `norm_${lineId}`,
+          raw_line_id: lineId,
+          raw_invoice_id: invoiceId,
+          line_order: line.line_order,
+          ressource: line.ressource || null,
+          bl_numero: line.bl_numero || null,
+          arc: line.arc || null,
+          chantier_ligne: line.chantier_ligne || null,
+          libelle_ligne: line.libelle_ligne || null,
+          unite: line.unite || null,
+          qte_fact: line.qte_fact != null ? line.qte_fact : null,
+          pu: line.pu != null ? line.pu : null,
+          montant: line.montant != null ? line.montant : null,
+          type_technique: 'product_or_service',
+          categorie_technique: 'unclassified',
+          excluded_from_indicators: isStockLine ? 1 : 0,
+          is_transport: /transport/i.test(line.libelle_ligne || '') ? 1 : 0,
+          is_eco: /(eco|contribution)/i.test(line.libelle_ligne || '') ? 1 : 0,
+          is_taxe: /(taxe|tva|parafiscale|fiscale)/i.test(line.libelle_ligne || '') ? 1 : 0
+        };
+        const normText = normalizeText([normLine.ressource, normLine.libelle_ligne].filter(Boolean).join(' '));
+        const isAnnexe = isAnnexeText(normText);
+        const isService = !isAnnexe && isServiceText(normText);
+        normLine.type_technique = isAnnexe ? 'annexe' : (isService ? 'service' : 'product');
+        normLine.categorie_technique = isAnnexe ? 'charge_annexe' : (isService ? 'service_non_ventilable' : 'matiere');
+        normalizedLines.push(normLine);
+        normalizedForAllocation.push(normLine);
+
+        renderBlocks.push({
+          type: 'line',
+          line_order: line.line_order,
+          columns: {
+            ressource: line.ressource || '',
+            bl_numero: line.bl_numero || '',
+            arc: line.arc || '',
+            chantier_ligne: line.chantier_ligne || '',
+            libelle_ligne: line.libelle_ligne || '',
+            unite: line.unite || '',
+            qte_fact: line.qte_fact,
+            pu: line.pu,
+            montant: line.montant
+          }
+        });
+      }
+
+      totalLines += inv.lines.length;
+
+      const invoiceAllocated = allocateInvoiceLinesByBL(normalizedForAllocation, batchId, invoiceId);
+      allocatedLines.push(...invoiceAllocated);
+
+      const allInvoices = rawInvoices.filter((x) => x.fournisseur === inv.fournisseur);
+      const sameAmountInvoices = allInvoices.filter((x) => Number(x.montant_ht || 0).toFixed(2) === Number(inv.montant_ht || 0).toFixed(2));
+      const isAvoir = Boolean(inv.avoir) || /(^|\s)avoir(\s|$)/i.test(String(inv.libelle_facture || ''));
+      let versionStatus = 'active';
+      let linkedInvoiceId = null;
+      let linkedReason = null;
+      if (isAvoir && sameAmountInvoices.length > 1) {
+        const original = sameAmountInvoices.find((x) => x.id !== invoiceId);
+        if (original) {
+          versionStatus = 'avoir';
+          linkedInvoiceId = original.id;
+          linkedReason = 'avoir_annulation';
+        }
+      }
+      versions.push({
+        id: `ver_${invoiceId}`,
+        raw_invoice_id: invoiceId,
+        status: versionStatus,
+        linked_invoice_id: linkedInvoiceId,
+        linked_reason: linkedReason,
+        created_at: now
+      });
+
+      renderCache.push({
+        id: `render_${invoiceId}`,
+        raw_invoice_id: invoiceId,
+        batch_id: batchId,
+        render_model: {
+          header: {
+            date: inv.date_facture || null,
+            numero_facture: inv.numero_facture || null,
+            avoir: inv.avoir || null,
+            journal: inv.journal || null,
+            fournisseur: inv.fournisseur || null,
+            chantier: inv.chantier || null,
+            libelle_facture: inv.libelle_facture || null,
+            montant_ht: inv.montant_ht != null ? inv.montant_ht : null
+          },
+          blocks: renderBlocks,
+          total_bon: inv.total_bon != null ? inv.total_bon : null
+        }
+      });
+    }
+
+    for (const w of blockParsed.warnings) {
+      anomalyLogs.push({
+        id: `an_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        batch_id: batchId,
+        level: 'warning',
+        message: w,
+        created_at: now
+      });
+    }
+
+    importBatches.push({
+      id: batchId,
+      date_import: now,
+      nom_fichier: fileName,
+      statut: 'parsed',
+      total_lignes_extraites: totalLines,
+      total_factures_detectees: blockParsed.invoices.length,
+      total_lignes_exclues_stock: totalStockExcluded
+    });
+
+    dbSet('achats_v2_import_batches', importBatches);
+    dbSet('achats_v2_raw_invoices', rawInvoices);
+    dbSet('achats_v2_raw_invoice_lines', rawLines);
+    dbSet('achats_v2_normalized_invoice_lines', normalizedLines);
+    dbSet('achats_v2_allocated_invoice_lines', allocatedLines);
+    dbSet('achats_v2_invoice_render_cache', renderCache);
+    dbSet('achats_v2_invoice_versions', versions);
+    dbSet('achats_v2_anomaly_logs', anomalyLogs);
+
+    res.json({
+      success: true,
+      batch_id: batchId,
+      invoices: blockParsed.invoices.length,
+      lines: totalLines,
+      excluded_stock_lines: totalStockExcluded,
+      warnings: blockParsed.warnings
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, error: `Erreur import PDF v2: ${e.message}` });
+  }
+});
+
+app.get('/api/achats-v2/indicators-monthly', (req, res) => {
+  const rawInvoices = dbGet('achats_v2_raw_invoices', []);
+  const versions = dbGet('achats_v2_invoice_versions', []);
+  const norm = dbGet('achats_v2_normalized_invoice_lines', []);
+  const alloc = dbGet('achats_v2_allocated_invoice_lines', []);
+
+  const versionByInvoice = new Map(versions.map((v) => [v.raw_invoice_id, v]));
+  const invoiceById = new Map(rawInvoices.map((i) => [i.id, i]));
+  const normById = new Map(norm.map((n) => [n.id, n]));
+
+  function toIsoMonth(frDate) {
+    const m = String(frDate || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!m) return null;
+    return `${m[3]}-${m[2]}`;
+  }
+
+  const byMonth = new Map();
+  for (const a of alloc) {
+    if (!Number(a.active_for_indicators || 0)) continue;
+    const n = normById.get(a.normalized_line_id);
+    if (!n) continue;
+    if (n.type_technique !== 'product') continue;
+    if (Number(n.excluded_from_indicators || 0)) continue;
+    const inv = invoiceById.get(a.raw_invoice_id);
+    if (!inv) continue;
+    const ver = versionByInvoice.get(inv.id);
+    if (ver && ver.status === 'neutralized') continue;
+    const month = toIsoMonth(inv.date);
+    if (!month) continue;
+
+    const isClt = isCltLineFromNorm(n);
+    const isLc = isLcLineFromNorm(n);
+    if (!isClt && !isLc) continue;
+
+    if (!byMonth.has(month)) byMonth.set(month, { month, v_clt_m3: 0, v_lc_m3: 0, lc_amount: 0 });
+    const row = byMonth.get(month);
+    const vol = Number(a.volume_m3 != null ? a.volume_m3 : computeVolumeM3FromNorm(n));
+
+    if (isClt && Number.isFinite(vol) && vol > 0) row.v_clt_m3 += vol;
+    if (isLc && Number.isFinite(vol) && vol > 0) {
+      row.v_lc_m3 += vol;
+      row.lc_amount += Number(a.allocated_montant || 0);
+    }
+  }
+
+  const rows = [...byMonth.values()]
+    .sort((a, b) => a.month.localeCompare(b.month))
+    .map((r) => ({
+      month: r.month,
+      v_clt_m3: r.v_clt_m3,
+      v_lc_m3: r.v_lc_m3,
+      prix_moyen_lc_eur_m3: r.v_lc_m3 > 0 ? (r.lc_amount / r.v_lc_m3) : null
+    }));
+  res.json({ success: true, rows });
 });
 
 // ─── EXCEL GOUDALLE MAÇONNERIE : CONFIG + WATCHER + AUTO-IMPORT ─────────────────

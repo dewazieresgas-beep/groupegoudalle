@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contrôle imports achats v2 - Intranet Goudalle</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .achat-table-wrap { overflow-x: auto; }
+    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    @media (max-width: 980px) { .grid-2 { grid-template-columns:1fr; } }
+    .muted { color:#666; font-size:13px; }
+    .chip {
+      display:inline-block; padding:2px 8px; border-radius:999px;
+      border:1px solid #cfd8cf; background:#f4f7f4; font-size:12px;
+    }
+  </style>
+</head>
+<body>
+  <script src="../js/api.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+  <script>Auth.requireAuth();</script>
+
+  <div class="app-container">
+    <div id="sidebar"></div>
+    <main class="main-content">
+      <div class="d-flex justify-between items-center mb-3" style="gap:12px; flex-wrap:wrap;">
+        <h1 class="mb-0">Contrôle imports achats v2</h1>
+      </div>
+
+      <div id="pageMessage" class="alert" style="display:none;"></div>
+
+      <div class="card">
+        <div class="card-title"><h2>Batch import</h2></div>
+        <div class="card-body">
+          <div class="grid-2">
+            <div>
+              <label for="batchSelect">Sélectionner un import :</label>
+              <select id="batchSelect"></select>
+            </div>
+            <div style="align-self:end;">
+              <button id="btnReload" class="btn btn-secondary">🔄 Recharger</button>
+            </div>
+          </div>
+          <p class="muted" id="batchInfo"></p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><h2>Factures (brut)</h2></div>
+        <div class="card-body achat-table-wrap">
+          <table id="tableInvoices">
+            <thead>
+              <tr>
+                <th>Date</th><th>N°</th><th>Fournisseur</th><th>Chantier</th><th>Libellé</th><th>Montant H.T</th><th>Exclue</th>
+              </tr>
+            </thead>
+            <tbody><tr><td colspan="7" style="text-align:center;">Chargement...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><h2>Lignes extraites (brut)</h2></div>
+        <div class="card-body achat-table-wrap">
+          <table id="tableRawLines">
+            <thead>
+              <tr>
+                <th>Facture</th><th>Ordre</th><th>Ressource</th><th>BL</th><th>A.R.C</th><th>Libellé</th><th>Unité</th><th>Qté</th><th>P.U</th><th>Montant</th><th>Exclue</th>
+              </tr>
+            </thead>
+            <tbody><tr><td colspan="11" style="text-align:center;">Chargement...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><h2>Lignes normalisées</h2></div>
+        <div class="card-body achat-table-wrap">
+          <table id="tableNormLines">
+            <thead>
+              <tr>
+                <th>Facture</th><th>Ordre</th><th>Type technique</th><th>Ressource</th><th>BL</th><th>A.R.C</th><th>Libellé</th><th>Montant</th><th>Exclue</th>
+              </tr>
+            </thead>
+            <tbody><tr><td colspan="9" style="text-align:center;">Chargement...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><h2>Lignes retraitées (ventilation)</h2></div>
+        <div class="card-body achat-table-wrap">
+          <table id="tableAllocLines">
+            <thead>
+              <tr>
+                <th>Facture</th><th>Ligne normalisée</th><th>Base</th><th>Extra ventilé</th><th>Montant retraité</th><th>Clé</th><th>Actif indicateurs</th>
+              </tr>
+            </thead>
+            <tbody><tr><td colspan="7" style="text-align:center;">Chargement...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><h2>Facture reconstruite</h2></div>
+        <div class="card-body" id="renderPreview"></div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const API = window.location.origin + '/api';
+
+    function showMessage(msg, type='info') {
+      const el = document.getElementById('pageMessage');
+      el.innerHTML = msg;
+      el.className = `alert alert-${type}`;
+      el.style.display = 'block';
+    }
+
+    function clearMessage() {
+      const el = document.getElementById('pageMessage');
+      el.style.display = 'none';
+      el.innerHTML = '';
+    }
+
+    function fmt(v) {
+      if (v == null || v === '') return '—';
+      return Number(v).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function esc(s) {
+      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    async function apiGet(path) {
+      const res = await fetch(API + path, { method: 'GET' });
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload.error || `Erreur API ${path}`);
+      return payload;
+    }
+
+    function renderInvoices(rows) {
+      const tbody = document.querySelector('#tableInvoices tbody');
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Aucune facture</td></tr>';
+        return;
+      }
+      tbody.innerHTML = rows.map(r => `
+        <tr>
+          <td>${esc(r.date || '')}</td>
+          <td>${esc(r.numero_facture || '')}</td>
+          <td>${esc(r.fournisseur || '')}</td>
+          <td>${esc(r.chantier || '')}</td>
+          <td>${esc(r.libelle_facture || '')}</td>
+          <td>${fmt(r.montant_ht)}</td>
+          <td>${Number(r.excluded_from_indicators || 0) ? '<span class="chip">Stock</span>' : ''}</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderRawLines(lines, invoicesById) {
+      const tbody = document.querySelector('#tableRawLines tbody');
+      if (!lines.length) {
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;">Aucune ligne</td></tr>';
+        return;
+      }
+      const sorted = [...lines].sort((a, b) => {
+        if (a.raw_invoice_id === b.raw_invoice_id) return (a.line_order || 0) - (b.line_order || 0);
+        return String(a.raw_invoice_id).localeCompare(String(b.raw_invoice_id));
+      });
+      tbody.innerHTML = sorted.map(l => {
+        const inv = invoicesById.get(l.raw_invoice_id);
+        return `
+          <tr>
+            <td>${esc(inv?.numero_facture || '')}</td>
+            <td>${l.line_order || ''}</td>
+            <td>${esc(l.ressource || '')}</td>
+            <td>${esc(l.bl_numero || '')}</td>
+            <td>${esc(l.arc || '')}</td>
+            <td>${esc(l.libelle_ligne || '')}</td>
+            <td>${esc(l.unite || '')}</td>
+            <td>${l.qte_fact != null ? fmt(l.qte_fact) : '—'}</td>
+            <td>${l.pu != null ? fmt(l.pu) : '—'}</td>
+            <td>${l.montant != null ? fmt(l.montant) : '—'}</td>
+            <td>${Number(l.excluded_from_indicators || 0) ? '<span class="chip">Stock</span>' : ''}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderReconstruction(renderRows, batchId) {
+      const root = document.getElementById('renderPreview');
+      const rows = (renderRows || []).filter(r => r.batch_id === batchId);
+      if (!rows.length) {
+        root.innerHTML = '<p class="muted">Aucune reconstruction disponible.</p>';
+        return;
+      }
+      const r = rows[0].render_model || {};
+      const header = r.header || {};
+      const blocks = r.blocks || [];
+      root.innerHTML = `
+        <div class="achat-table-wrap">
+          <table>
+            <tr style="background:#f3f6f3;"><th>Date</th><th>N°</th><th>Journal</th><th>Fournisseur</th><th>Chantier</th><th>Libellé</th><th>Montant H.T</th></tr>
+            <tr>
+              <td>${esc(header.date || '')}</td>
+              <td>${esc(header.numero_facture || '')}</td>
+              <td>${esc(header.journal || '')}</td>
+              <td>${esc(header.fournisseur || '')}</td>
+              <td>${esc(header.chantier || '')}</td>
+              <td>${esc(header.libelle_facture || '')}</td>
+              <td>${fmt(header.montant_ht)}</td>
+            </tr>
+          </table>
+          <table style="margin-top:10px;">
+            <tr style="background:#fafafa;"><th>Ressource</th><th>BL</th><th>A.R.C</th><th>Libellé</th><th>Unité</th><th>Qté</th><th>P.U</th><th>Montant</th></tr>
+            ${blocks.map(b => `
+              <tr>
+                <td>${esc(b.columns?.ressource || '')}</td>
+                <td>${esc(b.columns?.bl_numero || '')}</td>
+                <td>${esc(b.columns?.arc || '')}</td>
+                <td>${esc(b.columns?.libelle_ligne || '')}</td>
+                <td>${esc(b.columns?.unite || '')}</td>
+                <td>${b.columns?.qte_fact != null ? fmt(b.columns.qte_fact) : '—'}</td>
+                <td>${b.columns?.pu != null ? fmt(b.columns.pu) : '—'}</td>
+                <td>${b.columns?.montant != null ? fmt(b.columns.montant) : '—'}</td>
+              </tr>
+            `).join('')}
+            <tr><td colspan="7" style="text-align:right;"><strong>Total Bon</strong></td><td><strong>${fmt(r.total_bon)}</strong></td></tr>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderNormalized(rows, invoicesById) {
+      const tbody = document.querySelector('#tableNormLines tbody');
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Aucune ligne normalisée</td></tr>';
+        return;
+      }
+      const sorted = [...rows].sort((a, b) => (a.raw_invoice_id || '').localeCompare(b.raw_invoice_id || '') || ((a.line_order || 0) - (b.line_order || 0)));
+      tbody.innerHTML = sorted.map(r => `
+        <tr>
+          <td>${esc(invoicesById.get(r.raw_invoice_id)?.numero_facture || '')}</td>
+          <td>${r.line_order || ''}</td>
+          <td>${esc(r.type_technique || '')}</td>
+          <td>${esc(r.ressource || '')}</td>
+          <td>${esc(r.bl_numero || '')}</td>
+          <td>${esc(r.arc || '')}</td>
+          <td>${esc(r.libelle_ligne || '')}</td>
+          <td>${r.montant != null ? fmt(r.montant) : '—'}</td>
+          <td>${Number(r.excluded_from_indicators || 0) ? '<span class="chip">Stock</span>' : ''}</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderAllocated(rows, invoicesById, normById) {
+      const tbody = document.querySelector('#tableAllocLines tbody');
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Aucune ligne retraitée</td></tr>';
+        return;
+      }
+      const sorted = [...rows].sort((a, b) => (a.raw_invoice_id || '').localeCompare(b.raw_invoice_id || ''));
+      tbody.innerHTML = sorted.map(r => {
+        const n = normById.get(r.normalized_line_id);
+        return `
+          <tr>
+            <td>${esc(invoicesById.get(r.raw_invoice_id)?.numero_facture || '')}</td>
+            <td>${esc(n?.libelle_ligne || r.normalized_line_id || '')}</td>
+            <td>${r.base_montant != null ? fmt(r.base_montant) : '—'}</td>
+            <td>${r.allocated_extra != null ? fmt(r.allocated_extra) : '—'}</td>
+            <td>${r.allocated_montant != null ? fmt(r.allocated_montant) : '—'}</td>
+            <td>${esc(r.allocation_key || '')}</td>
+            <td>${Number(r.active_for_indicators || 0) ? '<span class="chip">Oui</span>' : ''}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function loadControl(batchId) {
+      clearMessage();
+      const payload = await apiGet(`/achats-v2/control/${encodeURIComponent(batchId)}`);
+      const renderRows = await apiGet('/achats-v2/render-cache');
+      const invoices = payload.invoices || [];
+      const lines = payload.lines || [];
+      const normalized = payload.normalized || [];
+      const allocated = payload.allocated || [];
+      const invoicesById = new Map(invoices.map(i => [i.id, i]));
+      renderInvoices(invoices);
+      renderRawLines(lines, invoicesById);
+      const normById = new Map(normalized.map(n => [n.id, n]));
+      renderNormalized(normalized, invoicesById);
+      renderAllocated(allocated, invoicesById, normById);
+      renderReconstruction(renderRows, batchId);
+
+      const b = payload.batch || {};
+      document.getElementById('batchInfo').textContent =
+        `Fichier: ${b.nom_fichier || '—'} | Factures: ${b.total_factures_detectees || 0} | Lignes: ${b.total_lignes_extraites || 0} | Exclues stock: ${b.total_lignes_exclues_stock || 0}`;
+    }
+
+    async function initPage() {
+      document.getElementById('sidebar').innerHTML = getSidebar();
+      injectAchatSecondaryBar();
+
+      const batches = await apiGet('/achats-v2/import-batches');
+      const select = document.getElementById('batchSelect');
+      if (!Array.isArray(batches) || !batches.length) {
+        select.innerHTML = '<option value="">Aucun import v2</option>';
+        document.querySelector('#tableInvoices tbody').innerHTML = '<tr><td colspan="7" style="text-align:center;">Aucune donnée</td></tr>';
+        document.querySelector('#tableRawLines tbody').innerHTML = '<tr><td colspan="11" style="text-align:center;">Aucune donnée</td></tr>';
+        document.getElementById('renderPreview').innerHTML = '<p class="muted">Aucune reconstruction disponible.</p>';
+        return;
+      }
+
+      const ordered = [...batches].sort((a,b) => String(b.date_import || '').localeCompare(String(a.date_import || '')));
+      select.innerHTML = ordered.map(b => `<option value="${esc(b.id)}">${esc(b.id)} — ${esc(b.nom_fichier || '')}</option>`).join('');
+      const load = () => loadControl(select.value).catch(e => showMessage(`❌ ${e.message}`, 'danger'));
+      select.addEventListener('change', load);
+      document.getElementById('btnReload').addEventListener('click', load);
+      await load();
+    }
+
+    let _initDone = false;
+    async function init() {
+      if (_initDone) return;
+      _initDone = true;
+      if (typeof window.loadServerKeys === 'function') {
+        await window.loadServerKeys([
+          'goudalle_achats_imports',
+          'goudalle_achats_factures',
+          'goudalle_achats_lignes',
+          'goudalle_achats_regles'
+        ]);
+      }
+      await initPage();
+    }
+    window.onServerReady(init);
+  </script>
+</body>
+</html>
