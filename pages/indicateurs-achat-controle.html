@@ -14,12 +14,14 @@
       display:inline-block; padding:2px 8px; border-radius:999px;
       border:1px solid #cfd8cf; background:#f4f7f4; font-size:12px;
     }
+    #renderPreview { overflow-x:auto; }
     .invoice-list {
       border:1px solid #d9d9d9;
       border-radius:12px;
       overflow:hidden;
       background:#fff;
       box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+      min-width: 980px;
     }
     .invoice-item { border-bottom:1px solid #e6e6e6; background:#fff; }
     .invoice-item:last-child { border-bottom:none; }
@@ -30,10 +32,11 @@
     .invoice-row:hover { background:#f8fbf8; }
     .invoice-row-grid {
       display:grid;
-      grid-template-columns: 5% 9% 18% 13% 43% 12%;
+      grid-template-columns: 46px 108px 200px 140px 1fr 150px;
       gap:8px;
       padding:12px 14px;
       align-items:center;
+      color:#1f2a1f;
     }
     .invoice-row-grid.head {
       background:linear-gradient(180deg, #f6f6ef 0%, #efefe7 100%);
@@ -42,6 +45,14 @@
     }
     .invoice-item.open .invoice-row-grid { background:#f3faf3; }
     .invoice-item.open .invoice-summary { font-weight:700; }
+    .invoice-row-grid > div { min-width:0; }
+    .invoice-montant {
+      white-space:nowrap;
+      overflow:visible;
+      text-overflow:clip;
+      font-weight:700;
+      color:#102710;
+    }
     .invoice-toggle {
       display:inline-flex; align-items:center; justify-content:center;
       width:24px; height:24px; border-radius:999px; border:1px solid #d7ded7; background:#fff;
@@ -63,11 +74,12 @@
     .invoice-detail-inner { padding:12px 14px 14px; }
     .invoice-detail table { width:100%; border-collapse:collapse; table-layout:fixed; background:#fff; }
     .invoice-detail th {
-      text-align:left; padding:8px 6px; border-bottom:1px solid #d9d9d9; background:#f8f8f8;
+      text-align:left; padding:8px 6px; border-bottom:1px solid #d9d9d9; background:#f2f4f2; color:#2a2a2a;
     }
     .invoice-detail td {
-      padding:8px 6px; border-bottom:1px solid #ececec; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      padding:8px 6px; border-bottom:1px solid #ececec; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#222;
     }
+    .invoice-detail .montant-col { white-space:nowrap; overflow:visible; text-overflow:clip; font-weight:700; }
     .invoice-detail tr:last-child td { border-bottom:none; }
     .hidden { display:none !important; }
     .num { text-align:right; font-variant-numeric: tabular-nums; }
@@ -83,7 +95,8 @@
     .imports-meta strong { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .imports-meta span { color:#666; font-size:12px; }
     @media (max-width: 980px) {
-      .invoice-row-grid { grid-template-columns: 7% 17% 24% 16% 22% 14%; font-size:12px; }
+      .invoice-list { min-width: 900px; }
+      .invoice-row-grid { grid-template-columns: 42px 98px 160px 130px 1fr 130px; font-size:12px; }
       .invoice-detail table { font-size:12px; }
       .imports-row { grid-template-columns: 1fr; }
     }
@@ -317,7 +330,7 @@
                     <div>${esc(inv.fournisseur)}</div>
                     <div class="mono">${esc(inv.chantier)}</div>
                     <div class="invoice-summary">${esc(inv.libelle)} <span class="line-count">${inv.lignes.length}</span></div>
-                    <div class="num"><strong>${fmt(inv.montant)}</strong></div>
+                    <div class="num invoice-montant">${fmt(inv.montant)}</div>
                   </div>
                 </button>
                 <div class="invoice-detail" data-invoice-id="${esc(inv.id)}">
@@ -347,7 +360,7 @@
                             <td>${esc(l.unite)}</td>
                             <td class="num">${l.qte != null ? fmt(l.qte) : '—'}</td>
                             <td class="num">${l.pu != null ? fmt(l.pu) : '—'}</td>
-                            <td class="num">${l.montant != null ? fmt(l.montant) : '—'}</td>
+                            <td class="num montant-col">${l.montant != null ? fmt(l.montant) : '—'}</td>
                           </tr>
                         `).join('') || '<tr><td colspan="9" class="muted">Aucune ligne</td></tr>'}
                       </tbody>
