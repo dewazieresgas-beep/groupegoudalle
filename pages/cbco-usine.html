@@ -803,19 +803,22 @@
     function downloadUsineAsImage() {
       const element = document.querySelector('.main-content');
       const weekRangeLabel = getExportWeekRangeLabel();
+      const A3_W = 3508; // A3 portrait @300dpi
+      const A3_H = 4961; // A3 portrait @300dpi
+      const EXPORT_CONTENT_W = 3280;
       html2canvas(element, {
-        scale: 2,
-        windowWidth: 2480,
+        scale: 1.2,
+        windowWidth: EXPORT_CONTENT_W,
         backgroundColor: '#ffffff',
         logging: false,
         useCORS: true,
         onclone: (doc) => {
           const root = doc.querySelector('.main-content');
           if (!root) return;
-          root.style.setProperty('width', '2480px', 'important');
+          root.style.setProperty('width', `${EXPORT_CONTENT_W}px`, 'important');
           root.style.setProperty('max-width', 'none', 'important');
-          root.style.setProperty('min-width', '2480px', 'important');
-          root.style.setProperty('padding', '20px 30px', 'important');
+          root.style.setProperty('min-width', `${EXPORT_CONTENT_W}px`, 'important');
+          root.style.setProperty('padding', '24px 36px', 'important');
 
           // En-tête : titre + période
           const headerSlot = root.querySelector('#exportHeaderSlot');
@@ -860,13 +863,13 @@
             if (machineSections[i]) pairs.push({ header: h, section: machineSections[i] });
           });
 
-          if (pairs.length >= 2) {
-            // Créer la grille 2 colonnes
-            const grid = doc.createElement('div');
-            grid.style.display = 'grid';
-            grid.style.gridTemplateColumns = '1fr 1fr';
-            grid.style.gap = '16px';
-            grid.style.marginTop = '16px';
+            if (pairs.length >= 2) {
+              // Créer la grille 2 colonnes
+              const grid = doc.createElement('div');
+              grid.style.display = 'grid';
+              grid.style.gridTemplateColumns = '1fr';
+              grid.style.gap = '14px';
+              grid.style.marginTop = '14px';
 
             pairs.forEach((pair) => {
               const wrapper = doc.createElement('div');
@@ -892,8 +895,8 @@
               const container = pair.section.querySelector('.gm-main-container');
               if (container) {
                 container.style.display = 'grid';
-                container.style.gridTemplateColumns = 'minmax(180px, auto) 1fr auto';
-                container.style.gap = '10px';
+                container.style.gridTemplateColumns = 'minmax(170px, auto) 1fr minmax(220px, auto)';
+                container.style.gap = '8px';
                 container.style.marginBottom = '0';
                 container.style.alignItems = 'stretch';
               }
@@ -917,7 +920,7 @@
               // Graphique
               const chartSection = pair.section.querySelector('.gm-chart-section');
               if (chartSection) {
-                chartSection.style.height = '300px';
+                chartSection.style.height = '280px';
                 chartSection.style.padding = '12px 14px';
               }
               const chartContainer = pair.section.querySelector('.gm-chart-container');
@@ -935,8 +938,8 @@
               }
               const indicatorCard = pair.section.querySelector('.gm-indicator-card');
               if (indicatorCard) {
-                indicatorCard.style.width = '200px';
-                indicatorCard.style.height = '200px';
+                indicatorCard.style.width = '175px';
+                indicatorCard.style.height = '175px';
               }
 
               wrapper.appendChild(pair.section);
@@ -993,8 +996,6 @@
           });
         }
       }).then(canvas => {
-        const A3_W = 4961;
-        const A3_H = 3508;
         const a3Canvas = document.createElement('canvas');
         a3Canvas.width = A3_W;
         a3Canvas.height = A3_H;
@@ -1023,3 +1024,4 @@
   <footer class="site-footer"></footer>
 </body>
 </html>
+
