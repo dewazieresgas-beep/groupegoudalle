@@ -6,7 +6,6 @@
   <title>Indicateurs Usine CBCO - Intranet</title>
   <link rel="stylesheet" href="../css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
   <script src="../js/api.js"></script>
@@ -22,9 +21,6 @@
     <main class="main-content">
       <div class="gm-header">
         <h1>Dashboard Usine CBCO</h1>
-        <div id="exportHeaderSlot" style="margin-top: 12px;">
-          <button class="btn btn-secondary" onclick="downloadUsineAsImage()">📥 Télécharger le dashboard usine</button>
-        </div>
       </div>
 
       <div class="card" style="margin-bottom:18px;">
@@ -586,32 +582,6 @@
       return { week, year };
     }
 
-    function getExportWeekRangeLabel() {
-      const suffixes = ['SC', 'ULTRA', 'EXTRA', 'COLLAGE', 'ASSEMBLAGE'];
-      let best = null;
-      suffixes.forEach((suffix) => {
-        const text = document.getElementById(`weekNumber${suffix}`)?.textContent || '';
-        const m = text.match(/S\s*(\d{1,2})\s+(\d{4})/i);
-        if (!m) return;
-        const week = Number(m[1]);
-        const year = Number(m[2]);
-        if (!Number.isFinite(week) || !Number.isFinite(year) || week <= 0) return;
-        if (!best || year > best.year || (year === best.year && week > best.week)) best = { week, year };
-      });
-      if (!best) best = getCurrentIsoWeekYear();
-
-      const jan4 = new Date(Date.UTC(best.year, 0, 4));
-      const jan4Day = jan4.getUTCDay() || 7;
-      const mondayWeek1 = new Date(jan4);
-      mondayWeek1.setUTCDate(jan4.getUTCDate() - jan4Day + 1);
-      const monday = new Date(mondayWeek1);
-      monday.setUTCDate(mondayWeek1.getUTCDate() + (best.week - 1) * 7);
-      const sunday = new Date(monday);
-      sunday.setUTCDate(monday.getUTCDate() + 6);
-      const fmt = (d) => d.toLocaleDateString('fr-FR', { timeZone: 'UTC' });
-      return `Du ${fmt(monday)} au ${fmt(sunday)}`;
-    }
-
     function getMachineProdValue(entry, machine, cfg) {
       const direct = toFiniteNumber(entry[cfg.prodField]);
       if (direct !== null) return direct;
@@ -798,224 +768,6 @@
       renderMachineSection('extra');
       renderMachineSection('collage');
       renderMachineSection('assemblage');
-    }
-
-    function downloadUsineAsImage() {
-      const element = document.querySelector('.main-content');
-      const weekRangeLabel = getExportWeekRangeLabel();
-      const A3_W = 3508; // A3 portrait @300dpi
-      const A3_H = 4961; // A3 portrait @300dpi
-      const EXPORT_CONTENT_W = 3280;
-      html2canvas(element, {
-        scale: 1.2,
-        windowWidth: EXPORT_CONTENT_W,
-        backgroundColor: '#ffffff',
-        logging: false,
-        useCORS: true,
-        onclone: (doc) => {
-          const root = doc.querySelector('.main-content');
-          if (!root) return;
-          root.style.setProperty('width', `${EXPORT_CONTENT_W}px`, 'important');
-          root.style.setProperty('max-width', 'none', 'important');
-          root.style.setProperty('min-width', `${EXPORT_CONTENT_W}px`, 'important');
-          root.style.setProperty('padding', '24px 36px', 'important');
-
-          // En-tête : titre + période
-          const headerSlot = root.querySelector('#exportHeaderSlot');
-          if (headerSlot) {
-            headerSlot.innerHTML = '';
-            const period = doc.createElement('div');
-            period.textContent = weekRangeLabel;
-            period.style.fontSize = '40px';
-            period.style.fontWeight = '800';
-            period.style.color = '#000000';
-            period.style.lineHeight = '1.1';
-            period.style.textAlign = 'right';
-            headerSlot.appendChild(period);
-          }
-          root.querySelectorAll('button').forEach((btn) => { btn.style.display = 'none'; });
-          root.querySelectorAll('select').forEach((s) => { s.style.display = 'none'; });
-
-          // Agrandir textes sécurité & qualité
-          const cards = root.querySelectorAll(':scope > .card');
-          cards.forEach((card) => {
-            card.style.padding = '14px 16px';
-            card.querySelectorAll('.card-body').forEach(cb => { cb.style.padding = '14px 16px'; });
-            card.querySelectorAll('h2').forEach(h2 => { h2.style.fontSize = '1.6em'; });
-            card.querySelectorAll('td').forEach(td => { td.style.fontSize = '1.1em'; td.style.padding = '6px 10px'; });
-            card.querySelectorAll('[style*="font-size:0.85em"]').forEach(el => { el.style.fontSize = '1em'; });
-            card.querySelectorAll('[style*="font-size:0.82em"]').forEach(el => { el.style.fontSize = '0.95em'; });
-            card.querySelectorAll('[style*="font-size:0.95em"]').forEach(el => { el.style.fontSize = '1.05em'; });
-            card.querySelectorAll('[style*="font-size:1.1em"]').forEach(el => { el.style.fontSize = '1.25em'; });
-            card.querySelectorAll('[style*="font-size:2em"]').forEach(el => { el.style.fontSize = '2.2em'; });
-            card.querySelectorAll('[style*="font-size:1.5em"]').forEach(el => { el.style.fontSize = '1.7em'; });
-            // Padding encarts sécurité/qualité
-            card.querySelectorAll('[style*="border-radius:10px"]').forEach(el => { el.style.padding = '12px'; });
-            card.querySelectorAll('[style*="border-radius:8px"]').forEach(el => { el.style.padding = '10px'; });
-          });
-
-          // Collecter les paires header+section machine (skip le premier gm-header = titre page)
-          const allHeaders = Array.from(root.querySelectorAll(':scope > .gm-header'));
-          const machineHeaders = allHeaders.slice(1); // skip titre page
-          const machineSections = Array.from(root.querySelectorAll(':scope > .gm-main-section'));
-          const pairs = [];
-          machineHeaders.forEach((h, i) => {
-            if (machineSections[i]) pairs.push({ header: h, section: machineSections[i] });
-          });
-
-            if (pairs.length >= 2) {
-              // Créer la grille 2 colonnes
-              const grid = doc.createElement('div');
-              grid.style.display = 'grid';
-              grid.style.gridTemplateColumns = '1fr';
-              grid.style.gap = '14px';
-              grid.style.marginTop = '14px';
-
-            pairs.forEach((pair) => {
-              const wrapper = doc.createElement('div');
-              wrapper.style.border = '2px solid #d4ccc3';
-              wrapper.style.borderRadius = '10px';
-              wrapper.style.padding = '16px 20px';
-              wrapper.style.background = '#fff';
-              wrapper.style.overflow = 'visible';
-
-              // Titre machine (move, pas clone, pour préserver canvas)
-              pair.header.style.marginTop = '0';
-              pair.header.style.paddingBottom = '6px';
-              pair.header.style.borderBottom = '2px solid #8ba88a';
-              pair.header.querySelectorAll('h1').forEach(t => {
-                t.style.fontSize = '22px'; t.style.margin = '0';
-                t.style.borderBottom = 'none'; t.style.paddingBottom = '0';
-              });
-              wrapper.appendChild(pair.header);
-
-              // Section machine (move pour préserver les canvas Chart.js)
-              pair.section.style.marginBottom = '0';
-
-              const container = pair.section.querySelector('.gm-main-container');
-              if (container) {
-                container.style.display = 'grid';
-                container.style.gridTemplateColumns = 'minmax(170px, auto) 1fr minmax(220px, auto)';
-                container.style.gap = '8px';
-                container.style.marginBottom = '0';
-                container.style.alignItems = 'stretch';
-              }
-
-              // KPIs agrandis
-              const kpiCol = pair.section.querySelector('.gm-kpi-column');
-              if (kpiCol) {
-                kpiCol.style.height = 'auto';
-                kpiCol.style.gap = '6px';
-                kpiCol.style.minWidth = '0';
-                kpiCol.querySelectorAll('.gm-kpi-card').forEach(card => {
-                  card.style.height = 'auto';
-                  card.style.padding = '10px 14px';
-                  card.style.overflow = 'hidden';
-                  card.style.wordBreak = 'break-word';
-                });
-                kpiCol.querySelectorAll('.gm-kpi-value').forEach(v => { v.style.fontSize = '26px'; v.style.overflowWrap = 'anywhere'; });
-                kpiCol.querySelectorAll('.gm-kpi-label').forEach(l => { l.style.fontSize = '11px'; l.style.marginBottom = '3px'; });
-              }
-
-              // Graphique
-              const chartSection = pair.section.querySelector('.gm-chart-section');
-              if (chartSection) {
-                chartSection.style.height = '280px';
-                chartSection.style.padding = '12px 14px';
-              }
-              const chartContainer = pair.section.querySelector('.gm-chart-container');
-              if (chartContainer) {
-                chartContainer.style.flex = '1';
-                chartContainer.style.minHeight = '0';
-              }
-
-              // Smiley + commentaire alignés
-              const indicatorCol = pair.section.querySelector('.gm-indicator-column');
-              if (indicatorCol) {
-                indicatorCol.style.height = 'auto';
-                indicatorCol.style.gap = '8px';
-                indicatorCol.style.justifyContent = 'flex-start';
-              }
-              const indicatorCard = pair.section.querySelector('.gm-indicator-card');
-              if (indicatorCard) {
-                indicatorCard.style.width = '175px';
-                indicatorCard.style.height = '175px';
-              }
-
-              wrapper.appendChild(pair.section);
-              grid.appendChild(wrapper);
-            });
-
-            // Insérer grille après les cards sécurité/qualité
-            const lastCard = root.querySelectorAll(':scope > .card');
-            const insertAfter = lastCard.length > 0 ? lastCard[lastCard.length - 1] : root.firstChild;
-            insertAfter.parentNode.insertBefore(grid, insertAfter.nextSibling);
-          }
-
-          // Smileys proportionnés
-          root.querySelectorAll('.gm-indicator-card img').forEach((img) => {
-            img.style.setProperty('width', 'auto', 'important');
-            img.style.setProperty('height', 'auto', 'important');
-            img.style.setProperty('max-width', '100%', 'important');
-            img.style.setProperty('max-height', '100%', 'important');
-            img.style.setProperty('object-fit', 'contain', 'important');
-          });
-
-          // Commentaires en blocs texte
-          root.querySelectorAll('.gm-comment-input').forEach((ta) => {
-            const cs = doc.defaultView.getComputedStyle(ta);
-            const box = doc.createElement('div');
-            box.textContent = ta.value || ta.textContent || '';
-            box.style.width = '100%';
-            box.style.minHeight = '60px';
-            box.style.padding = '6px 8px';
-            box.style.border = '1px solid #e0e0e0';
-            box.style.borderRadius = '6px';
-            box.style.background = '#fafafa';
-            box.style.fontFamily = cs.fontFamily;
-            box.style.fontSize = '12px';
-            box.style.lineHeight = '1.4';
-            box.style.whiteSpace = 'pre-wrap';
-            box.style.overflowWrap = 'anywhere';
-            box.style.wordBreak = 'break-word';
-            box.style.color = '#000';
-            ta.replaceWith(box);
-          });
-
-          // Forcer texte noir partout
-          const nodes = root.querySelectorAll('*');
-          nodes.forEach((el) => {
-            if (el.tagName === 'CANVAS' || el.tagName === 'IMG' || el.tagName === 'SVG') return;
-            const cs = doc.defaultView.getComputedStyle(el);
-            if (!cs) return;
-            const c = cs.color || '';
-            if (c.includes('rgb(255, 255, 255)')) return;
-            el.style.setProperty('color', '#000000', 'important');
-            el.style.setProperty('opacity', '1', 'important');
-            el.style.setProperty('text-shadow', 'none', 'important');
-          });
-        }
-      }).then(canvas => {
-        const a3Canvas = document.createElement('canvas');
-        a3Canvas.width = A3_W;
-        a3Canvas.height = A3_H;
-        const a3Ctx = a3Canvas.getContext('2d');
-        a3Ctx.fillStyle = '#ffffff';
-        a3Ctx.fillRect(0, 0, A3_W, A3_H);
-        const scale = Math.min(A3_W / canvas.width, A3_H / canvas.height);
-        const drawWidth = Math.round(canvas.width * scale);
-        const drawHeight = Math.round(canvas.height * scale);
-        const offsetX = Math.floor((A3_W - drawWidth) / 2);
-        const offsetY = Math.floor((A3_H - drawHeight) / 2);
-        a3Ctx.drawImage(canvas, offsetX, offsetY, drawWidth, drawHeight);
-        const link = document.createElement('a');
-        const date = new Date().toISOString().split('T')[0];
-        link.download = `cbco_usine_dashboard_${date}.png`;
-        link.href = a3Canvas.toDataURL('image/png');
-        link.click();
-      }).catch(() => {
-        alert('❌ Erreur lors de la génération de l’image.');
-      });
     }
 
     window.onServerReady(init);

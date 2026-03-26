@@ -44,8 +44,6 @@ const KEY_TO_ENDPOINT = {
   'goudalle_sylve_balance':          '/sylve-balance',
   'goudalle_sylve_ca':               '/sylve-ca',
   'goudalle_sylve_paiements_attente':'/sylve-paiements',
-  'goudalle_reminder_config':        '/reminders-config',
-  'goudalle_reminders_sent':         '/reminders-sent',
   'goudalle_achats_imports':         '/achats-imports',
   'goudalle_achats_factures':        '/achats-factures',
   'goudalle_achats_lignes':          '/achats-lignes',
@@ -105,8 +103,6 @@ async function loadAllFromServer() {
     ['/sylve-balance',   'goudalle_sylve_balance'],
     ['/sylve-ca',        'goudalle_sylve_ca'],
     ['/sylve-paiements', 'goudalle_sylve_paiements_attente'],
-    ['/reminders-config','goudalle_reminder_config'],
-    ['/reminders-sent',  'goudalle_reminders_sent'],
   ];
 
   await Promise.all(endpoints.map(async ([endpoint, key]) => {

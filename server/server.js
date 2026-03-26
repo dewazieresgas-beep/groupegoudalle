@@ -235,6 +235,19 @@ function isStockRelatedText(raw) {
     /\bgc\b/.test(txt);
 }
 
+/**
+ * Parse le texte brut d'un PDF fournisseur en blocs "facture".
+ *
+ * Stratégie :
+ * - détecter une ligne d'en-tête facture (date / numéro / fournisseur / montant),
+ * - accumuler les lignes d'articles entre cet en-tête et un "Total Bon",
+ * - finaliser la facture avec un montant robuste (montant en-tête, total bon ou somme des lignes).
+ *
+ * Ce parser est tolérant aux OCR imparfaits :
+ * - ignore les séparateurs de page ("-- X of Y --"),
+ * - ignore les lignes d'entête de colonnes,
+ * - normalise les doublons de caractères via dedupeRepeatedLine().
+ */
 function parsePdfInvoiceBlocks(text) {
   const lines = String(text || '').split(/\r?\n/).map((l) => dedupeRepeatedLine(l)).filter(Boolean);
   const invoices = [];
@@ -617,30 +630,6 @@ app.get('/api/sylve-paiements', (req, res) => {
 
 app.put('/api/sylve-paiements', (req, res) => {
   dbSet('sylve_paiements', req.body);
-  res.json({ success: true });
-});
-
-// ─── ROUTES : RAPPELS EMAIL ─────────────────────────────────────────────────────
-
-app.get('/api/reminders-config', (req, res) => {
-  res.json(dbGet('reminders_config', {
-    enabled: false, siteUrl: '',
-    emailjsServiceId: '', emailjsTemplateId: '', emailjsPublicKey: '',
-    indicators: { gm: { recurrence: 'hebdomadaire' }, cbco: { recurrence: 'mensuel' } }
-  }));
-});
-
-app.put('/api/reminders-config', (req, res) => {
-  dbSet('reminders_config', req.body);
-  res.json({ success: true });
-});
-
-app.get('/api/reminders-sent', (req, res) => {
-  res.json(dbGet('reminders_sent', []));
-});
-
-app.put('/api/reminders-sent', (req, res) => {
-  dbSet('reminders_sent', req.body);
   res.json({ success: true });
 });
 

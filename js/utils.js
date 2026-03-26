@@ -430,7 +430,7 @@ function getSidebar() {
     <a href="${base}index.html" class="sidebar-item${accueilActive}">🏠 Accueil</a>
   `;
 
-  // ===== CHANTIERS (direction seulement - placeholder) =====
+  // ===== CHANTIERS (direction seulement) =====
   if (isDirection) {
     const chantiersActive = currentPage === 'indicateurs-chantiers.html' ? ' active' : '';
     items += `<a href="${base}pages/indicateurs-chantiers.html" class="sidebar-item${chantiersActive}">🚧 Chantiers</a>`;
@@ -468,7 +468,7 @@ function getSidebar() {
     items += `<a href="${base}pages/indicateurs-achat.html" class="sidebar-item${achatActive}">🛒 Achat</a>`;
   }
 
-  // ===== RH (direction seulement - placeholder) =====
+  // ===== RH (direction seulement) =====
   if (isDirection) {
     const rhActive = currentPage === 'indicateurs-rh.html' ? ' active' : '';
     items += `<a href="${base}pages/indicateurs-rh.html" class="sidebar-item${rhActive}">👷 RH</a>`;
@@ -762,6 +762,9 @@ function saveCBCOEntry(year, month, montantChantiersCours, montantChantiersTermi
 /**
  * Calcule les cumuls annuels pour chaque année dans les données CBCO
  * Met à jour le champ cumulAnnuel pour chaque entrée
+ * Règle métier : l'exercice fiscal CBCO va d'octobre (10) à septembre (9).
+ * Exemple : Octobre 2025, Novembre 2025, ... Septembre 2026 appartiennent tous
+ * au même exercice fiscal 2025 et le cumul se calcule dans cet ordre.
  * @param {Array} data - Données CBCO (ordre n'importe pas, sera trié par année/mois)
  */
 function calculateCBCOCumuls(data) {
@@ -964,7 +967,7 @@ function injectAchatSecondaryBar() {
 
 function isUsersPage() {
   const page = getCurrentPage();
-  return page === 'users-admin.html' || page === 'users-code.html' || page === 'users-reminders.html';
+  return page === 'users-admin.html' || page === 'users-code.html';
 }
 
 /**
@@ -1051,12 +1054,10 @@ function injectUsersSecondaryBar() {
 
   const usersActive = currentPage === 'users-admin.html' ? ' active' : '';
   const codeActive = currentPage === 'users-code.html' ? ' active' : '';
-  const remindersActive = currentPage === 'users-reminders.html' ? ' active' : '';
 
   const secondaryItems = `
     <a href="${base}pages/users-admin.html" class="sidebar-item${usersActive}">👥 Utilisateurs</a>
     <a href="${base}pages/users-code.html" class="sidebar-item${codeActive}">🔐 Code admin</a>
-    <a href="${base}pages/users-reminders.html" class="sidebar-item${remindersActive}">📧 Rappels email</a>
   `;
 
   const barHTML = `

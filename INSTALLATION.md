@@ -55,7 +55,6 @@ Les données stockées :
 - Chiffre d'affaires CBCO + affaires commerciales
 - Balance âgée Sylve, CA mensuel, paiements en attente
 - Journal d'audit
-- Configuration rappels email
 - Seuils KPI
 - Code administrateur
 

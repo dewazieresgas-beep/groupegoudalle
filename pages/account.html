@@ -216,6 +216,9 @@
       const roleNames = {
         'direction': '🗝️ Direction',
         'referent': '📊 Référent',
+        'referent_cbco': '🏢 Référent CBCO',
+        'referent_sylve': '📒 Référent Sylve Support',
+        'referent_gc': '🏗️ Référent Goudalle Charpente',
         'lecture': '👁️ Consultation'
       };
       document.getElementById('roleDisplay').innerHTML = `<span class="role-badge">${roleNames[session.role] || session.role}</span>`;
@@ -230,8 +233,8 @@
       const permissionNames = {
         'gm': '📊 Consulter les données Goudalle',
         'gm_saisie': '✏️ Saisir les indicateurs',
-        'production_general': '📈 Indicateures générale',
-        'cbco': "🏢 Indicateurs Comercial",
+        'production_general': '📈 Indicateurs généraux de production',
+        'cbco': "🏢 Indicateurs commerciaux CBCO",
         'cbco_saisie': "✏️ Saisie Chiffre d'Affaires",
         'cbco_commercial': '💼 Saisie Indicateurs Commerciaux',
         'cbco_usine': '🏭 Indicateurs Usine CBCO',
@@ -243,10 +246,10 @@
         'cbco_paiement': '💳 Paiements en Attente — CBCO',
         'gc': '📊 Indicateurs Goudalle Charpente',
         'gc_saisie': '✏️ Saisie Goudalle Charpente',
-        'gm_admin': '⚙️ Gérer les paramètres Goudalle',
         'users_admin': '👥 Gérer les utilisateurs',
         'thresholds': '🎚️ Modifier les seuils',
-        'audit': '📋 Consulter l\'audit'
+        'audit': '📋 Consulter l\'audit',
+        'achats': '🛒 Indicateurs achats'
       };
 
       // Générer le HTML des permissions
