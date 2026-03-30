@@ -149,7 +149,7 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" id="permissionsCard" style="display:none;">
         <div class="card-title">
           <h2>Permissions et accès aux pages</h2>
         </div>
@@ -283,7 +283,10 @@
       const loginDate = new Date(session.loginAt);
       document.getElementById('loginAt').textContent = loginDate.toLocaleString('fr-FR');
 
-      // ===== AFFICHAGE DES PERMISSIONS PAR PAGE =====
+      // ===== AFFICHAGE DES PERMISSIONS PAR PAGE (direction uniquement) =====
+      if (user.role !== 'direction') return;
+      document.getElementById('permissionsCard').style.display = '';
+
       // Déterminer les permissions effectives de l'utilisateur
       let effectivePerms;
       if (user.role === 'direction') {
