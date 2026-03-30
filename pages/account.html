@@ -38,18 +38,35 @@
       font-weight: 600;
       font-size: 12px;
     }
-    .permissions-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 10px;
-      margin-top: 15px;
+    .access-group-title {
+      grid-column: 1 / -1;
+      font-size: 0.95em;
+      color: #555;
+      border-bottom: 2px solid #e0e0e0;
+      padding-bottom: 4px;
+      margin-top: 12px;
+      margin-bottom: 4px;
+      font-weight: 700;
     }
-    .permission {
-      background: #f0f4ff;
-      padding: 10px 12px;
-      border-radius: 5px;
+    .access-checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
       font-size: 13px;
-      border-left: 3px solid var(--accent);
+      background: #fafafa;
+    }
+    .access-checkbox-item.has-access {
+      background: #f0f4ff;
+      border-color: var(--accent);
+    }
+    .access-checkbox-item input[type=checkbox] {
+      accent-color: var(--accent);
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
     }
   </style>
 </head>
@@ -134,10 +151,11 @@
 
       <div class="card">
         <div class="card-title">
-          <h2>Permissions et accès</h2>
+          <h2>Permissions et accès aux pages</h2>
         </div>
         <div class="card-body">
-          <div id="permissionsDisplay"></div>
+          <p style="color:#7f8c8d; margin-bottom:16px; font-size:13px;">Les pages auxquelles vous avez accès sont cochées ci-dessous.</p>
+          <div id="permissionsDisplay" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"></div>
         </div>
       </div>
 
@@ -184,6 +202,44 @@
   </div>
 
   <script>
+    const ALL_PAGES_GROUPS = [
+      {
+        group: '💼 Indicateurs Commerciaux',
+        pages: [
+          { key: 'cbco',             label: "🏢 Indicateurs Commercial" },
+          { key: 'cbco_saisie',      label: "✏️ Saisie Chiffre d'Affaires" },
+          { key: 'cbco_commercial',  label: '💼 Saisie Indicateurs Commerciaux' },
+        ]
+      },
+      {
+        group: '📒 Indicateurs Comptabilité',
+        pages: [
+          { key: 'sylve',        label: '📊 Indicateurs Balance Âgée' },
+          { key: 'sylve_saisie', label: '✏️ Saisie Factures' },
+          { key: 'gc_paiement',  label: '💳 Paiements en Attente — Charpente' },
+          { key: 'gm_paiement',  label: '💳 Paiements en Attente — Maçonnerie' },
+          { key: 'cbco_paiement',label: '💳 Paiements en Attente — CBCO' },
+        ]
+      },
+      {
+        group: '🏭 Indicateurs Production',
+        pages: [
+          { key: 'production_general',       label: '📈 Indicateurs généraux' },
+          { key: 'gm',                       label: '📊 Indicateurs Maçonnerie' },
+          { key: 'cbco_usine',               label: '🏭 Indicateurs Usine CBCO' },
+          { key: 'gm_saisie',                label: '✏️ Saisie Indicateurs Maçonnerie' },
+          { key: 'cbco_productivite_saisie', label: '✏️ Saisie Productivité Usine' },
+        ]
+      },
+      {
+        group: '⚙️ Administration',
+        pages: [
+          { key: 'users_admin', label: '👥 Gestion Utilisateurs' },
+          { key: 'thresholds',  label: '🎯 Seuils & Paramètres' },
+        ]
+      },
+    ];
+
     /**
      * Charge et affiche les informations du profil utilisateur
      * - Affiche les données personnelles
@@ -227,42 +283,30 @@
       const loginDate = new Date(session.loginAt);
       document.getElementById('loginAt').textContent = loginDate.toLocaleString('fr-FR');
 
-      // ===== AFFICHAGE DES PERMISSIONS =====
-      const permissions = Auth.PERMISSIONS[session.role] || [];
-      // Mapping des noms techniques vers des libellés lisibles
-      const permissionNames = {
-        'gm': '📊 Consulter les données Goudalle',
-        'gm_saisie': '✏️ Saisir les indicateurs',
-        'production_general': '📈 Indicateurs généraux de production',
-        'cbco': "🏢 Indicateurs commerciaux CBCO",
-        'cbco_saisie': "✏️ Saisie Chiffre d'Affaires",
-        'cbco_commercial': '💼 Saisie Indicateurs Commerciaux',
-        'cbco_usine': '🏭 Indicateurs Usine CBCO',
-        'cbco_productivite_saisie': '✏️ Saisie Productivité Usine',
-        'sylve': '📊 Indicateurs Balance Âgée',
-        'sylve_saisie': '✏️ Saisie Factures',
-        'gc_paiement': '💳 Paiements en Attente — Charpente',
-        'gm_paiement': '💳 Paiements en Attente — Maçonnerie',
-        'cbco_paiement': '💳 Paiements en Attente — CBCO',
-        'gc': '📊 Indicateurs Goudalle Charpente',
-        'gc_saisie': '✏️ Saisie Goudalle Charpente',
-        'users_admin': '👥 Gérer les utilisateurs',
-        'thresholds': '🎚️ Modifier les seuils',
-        'audit': '📋 Consulter l\'audit',
-        'achats': '🛒 Indicateurs achats'
-      };
-
-      // Générer le HTML des permissions
-      const permissionsHtml = permissions.map(p => 
-        `<div class="permission">${permissionNames[p] || p}</div>`
-      ).join('');
-
-      // Afficher les permissions ou message si aucune
-      if (permissions.length === 0) {
-        document.getElementById('permissionsDisplay').innerHTML = '<p>Aucune permission attribuée</p>';
+      // ===== AFFICHAGE DES PERMISSIONS PAR PAGE =====
+      // Déterminer les permissions effectives de l'utilisateur
+      let effectivePerms;
+      if (user.role === 'direction') {
+        effectivePerms = ALL_PAGES_GROUPS.flatMap(g => g.pages).map(p => p.key);
+      } else if (Array.isArray(user.customPermissions)) {
+        effectivePerms = user.customPermissions;
       } else {
-        document.getElementById('permissionsDisplay').innerHTML = `<div class="permissions-grid">${permissionsHtml}</div>`;
+        effectivePerms = Auth.PERMISSIONS[user.role] || [];
       }
+
+      // Générer la grille groupée (identique à users-admin)
+      const permissionsHtml = ALL_PAGES_GROUPS.map(group => `
+        <div class="access-group-title">${group.group}</div>
+        ${group.pages.map(p => {
+          const hasAccess = effectivePerms.includes(p.key);
+          return `<label class="access-checkbox-item${hasAccess ? ' has-access' : ''}">
+            <input type="checkbox" ${hasAccess ? 'checked' : ''} disabled>
+            ${p.label}
+          </label>`;
+        }).join('')}
+      `).join('');
+
+      document.getElementById('permissionsDisplay').innerHTML = permissionsHtml;
     }
 
     /**
