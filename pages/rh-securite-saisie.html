@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Liaison Excel Sécurité RH - Intranet</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <script src="../js/api.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+  <script>Auth.requirePermission('rh_security_admin');</script>
+
+  <div class="app-container">
+    <div id="sidebar"></div>
+
+    <main class="main-content">
+      <div class="d-flex justify-between items-center mb-3" style="gap:12px; flex-wrap:wrap;">
+        <h1 class="mb-0">Liaison Excel - Sécurité RH</h1>
+      </div>
+
+      <div id="pageMessage" class="alert" style="display:none;"></div>
+
+      <div class="card">
+        <div class="card-title">
+          <h2 id="cfgCardTitle">🔗 Connexion des fichiers Excel sécurité</h2>
+        </div>
+        <div class="card-body">
+          <form onsubmit="handleConnect(event)">
+            <div class="form-group">
+              <label for="cfgFolder">📁 Chemin du dossier</label>
+              <input type="text" id="cfgFolder" placeholder="ex: Z:\03-BE\RH\Securite" required>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr; gap:16px;">
+              <div class="form-group">
+                <label for="cfgCbco">📄 Fichier CBCO</label>
+                <input type="text" id="cfgCbco" value="TABLEAU ACCIDENT RELEVE CBCO.xlsx" required>
+              </div>
+              <div class="form-group">
+                <label for="cfgCharpente">📄 Fichier Goudalle Charpente</label>
+                <input type="text" id="cfgCharpente" value="TABLEAU ACCIDENTS CHARPENTE.xlsx" required>
+              </div>
+              <div class="form-group">
+                <label for="cfgMacons">📄 Fichier Goudalle Maçonnerie</label>
+                <input type="text" id="cfgMacons" value="TABLEAU ACCIDENTS RELEVE MACONS.xlsx" required>
+              </div>
+            </div>
+
+            <p style="font-size:0.83em; color:#888; margin:8px 0 12px 0;">
+              Toutes les feuilles d'année (`2026`, `2025`, etc.) sont lues automatiquement. La structure attendue est identique sur les 3 fichiers.
+            </p>
+
+            <div id="cfgLastSync" style="display:none; font-size:13px; color:var(--text-light); margin-bottom:12px;">
+              Dernière sync : <strong id="cfgDisplayLastSync">—</strong>
+            </div>
+
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <button type="submit" id="btnConnect" class="btn btn-success" style="padding:12px 24px; font-size:15px;">
+                🔗 Connecter et synchroniser
+              </button>
+              <button type="button" id="btnModifier" class="btn btn-secondary" style="display:none;" onclick="unlockConfig()">
+                ✏️ Modifier
+              </button>
+              <button type="button" id="btnForceSync" class="btn btn-primary" style="display:none;" onclick="handleForceSync()">
+                🔄 Sync maintenant
+              </button>
+              <button type="button" id="btnDesync" class="btn btn-danger" style="display:none;" onclick="handleDesync()">
+                🔌 Désynchroniser
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:20px;">
+        <div class="card-title"><h2>Résumé de la synchronisation</h2></div>
+        <div class="card-body" id="syncSummary">
+          <p style="color:var(--text-muted-dark); margin:0;">Aucune synchronisation active.</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    function showMessage(msg, type) {
+      const d = document.getElementById('pageMessage');
+      d.textContent = msg;
+      d.className = `alert alert-${type}`;
+      d.style.display = 'block';
+      window.scrollTo(0, 0);
+    }
+
+    function lockConfig(cfg) {
+      ['cfgFolder', 'cfgCbco', 'cfgCharpente', 'cfgMacons'].forEach((id) => {
+        document.getElementById(id).disabled = true;
+      });
+      document.getElementById('btnConnect').style.display = 'none';
+      document.getElementById('btnModifier').style.display = 'inline-flex';
+      document.getElementById('btnForceSync').style.display = 'inline-flex';
+      document.getElementById('btnDesync').style.display = 'inline-flex';
+      document.getElementById('cfgCardTitle').textContent = '✅ Synchronisation active';
+      document.getElementById('cfgLastSync').style.display = 'block';
+      if (cfg?.lastSync) {
+        document.getElementById('cfgDisplayLastSync').textContent = new Date(cfg.lastSync).toLocaleString('fr-FR');
+      }
+    }
+
+    function unlockConfig() {
+      ['cfgFolder', 'cfgCbco', 'cfgCharpente', 'cfgMacons'].forEach((id) => {
+        document.getElementById(id).disabled = false;
+      });
+      document.getElementById('btnConnect').style.display = 'inline-flex';
+      document.getElementById('btnModifier').style.display = 'none';
+      document.getElementById('btnForceSync').style.display = 'none';
+      document.getElementById('btnDesync').style.display = 'none';
+      document.getElementById('cfgCardTitle').textContent = '✏️ Modifier la connexion';
+      document.getElementById('cfgLastSync').style.display = 'none';
+    }
+
+    function renderSummary(cfg) {
+      const summary = document.getElementById('syncSummary');
+      if (!cfg || !cfg.active) {
+        summary.innerHTML = '<p style="color:var(--text-muted-dark); margin:0;">Aucune synchronisation active.</p>';
+        return;
+      }
+      const result = cfg.lastSyncResult || {};
+      summary.innerHTML = `
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px;">
+          <div class="stat-card">
+            <div class="stat-number">${Number(result.imported || 0)}</div>
+            <div class="stat-label">Accidents synchronisés</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number">${cfg.files ? Object.keys(cfg.files).length : 0}</div>
+            <div class="stat-label">Fichiers liés</div>
+          </div>
+        </div>
+        <div style="margin-top:14px; color:var(--text-muted-dark);">
+          <div><strong>Dossier :</strong> ${escapeHtml(cfg.folder || '')}</div>
+          <div><strong>CBCO :</strong> ${escapeHtml(cfg.files?.cbco || '')}</div>
+          <div><strong>Charpente :</strong> ${escapeHtml(cfg.files?.charpente || '')}</div>
+          <div><strong>Maçonnerie :</strong> ${escapeHtml(cfg.files?.macons || '')}</div>
+        </div>
+      `;
+    }
+
+    async function loadConfig() {
+      try {
+        const res = await fetch(SERVER_URL + '/rh-security-excel-config', { cache: 'no-store' });
+        const cfg = await res.json();
+        renderSummary(cfg);
+        if (cfg && cfg.active) {
+          document.getElementById('cfgFolder').value = cfg.folder || '';
+          document.getElementById('cfgCbco').value = cfg.files?.cbco || '';
+          document.getElementById('cfgCharpente').value = cfg.files?.charpente || '';
+          document.getElementById('cfgMacons').value = cfg.files?.macons || '';
+          lockConfig(cfg);
+        }
+      } catch {
+        renderSummary(null);
+      }
+    }
+
+    function buildBody() {
+      return {
+        folder: document.getElementById('cfgFolder').value.trim(),
+        files: {
+          cbco: document.getElementById('cfgCbco').value.trim(),
+          charpente: document.getElementById('cfgCharpente').value.trim(),
+          macons: document.getElementById('cfgMacons').value.trim()
+        }
+      };
+    }
+
+    async function getWriteHeaders() {
+      const res = await fetch(SERVER_URL + '/health', { cache: 'no-store' });
+      const payload = await res.json();
+      const headers = { 'Content-Type': 'application/json' };
+      if (payload?.token) headers['x-goudalle-token'] = payload.token;
+      return headers;
+    }
+
+    async function handleConnect(event) {
+      event.preventDefault();
+      const btn = document.getElementById('btnConnect');
+      btn.textContent = '⏳ Connexion...';
+      btn.disabled = true;
+      const body = buildBody();
+      try {
+        const headers = await getWriteHeaders();
+        const res = await fetch(SERVER_URL + '/rh-security-excel-config', {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify(body)
+        });
+        const result = await res.json();
+        if (!result.success) {
+          showMessage(`❌ ${result.error}`, 'error');
+          return;
+        }
+        const cfg = { ...body, active: true, lastSync: new Date().toISOString(), lastSyncResult: result.result };
+        lockConfig(cfg);
+        renderSummary(cfg);
+        showMessage(`✅ Connexion réussie ! ${result.incidentCount} accident(s) synchronisé(s).`, 'success');
+      } catch (e) {
+        showMessage(`❌ Erreur : ${e.message}`, 'error');
+      } finally {
+        btn.textContent = '🔗 Connecter et synchroniser';
+        btn.disabled = false;
+      }
+    }
+
+    async function handleForceSync() {
+      try {
+        const res = await fetch(SERVER_URL + '/rh-security-import-excel', { method: 'POST' });
+        const result = await res.json();
+        if (!result.success) {
+          showMessage(`❌ ${result.error}`, 'error');
+          return;
+        }
+        showMessage(`✅ Synchronisation effectuée — ${result.incidentCount} accident(s) relu(s).`, 'success');
+        await loadConfig();
+      } catch (e) {
+        showMessage(`❌ Erreur : ${e.message}`, 'error');
+      }
+    }
+
+    async function handleDesync() {
+      if (!confirm('Désynchroniser les fichiers Excel sécurité ? Les données déjà importées sont conservées.')) return;
+      try {
+        await fetch(SERVER_URL + '/rh-security-excel-config', { method: 'DELETE' });
+        unlockConfig();
+        renderSummary(null);
+        showMessage('🔌 Désynchronisé. Vous pouvez reconnecter d’autres fichiers.', 'success');
+      } catch (e) {
+        showMessage(`❌ Erreur : ${e.message}`, 'error');
+      }
+    }
+
+    function init() {
+      document.getElementById('sidebar').innerHTML = getSidebar();
+      injectRHSecondaryBar();
+      loadConfig();
+    }
+
+    window.onServerReady(init);
+  </script>
+</body>
+</html>

@@ -5,15 +5,217 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Indicateurs RH - Intranet Goudalle</title>
   <link rel="stylesheet" href="../css/style.css">
+  <style>
+    :root {
+      --rh-ink: #203626;
+      --rh-soft: #eef5ef;
+      --rh-accent: #4b7856;
+      --rh-accent-light: #bdd7c1;
+      --rh-alert: #fff4e3;
+      --rh-danger: #b14f2d;
+    }
+    .rh-hero {
+      position: relative;
+      overflow: hidden;
+      border-radius: 18px;
+      padding: 22px;
+      background: linear-gradient(135deg, #f7fbf7 0%, #ebf5ed 55%, #dfeee2 100%);
+      border: 1px solid #d4e4d7;
+      margin-bottom: 18px;
+    }
+    .rh-hero::after {
+      content: '';
+      position: absolute;
+      right: -40px;
+      top: -40px;
+      width: 180px;
+      height: 180px;
+      background: radial-gradient(circle, rgba(123,169,130,0.28) 0%, rgba(123,169,130,0) 70%);
+    }
+    .rh-hero-title {
+      margin: 0 0 8px 0;
+      color: var(--rh-ink);
+      font-size: 30px;
+    }
+    .rh-hero-text {
+      margin: 0;
+      max-width: 760px;
+      color: #506553;
+      line-height: 1.5;
+    }
+    .rh-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+    .rh-stat {
+      background: #fff;
+      border: 1px solid #dfe7e0;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 8px 18px rgba(28, 49, 33, 0.05);
+    }
+    .rh-stat-label {
+      color: #647867;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 8px;
+    }
+    .rh-stat-value {
+      color: var(--rh-ink);
+      font-size: 32px;
+      line-height: 1;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .rh-stat-sub {
+      color: #738676;
+      font-size: 13px;
+    }
+    .rh-banner {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+      background: var(--rh-alert);
+      border: 1px solid #f1ddb8;
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin-top: 16px;
+    }
+    .rh-banner strong {
+      color: #704718;
+    }
+    .rh-company-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .rh-company-card {
+      background: #fff;
+      border: 1px solid #dfe7e0;
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 10px 22px rgba(24, 43, 28, 0.05);
+    }
+    .rh-company-title {
+      margin: 0 0 14px 0;
+      color: var(--rh-ink);
+      font-size: 20px;
+    }
+    .rh-mini-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .rh-mini {
+      background: var(--rh-soft);
+      border-radius: 12px;
+      padding: 12px;
+    }
+    .rh-mini .label {
+      color: #5e7362;
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+    .rh-mini .value {
+      color: var(--rh-ink);
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .rh-mini .sub {
+      margin-top: 5px;
+      color: #6e8371;
+      font-size: 12px;
+    }
+    .rh-safety-meter {
+      margin-top: 14px;
+      padding: 14px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #edf7ef 0%, #dff0e3 100%);
+      border: 1px solid #d2e6d6;
+    }
+    .rh-safety-meter.alert {
+      background: linear-gradient(135deg, #fff3eb 0%, #ffe6d8 100%);
+      border-color: #f1c5ad;
+    }
+    .rh-safety-meter .headline {
+      font-size: 14px;
+      color: #56705c;
+      margin-bottom: 8px;
+    }
+    .rh-safety-meter .days {
+      font-size: 34px;
+      color: var(--rh-ink);
+      font-weight: 800;
+      line-height: 1;
+    }
+    .rh-safety-meter.alert .days {
+      color: var(--rh-danger);
+    }
+    .rh-section-title {
+      margin: 0 0 12px 0;
+      color: var(--rh-ink);
+    }
+    .rh-recent-list {
+      display: grid;
+      gap: 12px;
+    }
+    .rh-incident {
+      border: 1px solid #dfe7e0;
+      border-radius: 14px;
+      background: #fff;
+      padding: 14px;
+    }
+    .rh-incident-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .rh-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #edf4ee;
+      color: #416247;
+      border: 1px solid #d7e5da;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .rh-incident-title {
+      font-weight: 700;
+      color: var(--rh-ink);
+    }
+    .rh-incident-meta {
+      color: #68806c;
+      font-size: 13px;
+    }
+    .rh-incident-cause {
+      color: #455a49;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      margin-top: 8px;
+    }
+    .rh-empty {
+      color: var(--text-muted-dark);
+      padding: 20px 0;
+    }
+  </style>
 </head>
 <body>
   <script src="../js/api.js"></script>
   <script src="../js/auth.js"></script>
   <script src="../js/utils.js"></script>
-
-  <script>
-    Auth.requireAuth();
-  </script>
+  <script>Auth.requirePermission('rh');</script>
 
   <div class="app-container">
     <div id="sidebar"></div>
@@ -21,27 +223,208 @@
     <main class="main-content">
       <div class="d-flex justify-between items-center mb-3" style="gap: 12px; flex-wrap: wrap;">
         <h1 class="mb-0">Indicateurs RH</h1>
+        <a href="./rh-securite-saisie.html" id="rhConfigLink" class="btn btn-secondary" style="display:none;">🔗 Lier les Excel sécurité</a>
       </div>
 
-      <div class="card">
-        <div class="card-title">
-          <h2>En cours de développement</h2>
-        </div>
-        <div class="card-body">
-          <p style="color:var(--text-muted-dark);">Cette section est en cours de développement. Le contenu sera ajouté prochainement.</p>
-        </div>
-      </div>
+      <div id="pageMessage" class="alert" style="display:none;"></div>
+
+      <section class="rh-hero">
+        <h2 class="rh-hero-title">Sécurité du groupe</h2>
+        <p class="rh-hero-text">
+          Vue consolidée des accidents avec arrêt, du nombre de jours d'arrêt cumulés, du dernier accident enregistré
+          et du compteur de jours sans accident pour l'ensemble du groupe puis pour chaque entreprise.
+        </p>
+      </section>
+
+      <div id="rhRoot"></div>
     </main>
   </div>
 
   <script>
+    function showMessage(msg, type = 'info') {
+      const d = document.getElementById('pageMessage');
+      d.innerHTML = msg;
+      d.className = `alert alert-${type}`;
+      d.style.display = 'block';
+    }
+
+    function hideMessage() {
+      const d = document.getElementById('pageMessage');
+      d.style.display = 'none';
+      d.innerHTML = '';
+    }
+
+    function formatDateFr(iso) {
+      if (!iso) return '—';
+      const d = new Date(`${iso}T00:00:00Z`);
+      if (Number.isNaN(d.getTime())) return iso;
+      return d.toLocaleDateString('fr-FR');
+    }
+
+    function pluralize(value, singular, plural) {
+      return `${value} ${value > 1 ? plural : singular}`;
+    }
+
+    function renderStatCard(label, value, sub) {
+      return `
+        <div class="rh-stat">
+          <div class="rh-stat-label">${label}</div>
+          <div class="rh-stat-value">${value}</div>
+          <div class="rh-stat-sub">${sub || ''}</div>
+        </div>
+      `;
+    }
+
+    function renderCompanyCard(company) {
+      const days = company.joursSansAccident;
+      const alertClass = days !== null && days < 30 ? ' alert' : '';
+      return `
+        <article class="rh-company-card">
+          <h3 class="rh-company-title">${escapeHtml(company.label)}</h3>
+
+          <div class="rh-mini-grid">
+            <div class="rh-mini">
+              <div class="label">Accidents</div>
+              <div class="value">${company.totalAccidents}</div>
+              <div class="sub">${pluralize(company.totalAccidents, 'accident', 'accidents')}</div>
+            </div>
+            <div class="rh-mini">
+              <div class="label">Avec arrêt</div>
+              <div class="value">${company.accidentsAvecArret}</div>
+              <div class="sub">${pluralize(company.accidentsAvecArret, 'arrêt', 'arrêts')}</div>
+            </div>
+            <div class="rh-mini">
+              <div class="label">Jours d'arrêt</div>
+              <div class="value">${company.joursArret}</div>
+              <div class="sub">cumulés</div>
+            </div>
+            <div class="rh-mini">
+              <div class="label">Arrêts en cours</div>
+              <div class="value">${company.accidentsEnCours}</div>
+              <div class="sub">aujourd'hui</div>
+            </div>
+          </div>
+
+          <div class="rh-safety-meter${alertClass}">
+            <div class="headline">Jours sans accident</div>
+            <div class="days">${company.joursSansAccident == null ? '—' : company.joursSansAccident}</div>
+            <div class="rh-stat-sub" style="margin-top:8px;">
+              Dernier accident : ${company.dernierAccidentDate ? `${formatDateFr(company.dernierAccidentDate)}${company.dernierAccidentNom ? ` · ${escapeHtml(company.dernierAccidentNom)}` : ''}` : 'aucun'}
+            </div>
+          </div>
+        </article>
+      `;
+    }
+
+    function renderRecentIncident(item) {
+      const stopLabel = item.stopDays ? `${item.stopDays} jour${item.stopDays > 1 ? 's' : ''} d'arrêt` : 'Sans durée d\'arrêt renseignée';
+      return `
+        <article class="rh-incident">
+          <div class="rh-incident-top">
+            <div>
+              <div class="rh-incident-title">${escapeHtml(item.employeeName || 'Salarié non renseigné')}</div>
+              <div class="rh-incident-meta">${escapeHtml(item.companyLabel || '—')} · ${formatDateFr(item.accidentDate)}</div>
+            </div>
+            <span class="rh-chip">${stopLabel}</span>
+          </div>
+          <div class="rh-incident-meta">Arrêt : ${item.stopRaw ? escapeHtml(item.stopRaw) : 'non renseigné'}</div>
+          <div class="rh-incident-cause">${escapeHtml(item.cause || 'Cause non renseignée')}</div>
+        </article>
+      `;
+    }
+
+    async function loadDashboard() {
+      hideMessage();
+      const [summaryRes, incidentsRes, cfgRes] = await Promise.all([
+        fetch(SERVER_URL + '/rh-security-summary', { cache: 'no-store' }),
+        fetch(SERVER_URL + '/rh-security-incidents', { cache: 'no-store' }),
+        fetch(SERVER_URL + '/rh-security-excel-config', { cache: 'no-store' })
+      ]);
+
+      const summaryPayload = await summaryRes.json();
+      const incidents = await incidentsRes.json();
+      const cfg = await cfgRes.json();
+
+      if (Auth.hasAccess('rh_security_admin')) {
+        document.getElementById('rhConfigLink').style.display = 'inline-flex';
+      }
+
+      if (!cfg || !cfg.active) {
+        showMessage('⚠️ Aucun fichier Excel sécurité n’est encore lié. Connecte les 3 fichiers depuis la page de liaison RH.', 'warning');
+      }
+
+      const root = document.getElementById('rhRoot');
+      const group = summaryPayload.group || {
+        totalAccidents: 0,
+        accidentsAvecArret: 0,
+        joursArret: 0,
+        joursSansAccident: null,
+        dernierAccidentDate: null,
+        accidentsEnCours: 0
+      };
+      const companies = summaryPayload.companies || [];
+      const recentIncidents = (incidents || []).slice(0, 8);
+
+      root.innerHTML = `
+        <section class="card">
+          <div class="card-title">
+            <h2>Vue groupe</h2>
+          </div>
+          <div class="card-body">
+            <div class="rh-grid">
+              ${renderStatCard('Accidents enregistrés', group.totalAccidents, 'sur l’historique synchronisé')}
+              ${renderStatCard('Accidents avec arrêt', group.accidentsAvecArret, 'arrêts renseignés')}
+              ${renderStatCard('Jours d’arrêt cumulés', group.joursArret, 'toutes entreprises')}
+              ${renderStatCard('Arrêts en cours', group.accidentsEnCours, 'aujourd’hui')}
+            </div>
+
+            <div class="rh-banner">
+              <div>
+                <strong>${group.joursSansAccident == null ? 'Aucun accident enregistré' : `${group.joursSansAccident} jour${group.joursSansAccident > 1 ? 's' : ''} sans accident`}</strong>
+                <div style="color:#8a6a37; margin-top:4px;">
+                  Dernier accident groupe : ${group.dernierAccidentDate ? `${formatDateFr(group.dernierAccidentDate)}${group.dernierAccidentNom ? ` · ${escapeHtml(group.dernierAccidentNom)}` : ''}` : 'aucun'}
+                </div>
+              </div>
+              <div class="rh-chip">${companies.length} entreprise${companies.length > 1 ? 's' : ''} suivie${companies.length > 1 ? 's' : ''}</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card" style="margin-top:18px;">
+          <div class="card-title">
+            <h2>Par entreprise</h2>
+          </div>
+          <div class="card-body">
+            <div class="rh-company-grid">
+              ${companies.map(renderCompanyCard).join('')}
+            </div>
+          </div>
+        </section>
+
+        <section class="card" style="margin-top:18px;">
+          <div class="card-title">
+            <h2>Accidents récents</h2>
+          </div>
+          <div class="card-body">
+            ${recentIncidents.length ? `
+              <div class="rh-recent-list">
+                ${recentIncidents.map(renderRecentIncident).join('')}
+              </div>
+            ` : `
+              <div class="rh-empty">Aucun accident synchronisé pour le moment.</div>
+            `}
+          </div>
+        </section>
+      `;
+    }
+
     function init() {
       document.getElementById('sidebar').innerHTML = getSidebar();
+      injectRHSecondaryBar();
+      loadDashboard().catch((e) => showMessage(`❌ Erreur de chargement RH : ${e.message}`, 'danger'));
     }
 
     window.onServerReady(init);
   </script>
-
-  <footer class="site-footer"></footer>
 </body>
 </html>

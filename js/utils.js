@@ -145,6 +145,11 @@ function isComptaPage() {
   return page === 'sylve-support.html' || page === 'sylve-support-saisie.html' || page === 'gc-paiement.html' || page === 'gm-paiement.html' || page === 'cbco-paiement.html';
 }
 
+function isRHPage() {
+  const page = getCurrentPage();
+  return page === 'indicateurs-rh.html' || page === 'rh-securite-saisie.html';
+}
+
 // ============ WEEK UTILS ============
 /**
  * Calcule le numéro de semaine ISO 8601 d'une date
@@ -446,10 +451,14 @@ function getSidebar() {
     items += `<a href="${base}pages/indicateurs-achat.html" class="sidebar-item${achatActive}">🛒 Achat</a>`;
   }
 
-  // ===== RH (direction seulement) =====
-  if (isDirection) {
-    const rhActive = currentPage === 'indicateurs-rh.html' ? ' active' : '';
-    items += `<a href="${base}pages/indicateurs-rh.html" class="sidebar-item${rhActive}">👷 RH</a>`;
+  // ===== RH =====
+  if (Auth.hasAccess('rh') || Auth.hasAccess('rh_security_admin')) {
+    const rhActive = isRHPage() ? ' active' : '';
+    let rhHref = `${base}pages/indicateurs-rh.html`;
+    if (!Auth.hasAccess('rh') && Auth.hasAccess('rh_security_admin')) {
+      rhHref = `${base}pages/rh-securite-saisie.html`;
+    }
+    items += `<a href="${rhHref}" class="sidebar-item${rhActive}">👷 RH</a>`;
   }
 
   // ===== COMPTABILITÉ =====
@@ -941,6 +950,57 @@ function injectAchatSecondaryBar() {
   if (achatSidebar) {
     achatSidebar.classList.add('open');
   }
+}
+
+function injectRHSecondaryBar() {
+  const session = Auth.getSession();
+  if (!session) return;
+  if (document.getElementById('rhSidebar')) return;
+
+  const base = getBasePath();
+  const currentPage = getCurrentPage();
+  const dashboardActive = currentPage === 'indicateurs-rh.html' ? ' active' : '';
+  const configActive = currentPage === 'rh-securite-saisie.html' ? ' active' : '';
+
+  const links = [
+    `<a href="${base}pages/indicateurs-rh.html" class="sidebar-item${dashboardActive}">🦺 Indicateurs sécurité</a>`
+  ];
+  if (Auth.hasAccess('rh_security_admin')) {
+    links.push(`<a href="${base}pages/rh-securite-saisie.html" class="sidebar-item${configActive}">🔗 Liaison Excel sécurité</a>`);
+  }
+
+  const barHTML = `
+    <aside class="sidebar-secondary" id="rhSidebar">
+      <div class="sidebar-secondary-content">
+        <div class="sidebar-secondary-title">👷 RH</div>
+        <button class="sidebar-secondary-close" onclick="toggleRHSidebar();">✕</button>
+        <nav class="sidebar-secondary-nav">
+          ${links.join('')}
+        </nav>
+      </div>
+    </aside>
+  `;
+
+  const sidebar = document.querySelector('.sidebar');
+  if (sidebar) {
+    sidebar.insertAdjacentHTML('afterend', barHTML);
+  }
+
+  const rhSidebar = document.getElementById('rhSidebar');
+  if (rhSidebar) {
+    rhSidebar.classList.add('open');
+  }
+}
+
+function toggleRHSidebar(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  const rhSidebar = document.getElementById('rhSidebar');
+  if (!rhSidebar) return;
+  const isOpen = rhSidebar.classList.toggle('open');
+  localStorage.setItem('rh_sidebar_state', isOpen ? 'open' : 'closed');
 }
 
 function isUsersPage() {

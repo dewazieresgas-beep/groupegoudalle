@@ -2005,6 +2005,340 @@ app.post('/api/cbco-import-excel', (req, res) => {
   }
 });
 
+// ─── RH SÉCURITÉ : CONFIG + WATCHER + AUTO-IMPORT ───────────────────────────────
+
+const RH_SECURITY_COMPANIES = [
+  { id: 'cbco', label: 'CBCO' },
+  { id: 'charpente', label: 'Goudalle Charpente' },
+  { id: 'macons', label: 'Goudalle Maçonnerie' }
+];
+
+function parseFrDateFlexible(value) {
+  if (value == null || value === '') return null;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return new Date(Date.UTC(value.getFullYear(), value.getMonth(), value.getDate()));
+  }
+  if (typeof value === 'number') {
+    const parsed = XLSX.SSF.parse_date_code(value);
+    if (parsed && parsed.y && parsed.m && parsed.d) {
+      return new Date(Date.UTC(parsed.y, parsed.m - 1, parsed.d));
+    }
+  }
+  const txt = String(value).trim();
+  const m = txt.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (!m) return null;
+  let year = Number(m[3]);
+  if (year < 100) year += 2000;
+  const month = Number(m[2]) - 1;
+  const day = Number(m[1]);
+  const d = new Date(Date.UTC(year, month, day));
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function formatIsoDate(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return null;
+  return date.toISOString().slice(0, 10);
+}
+
+function diffDaysInclusive(startDate, endDate) {
+  if (!(startDate instanceof Date) || !(endDate instanceof Date)) return 0;
+  const msPerDay = 24 * 60 * 60 * 1000;
+  const diff = Math.floor((endDate.getTime() - startDate.getTime()) / msPerDay);
+  return diff >= 0 ? diff + 1 : 0;
+}
+
+function parseStopPeriod(value) {
+  const txt = String(value || '').trim();
+  if (!txt) return { startDate: null, endDate: null, days: 0, raw: '' };
+  const parts = txt.split(/\s+au\s+/i).map((part) => part.trim());
+  const startDate = parseFrDateFlexible(parts[0]);
+  const endDate = parseFrDateFlexible(parts[1] || parts[0]);
+  return {
+    startDate,
+    endDate,
+    days: diffDaysInclusive(startDate, endDate),
+    raw: txt
+  };
+}
+
+function normalizeExcelName(value) {
+  return String(value || '')
+    .trim()
+    .replace(/^["']|["']$/g, '')
+    .replace(/\.(xlsx|xlsm|xls)$/i, '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, '')
+    .toLowerCase();
+}
+
+function resolveExistingExcelPath(folder, filename) {
+  const trimmedFolder = String(folder || '').trim().replace(/^["']|["']$/g, '');
+  const trimmedFilename = String(filename || '').trim().replace(/^["']|["']$/g, '');
+  const directPath = path.join(trimmedFolder, trimmedFilename);
+  if (fs.existsSync(directPath)) {
+    return { fullPath: directPath, resolvedFilename: trimmedFilename };
+  }
+
+  if (!fs.existsSync(trimmedFolder)) {
+    throw new Error(`Dossier introuvable : "${trimmedFolder}"`);
+  }
+
+  const expectedBase = normalizeExcelName(trimmedFilename);
+  const excelEntries = fs.readdirSync(trimmedFolder)
+    .filter((entry) => /\.(xlsx|xlsm|xls)$/i.test(entry));
+
+  let candidates = excelEntries
+    .filter((entry) => normalizeExcelName(entry) === expectedBase);
+
+  if (!candidates.length && expectedBase) {
+    candidates = excelEntries.filter((entry) => {
+      const normalizedEntry = normalizeExcelName(entry);
+      return normalizedEntry.includes(expectedBase) || expectedBase.includes(normalizedEntry);
+    });
+  }
+
+  if (candidates.length === 1) {
+    return {
+      fullPath: path.join(trimmedFolder, candidates[0]),
+      resolvedFilename: candidates[0]
+    };
+  }
+
+  if (candidates.length > 1) {
+    throw new Error(`Plusieurs fichiers correspondent à "${trimmedFilename}" dans "${trimmedFolder}" : ${candidates.join(', ')}`);
+  }
+
+  const availableFiles = excelEntries.length ? ` Fichiers Excel trouvés : ${excelEntries.join(', ')}` : ' Aucun fichier Excel trouvé dans le dossier.';
+  throw new Error(`Fichier introuvable : "${directPath}".${availableFiles}`);
+}
+
+function parseRHSecurityWorkbook(cfg, company) {
+  const resolved = resolveExistingExcelPath(cfg.folder, company.filename);
+  const excelPath = resolved.fullPath;
+
+  const workbook = XLSX.readFile(excelPath);
+  const incidents = [];
+
+  for (const sheetName of workbook.SheetNames) {
+    if (!/^\d{4}$/.test(String(sheetName || '').trim())) continue;
+    const sheet = workbook.Sheets[sheetName];
+    if (!sheet) continue;
+
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
+    const headerIndex = rows.findIndex((row) => {
+      const c0 = String(row?.[0] || '').trim().toUpperCase();
+      const c1 = String(row?.[1] || '').trim().toUpperCase();
+      const c2 = String(row?.[2] || '').trim().toUpperCase();
+      const c3 = String(row?.[3] || '').trim().toUpperCase();
+      return c0.includes('NOM') && c1.includes('DATE') && c2.includes('CAUSE') && c3.includes('DUREE');
+    });
+    if (headerIndex < 0) continue;
+
+    let current = null;
+    for (let i = headerIndex + 1; i < rows.length; i++) {
+      const row = rows[i] || [];
+      const employee = String(row[0] || '').trim();
+      const accidentDateRaw = row[1];
+      const causeLine = String(row[2] || '').trim();
+      const stopRaw = String(row[3] || '').trim();
+      const hasStart = Boolean(employee || accidentDateRaw || stopRaw);
+      const isEmptyLine = !employee && !accidentDateRaw && !causeLine && !stopRaw;
+
+      if (hasStart) {
+        if (current) incidents.push(current);
+        const accidentDate = parseFrDateFlexible(accidentDateRaw);
+        const stop = parseStopPeriod(stopRaw);
+        current = {
+          id: `rhsec_${company.id}_${sheetName}_${i + 1}`,
+          companyId: company.id,
+          companyLabel: company.label,
+          employeeName: employee,
+          accidentDate: formatIsoDate(accidentDate),
+          accidentYear: accidentDate ? accidentDate.getUTCFullYear() : Number(sheetName),
+          cause: causeLine,
+          stopStartDate: formatIsoDate(stop.startDate),
+          stopEndDate: formatIsoDate(stop.endDate),
+          stopDays: stop.days,
+          stopRaw: stop.raw,
+          sourceSheet: String(sheetName),
+          sourceFile: resolved.resolvedFilename,
+          sourceRow: i + 1
+        };
+        continue;
+      }
+
+      if (isEmptyLine || !current) continue;
+      if (causeLine) {
+        current.cause = current.cause ? `${current.cause}\n${causeLine}` : causeLine;
+      }
+    }
+
+    if (current) incidents.push(current);
+  }
+
+  return incidents;
+}
+
+function parseRHSecurityExcels(cfg) {
+  const allIncidents = [];
+  for (const company of RH_SECURITY_COMPANIES) {
+    const filename = cfg?.files?.[company.id];
+    if (!filename) continue;
+    allIncidents.push(...parseRHSecurityWorkbook(cfg, { ...company, filename }));
+  }
+  allIncidents.sort((a, b) => String(b.accidentDate || '').localeCompare(String(a.accidentDate || '')));
+  return allIncidents;
+}
+
+function applyRHSecurityIncidents(incidents) {
+  dbSet('rh_security_incidents', incidents);
+  return { imported: incidents.length, companies: RH_SECURITY_COMPANIES.length };
+}
+
+function computeRHSecuritySummary(incidents = []) {
+  const today = new Date();
+  const todayUtc = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+
+  const summarize = (list, label, id = 'group') => {
+    const sorted = [...list].sort((a, b) => String(b.accidentDate || '').localeCompare(String(a.accidentDate || '')));
+    const latest = sorted[0] || null;
+    const latestDate = latest?.accidentDate ? new Date(`${latest.accidentDate}T00:00:00Z`) : null;
+    const daysSince = latestDate ? Math.floor((todayUtc.getTime() - latestDate.getTime()) / (24 * 60 * 60 * 1000)) : null;
+    const ongoing = sorted.filter((item) => {
+      if (!item.stopStartDate || !item.stopEndDate) return false;
+      const start = new Date(`${item.stopStartDate}T00:00:00Z`);
+      const end = new Date(`${item.stopEndDate}T00:00:00Z`);
+      return start <= todayUtc && end >= todayUtc;
+    }).length;
+    return {
+      id,
+      label,
+      totalAccidents: sorted.length,
+      accidentsAvecArret: sorted.filter((item) => Number(item.stopDays || 0) > 0).length,
+      joursArret: sorted.reduce((sum, item) => sum + Number(item.stopDays || 0), 0),
+      joursSansAccident: daysSince,
+      dernierAccidentDate: latest?.accidentDate || null,
+      dernierAccidentNom: latest?.employeeName || null,
+      accidentsEnCours: ongoing,
+      incidentsRecents: sorted.slice(0, 5)
+    };
+  };
+
+  return {
+    group: summarize(incidents, 'Groupe Goudalle'),
+    companies: RH_SECURITY_COMPANIES.map((company) => summarize(
+      incidents.filter((incident) => incident.companyId === company.id),
+      company.label,
+      company.id
+    ))
+  };
+}
+
+let rhSecurityWatcher = null;
+
+function startRHSecurityWatcher(cfg) {
+  if (rhSecurityWatcher) {
+    clearInterval(rhSecurityWatcher);
+    rhSecurityWatcher = null;
+  }
+
+  const getFingerprints = () => RH_SECURITY_COMPANIES.map((company) => {
+    const filename = cfg?.files?.[company.id];
+    if (!filename) return `${company.id}:missing`;
+    try {
+      const resolved = resolveExistingExcelPath(cfg.folder, filename);
+      return `${company.id}:${resolved.resolvedFilename}:${fs.statSync(resolved.fullPath).mtimeMs}`;
+    } catch {
+      return `${company.id}:missing`;
+    }
+  }).join('|');
+
+  let lastFingerprint = getFingerprints();
+  rhSecurityWatcher = setInterval(() => {
+    try {
+      const nextFingerprint = getFingerprints();
+      if (nextFingerprint === lastFingerprint) return;
+      lastFingerprint = nextFingerprint;
+      const incidents = parseRHSecurityExcels(cfg);
+      const result = applyRHSecurityIncidents(incidents);
+      dbSet('rh_security_excel_config', {
+        ...cfg,
+        active: true,
+        lastSync: new Date().toISOString(),
+        lastSyncResult: result
+      });
+      console.log(`[RH-Securite] Import OK — ${incidents.length} accident(s) synchronisé(s).`);
+    } catch (e) {
+      console.error(`[RH-Securite] Erreur watcher : ${e.message}`);
+    }
+  }, 30000);
+}
+
+(function resumeRHSecurityWatcherOnStartup() {
+  const cfg = dbGet('rh_security_excel_config', null);
+  if (cfg && cfg.active) {
+    console.log('[RH-Securite] Reprise de la surveillance au démarrage...');
+    startRHSecurityWatcher(cfg);
+  }
+})();
+
+app.get('/api/rh-security-excel-config', (req, res) => {
+  res.json(dbGet('rh_security_excel_config', null));
+});
+
+app.put('/api/rh-security-excel-config', requireToken, requireWriteRateLimit, (req, res) => {
+  const folder = String(req.body?.folder || '').trim();
+  const files = req.body?.files || {};
+  if (!folder || !files.cbco || !files.charpente || !files.macons) {
+    return res.status(400).json({ success: false, error: 'Champs manquants : folder + 3 fichiers.' });
+  }
+  try {
+    const cfg = { folder, files, active: true };
+    const incidents = parseRHSecurityExcels(cfg);
+    const result = applyRHSecurityIncidents(incidents);
+    const storedCfg = { ...cfg, lastSync: new Date().toISOString(), lastSyncResult: result };
+    dbSet('rh_security_excel_config', storedCfg);
+    startRHSecurityWatcher(storedCfg);
+    res.json({ success: true, result, incidentCount: incidents.length });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.delete('/api/rh-security-excel-config', (req, res) => {
+  if (rhSecurityWatcher) {
+    clearInterval(rhSecurityWatcher);
+    rhSecurityWatcher = null;
+  }
+  dbSet('rh_security_excel_config', null);
+  res.json({ success: true });
+});
+
+app.post('/api/rh-security-import-excel', (req, res) => {
+  const cfg = dbGet('rh_security_excel_config', null);
+  if (!cfg || !cfg.active) {
+    return res.status(400).json({ success: false, error: 'Aucune synchronisation configurée.' });
+  }
+  try {
+    const incidents = parseRHSecurityExcels(cfg);
+    const result = applyRHSecurityIncidents(incidents);
+    dbSet('rh_security_excel_config', { ...cfg, lastSync: new Date().toISOString(), lastSyncResult: result });
+    res.json({ success: true, result, incidentCount: incidents.length });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.get('/api/rh-security-incidents', (req, res) => {
+  res.json(dbGet('rh_security_incidents', []));
+});
+
+app.get('/api/rh-security-summary', (req, res) => {
+  const incidents = dbGet('rh_security_incidents', []);
+  res.json({ success: true, ...computeRHSecuritySummary(incidents) });
+});
+
 
 // /api/health expose le token de sécurité uniquement aux clients du réseau local.
 // Ce token doit être inclus dans toutes les requêtes d'écriture.
@@ -2064,6 +2398,12 @@ app.listen(PORT, '0.0.0.0', () => {
     }
   } else {
     console.log(`⚠️  [Excel CBCO Prod] Aucun fichier Excel configuré`);
+  }
+  const rhCfg = dbGet('rh_security_excel_config', null);
+  if (rhCfg && rhCfg.active) {
+    console.log(`✅ [Excel RH Sécurité] Connexion active : ${rhCfg.folder}`);
+  } else {
+    console.log(`⚠️  [Excel RH Sécurité] Aucun fichier Excel configuré`);
   }
   console.log('');
 });
