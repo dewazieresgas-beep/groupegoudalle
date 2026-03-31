@@ -7,149 +7,206 @@
   <link rel="stylesheet" href="../css/style.css">
   <style>
     :root {
-      --rh-ink: #203626;
-      --rh-soft: #eef5ef;
-      --rh-accent: #4b7856;
-      --rh-accent-light: #bdd7c1;
-      --rh-alert: #fff4e3;
+      --rh-ink: #173227;
+      --rh-ink-soft: #506a5d;
+      --rh-soft: #f3f7f2;
+      --rh-accent: #5f8667;
+      --rh-accent-dark: #345441;
+      --rh-accent-light: #dce9de;
+      --rh-panel: #ffffff;
+      --rh-alert: #fff1dd;
+      --rh-alert-border: #f1d2a4;
       --rh-danger: #b14f2d;
+      --rh-danger-soft: #fff0e8;
+      --rh-shadow: 0 16px 32px rgba(30, 51, 36, 0.08);
+    }
+    .main-content {
+      background:
+        radial-gradient(circle at top right, rgba(163, 198, 169, 0.22), transparent 26%),
+        linear-gradient(180deg, #fbfcfa 0%, #f5f8f4 100%);
     }
     .rh-hero {
       position: relative;
       overflow: hidden;
-      border-radius: 18px;
-      padding: 22px;
-      background: linear-gradient(135deg, #f7fbf7 0%, #ebf5ed 55%, #dfeee2 100%);
-      border: 1px solid #d4e4d7;
+      border-radius: 26px;
+      padding: 28px;
+      background:
+        radial-gradient(circle at top right, rgba(125, 168, 130, 0.28), transparent 28%),
+        linear-gradient(135deg, #f8fbf8 0%, #edf6ef 48%, #d7e7db 100%);
+      border: 1px solid #d1e0d4;
+      box-shadow: var(--rh-shadow);
       margin-bottom: 18px;
     }
     .rh-hero::after {
       content: '';
       position: absolute;
-      right: -40px;
-      top: -40px;
-      width: 180px;
-      height: 180px;
-      background: radial-gradient(circle, rgba(123,169,130,0.28) 0%, rgba(123,169,130,0) 70%);
+      right: -20px;
+      top: -26px;
+      width: 220px;
+      height: 220px;
+      background: radial-gradient(circle, rgba(123,169,130,0.22) 0%, rgba(123,169,130,0) 72%);
     }
     .rh-hero-title {
-      margin: 0 0 8px 0;
+      margin: 0 0 10px 0;
       color: var(--rh-ink);
-      font-size: 30px;
+      font-size: 34px;
+      line-height: 1.05;
     }
     .rh-hero-text {
       margin: 0;
-      max-width: 760px;
-      color: #506553;
-      line-height: 1.5;
+      max-width: 720px;
+      color: var(--rh-ink-soft);
+      line-height: 1.6;
+      font-size: 15px;
+    }
+    .rh-hero-meta {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 18px;
     }
     .rh-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 14px;
     }
     .rh-stat {
-      background: #fff;
+      position: relative;
+      background: linear-gradient(180deg, #ffffff 0%, #fbfdfb 100%);
       border: 1px solid #dfe7e0;
-      border-radius: 16px;
-      padding: 16px;
-      box-shadow: 0 8px 18px rgba(28, 49, 33, 0.05);
+      border-radius: 18px;
+      padding: 18px 18px 16px;
+      box-shadow: 0 12px 24px rgba(28, 49, 33, 0.05);
+      overflow: hidden;
+    }
+    .rh-stat::before {
+      content: '';
+      position: absolute;
+      inset: 0 auto auto 0;
+      width: 100%;
+      height: 4px;
+      background: linear-gradient(90deg, var(--rh-accent-dark) 0%, #8eb196 100%);
     }
     .rh-stat-label {
       color: #647867;
-      font-size: 12px;
+      font-size: 11px;
       text-transform: uppercase;
-      letter-spacing: 0.04em;
-      margin-bottom: 8px;
+      letter-spacing: 0.08em;
+      margin-bottom: 10px;
+      font-weight: 700;
     }
     .rh-stat-value {
       color: var(--rh-ink);
-      font-size: 32px;
+      font-size: 36px;
       line-height: 1;
       font-weight: 700;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
     }
     .rh-stat-sub {
-      color: #738676;
+      color: #6a7c6d;
       font-size: 13px;
+      line-height: 1.45;
     }
     .rh-banner {
       display: flex;
       justify-content: space-between;
-      gap: 16px;
-      align-items: center;
+      gap: 18px;
+      align-items: flex-start;
       flex-wrap: wrap;
-      background: var(--rh-alert);
-      border: 1px solid #f1ddb8;
-      border-radius: 14px;
-      padding: 14px 16px;
-      margin-top: 16px;
+      background: linear-gradient(135deg, #fff8ee 0%, var(--rh-alert) 100%);
+      border: 1px solid var(--rh-alert-border);
+      border-radius: 18px;
+      padding: 18px 20px;
+      margin-top: 18px;
     }
     .rh-banner strong {
-      color: #704718;
+      color: #8a5520;
+      font-size: 18px;
+      display: block;
+      margin-bottom: 6px;
     }
     .rh-company-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 16px;
-      margin-top: 16px;
+      gap: 18px;
+      margin-top: 12px;
     }
     .rh-company-card {
-      background: #fff;
-      border: 1px solid #dfe7e0;
-      border-radius: 18px;
+      background: linear-gradient(180deg, #ffffff 0%, #fbfdfb 100%);
+      border: 1px solid #d8e4da;
+      border-radius: 22px;
       padding: 18px;
-      box-shadow: 0 10px 22px rgba(24, 43, 28, 0.05);
+      box-shadow: 0 14px 28px rgba(24, 43, 28, 0.06);
+    }
+    .rh-company-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 14px;
     }
     .rh-company-title {
-      margin: 0 0 14px 0;
+      margin: 0;
       color: var(--rh-ink);
       font-size: 20px;
+    }
+    .rh-company-caption {
+      color: var(--rh-ink-soft);
+      font-size: 13px;
+      margin-top: 4px;
     }
     .rh-mini-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
+      gap: 12px;
     }
     .rh-mini {
-      background: var(--rh-soft);
-      border-radius: 12px;
-      padding: 12px;
+      background: linear-gradient(180deg, #f5f9f5 0%, #eef5ef 100%);
+      border: 1px solid #e0ebe1;
+      border-radius: 16px;
+      padding: 14px;
     }
     .rh-mini .label {
       color: #5e7362;
-      font-size: 12px;
-      margin-bottom: 6px;
+      font-size: 11px;
+      margin-bottom: 7px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 700;
     }
     .rh-mini .value {
       color: var(--rh-ink);
-      font-size: 22px;
+      font-size: 28px;
       font-weight: 700;
       line-height: 1;
     }
     .rh-mini .sub {
-      margin-top: 5px;
+      margin-top: 7px;
       color: #6e8371;
       font-size: 12px;
+      line-height: 1.4;
     }
     .rh-safety-meter {
-      margin-top: 14px;
-      padding: 14px;
-      border-radius: 14px;
+      margin-top: 16px;
+      padding: 16px 16px 14px;
+      border-radius: 18px;
       background: linear-gradient(135deg, #edf7ef 0%, #dff0e3 100%);
-      border: 1px solid #d2e6d6;
+      border: 1px solid #cfe2d2;
     }
     .rh-safety-meter.alert {
-      background: linear-gradient(135deg, #fff3eb 0%, #ffe6d8 100%);
-      border-color: #f1c5ad;
+      background: linear-gradient(135deg, #fff5ef 0%, #ffe7db 100%);
+      border-color: #f0c4aa;
     }
     .rh-safety-meter .headline {
-      font-size: 14px;
+      font-size: 12px;
       color: #56705c;
       margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 700;
     }
     .rh-safety-meter .days {
-      font-size: 34px;
+      font-size: 42px;
       color: var(--rh-ink);
       font-weight: 800;
       line-height: 1;
@@ -163,13 +220,15 @@
     }
     .rh-recent-list {
       display: grid;
-      gap: 12px;
+      gap: 14px;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     }
     .rh-incident {
-      border: 1px solid #dfe7e0;
-      border-radius: 14px;
-      background: #fff;
-      padding: 14px;
+      border: 1px solid #dce6dd;
+      border-radius: 18px;
+      background: linear-gradient(180deg, #ffffff 0%, #fbfdfb 100%);
+      padding: 16px;
+      box-shadow: 0 10px 22px rgba(28, 49, 33, 0.04);
     }
     .rh-incident-top {
       display: flex;
@@ -183,13 +242,23 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 4px 10px;
+      padding: 6px 11px;
       border-radius: 999px;
       background: #edf4ee;
       color: #416247;
       border: 1px solid #d7e5da;
       font-size: 12px;
       font-weight: 600;
+    }
+    .rh-chip.status {
+      background: #e4efe6;
+      color: var(--rh-accent-dark);
+      border-color: #cfe0d2;
+    }
+    .rh-chip.status.closed {
+      background: #f2efe7;
+      color: #7a6240;
+      border-color: #e1d3be;
     }
     .rh-incident-title {
       font-weight: 700;
@@ -207,7 +276,8 @@
     }
     .rh-empty {
       color: var(--text-muted-dark);
-      padding: 20px 0;
+      padding: 24px 0;
+      text-align: center;
     }
     .rh-toolbar {
       display: flex;
@@ -221,11 +291,11 @@
       display: inline-flex;
       align-items: center;
       gap: 10px;
-      padding: 10px 14px;
-      background: #fff;
+      padding: 12px 16px;
+      background: rgba(255,255,255,0.92);
       border: 1px solid #dfe7e0;
-      border-radius: 14px;
-      box-shadow: 0 8px 18px rgba(28, 49, 33, 0.05);
+      border-radius: 16px;
+      box-shadow: 0 12px 24px rgba(28, 49, 33, 0.05);
     }
     .rh-filter label {
       color: #56705c;
@@ -240,6 +310,60 @@
       background: #f8fbf8;
       color: var(--rh-ink);
       font-weight: 600;
+    }
+    .rh-layout {
+      display: grid;
+      gap: 18px;
+    }
+    .rh-panel {
+      background: rgba(255,255,255,0.88);
+      border: 1px solid #dde7de;
+      border-radius: 22px;
+      box-shadow: var(--rh-shadow);
+      overflow: hidden;
+    }
+    .rh-panel-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 16px 20px;
+      background: linear-gradient(90deg, var(--rh-accent) 0%, #8cab92 100%);
+      color: #fff;
+    }
+    .rh-panel-head h2 {
+      margin: 0;
+      font-size: 20px;
+    }
+    .rh-panel-head p {
+      margin: 4px 0 0 0;
+      color: rgba(255,255,255,0.88);
+      font-size: 13px;
+    }
+    .rh-panel-body {
+      padding: 20px;
+    }
+    .rh-kicker {
+      color: var(--rh-ink-soft);
+      font-size: 13px;
+    }
+    @media (max-width: 760px) {
+      .rh-hero {
+        padding: 22px;
+      }
+      .rh-hero-title {
+        font-size: 28px;
+      }
+      .rh-panel-body {
+        padding: 16px;
+      }
+      .rh-company-head {
+        flex-direction: column;
+      }
+      .rh-mini-grid {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
@@ -263,9 +387,13 @@
       <section class="rh-hero">
         <h2 class="rh-hero-title">Sécurité du groupe</h2>
         <p class="rh-hero-text">
-          Vue consolidée des accidents avec arrêt, du nombre de jours d'arrêt cumulés, du dernier accident enregistré
-          et du compteur de jours sans accident pour l'ensemble du groupe puis pour chaque entreprise.
+          Tableau de bord sécurité RH pour suivre les accidents du travail, comparer les entreprises
+          et lire rapidement les points de vigilance sur l'exercice sélectionné.
         </p>
+        <div class="rh-hero-meta">
+          <span class="rh-chip">Historique suivi depuis le 01/09/2019</span>
+          <span class="rh-chip">Exercice du 1 octobre au 30 septembre</span>
+        </div>
       </section>
 
       <div class="rh-toolbar">
@@ -459,6 +587,9 @@
     function renderCompanyCard(company, isClosedExercise) {
       const days = isClosedExercise ? company.plusLonguePeriodeSansAccident : company.joursSansAccident;
       const alertClass = days !== null && days < 30 ? ' alert' : '';
+      const statusLabel = isClosedExercise
+        ? (company.totalAccidents > 0 ? 'Exercice avec sinistres' : 'Aucun accident sur l’exercice')
+        : (company.accidentsEnCours > 0 ? 'Arrêt en cours' : 'Situation stable');
       const fourthBlock = isClosedExercise
         ? `
             <div class="rh-mini">
@@ -480,7 +611,13 @@
         : `Dernier accident : ${company.dernierAccidentDate ? `${formatDateFr(company.dernierAccidentDate)}${company.dernierAccidentNom ? ` · ${escapeHtml(company.dernierAccidentNom)}` : ''}` : 'aucun'}`;
       return `
         <article class="rh-company-card">
-          <h3 class="rh-company-title">${escapeHtml(company.label)}</h3>
+          <div class="rh-company-head">
+            <div>
+              <h3 class="rh-company-title">${escapeHtml(company.label)}</h3>
+              <div class="rh-company-caption">Lecture rapide des indicateurs de l’entreprise</div>
+            </div>
+            <span class="rh-chip ${company.totalAccidents > 0 ? '' : 'status'}">${statusLabel}</span>
+          </div>
 
           <div class="rh-mini-grid">
             <div class="rh-mini">
@@ -581,13 +718,38 @@
       const bannerSub = isClosedExercise
         ? `Dernier accident de l'exercice : ${group.dernierAccidentDate ? `${formatDateFr(group.dernierAccidentDate)}${group.dernierAccidentNom ? ` · ${escapeHtml(group.dernierAccidentNom)}` : ''}` : 'aucun'}`
         : `Dernier accident groupe : ${group.dernierAccidentDate ? `${formatDateFr(group.dernierAccidentDate)}${group.dernierAccidentNom ? ` · ${escapeHtml(group.dernierAccidentNom)}` : ''}` : 'aucun'}`;
+      const statusChip = isClosedExercise
+        ? '<span class="rh-chip status closed">Exercice clôturé</span>'
+        : '<span class="rh-chip status">Exercice en cours</span>';
+      const toolbar = document.querySelector('.rh-toolbar');
+      if (toolbar) {
+        toolbar.innerHTML = `
+          <div class="rh-filter">
+            <label for="exerciseSelect">Exercice affiché</label>
+            <select id="exerciseSelect"></select>
+          </div>
+          <div class="rh-kicker">
+            ${isClosedExercise ? 'Lecture bilan annuelle' : 'Lecture opérationnelle en temps réel'}
+          </div>
+        `;
+        renderExerciseSelect(exerciseOptions, rhState.selectedExercise);
+        document.getElementById('exerciseSelect').addEventListener('change', (event) => {
+          rhState.selectedExercise = Number(event.target.value);
+          renderDashboard();
+        });
+      }
 
       root.innerHTML = `
-        <section class="card">
-          <div class="card-title">
-            <h2>Vue groupe</h2>
+        <div class="rh-layout">
+        <section class="rh-panel">
+          <div class="rh-panel-head">
+            <div>
+              <h2>Vue groupe</h2>
+              <p>Bilan consolidé de l’exercice ${exerciseLabel}</p>
+            </div>
+            ${statusChip}
           </div>
-          <div class="card-body">
+          <div class="rh-panel-body">
             <div class="rh-grid">
               ${groupCards}
             </div>
@@ -595,7 +757,7 @@
             <div class="rh-banner">
               <div>
                 <strong>${bannerTitle}</strong>
-                <div style="color:#8a6a37; margin-top:4px;">
+                <div style="color:#8a6a37; margin-top:4px; line-height:1.5;">
                   ${bannerSub}
                 </div>
               </div>
@@ -604,22 +766,30 @@
           </div>
         </section>
 
-        <section class="card" style="margin-top:18px;">
-          <div class="card-title">
-            <h2>Par entreprise</h2>
+        <section class="rh-panel">
+          <div class="rh-panel-head">
+            <div>
+              <h2>Par entreprise</h2>
+              <p>Comparer les résultats sécurité de chaque entité</p>
+            </div>
+            <span class="rh-chip">${companies.length} entreprise${companies.length > 1 ? 's' : ''}</span>
           </div>
-          <div class="card-body">
+          <div class="rh-panel-body">
             <div class="rh-company-grid">
               ${companies.map((company) => renderCompanyCard(company, isClosedExercise)).join('')}
             </div>
           </div>
         </section>
 
-        <section class="card" style="margin-top:18px;">
-          <div class="card-title">
-            <h2>Accidents de l'exercice</h2>
+        <section class="rh-panel">
+          <div class="rh-panel-head">
+            <div>
+              <h2>Accidents de l'exercice</h2>
+              <p>Les événements les plus récents pour l’exercice sélectionné</p>
+            </div>
+            <span class="rh-chip">${recentIncidents.length} fiche${recentIncidents.length > 1 ? 's' : ''}</span>
           </div>
-          <div class="card-body">
+          <div class="rh-panel-body">
             ${recentIncidents.length ? `
               <div class="rh-recent-list">
                 ${recentIncidents.map(renderRecentIncident).join('')}
@@ -629,6 +799,7 @@
             `}
           </div>
         </section>
+        </div>
       `;
     }
 
@@ -661,10 +832,6 @@
     function init() {
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectRHSecondaryBar();
-      document.getElementById('exerciseSelect').addEventListener('change', (event) => {
-        rhState.selectedExercise = Number(event.target.value);
-        renderDashboard();
-      });
       loadDashboard().catch((e) => showMessage(`❌ Erreur de chargement RH : ${e.message}`, 'danger'));
     }
 

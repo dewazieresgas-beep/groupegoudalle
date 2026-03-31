@@ -2013,7 +2013,7 @@ const RH_SECURITY_COMPANIES = [
   { id: 'macons', label: 'Goudalle Maçonnerie' }
 ];
 
-function parseFrDateFlexible(value) {
+function parseFrDateFlexible(value, options = {}) {
   if (value == null || value === '') return null;
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
     return new Date(Date.UTC(value.getFullYear(), value.getMonth(), value.getDate()));
@@ -2025,9 +2025,12 @@ function parseFrDateFlexible(value) {
     }
   }
   const txt = String(value).trim();
-  const m = txt.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  const m = txt.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{1,4}))?$/);
   if (!m) return null;
-  let year = Number(m[3]);
+  let year = m[3] != null && m[3] !== ''
+    ? Number(m[3])
+    : Number(options.defaultYear || options.referenceDate?.getUTCFullYear?.() || 0);
+  if (!year) return null;
   if (year < 100) year += 2000;
   const month = Number(m[2]) - 1;
   const day = Number(m[1]);
@@ -2047,16 +2050,93 @@ function diffDaysInclusive(startDate, endDate) {
   return diff >= 0 ? diff + 1 : 0;
 }
 
-function parseStopPeriod(value) {
-  const txt = String(value || '').trim();
+function normalizeStopText(value) {
+  return String(value || '')
+    .replace(/\r?\n+/g, ' ')
+    .replace(/[–—]/g, '-')
+    .replace(/\s+/g, ' ')
+    .replace(/\bau(?=\d)/gi, 'au ')
+    .replace(/(\d)\.(?=\s*au\b)/g, '$1')
+    .trim();
+}
+
+function removeAccents(value) {
+  return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function parseStopPeriod(value, options = {}) {
+  const txt = normalizeStopText(value);
   if (!txt) return { startDate: null, endDate: null, days: 0, raw: '' };
-  const parts = txt.split(/\s+au\s+/i).map((part) => part.trim());
-  const startDate = parseFrDateFlexible(parts[0]);
-  const endDate = parseFrDateFlexible(parts[1] || parts[0]);
+
+  const normalized = removeAccents(txt).toLowerCase();
+  const noStopMention = /(pas\s*d?'?\s*arret|pas\s*arret|sans\s*arret)/i.test(normalized);
+
+  const buildRange = (rawStart, rawEnd, forceExplicitStop = false) => {
+    if (!rawStart || !rawEnd) return null;
+    const endDate = parseFrDateFlexible(rawEnd, { defaultYear: options.sheetYear });
+    if (!endDate) return null;
+
+    let startDefaultYear = endDate.getUTCFullYear();
+    const startParts = String(rawStart).trim().match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{1,4}))?$/);
+    if (startParts && !startParts[3]) {
+      const startMonth = Number(startParts[2]);
+      const endMonth = endDate.getUTCMonth() + 1;
+      if (startMonth > endMonth) startDefaultYear -= 1;
+    }
+
+    const startDate = parseFrDateFlexible(rawStart, {
+      defaultYear: startDefaultYear || options.sheetYear,
+      referenceDate: endDate
+    });
+    if (!startDate) return null;
+
+    return {
+      startDate,
+      endDate,
+      days: diffDaysInclusive(startDate, endDate),
+      explicitStop: forceExplicitStop
+    };
+  };
+
+  const explicitRanges = [];
+  const explicitRegex = /arret(?:\s+du)?[^0-9]{0,10}(\d{1,2}\/\d{1,2}(?:\/\d{1,4})?)\s*(?:au|a|jusqu'?au|jusquau)\s*(\d{1,2}\/\d{1,2}(?:\/\d{1,4})?)/gi;
+  for (const match of txt.matchAll(explicitRegex)) {
+    const range = buildRange(match[1], match[2], true);
+    if (range) explicitRanges.push(range);
+  }
+
+  const genericRanges = [];
+  const genericRegex = /(\d{1,2}\/\d{1,2}(?:\/\d{1,4})?)\s*(?:au|a|jusqu'?au|jusquau)\s*(\d{1,2}\/\d{1,2}(?:\/\d{1,4})?)/gi;
+  for (const match of txt.matchAll(genericRegex)) {
+    const range = buildRange(match[1], match[2], false);
+    if (range) genericRanges.push(range);
+  }
+
+  let chosenRange = explicitRanges[explicitRanges.length - 1] || null;
+  if (!chosenRange && !noStopMention) {
+    chosenRange = genericRanges[genericRanges.length - 1] || null;
+  }
+
+  if (chosenRange) {
+    const extensionMatch = txt.match(/jusqu'?au\s*(\d{1,2}\/\d{1,2}(?:\/\d{1,4})?)/i);
+    if (extensionMatch) {
+      const extendedEnd = parseFrDateFlexible(extensionMatch[1], {
+        defaultYear: chosenRange.endDate?.getUTCFullYear?.() || options.sheetYear,
+        referenceDate: chosenRange.endDate
+      });
+      if (extendedEnd && chosenRange.startDate && extendedEnd >= chosenRange.endDate) {
+        chosenRange.endDate = extendedEnd;
+        chosenRange.days = diffDaysInclusive(chosenRange.startDate, chosenRange.endDate);
+      }
+    }
+  }
+
+  const startDate = chosenRange?.startDate || null;
+  const endDate = chosenRange?.endDate || null;
   return {
     startDate,
     endDate,
-    days: diffDaysInclusive(startDate, endDate),
+    days: chosenRange ? chosenRange.days : 0,
     raw: txt
   };
 }
@@ -2142,13 +2222,34 @@ function parseRHSecurityWorkbook(cfg, company) {
       const accidentDateRaw = row[1];
       const causeLine = String(row[2] || '').trim();
       const stopRaw = String(row[3] || '').trim();
-      const hasStart = Boolean(employee || accidentDateRaw || stopRaw);
+      const hasStructuredStart = Boolean(accidentDateRaw || (employee && (causeLine || stopRaw)));
       const isEmptyLine = !employee && !accidentDateRaw && !causeLine && !stopRaw;
 
-      if (hasStart) {
+      if (!employee && !accidentDateRaw && current) {
+        if (causeLine) {
+          current.cause = current.cause ? `${current.cause}\n${causeLine}` : causeLine;
+        }
+        if (stopRaw) {
+          current.stopRaw = current.stopRaw ? `${current.stopRaw} ${stopRaw}` : stopRaw;
+          const updatedStop = parseStopPeriod(current.stopRaw, {
+            accidentDate: current.accidentDate,
+            sheetYear: Number(sheetName)
+          });
+          current.stopStartDate = formatIsoDate(updatedStop.startDate);
+          current.stopEndDate = formatIsoDate(updatedStop.endDate);
+          current.stopDays = updatedStop.days;
+          current.stopRaw = updatedStop.raw;
+        }
+        continue;
+      }
+
+      if (hasStructuredStart) {
         if (current) incidents.push(current);
         const accidentDate = parseFrDateFlexible(accidentDateRaw);
-        const stop = parseStopPeriod(stopRaw);
+        const stop = parseStopPeriod(stopRaw, {
+          accidentDate,
+          sheetYear: Number(sheetName)
+        });
         current = {
           id: `rhsec_${company.id}_${sheetName}_${i + 1}`,
           companyId: company.id,

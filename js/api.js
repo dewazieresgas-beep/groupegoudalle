@@ -108,7 +108,7 @@ function getInitialPreloadKeys() {
 
 async function checkServerAvailable() {
   try {
-    const signal = createTimeoutSignal(3000);
+    const signal = createTimeoutSignal(8000);
     const res = await fetch(
       SERVER_URL + '/health',
       signal ? { method: 'GET', signal, cache: 'no-store' } : { method: 'GET', cache: 'no-store' }
@@ -160,7 +160,7 @@ async function loadKeysFromServer(keys = [], options = {}) {
   await Promise.all(uniqueKeys.map(async (key) => {
     const endpoint = KEY_TO_ENDPOINT[key];
     try {
-      const signal = createTimeoutSignal(7000);
+      const signal = createTimeoutSignal(20000);
       const res = await fetch(
         SERVER_URL + endpoint,
         signal ? { method: 'GET', signal, cache: 'no-store' } : { method: 'GET', cache: 'no-store' }
