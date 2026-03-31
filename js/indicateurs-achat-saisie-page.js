@@ -1,0 +1,2321 @@
+const STORAGE_KEYS = {
+      imports: 'goudalle_achats_imports',
+      factures: 'goudalle_achats_factures',
+      lignes: 'goudalle_achats_lignes',
+      regles: 'goudalle_achats_regles',
+      arcRules: 'goudalle_achats_arc_rules',
+      arcRulesVersion: 'goudalle_achats_arc_rules_version'
+    };
+
+    const DEFAULT_REGLES = [
+      { id: 'bois_lc_blc', famille: 'Bois structure', sousFamille: 'LC / BLC', keywords: ['lc', 'blc', 'lamelle colle', 'lamellé collé', 'gl24', 'gl28'], points: 5, priority: 40 },
+      { id: 'bois_clt_klh_lvl', famille: 'Bois structure', sousFamille: 'CLT / KLH / LVL', keywords: ['clt', 'klh', 'lvl', 'panneau klh'], points: 5, priority: 40 },
+      { id: 'bois_massif', famille: 'Bois secondaire', sousFamille: 'Bois massif', keywords: ['douglas', 'sapin', 'epicea', 'épicéa', 'madrier', 'bastaing', 'chevron', 'liteau', 'demi-liteau', 'solivette'], points: 4, priority: 45 },
+      { id: 'bois_panneaux', famille: 'Bois secondaire', sousFamille: 'Panneaux bois', keywords: ['panneau 3 plis', '3 plis', 'osb', 'ctbh', 'panneau bois'], points: 4, priority: 45 },
+      { id: 'bois_bardage', famille: 'Bois secondaire', sousFamille: 'Bardage bois', keywords: ['bardage', 'clin bois'], points: 4, priority: 45 },
+      { id: 'bois_isolants', famille: 'Bois secondaire', sousFamille: 'Isolants / membranes', keywords: ['steico', 'knauf', 'irexpan', 'majpell', 'majvest', 'pare pluie'], points: 4, priority: 45 },
+      { id: 'bois_struct_interne', famille: 'Bois secondaire', sousFamille: 'Éléments structure interne', keywords: ['charpente', 'caisson', 'caissons', 'mur ossature bois'], points: 5, priority: 45 },
+      { id: 'transport_bois', famille: 'Transport', sousFamille: 'Transport bois', keywords: ['tportclt', 'transport clt', 'transport panneau'], points: 5, priority: 30 },
+      { id: 'transport_general', famille: 'Transport', sousFamille: 'Transport général', keywords: ['transport', 'forfait transport', 'appro chantier'], points: 4, priority: 30 },
+      { id: 'quinc_vis', famille: 'Quincaillerie / fixations', sousFamille: 'Vis bois', keywords: ['vis', 'colorvis', 'zacrovis'], points: 4, priority: 50 },
+      { id: 'quinc_boulon', famille: 'Quincaillerie / fixations', sousFamille: 'Boulonnerie', keywords: ['boulon', 'rondelle', 'goujon', 'ecrou', 'tige filetée'], points: 4, priority: 50 },
+      { id: 'quinc_fix_diverses', famille: 'Quincaillerie / fixations', sousFamille: 'Fixations diverses', keywords: ['clou', 'cavalier'], points: 4, priority: 50 },
+      { id: 'quinc_ferrures', famille: 'Quincaillerie / fixations', sousFamille: 'Ferrures', keywords: ['sabot', 'connecteur', 'ferrure', 'ferrures'], points: 4, priority: 50 },
+      { id: 'metal_tole', famille: 'Métal / tôle / pliage', sousFamille: 'Tôle bac acier', keywords: ['tole', 'tôle', 'bac acier', 'couvertine'], points: 4, priority: 55 },
+      { id: 'metal_pliage', famille: 'Métal / tôle / pliage', sousFamille: 'Pliage', keywords: ['pliage'], points: 4, priority: 55 },
+      { id: 'traitement_bois', famille: 'Traitement / finition', sousFamille: 'Traitement bois', keywords: ['traitement', 'autoclave', 'classe iv'], points: 4, priority: 60 },
+      { id: 'finition_bois', famille: 'Traitement / finition', sousFamille: 'Finition bois', keywords: ['saturateur', 'rubio', 'lasure'], points: 4, priority: 60 },
+      { id: 'conso_carburant', famille: 'Consommables / atelier', sousFamille: 'Carburant', keywords: ['gnr', 'gasoil', 'totalenergie'], points: 4, priority: 65 },
+      { id: 'conso_atelier', famille: 'Consommables / atelier', sousFamille: 'Consommables atelier', keywords: ['gant', 'film', 'bobine', 'papier'], points: 3, priority: 65 },
+      { id: 'outillage', famille: 'Outillage / maintenance', sousFamille: 'Outillage', keywords: ['foret', 'forêt', 'hss', 'sds', 'laser', 'trepied', 'mire'], points: 4, priority: 70 },
+      { id: 'maintenance', famille: 'Outillage / maintenance', sousFamille: 'Maintenance', keywords: ['reparation', 'réparation', 'controle periodique', 'autosur', 'hmc'], points: 5, priority: 70 },
+      { id: 'prest_gros_oeuvre', famille: 'Prestations chantier', sousFamille: 'Gros œuvre', keywords: ['implantation', 'demolition', 'démolition', 'poteau beton', 'maçonnerie'], points: 4, priority: 75 },
+      { id: 'prest_interventions', famille: 'Prestations chantier', sousFamille: 'Interventions', keywords: ['location', 'intervention'], points: 4, priority: 75 },
+      { id: 'prest_materiel', famille: 'Prestations chantier', sousFamille: 'Matériel chantier', keywords: ['nacelle', 'chariot', 'telescopique', 'container', 'wc chimique'], points: 4, priority: 75 },
+      { id: 'prest_materiaux', famille: 'Prestations chantier', sousFamille: 'Matériaux chantier', keywords: ['sable', 'granulat', '0/31.5'], points: 3, priority: 75 },
+      { id: 'prest_tech', famille: 'Prestations techniques', sousFamille: 'Études / ingénierie', keywords: ['etude', 'étude', 'test etancheite', 'test étanchéité'], points: 4, priority: 72 },
+      { id: 'ajustements', famille: 'Ajustements', sousFamille: 'Ajustements', keywords: ['ecart', 'écart', 'remise'], points: 5, priority: 20 },
+      { id: 'ajustements_eco', famille: 'Ajustements', sousFamille: 'Éco / taxes', keywords: ['eco', 'éco', 'contribution verte', 'taxe'], points: 5, priority: 20 },
+      { id: 'admin', famille: 'Administratif', sousFamille: 'Administratif', keywords: ['carte grise'], points: 3, priority: 80 },
+      { id: 'fallback_divers', famille: 'Divers', sousFamille: 'Divers', keywords: ['fact', 'ligne'], points: 1, priority: 99 }
+    ];
+    const LEGACY_RULE_IDS = new Set([
+      'bois_lc', 'bois_clt', 'bois_lvl', 'bois_massif_douglas', 'bois_massif_sapin',
+      'bardage', 'panneaux', 'transport', 'quincaillerie_vis', 'quincaillerie_boulon',
+      'quincaillerie_sabot', 'metal_pliage', 'traitement_autoclave', 'traitement_saturateur',
+      'conso_epi', 'outillage_foret', 'outillage_materiel', 'outillage_maintenance',
+      'prestations_location', 'prestations_maconnerie', 'ajustement_ecart', 'ajustement_eco'
+    ]);
+    const ARC_RULES_VERSION = '2026-03-25-v2';
+    const DEFAULT_ARC_RULES = [
+      { code: '100', designation: 'MO Entreprise', famille: 'Main d’œuvre', sousFamille: 'MO entreprise', points: 10, priority: 10 },
+      { code: '102', designation: 'MO Interim', famille: 'Main d’œuvre', sousFamille: 'MO intérim', points: 10, priority: 10 },
+      { code: '110', designation: 'MO Encadrement', famille: 'Main d’œuvre', sousFamille: 'MO encadrement', points: 10, priority: 10 },
+      { code: '120', designation: 'Frais déplacement MO', famille: 'Main d’œuvre', sousFamille: 'Déplacements MO', points: 8, priority: 12 },
+      { code: '150', designation: 'Primes Chantier', famille: 'Main d’œuvre', sousFamille: 'Primes chantier', points: 8, priority: 12 },
+      { code: '160', designation: 'Primes Chantier', famille: 'Main d’œuvre', sousFamille: 'Primes chantier', points: 8, priority: 12 },
+      { code: '2', designation: 'Axe interne', famille: 'Administratif', sousFamille: 'Codification interne', points: 5, priority: 40 },
+      { code: '200', designation: 'Achats BOIS massifs', famille: 'Bois secondaire', sousFamille: 'Bois massif', points: 10, priority: 10 },
+      { code: '201', designation: 'Achats Bois Chêne', famille: 'Bois secondaire', sousFamille: 'Bois massif', points: 10, priority: 10 },
+      { code: '202', designation: 'Achats BOIS Belgique', famille: 'Bois secondaire', sousFamille: 'Bois massif', points: 10, priority: 10 },
+      { code: '203', designation: 'Achats Bois LC - Massif Peuplier', famille: 'Bois structure', sousFamille: 'LC / BLC', points: 10, priority: 10 },
+      { code: '204', designation: 'Achats BOIS CLT', famille: 'Bois structure', sousFamille: 'CLT / KLH / LVL', points: 10, priority: 10 },
+      { code: '205', designation: 'Achats FMS - thermolaquage', famille: 'Traitement / finition', sousFamille: 'Traitement bois', points: 8, priority: 18 },
+      { code: '206', designation: 'Achats BOIS Lamellé collé', famille: 'Bois structure', sousFamille: 'LC / BLC', points: 10, priority: 10 },
+      { code: '207', designation: 'Achats Bois massif abouté BMA', famille: 'Bois secondaire', sousFamille: 'Bois massif', points: 10, priority: 10 },
+      { code: '208', designation: 'Achats Bardage', famille: 'Bois secondaire', sousFamille: 'Bardage bois', points: 10, priority: 10 },
+      { code: '210', designation: 'Achats Maçonnerie', famille: 'Prestations chantier', sousFamille: 'Gros œuvre', points: 9, priority: 15 },
+      { code: '214', designation: 'Achats PREFA béton', famille: 'Prestations chantier', sousFamille: 'Matériaux chantier', points: 8, priority: 16 },
+      { code: '215', designation: 'Achats Pare-pluie - bachage', famille: 'Bois secondaire', sousFamille: 'Isolants / membranes', points: 8, priority: 16 },
+      { code: '216', designation: 'Achats PREFA béton Belgique', famille: 'Prestations chantier', sousFamille: 'Matériaux chantier', points: 8, priority: 16 },
+      { code: '220', designation: 'Achats Menuiserie', famille: 'Prestations chantier', sousFamille: 'Matériaux chantier', points: 8, priority: 16 },
+      { code: '221', designation: 'Achats CP et panneaux contreventements', famille: 'Bois secondaire', sousFamille: 'Panneaux bois', points: 9, priority: 14 },
+      { code: '230', designation: 'Achats Quincaillerie', famille: 'Quincaillerie / fixations', sousFamille: 'Fixations diverses', points: 10, priority: 12 },
+      { code: '235', designation: 'Achats Isolant', famille: 'Bois secondaire', sousFamille: 'Isolants / membranes', points: 9, priority: 14 },
+      { code: '240', designation: 'Achats Couverture', famille: 'Métal / tôle / pliage', sousFamille: 'Tôle bac acier', points: 8, priority: 18 },
+      { code: '245', designation: 'Achats Etanchéité', famille: 'Traitement / finition', sousFamille: 'Finition bois', points: 8, priority: 18 },
+      { code: '250', designation: 'Lasure et saturateur', famille: 'Traitement / finition', sousFamille: 'Finition bois', points: 9, priority: 16 },
+      { code: '265', designation: 'Consommables et divers', famille: 'Consommables / atelier', sousFamille: 'Consommables atelier', points: 8, priority: 20 },
+      { code: '280', designation: 'Consommables et divers', famille: 'Consommables / atelier', sousFamille: 'Consommables atelier', points: 8, priority: 20 },
+      { code: '285', designation: 'Transport achats Matière 1ere', famille: 'Transport', sousFamille: 'Transport général', points: 10, priority: 8 },
+      { code: '290', designation: 'Transport sur achats', famille: 'Transport', sousFamille: 'Transport général', points: 10, priority: 8 },
+      { code: '295', designation: 'Transport sur achats intra', famille: 'Transport', sousFamille: 'Transport général', points: 10, priority: 8 },
+      { code: '3', designation: 'Axe interne', famille: 'Administratif', sousFamille: 'Codification interne', points: 5, priority: 40 },
+      { code: '300', designation: 'Taille numérique', famille: 'Prestations internes', sousFamille: 'Production interne', points: 9, priority: 12 },
+      { code: '305', designation: 'Raboterie', famille: 'Prestations internes', sousFamille: 'Production interne', points: 9, priority: 12 },
+      { code: '310', designation: 'Assemblage', famille: 'Prestations internes', sousFamille: 'Production interne', points: 9, priority: 12 },
+      { code: '315', designation: 'Collage sous presse', famille: 'Prestations internes', sousFamille: 'Production interne', points: 9, priority: 12 },
+      { code: '320', designation: 'Matériel de finition', famille: 'Traitement / finition', sousFamille: 'Finition bois', points: 7, priority: 20 },
+      { code: '330', designation: 'Matériel de manutention', famille: 'Prestations chantier', sousFamille: 'Matériel chantier', points: 7, priority: 20 },
+      { code: '340', designation: 'Matériel de levage', famille: 'Prestations chantier', sousFamille: 'Matériel chantier', points: 7, priority: 20 },
+      { code: '350', designation: 'Moyens transport - Appro chantier', famille: 'Transport', sousFamille: 'Transport général', points: 10, priority: 8 },
+      { code: '351', designation: 'Moyens transport - Appro chantier', famille: 'Transport', sousFamille: 'Transport général', points: 10, priority: 8 },
+      { code: '370', designation: 'Transport Engins entreprise', famille: 'Transport', sousFamille: 'Transport général', points: 9, priority: 10 },
+      { code: '371', designation: 'Transports entre etab/chantiers', famille: 'Transport', sousFamille: 'Transport général', points: 9, priority: 10 },
+      { code: '380', designation: 'Location de Matériel', famille: 'Prestations chantier', sousFamille: 'Interventions', points: 8, priority: 16 },
+      { code: '390', designation: 'Carburant engins chantier', famille: 'Consommables / atelier', sousFamille: 'Carburant', points: 9, priority: 14 },
+      { code: '4', designation: 'Axe interne', famille: 'Administratif', sousFamille: 'Codification interne', points: 5, priority: 40 },
+      { code: '400', designation: 'Prorata', famille: 'Ajustements', sousFamille: 'Ajustements', points: 9, priority: 12 },
+      { code: '410', designation: 'Honoraires Techniques', famille: 'Prestations techniques', sousFamille: 'Études / ingénierie', points: 9, priority: 12 },
+      { code: '420', designation: "Constat d'huissier", famille: 'Prestations techniques', sousFamille: 'Études / ingénierie', points: 8, priority: 14 },
+      { code: '430', designation: 'Commission sur vente', famille: 'Administratif', sousFamille: 'Administratif', points: 7, priority: 20 },
+      { code: '500', designation: 'ST CBCO BE', famille: 'Prestations internes', sousFamille: 'CBCO (taille / étude / fabrication)', points: 10, priority: 5 },
+      { code: '501', designation: 'ST CBCO CUB', famille: 'Prestations internes', sousFamille: 'CBCO (taille / étude / fabrication)', points: 10, priority: 5 },
+      { code: '510', designation: 'ST Chantier', famille: 'Prestations chantier', sousFamille: 'Interventions', points: 8, priority: 16 },
+      { code: '580', designation: 'ST Autoliquidée', famille: 'Prestations chantier', sousFamille: 'Interventions', points: 8, priority: 16 },
+      { code: '590', designation: 'ST Autre', famille: 'Prestations chantier', sousFamille: 'Interventions', points: 8, priority: 16 },
+      { code: '600', designation: 'FG sur MO', famille: 'Main d’œuvre', sousFamille: 'MO entreprise', points: 8, priority: 14 },
+      { code: '601', designation: 'Assurance Decennale', famille: 'Administratif', sousFamille: 'Administratif', points: 8, priority: 18 },
+      { code: '610', designation: 'Entretien Réparation Petit outillage', famille: 'Outillage / maintenance', sousFamille: 'Maintenance', points: 9, priority: 14 },
+      { code: '620', designation: 'Entretien engins chantier', famille: 'Outillage / maintenance', sousFamille: 'Maintenance', points: 9, priority: 14 },
+      { code: '630', designation: 'Entretien Matériel de transport', famille: 'Outillage / maintenance', sousFamille: 'Maintenance', points: 9, priority: 14 },
+      { code: '670', designation: 'Maintenance', famille: 'Outillage / maintenance', sousFamille: 'Maintenance', points: 9, priority: 14 },
+      { code: '700', designation: 'Vente travaux autoliquidés', famille: 'Hors achats', sousFamille: 'Ventes / hors périmètre', points: 7, priority: 30 },
+      { code: '710', designation: 'Ventes travaux 10 %', famille: 'Hors achats', sousFamille: 'Ventes / hors périmètre', points: 7, priority: 30 },
+      { code: '719', designation: 'Ventes Travaux 19,60%', famille: 'Hors achats', sousFamille: 'Ventes / hors périmètre', points: 7, priority: 30 },
+      { code: '720', designation: 'Ventes travaux 20%', famille: 'Hors achats', sousFamille: 'Ventes / hors périmètre', points: 7, priority: 30 },
+      { code: '755', designation: 'Ventes travaux 5,5%', famille: 'Hors achats', sousFamille: 'Ventes / hors périmètre', points: 7, priority: 30 },
+      { code: '790', designation: 'Vente travaux autres', famille: 'Hors achats', sousFamille: 'Ventes / hors périmètre', points: 7, priority: 30 },
+      { code: '9', designation: 'Axe interne', famille: 'Administratif', sousFamille: 'Codification interne', points: 5, priority: 40 },
+      { code: '999', designation: 'ARC A VENTILER', famille: 'Divers', sousFamille: 'ARC à ventiler', points: 6, priority: 35 },
+      { code: 'ML', designation: 'Unité ML', famille: 'Divers', sousFamille: 'ARC à ventiler', points: 6, priority: 35 },
+      { code: 'MOI', designation: 'Unité MOI', famille: 'Divers', sousFamille: 'ARC à ventiler', points: 6, priority: 35 },
+      { code: 'MOIS', designation: 'Unité MOIS', famille: 'Divers', sousFamille: 'ARC à ventiler', points: 6, priority: 35 },
+      { code: 'U', designation: 'Unité U', famille: 'Divers', sousFamille: 'ARC à ventiler', points: 6, priority: 35 },
+      { code: 'VGZ', designation: 'Code VGZ', famille: 'Divers', sousFamille: 'ARC à ventiler', points: 6, priority: 35 }
+    ];
+
+    const state = {
+      fichiers: [],
+      analyse: null,
+      lignesFiltrees: [],
+      regles: [],
+      arcRules: [],
+      preview: {
+        periods: [],
+        selectedYear: '',
+        selectedMonth: '',
+        invoiceSearch: ''
+      }
+    };
+
+    function showMessage(msg, type = 'info') {
+      const el = document.getElementById('pageMessage');
+      el.innerHTML = msg;
+      el.className = `alert alert-${type}`;
+      el.style.display = 'block';
+      window.scrollTo(0, 0);
+    }
+
+    function clearMessage() {
+      const el = document.getElementById('pageMessage');
+      el.style.display = 'none';
+      el.innerHTML = '';
+    }
+
+    function setAnalyseProgress(percent, label) {
+      if (typeof window.__setAnalyseProgress === 'function') {
+        window.__setAnalyseProgress(percent, label);
+      }
+    }
+
+    function hideAnalyseProgress() {
+      if (typeof window.__hideAnalyseProgress === 'function') {
+        window.__hideAnalyseProgress();
+      }
+    }
+
+    function toNumberFr(raw) {
+      if (raw == null) return null;
+      const txt = String(raw).trim();
+      if (!txt) return null;
+      const cleaned = txt.replace(/\s/g, '').replace(/[^\d,\.-]/g, '').replace(',', '.');
+      const n = parseFloat(cleaned);
+      return Number.isFinite(n) ? n : null;
+    }
+
+    function normalizeText(str) {
+      return String(str || '')
+        .replace(/œ/g, 'oe')
+        .replace(/æ/g, 'ae')
+        .replace(/[™®©]/g, '')
+        .replace(/[|¦]/g, 'l')
+        .replace(/[`´’]/g, "'")
+        .replace(/[“”]/g, '"')
+        .replace(/[%]/g, ' ')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+    }
+
+    function toAlphaNumTokens(str) {
+      const cleaned = normalizeText(str)
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      return cleaned ? cleaned.split(' ') : [];
+    }
+
+    function levenshteinDistanceBounded(a, b, maxDistance = 2) {
+      if (a === b) return 0;
+      if (!a || !b) return Math.max(a.length, b.length);
+      if (Math.abs(a.length - b.length) > maxDistance) return maxDistance + 1;
+
+      const dp = new Array(b.length + 1);
+      for (let j = 0; j <= b.length; j++) dp[j] = j;
+
+      for (let i = 1; i <= a.length; i++) {
+        let prev = dp[0];
+        dp[0] = i;
+        let minRow = dp[0];
+
+        for (let j = 1; j <= b.length; j++) {
+          const temp = dp[j];
+          const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+          dp[j] = Math.min(
+            dp[j] + 1,
+            dp[j - 1] + 1,
+            prev + cost
+          );
+          prev = temp;
+          if (dp[j] < minRow) minRow = dp[j];
+        }
+
+        if (minRow > maxDistance) return maxDistance + 1;
+      }
+      return dp[b.length];
+    }
+
+    function fuzzyTokenSimilarity(token, keywordToken) {
+      if (!token || !keywordToken) return 0;
+      if (token === keywordToken) return 1;
+      if (token.length < 4 || keywordToken.length < 4) return 0;
+      if (token.includes(keywordToken) || keywordToken.includes(token)) return 0.92;
+
+      const maxDistance = Math.min(2, Math.floor(Math.min(token.length, keywordToken.length) / 3));
+      if (maxDistance < 1) return 0;
+      const dist = levenshteinDistanceBounded(token, keywordToken, maxDistance);
+      if (dist > maxDistance) return 0;
+      if (dist === 1) return 0.82;
+      if (dist === 2) return 0.64;
+      return 0;
+    }
+
+    function scoreKeyword(baseText, baseTokens, keyword) {
+      const kNorm = normalizeText(keyword);
+      if (!kNorm) return { scoreFactor: 0, exact: false, fuzzy: false };
+      if (baseText.includes(kNorm)) return { scoreFactor: 1.25, exact: true, fuzzy: false };
+
+      const kwTokens = toAlphaNumTokens(kNorm);
+      if (!kwTokens.length) return { scoreFactor: 0, exact: false, fuzzy: false };
+
+      let matched = 0;
+      let fuzzyTotal = 0;
+      for (const kwToken of kwTokens) {
+        let best = 0;
+        for (const token of baseTokens) {
+          const sim = fuzzyTokenSimilarity(token, kwToken);
+          if (sim > best) best = sim;
+          if (best >= 0.95) break;
+        }
+        if (best >= 0.64) {
+          matched++;
+          fuzzyTotal += best;
+        }
+      }
+
+      if (matched !== kwTokens.length) return { scoreFactor: 0, exact: false, fuzzy: false };
+      const avg = fuzzyTotal / kwTokens.length;
+      return { scoreFactor: avg, exact: false, fuzzy: true };
+    }
+
+    function mergeRulesWithDefaults(existingRules) {
+      if (!Array.isArray(existingRules) || !existingRules.length) return [...DEFAULT_REGLES];
+      const hasLegacy = existingRules.some((r) => LEGACY_RULE_IDS.has(String(r?.id || '')));
+      if (hasLegacy) {
+        const defaultIds = new Set(DEFAULT_REGLES.map((d) => String(d.id || '')));
+        const customRules = existingRules.filter((r) => {
+          const id = String(r?.id || '');
+          if (!id) return true;
+          return !LEGACY_RULE_IDS.has(id) && !defaultIds.has(id);
+        });
+        return [...DEFAULT_REGLES, ...customRules];
+      }
+      const byId = new Map(existingRules.map((r) => [String(r.id || ''), r]));
+      const merged = [...existingRules];
+      for (const def of DEFAULT_REGLES) {
+        if (!byId.has(def.id)) merged.push(def);
+      }
+      return merged;
+    }
+
+    function formatMoney(v) {
+      return Number(v || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function formatDateFr(isoOrFr) {
+      if (!isoOrFr) return '—';
+      if (/^\d{2}\/\d{2}\/\d{4}$/.test(String(isoOrFr))) return isoOrFr;
+      const d = new Date(isoOrFr);
+      if (Number.isNaN(d.getTime())) return String(isoOrFr);
+      return d.toLocaleDateString('fr-FR');
+    }
+
+    function toIsoDate(frDate) {
+      if (!frDate) return null;
+      const m = String(frDate).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (!m) return null;
+      return `${m[3]}-${m[2]}-${m[1]}`;
+    }
+
+    function splitByTabs(line) {
+      const parts = String(line || '').replace(/\r/g, '').split('\t');
+      return parts.map((p) => p.trim());
+    }
+
+    function isHeaderFacture(parts) {
+      if (!parts || parts.length < 8) return false;
+      return /^\d{2}\/\d{2}\/\d{4}$/.test(parts[0]) && /^FR[\w-]+$/i.test(parts[1]);
+    }
+
+    function isHeaderColonnes(parts) {
+      const full = normalizeText(parts.join(' '));
+      return full.includes('montant') && full.includes('ressource') && full.includes('qt') && full.includes('libelle');
+    }
+
+    function isTotalLine(parts) {
+      return /total\s+(bon|chantier|fournisseur)/i.test(parts.join(' '));
+    }
+
+    async function fetchJsonSafe(url, options, contextLabel) {
+      const res = await fetch(url, options);
+      const raw = await res.text();
+      let payload = null;
+      try {
+        payload = raw ? JSON.parse(raw) : null;
+      } catch {
+        const sample = String(raw || '').slice(0, 80).replace(/\s+/g, ' ');
+        throw new Error(`${contextLabel}: réponse non JSON (${res.status}). ${sample.startsWith('<') ? 'Le serveur semble renvoyer une page HTML.' : sample}`);
+      }
+      return { res, payload };
+    }
+
+    async function decodePdfFile(file) {
+      const buffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      let binary = '';
+      const chunkSize = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        const chunk = bytes.subarray(i, i + chunkSize);
+        binary += String.fromCharCode.apply(null, chunk);
+      }
+      const base64 = btoa(binary);
+      const { res, payload } = await fetchJsonSafe(SERVER_URL + '/achats-parse-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileName: file.name, contentBase64: base64 })
+      }, `Extraction PDF (${file.name})`);
+      if (!res.ok || !payload.success) {
+        throw new Error(payload.error || 'Extraction PDF impossible.');
+      }
+      return String(payload.text || '');
+    }
+
+    function toBase64(file, onProgress = null) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onprogress = (event) => {
+          if (typeof onProgress === 'function' && event.lengthComputable) {
+            onProgress(event.loaded / event.total);
+          }
+        };
+        reader.onload = () => {
+          const full = String(reader.result || '');
+          const comma = full.indexOf(',');
+          if (typeof onProgress === 'function') onProgress(1);
+          resolve(comma >= 0 ? full.slice(comma + 1) : full);
+        };
+        reader.onerror = () => reject(new Error('Lecture fichier impossible.'));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function uploadJsonWithProgress(url, payload, contextLabel, onProgress = null) {
+      return await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', url, true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.upload.onprogress = (event) => {
+          if (typeof onProgress === 'function' && event.lengthComputable) {
+            onProgress(event.loaded / event.total);
+          }
+        };
+        xhr.onload = () => {
+          const raw = xhr.responseText || '';
+          let parsed = null;
+          try {
+            parsed = raw ? JSON.parse(raw) : null;
+          } catch {
+            const sample = String(raw || '').slice(0, 80).replace(/\s+/g, ' ');
+            reject(new Error(`${contextLabel}: réponse non JSON (${xhr.status}). ${sample.startsWith('<') ? 'Le serveur semble renvoyer une page HTML.' : sample}`));
+            return;
+          }
+          if (typeof onProgress === 'function') onProgress(1);
+          resolve({
+            res: { ok: xhr.status >= 200 && xhr.status < 300, status: xhr.status },
+            payload: parsed
+          });
+        };
+        xhr.onerror = () => reject(new Error(`${contextLabel}: envoi impossible.`));
+        xhr.send(JSON.stringify(payload));
+      });
+    }
+
+    function mapV2ControlToAnalyse(control, fileMetaByName, facturesExistantes) {
+      const batchId = control.batch?.id || null;
+      const invoices = control.invoices || [];
+      const rawLines = control.lines || [];
+      const linesByInvoice = new Map();
+      for (const l of rawLines) {
+        if (!linesByInvoice.has(l.raw_invoice_id)) linesByInvoice.set(l.raw_invoice_id, []);
+        linesByInvoice.get(l.raw_invoice_id).push(l);
+      }
+
+      const factures = [];
+      const lignes = [];
+      const lignesTotauxControle = [];
+      let localFactureIdx = 0;
+
+      for (const inv of invoices) {
+        localFactureIdx += 1;
+        const idFacture = `fac_${Date.now()}_${localFactureIdx}_${Math.random().toString(36).slice(2, 8)}`;
+        const fileMeta = fileMetaByName.get(inv.source_file || '') || { nom: inv.source_file || 'import.pdf', taille: 0, dateAnalyse: new Date().toISOString(), lignesBrutes: 0 };
+        const facture = {
+          idFacture,
+          sourceBatchId: batchId,
+          nomFichierImporte: fileMeta.nom,
+          dateImport: control.batch?.date_import || new Date().toISOString(),
+          dateFacture: inv.date || null,
+          numeroFacture: inv.numero_facture || null,
+          journalOuType: inv.journal || null,
+          fournisseurCode: inv.fournisseur || null,
+          fournisseurLibelle: inv.fournisseur ? String(inv.fournisseur).replace(/^0/, '') : null,
+          chantierOuAffaire: inv.chantier || null,
+          centreCout: null,
+          libelleFacture: inv.libelle_facture || null,
+          montantTotalFacture: inv.montant_ht != null ? Number(inv.montant_ht) : null,
+          nombreLignes: 0,
+          hashControle: [toIsoDate(inv.date || null) || '', normalizeText(inv.numero_facture || ''), normalizeText(inv.fournisseur || ''), Number(inv.montant_ht || 0).toFixed(2), fileMeta.nom].join('|'),
+          sommeLignes: 0,
+          drapeauStock: Number(inv.excluded_from_indicators || 0) === 1
+        };
+        factures.push(facture);
+
+        if (inv.total_bon != null) {
+          lignesTotauxControle.push({
+            idFacture,
+            texte: `Total Bon ${inv.total_bon}`,
+            typeTotal: 'Total Bon',
+            montantTotalLigne: Number(inv.total_bon)
+          });
+        }
+        const totalBonFacture = inv.total_bon != null ? Number(inv.total_bon) : null;
+
+        const invLines = (linesByInvoice.get(inv.id) || []).sort((a, b) => (a.line_order || 0) - (b.line_order || 0));
+        for (const r of invLines) {
+          const ordre = Number(r.line_order || 0);
+          const ligne = {
+            idLigne: `lig_${idFacture}_${ordre || (facture.nombreLignes + 1)}`,
+            idFactureParente: idFacture,
+            sourceBatchId: batchId,
+            ordreLigne: ordre || (facture.nombreLignes + 1),
+            montantLigne: r.montant != null ? Number(r.montant) : null,
+            ressource: r.ressource || null,
+            bl: r.bl_numero || null,
+            arc: r.arc || null,
+            unite: r.unite || null,
+            quantite: r.qte_fact != null ? Number(r.qte_fact) : null,
+            prixUnitaire: r.pu != null ? Number(r.pu) : null,
+            designation: r.libelle_ligne || null,
+            chantierOuAffaireLigne: r.chantier_ligne || facture.chantierOuAffaire,
+            libelleFacture: facture.libelleFacture,
+            fournisseur: facture.fournisseurCode,
+            dateFacture: facture.dateFacture,
+            numeroFacture: facture.numeroFacture,
+            texteBrutLigne: r.raw_text || '',
+            categorieAutomatique: null,
+            sousCategorieAutomatique: null,
+            familleAchat: 'Non classé',
+            drapeauTransport: false,
+            drapeauEcart: false,
+            drapeauEcoContribution: false,
+            drapeauTaxe: false,
+            drapeauTraitement: false,
+            drapeauBois: false,
+            drapeauQuincaillerie: false,
+            drapeauStock: Number(r.excluded_from_indicators || 0) === 1,
+            statutConfianceClassement: 'non classé'
+          };
+          lignes.push(ligne);
+          facture.nombreLignes += 1;
+          facture.sommeLignes += ligne.montantLigne || 0;
+        }
+        facture.montantTotalFacture = pickRobustInvoiceTotal(facture.montantTotalFacture, totalBonFacture, facture.sommeLignes);
+      }
+
+      for (const ligne of lignes) classerLigne(ligne, state.regles);
+      rattacherLignesAnnexesAuxProduits(lignes);
+      const sansStock = exclureStocksDeAnalyse(factures, lignes, lignesTotauxControle);
+      const doublons = detecterDoublons(sansStock.factures, facturesExistantes);
+
+      const fichiersInfoMap = new Map();
+      for (const f of factures) {
+        const key = f.nomFichierImporte || 'import.pdf';
+        if (!fichiersInfoMap.has(key)) {
+          const meta = fileMetaByName.get(key) || { nom: key, taille: 0, dateAnalyse: new Date().toISOString(), lignesBrutes: 0 };
+          fichiersInfoMap.set(key, { ...meta });
+        }
+      }
+
+      return {
+        idAnalyse: `analyse_${Date.now()}`,
+        batchIds: batchId ? [batchId] : [],
+        dateAnalyse: new Date().toISOString(),
+        fichiers: [...fichiersInfoMap.values()],
+        factures: sansStock.factures,
+        lignes: sansStock.lignes,
+        lignesTotauxControle: sansStock.lignesTotauxControle,
+        doublons,
+        nbFacturesStockExclues: sansStock.nbFacturesStockExclues
+      };
+    }
+
+    function parseArticleLineFlexible(parts, fallbackLine) {
+      const tokens = parts.filter(Boolean);
+      if (!tokens.length) return null;
+      const numericAt = [];
+      for (let i = 0; i < tokens.length; i++) {
+        if (toNumberFr(tokens[i]) != null) numericAt.push(i);
+      }
+      if (!numericAt.length) return null;
+      const idxMontant = numericAt[numericAt.length - 1];
+      const idxPu = numericAt.length > 1 ? numericAt[numericAt.length - 2] : -1;
+      const idxQte = numericAt.length > 2 ? numericAt[numericAt.length - 3] : -1;
+
+      let idxUnite = -1;
+      const uniteCandidates = ['U', 'ML', 'M2', 'M3', 'ENS', 'KG'];
+      for (let i = 0; i < tokens.length; i++) {
+        if (uniteCandidates.includes(String(tokens[i] || '').toUpperCase())) {
+          if (idxQte < 0 || i < idxQte) idxUnite = i;
+        }
+      }
+
+      const isChantierToken = (t) => /^\d{2}-\d{3,}$/.test(t) || /^[A-Z]{2}\d+[A-Z0-9]*-\d+$/i.test(t);
+      const isArcToken = (t) => (
+        /^\d{2,4}$/.test(t) ||
+        (/^[A-Z]{2,}[A-Z0-9_-]*-\d+$/i.test(t) && !isChantierToken(t))
+      );
+
+      const resource = tokens[0] || null;
+      const bl = tokens.find((t) => /^(BL|BC)[\w-]+$/i.test(t)) || null;
+      const idxBl = bl ? tokens.indexOf(bl) : -1;
+      const startAfterBl = idxBl >= 0 ? idxBl + 1 : 1;
+      let arc = null;
+      let chantierLigne = null;
+      for (let i = startAfterBl; i < tokens.length; i++) {
+        const tk = tokens[i];
+        if (!arc && isArcToken(tk)) {
+          arc = tk;
+          continue;
+        }
+        if (!chantierLigne && isChantierToken(tk)) {
+          chantierLigne = tk;
+          continue;
+        }
+      }
+
+      const startDesignation = Math.max(
+        1,
+        bl ? tokens.indexOf(bl) + 1 : 1,
+        arc ? tokens.indexOf(arc) + 1 : 1,
+        chantierLigne ? tokens.indexOf(chantierLigne) + 1 : 1
+      );
+      const endDesignation = idxUnite > startDesignation ? idxUnite : (idxQte > startDesignation ? idxQte : idxMontant);
+      const designation = tokens.slice(startDesignation, Math.max(endDesignation, startDesignation)).join(' ') || fallbackLine || null;
+
+      return {
+        resource,
+        bl,
+        arc,
+        chantierLigne,
+        designation,
+        unite: idxUnite >= 0 ? tokens[idxUnite] : null,
+        quantite: idxQte >= 0 ? toNumberFr(tokens[idxQte]) : null,
+        prixUnitaire: idxPu >= 0 ? toNumberFr(tokens[idxPu]) : null,
+        montantLigne: idxMontant >= 0 ? toNumberFr(tokens[idxMontant]) : null
+      };
+    }
+
+    function dedupeRepeatedLine(line) {
+      let out = String(line || '').replace(/\s+/g, ' ').trim();
+      if (!out) return out;
+
+      // Cas fréquent PDF: "xxx xxx" (même texte répété deux fois).
+      const doubled = out.match(/^(.+?)\s+\1$/i);
+      if (doubled) out = doubled[1].trim();
+
+      // Cas "Total Bon" répété avec même montant.
+      out = out.replace(/^(.+?total\s+(?:bon|chantier|fournisseur))\s+\1$/i, '$1').trim();
+      return out;
+    }
+
+    function isStockRelatedText(raw) {
+      const txt = normalizeText(raw);
+      if (!txt) return false;
+      return txt.includes('etat de stock') ||
+        txt.includes('etat stock') ||
+        txt.includes('sortie de stock') ||
+        txt.includes('sortie stock') ||
+        txt.includes('sorties de stock') ||
+        txt.includes('sorties stock') ||
+        txt.includes('liste de sortie de stock') ||
+        txt.includes('liste sortie stock');
+    }
+
+    function isPdfFactureColumnsHeader(line) {
+      const txt = normalizeText(line);
+      return txt.includes('date') &&
+        txt.includes('fact') &&
+        txt.includes('journal') &&
+        txt.includes('fournisseur') &&
+        txt.includes('chantier') &&
+        txt.includes('libelle') &&
+        txt.includes('montant');
+    }
+
+    function isPdfDetailColumnsHeader(line) {
+      const txt = normalizeText(line);
+      return txt.includes('ressource') &&
+        txt.includes('arc') &&
+        txt.includes('libelle') &&
+        txt.includes('unite') &&
+        txt.includes('qte') &&
+        txt.includes('montant');
+    }
+
+    function parsePdfTotalLine(line) {
+      const clean = dedupeRepeatedLine(line);
+      if (!/total\s+(bon|chantier|fournisseur)/i.test(clean)) return null;
+      const allAmounts = clean.match(/-?\d[\d ]*,\d{2}/g) || [];
+      const amountRaw = allAmounts.length ? allAmounts[allAmounts.length - 1] : null;
+      return {
+        typeTotal: /total\s+fournisseur/i.test(clean) ? 'Total Fournisseur' : /total\s+chantier/i.test(clean) ? 'Total Chantier' : 'Total Bon',
+        montantTotalLigne: amountRaw ? toNumberFr(amountRaw) : null,
+        texte: clean
+      };
+    }
+
+    function pickRobustInvoiceTotal(headerTotal, totalBon, sumLines) {
+      const h = Number.isFinite(Number(headerTotal)) ? Number(headerTotal) : null;
+      const t = Number.isFinite(Number(totalBon)) ? Number(totalBon) : null;
+      const s = Number.isFinite(Number(sumLines)) ? Number(sumLines) : null;
+
+      const ratio = (a, b) => {
+        if (a == null || b == null || b === 0) return null;
+        return Math.abs(a / b);
+      };
+
+      const hasLargeMismatch = (a, b) => {
+        const r = ratio(a, b);
+        if (r == null) return false;
+        return r > 100 || r < 0.01 || Math.abs(a - b) > Math.max(5000, Math.abs(b) * 0.9);
+      };
+
+      if (t != null) {
+        if (h == null) return t;
+        if (hasLargeMismatch(h, t)) return t;
+        return t;
+      }
+      if (s != null) {
+        if (h == null) return s;
+        if (hasLargeMismatch(h, s)) return s;
+      }
+      return h;
+    }
+
+    function parsePdfHeaderLine(line) {
+      const clean = dedupeRepeatedLine(line);
+      const compact = String(clean || '').replace(/\s+/g, ' ').trim();
+      const m = compact.match(/^(\d{2}\/\d{2}\/\d{4})\s+(FR[\w-]+)\s+(.*?)\s+(-?\d[\d ]*,\d{2})$/i);
+      if (!m) return null;
+
+      const [, dateFacture, numeroFacture, middleRaw, montantRaw] = m;
+      const middle = String(middleRaw || '').trim();
+      if (!middle) return null;
+
+      const tokens = middle.split(' ').filter(Boolean);
+      if (!tokens.length) return null;
+
+      let journal = null;
+      let fournisseurCode = null;
+      let rest = [];
+      let avoir = null;
+
+      // En-tête ONAYA: [Avoir?] [Journal?] [Fournisseur] [Chantier...] [Fact/Avoir ...]
+      // Le fournisseur est généralement le premier token commençant par "0".
+      const idxSupplier = tokens.findIndex((t) => /^0\S+$/i.test(t));
+      if (idxSupplier >= 0) {
+        fournisseurCode = tokens[idxSupplier];
+        const beforeSupplier = tokens.slice(0, idxSupplier);
+        rest = tokens.slice(idxSupplier + 1);
+        const avoirToken = beforeSupplier.find((t) => /^(avoir|av)$/i.test(t));
+        if (avoirToken) avoir = 'AVOIR';
+
+        // Journal = dernier code court alpha avant fournisseur (AC/OD/...),
+        // en excluant les marqueurs d'avoir.
+        for (let i = beforeSupplier.length - 1; i >= 0; i--) {
+          const t = beforeSupplier[i];
+          if (/^(avoir|av)$/i.test(t)) continue;
+          if (/^[A-Z]{1,3}$/.test(t)) {
+            journal = t;
+            break;
+          }
+        }
+      } else {
+        // Fallback défensif si format atypique.
+        let cursor = 0;
+        if (tokens.length >= 2 && /^[A-Z]{1,3}$/.test(tokens[0]) && !/^fact$/i.test(tokens[0]) && !/^avoir$/i.test(tokens[0])) {
+          journal = tokens[0];
+          cursor = 1;
+        }
+        fournisseurCode = tokens[cursor] || null;
+        if (!fournisseurCode) return null;
+        rest = tokens.slice(cursor + 1);
+      }
+
+      const idxFact = rest.findIndex((t) => /^fact$/i.test(t) || /^avoir$/i.test(t));
+      const chantier = idxFact > 0 ? rest.slice(0, idxFact).join(' ').trim() : null;
+      const libelleFacture = idxFact >= 0 ? rest.slice(idxFact).join(' ').trim() : rest.join(' ').trim();
+
+      // Évite de confondre une ligne article avec une entête facture.
+      if (!libelleFacture || !/(^fact\b|^avoir\b)/i.test(libelleFacture)) return null;
+
+      return {
+        dateFacture,
+        numeroFacture,
+        avoir,
+        journalOuType: journal,
+        fournisseurCode,
+        chantierOuAffaire: chantier,
+        libelleFacture,
+        montantTotalFacture: toNumberFr(montantRaw)
+      };
+    }
+
+    function parsePdfArticleLine(line) {
+      const clean = dedupeRepeatedLine(line);
+      const m = clean.match(/^(.*?)(?:\s+(U|ML|M2|M3|ENS|KG))?\s+(-?\d[\d ]*,\d{3})\s+(-?\d[\d ]*,\d{2})\s+(-?\d[\d ]*,\d{2})$/i);
+      if (!m) return null;
+      const prefix = String(m[1] || '').trim();
+      const unit = m[2] || null;
+      const qte = toNumberFr(m[3]);
+      const pu = toNumberFr(m[4]);
+      const montant = toNumberFr(m[5]);
+
+      const tokens = prefix.split(/\s+/).filter(Boolean);
+      if (!tokens.length) return null;
+
+      const isChantierToken = (t) => /^\d{2}-\d{3,}$/.test(t) || /^[A-Z]{2}\d+[A-Z0-9]*-\d+$/i.test(t);
+      const isArcToken = (t) => (
+        /^\d{2,4}$/.test(t) ||
+        (/^[A-Z]{2,}[A-Z0-9_-]*-\d+$/i.test(t) && !isChantierToken(t))
+      );
+
+      // Le code ressource peut contenir des espaces ("KLH 2F ISI").
+      const idxBl = tokens.findIndex((t) => /^(BL|BC)[A-Z0-9-]+$/i.test(t));
+      let bl = null;
+      let resourceTokens = [];
+      let tailTokens = [];
+      if (idxBl >= 0) {
+        bl = tokens[idxBl];
+        resourceTokens = tokens.slice(0, idxBl);
+        tailTokens = tokens.slice(idxBl + 1);
+      } else {
+        // Sans BL, on coupe au début du code article/chantier
+        // (ex: "CABLE 230 ...", "INTERVENTION 230 23-2524 ...").
+        const arcStart = tokens.findIndex((t, i) => i > 0 && (isArcToken(t) || isChantierToken(t)));
+        if (arcStart > 0) {
+          resourceTokens = tokens.slice(0, arcStart);
+          tailTokens = tokens.slice(arcStart);
+        } else {
+          resourceTokens = [tokens[0]];
+          tailTokens = tokens.slice(1);
+        }
+      }
+      if (!resourceTokens.length && tailTokens.length) {
+        resourceTokens = [tailTokens.shift()];
+      }
+      const resource = resourceTokens.join(' ').trim() || null;
+
+      let arc = null;
+      let chantierLigne = null;
+      if (tailTokens.length && isChantierToken(tailTokens[0])) {
+        chantierLigne = tailTokens.shift();
+      }
+      if (tailTokens.length && isArcToken(tailTokens[0])) {
+        arc = tailTokens.shift();
+      }
+
+      const designation = tailTokens.join(' ').trim() || prefix || null;
+
+      return {
+        resource,
+        bl,
+        arc,
+        chantierLigne,
+        designation,
+        unite: unit,
+        quantite: qte,
+        prixUnitaire: pu,
+        montantLigne: montant,
+        texteBrut: clean
+      };
+    }
+
+    function parserFichierOnayaPdf(contenuBrut, nomFichier) {
+      const rawLines = String(contenuBrut || '').split(/\r?\n/);
+      const factures = [];
+      const lignes = [];
+      const lignesTotauxControle = [];
+      let factureCourante = null;
+      let compteurFacture = 0;
+      let ordreLigne = 0;
+      let factureOuverte = false;
+
+      for (let raw of rawLines) {
+        raw = dedupeRepeatedLine(raw);
+        if (!raw) continue;
+        if (/^--\s*\d+\s+of\s+\d+\s*--$/i.test(raw)) continue;
+        const normalized = normalizeText(raw);
+        if (!normalized) continue;
+        if (isPdfFactureColumnsHeader(raw) || isPdfDetailColumnsHeader(raw)) continue;
+        if (/^(p\.?\s*u|bl|n[°o])/.test(normalized)) continue;
+
+        const h = parsePdfHeaderLine(raw);
+        if (h) {
+          // Nouvelle entête rencontrée: on ferme implicitement le bloc précédent
+          // s'il n'a pas eu de "Total Bon" explicite.
+          if (factureCourante && factureOuverte) {
+            factureOuverte = false;
+          }
+          compteurFacture++;
+          ordreLigne = 0;
+          const idFacture = `fac_${Date.now()}_${compteurFacture}_${Math.random().toString(36).slice(2, 8)}`;
+          const hashControle = [
+            toIsoDate(h.dateFacture) || '',
+            normalizeText(h.numeroFacture || ''),
+            normalizeText(h.fournisseurCode || ''),
+            h.montantTotalFacture != null ? h.montantTotalFacture.toFixed(2) : '',
+            nomFichier
+          ].join('|');
+
+          factureCourante = {
+            idFacture,
+            nomFichierImporte: nomFichier,
+            dateImport: new Date().toISOString(),
+            dateFacture: h.dateFacture,
+            numeroFacture: h.numeroFacture,
+            avoir: h.avoir || null,
+            journalOuType: h.journalOuType,
+            fournisseurCode: h.fournisseurCode,
+            fournisseurLibelle: h.fournisseurCode ? h.fournisseurCode.replace(/^0/, '') : null,
+            chantierOuAffaire: h.chantierOuAffaire,
+            centreCout: null,
+            libelleFacture: h.libelleFacture,
+            montantTotalFacture: h.montantTotalFacture,
+            nombreLignes: 0,
+            hashControle,
+            sommeLignes: 0
+          };
+          factures.push(factureCourante);
+          factureOuverte = true;
+          continue;
+        }
+
+        if (!factureCourante || !factureOuverte) continue;
+
+        const totalInfo = parsePdfTotalLine(raw);
+        if (totalInfo) {
+          lignesTotauxControle.push({
+            idFacture: factureCourante.idFacture,
+            texte: totalInfo.texte,
+            typeTotal: totalInfo.typeTotal,
+            montantTotalLigne: totalInfo.montantTotalLigne
+          });
+          if (totalInfo.typeTotal === 'Total Bon') {
+            factureCourante.montantTotalFacture = pickRobustInvoiceTotal(
+              factureCourante.montantTotalFacture,
+              totalInfo.montantTotalLigne,
+              factureCourante.sommeLignes
+            );
+          }
+          if (totalInfo.typeTotal === 'Total Bon') {
+            factureOuverte = false;
+            factureCourante = null;
+          }
+          continue;
+        }
+
+        const article = parsePdfArticleLine(raw);
+        if (!article) continue;
+
+        ordreLigne++;
+        const ligne = {
+          idLigne: `lig_${factureCourante.idFacture}_${ordreLigne}`,
+          idFactureParente: factureCourante.idFacture,
+          ordreLigne,
+          montantLigne: article.montantLigne,
+          ressource: article.resource,
+          bl: article.bl,
+          arc: article.arc,
+          chantierOuAffaireLigne: article.chantierLigne || factureCourante.chantierOuAffaire,
+          unite: article.unite,
+          quantite: article.quantite,
+          prixUnitaire: article.prixUnitaire,
+          designation: article.designation,
+          libelleFacture: factureCourante.libelleFacture,
+          fournisseur: factureCourante.fournisseurCode,
+          dateFacture: factureCourante.dateFacture,
+          numeroFacture: factureCourante.numeroFacture,
+          texteBrutLigne: article.texteBrut || raw,
+          categorieAutomatique: null,
+          sousCategorieAutomatique: null,
+          familleAchat: 'Non classé',
+          drapeauTransport: false,
+          drapeauEcart: false,
+          drapeauEcoContribution: false,
+          drapeauTaxe: false,
+          drapeauTraitement: false,
+          drapeauBois: false,
+          drapeauQuincaillerie: false,
+          drapeauStock: isStockRelatedText([factureCourante.libelleFacture, article.designation, article.resource, article.texteBrut || raw].join(' ')),
+          statutConfianceClassement: 'non classé'
+        };
+        lignes.push(ligne);
+        factureCourante.nombreLignes += 1;
+        factureCourante.sommeLignes += ligne.montantLigne || 0;
+      }
+
+      for (const f of factures) {
+        const totalBon = (lignesTotauxControle || []).find((t) => t.idFacture === f.idFacture && t.typeTotal === 'Total Bon')?.montantTotalLigne;
+        f.montantTotalFacture = pickRobustInvoiceTotal(f.montantTotalFacture, totalBon, f.sommeLignes);
+      }
+
+      return {
+        factures,
+        lignes,
+        lignesTotauxControle,
+        lignesBrutesCount: rawLines.length
+      };
+    }
+
+    function parserFichierOnaya(contenuBrut, nomFichier) {
+      const lignesBrutes = contenuBrut.split(/\r?\n/).filter((l) => l != null);
+      const factures = [];
+      const lignes = [];
+      const lignesTotauxControle = [];
+      let factureCourante = null;
+      let ordreLigne = 0;
+      let compteurFacture = 0;
+
+      for (const ligneBrute of lignesBrutes) {
+        const line = String(ligneBrute || '').trim();
+        if (!line) continue;
+        const parts = splitByTabs(ligneBrute);
+        const partsNonVides = parts.filter(Boolean);
+        const partsSmart = partsNonVides.length > 1 ? parts : String(line).split(/\s{2,}/).map((p) => p.trim());
+        const workingParts = partsSmart.filter(Boolean);
+        if (!partsNonVides.length) continue;
+
+        if (isHeaderFacture(workingParts)) {
+          compteurFacture++;
+          ordreLigne = 0;
+          const dateFacture = workingParts[0] || null;
+          const numeroFacture = workingParts[1] || null;
+          const journal = workingParts[3] || null;
+          const fournisseurCode = workingParts[4] || null;
+          const chantier = workingParts[5] || null;
+          const libelleFacture = workingParts[6] || null;
+          const montantFacture = toNumberFr(workingParts[7] || null);
+          const idFacture = `fac_${Date.now()}_${compteurFacture}_${Math.random().toString(36).slice(2, 8)}`;
+          const hashControle = [
+            toIsoDate(dateFacture) || '',
+            normalizeText(numeroFacture || ''),
+            normalizeText(fournisseurCode || ''),
+            montantFacture != null ? montantFacture.toFixed(2) : '',
+            nomFichier
+          ].join('|');
+
+          factureCourante = {
+            idFacture,
+            nomFichierImporte: nomFichier,
+            dateImport: new Date().toISOString(),
+            dateFacture,
+            numeroFacture,
+            journalOuType: journal,
+            fournisseurCode,
+            fournisseurLibelle: fournisseurCode ? fournisseurCode.replace(/^0/, '') : null,
+            chantierOuAffaire: chantier,
+            centreCout: null,
+            libelleFacture,
+            montantTotalFacture: montantFacture,
+            nombreLignes: 0,
+            hashControle,
+            sommeLignes: 0
+          };
+          factures.push(factureCourante);
+          continue;
+        }
+
+        if (isHeaderColonnes(workingParts)) continue;
+
+        if (isTotalLine(workingParts)) {
+          if (factureCourante) {
+            const joined = workingParts.join(' ');
+            const montantTotalLine = toNumberFr(joined);
+            lignesTotauxControle.push({
+              idFacture: factureCourante.idFacture,
+              texte: joined,
+              typeTotal: /total\s+fournisseur/i.test(joined) ? 'Total Fournisseur' : /total\s+chantier/i.test(joined) ? 'Total Chantier' : 'Total Bon',
+              montantTotalLigne: montantTotalLine
+            });
+          }
+          continue;
+        }
+
+        if (!factureCourante) continue;
+
+        let resource = workingParts[0] || null;
+        let bl = workingParts[1] || null;
+        let arc = workingParts[2] || null;
+        let chantierLigne = null;
+        let designation = workingParts[4] || null;
+        let unite = workingParts[5] || null;
+        let quantite = toNumberFr(workingParts[6] || null);
+        let prixUnitaire = toNumberFr(workingParts[7] || null);
+        let montantLigne = toNumberFr(workingParts[8] || null);
+
+        const numericTail = (parts) => (parts.slice(-3).every((p) => toNumberFr(p) != null));
+        if (workingParts.length >= 9 && numericTail(workingParts)) {
+          const possibles = workingParts.slice(0, workingParts.length - 4);
+          if (possibles.length >= 3) {
+            const maybeArc = possibles[possibles.length - 2];
+            const maybeChantier = possibles[possibles.length - 1];
+            const isChantier = /^\d{2}-\d{3,}$/.test(maybeChantier) || /^[A-Z]{2}\d+[A-Z0-9]*-\d+$/i.test(maybeChantier);
+            const isArc = /^\d{2,4}$/.test(maybeArc) || (/^[A-Z]{2,}[A-Z0-9_-]*-\d+$/i.test(maybeArc) && !isChantier);
+            if (isArc) arc = maybeArc;
+            if (isChantier) chantierLigne = maybeChantier;
+          }
+        }
+
+        if (montantLigne == null || (!designation && workingParts.length < 8)) {
+          const parsedFlex = parseArticleLineFlexible(workingParts, line);
+          if (parsedFlex) {
+            resource = parsedFlex.resource;
+            bl = parsedFlex.bl;
+            arc = parsedFlex.arc;
+            chantierLigne = parsedFlex.chantierLigne || chantierLigne;
+            designation = parsedFlex.designation;
+            unite = parsedFlex.unite;
+            quantite = parsedFlex.quantite;
+            prixUnitaire = parsedFlex.prixUnitaire;
+            montantLigne = parsedFlex.montantLigne;
+          }
+        }
+        ordreLigne++;
+
+        const ligne = {
+          idLigne: `lig_${factureCourante.idFacture}_${ordreLigne}`,
+          idFactureParente: factureCourante.idFacture,
+          ordreLigne,
+          montantLigne,
+          ressource: resource,
+          bl,
+          arc,
+          unite,
+          quantite,
+          prixUnitaire,
+          designation,
+          libelleFacture: factureCourante.libelleFacture,
+          chantierOuAffaireLigne: chantierLigne || factureCourante.chantierOuAffaire,
+          fournisseur: factureCourante.fournisseurCode,
+          dateFacture: factureCourante.dateFacture,
+          numeroFacture: factureCourante.numeroFacture,
+          texteBrutLigne: ligneBrute,
+          categorieAutomatique: null,
+          sousCategorieAutomatique: null,
+          familleAchat: 'Non classé',
+          drapeauTransport: false,
+          drapeauEcart: false,
+          drapeauEcoContribution: false,
+          drapeauTaxe: false,
+          drapeauTraitement: false,
+          drapeauBois: false,
+          drapeauQuincaillerie: false,
+          drapeauStock: isStockRelatedText([factureCourante.libelleFacture, designation, resource, ligneBrute].join(' ')),
+          statutConfianceClassement: 'non classé'
+        };
+
+        lignes.push(ligne);
+        factureCourante.nombreLignes += 1;
+        factureCourante.sommeLignes += montantLigne || 0;
+      }
+
+      return { factures, lignes, lignesTotauxControle, lignesBrutesCount: lignesBrutes.length };
+    }
+
+    function chargerReglesClassification() {
+      const raw = localStorage.getItem(STORAGE_KEYS.regles);
+      if (!raw) {
+        localStorage.setItem(STORAGE_KEYS.regles, JSON.stringify(DEFAULT_REGLES));
+        return [...DEFAULT_REGLES];
+      }
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length) {
+          const merged = mergeRulesWithDefaults(parsed);
+          if (merged.length !== parsed.length) {
+            localStorage.setItem(STORAGE_KEYS.regles, JSON.stringify(merged));
+          }
+          return merged;
+        }
+      } catch {
+        // fallback plus bas.
+      }
+      localStorage.setItem(STORAGE_KEYS.regles, JSON.stringify(DEFAULT_REGLES));
+      return [...DEFAULT_REGLES];
+    }
+
+    function chargerArcRules() {
+      const existingVersion = localStorage.getItem(STORAGE_KEYS.arcRulesVersion);
+      const raw = localStorage.getItem(STORAGE_KEYS.arcRules);
+      if (!raw || existingVersion !== ARC_RULES_VERSION) {
+        localStorage.setItem(STORAGE_KEYS.arcRules, JSON.stringify(DEFAULT_ARC_RULES));
+        localStorage.setItem(STORAGE_KEYS.arcRulesVersion, ARC_RULES_VERSION);
+        return [...DEFAULT_ARC_RULES];
+      }
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length) return parsed;
+      } catch {
+        // fallback plus bas
+      }
+      localStorage.setItem(STORAGE_KEYS.arcRules, JSON.stringify(DEFAULT_ARC_RULES));
+      localStorage.setItem(STORAGE_KEYS.arcRulesVersion, ARC_RULES_VERSION);
+      return [...DEFAULT_ARC_RULES];
+    }
+
+    function getArcExpectedProfile(rule) {
+      const famille = normalizeText(rule?.famille || '');
+      const sous = normalizeText(rule?.sousFamille || '');
+      const isCltFamily = famille.includes('bois structure') && (sous.includes('clt') || sous.includes('klh') || sous.includes('lvl'));
+      const isLcFamily = famille.includes('bois structure') && (sous.includes('lc') || sous.includes('blc') || sous.includes('lamelle'));
+      const isPanelFamily = (sous.includes('panneaux') || sous.includes('3 plis') || sous.includes('contrevent'));
+      return { isCltFamily, isLcFamily, isPanelFamily };
+    }
+
+    function isArcOverrideCoherent(rule, ligne, baseText) {
+      const profile = getArcExpectedProfile(rule);
+      if (!profile.isCltFamily && !profile.isLcFamily && !profile.isPanelFamily) return { ok: true, reason: null };
+      const txt = normalizeText(baseText || '');
+      const hasClt = /\b(clt|klh)\b/.test(txt);
+      const hasLc = /\b(lc|lamelle)\b/.test(txt);
+      const hasPanel3Plis = /\b(3 plis|trois plis|panneau|contrevent)\b/.test(txt);
+      if (profile.isCltFamily && hasPanel3Plis && !hasClt) {
+        return { ok: false, reason: 'ARC CLT incohérent avec libellé panneau/3 plis' };
+      }
+      if (profile.isPanelFamily && hasClt && !hasPanel3Plis) {
+        return { ok: false, reason: 'ARC panneaux incohérent avec libellé CLT/KLH' };
+      }
+      if (profile.isLcFamily && hasClt && !hasLc) {
+        return { ok: false, reason: 'ARC LC incohérent avec libellé CLT/KLH' };
+      }
+      return { ok: true, reason: null };
+    }
+
+    function classerLigne(ligne, regles) {
+      const baseTexte = normalizeText([
+        ligne.ressource,
+        ligne.designation,
+        ligne.arc,
+        ligne.unite,
+        ligne.fournisseur
+      ].filter(Boolean).join(' '));
+      const baseTokens = toAlphaNumTokens(baseTexte);
+      const arcTxt = normalizeText(ligne.arc || '');
+
+      const arcMatches = (state.arcRules || []).filter((r) => {
+        const code = normalizeText(r.code || '');
+        return code && arcTxt === code;
+      });
+      if (arcMatches.length) {
+        arcMatches.sort((a, b) => {
+          const pa = Number(a.priority ?? 50);
+          const pb = Number(b.priority ?? 50);
+          if (pa !== pb) return pa - pb;
+          return Number(b.points ?? 0) - Number(a.points ?? 0);
+        });
+        const bestArc = arcMatches[0];
+        const coherent = isArcOverrideCoherent(bestArc, ligne, baseTexte);
+        if (coherent.ok) {
+          ligne.familleAchat = bestArc.famille || 'Non classé';
+          ligne.categorieAutomatique = bestArc.famille || 'Non classé';
+          ligne.sousCategorieAutomatique = bestArc.sousFamille || 'Non classé';
+          ligne.statutConfianceClassement = 'élevée';
+          ligne.classificationDebug = {
+            matchedRuleId: `arc_${bestArc.code}`,
+            mode: 'arc_override',
+            score: Number(bestArc.points || 0),
+            arc: ligne.arc || '',
+            matchedKeywords: [String(bestArc.code || '')],
+            rule: bestArc
+          };
+          return ligne;
+        }
+        ligne.classificationDebug = {
+          matchedRuleId: `arc_${bestArc.code}`,
+          mode: 'arc_override_rejected',
+          score: Number(bestArc.points || 0),
+          arc: ligne.arc || '',
+          reason: coherent.reason,
+          rule: bestArc
+        };
+      }
+
+      const correspondances = [];
+      for (const regle of regles) {
+        let score = 0;
+        let exactHits = 0;
+        let fuzzyHits = 0;
+        for (const kw of regle.keywords || []) {
+          const hit = scoreKeyword(baseTexte, baseTokens, kw);
+          if (hit.scoreFactor > 0) {
+            score += (regle.points || 1) * hit.scoreFactor;
+            if (hit.exact) exactHits++;
+            if (hit.fuzzy) fuzzyHits++;
+          }
+        }
+        if (score > 0) {
+          correspondances.push({ regle, score, exactHits, fuzzyHits });
+        }
+      }
+
+      const fournisseurTxt = normalizeText(ligne.fournisseur || '');
+      if (fournisseurTxt.includes('cbco')) {
+        ligne.familleAchat = 'Prestations internes';
+        ligne.categorieAutomatique = 'Prestations internes';
+        ligne.sousCategorieAutomatique = 'CBCO (taille / étude / fabrication)';
+        ligne.statutConfianceClassement = 'élevée';
+        ligne.classificationDebug = {
+          matchedRuleId: 'override_supplier_cbco',
+          mode: 'supplier_override',
+          fournisseur: ligne.fournisseur || '',
+          score: 999,
+          matchedKeywords: ['cbco'],
+          reason: 'Priorité fournisseur CBCO'
+        };
+        return ligne;
+      }
+
+      correspondances.sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        const aPriority = Number(a.regle?.priority ?? 50);
+        const bPriority = Number(b.regle?.priority ?? 50);
+        if (aPriority !== bPriority) return aPriority - bPriority;
+        const aPoints = Number(a.regle?.points ?? 0);
+        const bPoints = Number(b.regle?.points ?? 0);
+        return bPoints - aPoints;
+      });
+      const best = correspondances[0];
+      const second = correspondances[1];
+
+      const txt = baseTexte;
+      ligne.drapeauTransport = txt.includes('transport');
+      ligne.drapeauEcart = txt.includes('ecart');
+      ligne.drapeauEcoContribution = txt.includes('eco') || txt.includes('contribution');
+      ligne.drapeauTaxe = txt.includes('taxe') || txt.includes('tva') || txt.includes('parafiscale') || txt.includes('fiscale');
+      ligne.drapeauTraitement = txt.includes('traitement') || txt.includes('autoclave') || txt.includes('saturateur');
+      ligne.drapeauBois = /(bois|klh|clt|lvl|lamelle|douglas|sapin|epicea|bardage|panneau)/.test(txt);
+      ligne.drapeauQuincaillerie = /(vis|boulon|goujon|rondelle|clou|sabot|colorvis)/.test(txt);
+      ligne.drapeauStock = ligne.drapeauStock || isStockRelatedText([
+        ligne.libelleFacture,
+        ligne.designation,
+        ligne.ressource,
+        ligne.texteBrutLigne
+      ].filter(Boolean).join(' '));
+
+      const unite = String(ligne.unite || '').toUpperCase();
+      const hasPrestationHint = /(prestation|reparation|implantation|reprofilage|coupe|intervention|controle periodique|controle périodique)/.test(txt);
+      const hasBoisHint = /(bois|klh|clt|lc|lamelle|douglas|sapin|epicea|lvl|massif|bardage|panneau)/.test(txt);
+      const boisPrioritaire = hasBoisHint && (unite === 'M2' || unite === 'M3');
+
+      if (!best) {
+        ligne.familleAchat = 'Non classé';
+        ligne.sousCategorieAutomatique = 'Non classé';
+        ligne.categorieAutomatique = 'Non classé';
+        ligne.statutConfianceClassement = 'faible';
+        ligne.classificationDebug = {
+          matchedRuleId: null,
+          mode: 'no_match',
+          score: 0,
+          netGap: 0,
+          matchedKeywords: []
+        };
+        return ligne;
+      }
+
+      ligne.familleAchat = best.regle.famille;
+      ligne.categorieAutomatique = best.regle.famille;
+      ligne.sousCategorieAutomatique = best.regle.sousFamille || 'Divers';
+      const netGap = second ? (best.score - second.score) : best.score;
+      if (best.exactHits >= 1 && netGap >= 2) {
+        ligne.statutConfianceClassement = 'élevée';
+      } else if (best.fuzzyHits >= 1 || netGap >= 1) {
+        ligne.statutConfianceClassement = 'moyenne';
+      } else {
+        ligne.statutConfianceClassement = 'faible';
+      }
+
+      if (!ligne.drapeauTransport && !ligne.drapeauEcoContribution && !ligne.drapeauTaxe) {
+        if (hasPrestationHint && !boisPrioritaire) {
+          ligne.familleAchat = 'Prestations chantier';
+          ligne.categorieAutomatique = 'Prestations chantier';
+          ligne.sousCategorieAutomatique = 'Divers';
+          ligne.statutConfianceClassement = 'moyenne';
+        }
+      }
+
+      ligne.classificationDebug = {
+        matchedRuleId: best.regle.id || null,
+        mode: 'rule_scoring',
+        score: Number(best.score || 0),
+        netGap: Number(netGap || 0),
+        exactHits: Number(best.exactHits || 0),
+        fuzzyHits: Number(best.fuzzyHits || 0),
+        matchedKeywords: (best.regle.keywords || []).filter((kw) => scoreKeyword(baseTexte, baseTokens, kw).scoreFactor > 0),
+        fournisseur: ligne.fournisseur || '',
+        topCandidates: correspondances.slice(0, 3).map((c) => ({
+          id: c.regle.id,
+          famille: c.regle.famille,
+          sousFamille: c.regle.sousFamille,
+          score: Number(c.score || 0),
+          priority: Number(c.regle.priority ?? 50),
+          points: Number(c.regle.points || 0)
+        }))
+      };
+
+      if (!ligne.familleAchat) ligne.familleAchat = 'Non classé';
+      if (!ligne.sousCategorieAutomatique) ligne.sousCategorieAutomatique = 'Non classé';
+      return ligne;
+    }
+
+    function detecterDoublons(facturesImport, facturesExistantes) {
+      const index = new Map();
+      for (const f of facturesExistantes) {
+        const cle = [
+          toIsoDate(f.dateFacture) || '',
+          normalizeText(f.numeroFacture || ''),
+          normalizeText(f.fournisseurCode || f.fournisseurLibelle || ''),
+          Number(f.montantTotalFacture || 0).toFixed(2),
+          Number(f.nombreLignes || 0)
+        ].join('|');
+        if (!index.has(cle)) index.set(cle, []);
+        index.get(cle).push(f);
+      }
+
+      const doublons = [];
+      for (const f of facturesImport) {
+        const cle = [
+          toIsoDate(f.dateFacture) || '',
+          normalizeText(f.numeroFacture || ''),
+          normalizeText(f.fournisseurCode || f.fournisseurLibelle || ''),
+          Number(f.montantTotalFacture || 0).toFixed(2),
+          Number(f.nombreLignes || 0)
+        ].join('|');
+        const matches = index.get(cle) || [];
+        if (matches.length) {
+          doublons.push({
+            idFactureImport: f.idFacture,
+            cle,
+            factureImport: f,
+            facturesExistantes: matches
+          });
+        }
+      }
+      return doublons;
+    }
+
+    function exclureStocksDeAnalyse(factures, lignes, lignesTotauxControle) {
+      const lignesSansStock = (lignes || []).filter((l) => !l.drapeauStock);
+      const facturesStockSet = new Set(
+        (lignes || [])
+          .filter((l) => l.drapeauStock)
+          .map((l) => l.idFactureParente)
+      );
+
+      const lignesByFacture = new Map();
+      for (const l of lignesSansStock) {
+        if (!lignesByFacture.has(l.idFactureParente)) lignesByFacture.set(l.idFactureParente, []);
+        lignesByFacture.get(l.idFactureParente).push(l);
+      }
+
+      const facturesSansStock = (factures || [])
+        .map((f) => {
+          const ls = lignesByFacture.get(f.idFacture) || [];
+          if (!ls.length) return null;
+          const somme = ls.reduce((acc, l) => acc + (l.montantLigne || 0), 0);
+          return {
+            ...f,
+            nombreLignes: ls.length,
+            sommeLignes: somme
+          };
+        })
+        .filter(Boolean);
+
+      const facturesIds = new Set(facturesSansStock.map((f) => f.idFacture));
+      const totauxSansStock = (lignesTotauxControle || []).filter((t) => facturesIds.has(t.idFacture));
+
+      return {
+        factures: facturesSansStock,
+        lignes: lignesSansStock,
+        lignesTotauxControle: totauxSansStock,
+        nbFacturesStockExclues: facturesStockSet.size
+      };
+    }
+
+    function construireSynthese(analyse) {
+      const lignes = analyse.lignes;
+      const factures = analyse.factures;
+
+      const lignesClassees = lignes.filter((l) => l.familleAchat && l.familleAchat !== 'Non classé').length;
+      const lignesNonClassees = lignes.length - lignesClassees;
+      // Base unique pour l'analyse de répartition: somme des montants de lignes.
+      // Cela évite les écarts de base (totaux facture vs lignes classées) et garantit
+      // une somme des parts proche de 100%.
+      const montantTotalLignes = lignes.reduce((acc, l) => acc + (l.montantLigne || 0), 0);
+
+      const repartitionFamilleMap = new Map();
+      const repartitionSousFamilleMap = new Map();
+
+      for (const ligne of lignes) {
+        const famille = ligne.familleAchat || 'Non classé';
+        const sousFamille = ligne.sousCategorieAutomatique || 'Divers';
+        const montant = ligne.montantLigne || 0;
+
+        if (!repartitionFamilleMap.has(famille)) {
+          repartitionFamilleMap.set(famille, { typologie: famille, facturesSet: new Set(), nombreLignes: 0, montantTotal: 0 });
+        }
+        const fam = repartitionFamilleMap.get(famille);
+        fam.facturesSet.add(ligne.idFactureParente);
+        fam.nombreLignes += 1;
+        fam.montantTotal += montant;
+
+        if (!repartitionSousFamilleMap.has(sousFamille)) {
+          repartitionSousFamilleMap.set(sousFamille, { sousFamille, nombreLignes: 0, montantTotal: 0 });
+        }
+        const sf = repartitionSousFamilleMap.get(sousFamille);
+        sf.nombreLignes += 1;
+        sf.montantTotal += montant;
+      }
+
+      const repartitionFamille = [...repartitionFamilleMap.values()]
+        .map((f) => ({
+          typologie: f.typologie,
+          nombreFactures: f.facturesSet.size,
+          nombreLignes: f.nombreLignes,
+          montantTotal: f.montantTotal,
+          partTotal: montantTotalLignes ? (f.montantTotal / montantTotalLignes) : 0
+        }))
+        .sort((a, b) => b.montantTotal - a.montantTotal);
+
+      const repartitionSousFamille = [...repartitionSousFamilleMap.values()].sort((a, b) => b.montantTotal - a.montantTotal);
+
+      const alertes = [];
+      const facturesSansFournisseur = factures.filter((f) => !f.fournisseurCode);
+      const lignesSansDesignation = lignes.filter((l) => !l.designation);
+      const lignesSansMontant = lignes.filter((l) => l.montantLigne == null);
+      const lignesNonClasseesListe = lignes.filter((l) => l.familleAchat === 'Non classé');
+      const facturesIncoherentes = factures.filter((f) => {
+        const ecart = Math.abs((f.sommeLignes || 0) - (f.montantTotalFacture || 0));
+        return ecart > 0.05;
+      });
+
+      if (facturesSansFournisseur.length) alertes.push(`${facturesSansFournisseur.length} facture(s) sans fournisseur`);
+      if (lignesSansDesignation.length) alertes.push(`${lignesSansDesignation.length} ligne(s) sans désignation`);
+      if (lignesSansMontant.length) alertes.push(`${lignesSansMontant.length} ligne(s) sans montant`);
+      if (lignesNonClasseesListe.length) alertes.push(`${lignesNonClasseesListe.length} ligne(s) non classée(s)`);
+      if (analyse.doublons.length) alertes.push(`${analyse.doublons.length} facture(s) déjà importée(s)`);
+      if (facturesIncoherentes.length) alertes.push(`${facturesIncoherentes.length} facture(s) avec écart total/somme lignes`);
+      if (!alertes.length) alertes.push('Aucune anomalie détectée');
+
+      return {
+        resumeGeneral: {
+          nomFichiers: analyse.fichiers.map((f) => f.nom).join(', '),
+          nombreFactures: factures.length,
+          nombreLignes: lignes.length,
+          montantTotalDetecte: montantTotalLignes,
+          lignesClassees,
+          lignesNonClassees,
+          doublonsPotentiels: analyse.doublons.length
+        },
+        repartitionFamille,
+        repartitionSousFamille,
+        alertes
+      };
+    }
+
+    function rattacherLignesAnnexesAuxProduits(lignes) {
+      const byFacture = new Map();
+      for (const l of lignes) {
+        if (!byFacture.has(l.idFactureParente)) byFacture.set(l.idFactureParente, []);
+        byFacture.get(l.idFactureParente).push(l);
+      }
+
+      for (const arr of byFacture.values()) {
+        const blSet = new Set(arr.filter((x) => !x.drapeauTransport && !x.drapeauEcoContribution && !x.drapeauTaxe).map((x) => String(x.bl || '').trim()).filter(Boolean));
+        const hasMultiBL = blSet.size > 1;
+        for (const ligne of arr) {
+          const estAnnexe = ligne.drapeauTransport || ligne.drapeauEcoContribution || ligne.drapeauTaxe;
+          if (!estAnnexe) continue;
+
+          let cible = null;
+          if (ligne.bl) {
+            cible = arr.find((x) => x.idLigne !== ligne.idLigne && !x.drapeauTransport && !x.drapeauEcoContribution && !x.drapeauTaxe && x.bl && x.bl === ligne.bl);
+          }
+          if (!cible && ligne.arc && !hasMultiBL) {
+            cible = arr.find((x) => x.idLigne !== ligne.idLigne && !x.drapeauTransport && !x.drapeauEcoContribution && !x.drapeauTaxe && x.arc && x.arc === ligne.arc);
+          }
+          if (!cible && !hasMultiBL) {
+            cible = arr.find((x) => x.idLigne !== ligne.idLigne && !x.drapeauTransport && !x.drapeauEcoContribution && !x.drapeauTaxe);
+          }
+          if (!cible) continue;
+
+          ligne.familleAchat = cible.familleAchat || ligne.familleAchat;
+          ligne.categorieAutomatique = cible.categorieAutomatique || ligne.categorieAutomatique;
+          const prefix = ligne.drapeauTransport ? 'Transport lié' : (ligne.drapeauEcoContribution ? 'Éco-contribution liée' : 'Taxe liée');
+          ligne.sousCategorieAutomatique = `${prefix} - ${cible.sousCategorieAutomatique || cible.familleAchat || 'Divers'}`;
+          ligne.statutConfianceClassement = 'moyenne';
+          ligne.idProduitRattache = cible.idLigne;
+          ligne.designationProduitRattache = cible.designation || cible.ressource || '';
+        }
+      }
+    }
+
+    function renderFichiers() {
+      const container = document.getElementById('listeFichiers');
+      if (!state.fichiers.length) {
+        container.innerHTML = '<div style="color:var(--text-muted-dark);">Aucun fichier sélectionné</div>';
+        return;
+      }
+      container.innerHTML = state.fichiers.map((f, idx) => `
+        <div class="achat-file-item">
+          <div><strong>${escapeHtml(f.name)}</strong></div>
+          <div>${(f.size / 1024).toFixed(1)} Ko</div>
+          <button class="btn btn-secondary btn-small" onclick="retirerFichier(${idx})">Retirer</button>
+        </div>
+      `).join('');
+    }
+
+    function retirerFichier(index) {
+      state.fichiers.splice(index, 1);
+      renderFichiers();
+      document.getElementById('btnValider').disabled = true;
+      document.getElementById('btnExporterControle').disabled = true;
+      state.analyse = null;
+    }
+
+    window.retirerFichier = retirerFichier;
+
+    function renderKpisPreAnalyse() {
+      const wrap = document.getElementById('kpiPreAnalyse');
+      if (!state.analyse) {
+        wrap.innerHTML = `
+          <div class="achat-kpi-card"><div class="label">Factures détectées</div><div class="value">0</div></div>
+          <div class="achat-kpi-card"><div class="label">Lignes détectées</div><div class="value">0</div></div>
+          <div class="achat-kpi-card"><div class="label">Montant total</div><div class="value">0,00</div></div>
+          <div class="achat-kpi-card"><div class="label">Taux lignes classées</div><div class="value">0%</div></div>
+        `;
+        return;
+      }
+      const r = state.analyse.synthese.resumeGeneral;
+      const taux = r.nombreLignes ? ((r.lignesClassees / r.nombreLignes) * 100) : 0;
+      wrap.innerHTML = `
+        <div class="achat-kpi-card"><div class="label">Factures détectées</div><div class="value">${r.nombreFactures}</div></div>
+        <div class="achat-kpi-card"><div class="label">Lignes détectées</div><div class="value">${r.nombreLignes}</div></div>
+        <div class="achat-kpi-card"><div class="label">Montant total</div><div class="value">${formatMoney(r.montantTotalDetecte)}</div></div>
+        <div class="achat-kpi-card"><div class="label">Taux lignes classées</div><div class="value">${taux.toFixed(1)}%</div></div>
+        <div class="achat-kpi-card"><div class="label">Lignes non classées</div><div class="value">${r.lignesNonClassees}</div></div>
+        <div class="achat-kpi-card"><div class="label">Doublons potentiels</div><div class="value">${r.doublonsPotentiels}</div></div>
+      `;
+    }
+
+    function extractYearMonth(rawDate) {
+      const txt = String(rawDate || '').trim();
+      let m = txt.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (m) return { year: m[3], month: m[2] };
+      m = txt.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (m) return { year: m[1], month: m[2] };
+      return null;
+    }
+
+    function buildPreviewPeriods() {
+      const byYear = new Map();
+      for (const facture of (state.analyse?.factures || [])) {
+        const ym = extractYearMonth(facture.dateFacture);
+        if (!ym) continue;
+        if (!byYear.has(ym.year)) byYear.set(ym.year, new Map());
+        const months = byYear.get(ym.year);
+        if (!months.has(ym.month)) {
+          months.set(ym.month, { year: ym.year, month: ym.month, invoice_count: 0 });
+        }
+        months.get(ym.month).invoice_count += 1;
+      }
+
+      const periods = [];
+      for (const [year, months] of byYear.entries()) {
+        for (const period of months.values()) periods.push(period);
+      }
+      periods.sort((a, b) => `${b.year}${b.month}`.localeCompare(`${a.year}${a.month}`));
+      return periods;
+    }
+
+    function renderPreviewPeriodFilters() {
+      const yearSel = document.getElementById('filterPreviewYear');
+      const monthSel = document.getElementById('filterPreviewMonth');
+      const periods = state.preview.periods || [];
+      const byYear = new Map();
+      for (const period of periods) {
+        if (!byYear.has(period.year)) byYear.set(period.year, []);
+        byYear.get(period.year).push(period);
+      }
+
+      const years = [...byYear.keys()].sort((a, b) => Number(b) - Number(a));
+      if (!years.length) {
+        yearSel.innerHTML = '<option value="">Aucune année</option>';
+        monthSel.innerHTML = '<option value="">Aucun mois</option>';
+        yearSel.disabled = true;
+        monthSel.disabled = true;
+        state.preview.selectedYear = '';
+        state.preview.selectedMonth = '';
+        return;
+      }
+
+      yearSel.disabled = false;
+      monthSel.disabled = false;
+      if (!years.includes(state.preview.selectedYear)) state.preview.selectedYear = years[0];
+      yearSel.innerHTML = years.map((year) => `<option value="${escapeHtml(year)}"${year === state.preview.selectedYear ? ' selected' : ''}>${escapeHtml(year)}</option>`).join('');
+
+      const months = [...(byYear.get(state.preview.selectedYear) || [])].sort((a, b) => Number(a.month) - Number(b.month));
+      const monthValues = months.map((entry) => entry.month);
+      if (!monthValues.includes(state.preview.selectedMonth)) state.preview.selectedMonth = monthValues[0] || '';
+      monthSel.innerHTML = months.map((entry) => {
+        const label = MONTHS_FR[Number(entry.month) - 1] || entry.month;
+        return `<option value="${escapeHtml(entry.month)}"${entry.month === state.preview.selectedMonth ? ' selected' : ''}>${escapeHtml(label)} (${Number(entry.invoice_count || 0)})</option>`;
+      }).join('');
+    }
+
+    function appliquerFiltresLignes() {
+      state.preview.invoiceSearch = normalizeText(document.getElementById('filtreTexte').value);
+      renderTableLignes();
+    }
+
+    function renderInvoiceDetailTableSaisie(lignesFacture) {
+      return `
+        <table>
+          <colgroup>
+            <col style="width:12%;">
+            <col style="width:11%;">
+            <col style="width:8%;">
+            <col style="width:11%;">
+            <col style="width:28%;">
+            <col style="width:6%;">
+            <col style="width:10%;">
+            <col style="width:7%;">
+            <col style="width:7%;">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Ressource</th>
+              <th>BL N°</th>
+              <th>A.R.C</th>
+              <th>Chantier</th>
+              <th>Libellé</th>
+              <th class="num">Unité</th>
+              <th class="num">Qté Fact.</th>
+              <th class="num">P.U</th>
+              <th class="num">Montant</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${lignesFacture.map((l) => {
+              const transportHint = l.idProduitRattache ? ` <small style="color:var(--text-muted-dark);">↳ ${escapeHtml(l.designationProduitRattache || '')}</small>` : '';
+              return `
+                <tr>
+                  <td>${escapeHtml(l.ressource || '')}</td>
+                  <td class="mono">${escapeHtml(l.bl || '')}</td>
+                  <td class="mono">${escapeHtml(l.arc || '')}</td>
+                  <td class="mono">${escapeHtml(l.chantierOuAffaireLigne || '')}</td>
+                  <td>${escapeHtml(l.designation || '')}${transportHint}</td>
+                  <td class="num">${escapeHtml(l.unite || '')}</td>
+                  <td class="num">${l.quantite != null ? formatMoney(l.quantite) : '—'}</td>
+                  <td class="num">${l.prixUnitaire != null ? formatMoney(l.prixUnitaire) : '—'}</td>
+                  <td class="num montant-col">${l.montantLigne != null ? formatMoney(l.montantLigne) : '—'}</td>
+                </tr>
+              `;
+            }).join('') || '<tr><td colspan="9" class="muted">Aucune ligne</td></tr>'}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function bindInvoiceAccordionSaisie(root) {
+      const facturesById = new Map((window.__facturesApercu || []).map((f) => [String(f.idFacture), f]));
+      const rows = root.querySelectorAll('.invoice-row[data-invoice-id]');
+      rows.forEach((row) => {
+        row.addEventListener('click', () => {
+          const invoiceId = row.getAttribute('data-invoice-id');
+          const item = root.querySelector(`.invoice-item[data-invoice-id="${invoiceId}"]`);
+          const detail = root.querySelector(`.invoice-detail[data-invoice-id="${invoiceId}"]`);
+          if (!item || !detail) return;
+          const willOpen = !detail.classList.contains('open');
+          if (willOpen) {
+            root.querySelectorAll('.invoice-detail.open').forEach((d) => {
+              if (d !== detail) {
+                d.classList.remove('open');
+                d.style.maxHeight = '0px';
+              }
+            });
+            root.querySelectorAll('.invoice-item.open').forEach((i) => {
+              if (i !== item) i.classList.remove('open');
+            });
+            if (detail.dataset.loaded !== '1') {
+              const inv = facturesById.get(String(invoiceId));
+              const invLines = (state.analyse?.lignes || [])
+                .filter((line) => String(line.idFactureParente) === String(invoiceId))
+                .sort((a, b) => (a.ordreLigne || 0) - (b.ordreLigne || 0));
+              if (inv) detail.querySelector('.invoice-detail-inner').innerHTML = renderInvoiceDetailTableSaisie(invLines);
+              detail.dataset.loaded = '1';
+            }
+          }
+          detail.classList.toggle('open');
+          item.classList.toggle('open');
+          if (willOpen) {
+            detail.style.maxHeight = `${detail.scrollHeight}px`;
+          } else {
+            detail.style.maxHeight = '0px';
+          }
+        });
+      });
+    }
+
+    function renderTableLignes() {
+      const root = document.getElementById('renderPreviewSaisie');
+      if (!state.analyse) {
+        root.innerHTML = '<p class="muted">Aucune ligne pour le filtre actuel.</p>';
+        return;
+      }
+
+      const txt = state.preview.invoiceSearch || '';
+      const factures = (state.analyse.factures || []).filter((facture) => {
+        const ym = extractYearMonth(facture.dateFacture);
+        if (!ym) return false;
+        if (ym.year !== state.preview.selectedYear || ym.month !== state.preview.selectedMonth) return false;
+        if (!txt) return true;
+        const blob = normalizeText([
+          facture.dateFacture,
+          facture.numeroFacture,
+          facture.fournisseurCode,
+          facture.chantierOuAffaire,
+          facture.libelleFacture
+        ].filter(Boolean).join(' '));
+        return blob.includes(txt);
+      });
+
+      window.__facturesApercu = factures;
+      state.lignesFiltrees = factures.map((f) => f.idFacture);
+      if (!factures.length) {
+        root.innerHTML = '<p class="muted">Aucune facture disponible pour la période ou le filtre actuel.</p>';
+        return;
+      }
+      root.innerHTML = `
+        <div class="invoice-list">
+          <div class="invoice-row-grid head">
+            <div></div>
+            <div>Date</div>
+            <div>Fournisseur</div>
+            <div>Chantier</div>
+            <div>Libellé</div>
+            <div class="num">Montant H.T</div>
+          </div>
+          ${factures.map((f) => {
+            const count = Number(f.nombreLignes || 0) || (state.analyse.lignes || []).filter((line) => String(line.idFactureParente) === String(f.idFacture)).length;
+            return `
+              <section class="invoice-item" data-invoice-id="${escapeHtml(f.idFacture)}">
+                <button type="button" class="invoice-row" data-invoice-id="${escapeHtml(f.idFacture)}">
+                  <div class="invoice-row-grid">
+                    <div><span class="invoice-toggle">▶</span></div>
+                    <div>${escapeHtml(f.dateFacture || '')}</div>
+                    <div>${escapeHtml(f.fournisseurCode || '')}</div>
+                    <div class="mono">${escapeHtml(f.chantierOuAffaire || '')}</div>
+                    <div class="invoice-summary">${escapeHtml(f.libelleFacture || '')} <span class="line-count">${count}</span></div>
+                    <div class="num invoice-montant">${formatMoney(f.montantTotalFacture)}</div>
+                  </div>
+                </button>
+                <div class="invoice-detail" data-invoice-id="${escapeHtml(f.idFacture)}" data-loaded="0">
+                  <div class="invoice-detail-inner">
+                    <div class="detail-placeholder muted">Clique pour charger le détail de cette facture.</div>
+                  </div>
+                </div>
+              </section>
+            `;
+          }).join('')}
+        </div>
+      `;
+      bindInvoiceAccordionSaisie(root);
+    }
+
+    function renderAnomalies() {
+      const ul = document.getElementById('listeAnomalies');
+      if (!ul) return;
+      if (!state.analyse) {
+        ul.innerHTML = '<li>Aucune anomalie</li>';
+        return;
+      }
+      ul.innerHTML = state.analyse.synthese.alertes.map((a) => `<li>${escapeHtml(a)}</li>`).join('');
+    }
+
+    function renderArcRules() {
+      const tbody = document.querySelector('#tableArcRules tbody');
+      if (!state.arcRules.length) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Aucune règle A.R.C</td></tr>';
+        return;
+      }
+      tbody.innerHTML = state.arcRules.map((r) => `
+        <tr>
+          <td>${escapeHtml(r.code || '')}</td>
+          <td>${escapeHtml(r.designation || '')}</td>
+          <td>${Number(r.points || 0)}</td>
+          <td>${Number(r.priority || 0)}</td>
+        </tr>
+      `).join('');
+    }
+
+    function ajouterArcRegleDepuisForm() {
+      const code = document.getElementById('newArcCode').value.trim();
+      const designation = document.getElementById('newArcDesignation').value.trim();
+      const points = Number(document.getElementById('newArcPoids').value || 8);
+      const priority = Number(document.getElementById('newArcPriority').value || 20);
+      if (!code) {
+        showMessage('Code A.R.C obligatoire.', 'warning');
+        return;
+      }
+      const entry = {
+        code,
+        designation,
+        points: Number.isFinite(points) && points > 0 ? points : 8,
+        priority: Number.isFinite(priority) && priority > 0 ? priority : 20
+      };
+      state.arcRules = state.arcRules.filter((r) => String(r.code || '').trim() !== code);
+      state.arcRules.push(entry);
+      localStorage.setItem(STORAGE_KEYS.arcRules, JSON.stringify(state.arcRules));
+      renderArcRules();
+      showMessage('✅ Règle A.R.C ajoutée/mise à jour.', 'success');
+    }
+
+    function resetArcRulesDefaut() {
+      state.arcRules = [...DEFAULT_ARC_RULES];
+      localStorage.setItem(STORAGE_KEYS.arcRules, JSON.stringify(state.arcRules));
+      localStorage.setItem(STORAGE_KEYS.arcRulesVersion, ARC_RULES_VERSION);
+      renderArcRules();
+      showMessage('✅ Règles A.R.C réinitialisées.', 'success');
+    }
+
+    function resetUIAnalyse() {
+      state.analyse = null;
+      state.lignesFiltrees = [];
+      state.preview.periods = [];
+      state.preview.selectedYear = '';
+      state.preview.selectedMonth = '';
+      state.preview.invoiceSearch = '';
+      document.getElementById('filtreTexte').value = '';
+      renderPreviewPeriodFilters();
+      renderKpisPreAnalyse();
+      renderTableLignes();
+      renderAnomalies();
+      document.getElementById('btnValider').disabled = true;
+      document.getElementById('btnExporterControle').disabled = true;
+    }
+
+    async function analyserFichiers() {
+      clearMessage();
+      if (!state.fichiers.length) {
+        showMessage('Veuillez d’abord sélectionner au moins un fichier .pdf', 'warning');
+        return;
+      }
+
+      setAnalyseProgress(2, 'Préparation de l’analyse...');
+
+      const facturesExistantes = JSON.parse(localStorage.getItem(STORAGE_KEYS.factures) || '[]');
+      const fichiersInfo = [];
+      const fileMetaByName = new Map();
+      let analyse = null;
+      const warnings = [];
+      const legacyFactures = [];
+      const legacyLignes = [];
+      const legacyTotaux = [];
+      let usedV2 = false;
+      let usedLegacy = false;
+
+      try {
+        for (let index = 0; index < state.fichiers.length; index++) {
+          const file = state.fichiers[index];
+          const fileBase = (index / Math.max(state.fichiers.length, 1)) * 80;
+          const meta = {
+            nom: file.name,
+            taille: file.size,
+            dateAnalyse: new Date().toISOString(),
+            lignesBrutes: 0
+          };
+          fichiersInfo.push(meta);
+          fileMetaByName.set(file.name, meta);
+
+          try {
+            setAnalyseProgress(fileBase + 2, `Préparation du fichier ${index + 1}/${state.fichiers.length}: ${file.name}`);
+            const base64 = await toBase64(file, (ratio) => {
+              setAnalyseProgress(fileBase + (ratio * 18), `Lecture du fichier ${index + 1}/${state.fichiers.length}: ${file.name}`);
+            });
+            const { res: importRes, payload: importPayload } = await uploadJsonWithProgress(
+              SERVER_URL + '/achats-v2/import-pdf',
+              { fileName: file.name, contentBase64: base64 },
+              `Import (${file.name})`,
+              (ratio) => {
+                setAnalyseProgress(fileBase + 18 + (ratio * 42), `Envoi du fichier ${index + 1}/${state.fichiers.length}: ${file.name}`);
+              }
+            );
+            if (!importRes.ok || !importPayload.success) {
+              throw new Error(importPayload?.error || `Import impossible (${file.name}).`);
+            }
+            if (Array.isArray(importPayload.warnings)) warnings.push(...importPayload.warnings);
+
+            setAnalyseProgress(fileBase + 65, `Traitement du fichier ${index + 1}/${state.fichiers.length}: ${file.name}`);
+            const { res: controlRes, payload: controlPayload } = await fetchJsonSafe(
+              SERVER_URL + `/achats-v2/control/${encodeURIComponent(importPayload.batch_id)}`,
+              { method: 'GET' },
+              `Contrôle (${file.name})`
+            );
+            if (!controlRes.ok || !controlPayload.success) {
+              throw new Error(controlPayload?.error || `Contrôle introuvable (${file.name}).`);
+            }
+
+            const mapped = mapV2ControlToAnalyse(controlPayload, fileMetaByName, facturesExistantes);
+            if (!analyse) {
+              analyse = {
+                ...mapped,
+                doublons: []
+              };
+            } else {
+              analyse.factures.push(...mapped.factures);
+              analyse.lignes.push(...mapped.lignes);
+              analyse.lignesTotauxControle.push(...mapped.lignesTotauxControle);
+              analyse.nbFacturesStockExclues += mapped.nbFacturesStockExclues || 0;
+            }
+            usedV2 = true;
+          } catch (e) {
+            usedLegacy = true;
+            warnings.push(`Fallback parser local (${file.name}): ${e.message}`);
+            setAnalyseProgress(fileBase + 68, `Fallback local pour ${file.name}`);
+            const contenu = await decodePdfFile(file);
+            const parsed = parserFichierOnayaPdf(contenu, file.name);
+            legacyFactures.push(...parsed.factures);
+            legacyLignes.push(...parsed.lignes);
+            legacyTotaux.push(...parsed.lignesTotauxControle);
+          }
+        }
+
+        if (legacyFactures.length || legacyLignes.length) {
+          setAnalyseProgress(86, 'Consolidation des données...');
+          for (const ligne of legacyLignes) classerLigne(ligne, state.regles);
+          rattacherLignesAnnexesAuxProduits(legacyLignes);
+          const sansStockLegacy = exclureStocksDeAnalyse(legacyFactures, legacyLignes, legacyTotaux);
+          if (!analyse) {
+            analyse = {
+              idAnalyse: `analyse_${Date.now()}`,
+              dateAnalyse: new Date().toISOString(),
+              fichiers: [],
+              factures: sansStockLegacy.factures,
+              lignes: sansStockLegacy.lignes,
+              lignesTotauxControle: sansStockLegacy.lignesTotauxControle,
+              doublons: [],
+              nbFacturesStockExclues: sansStockLegacy.nbFacturesStockExclues || 0
+            };
+          } else {
+            analyse.factures.push(...sansStockLegacy.factures);
+            analyse.lignes.push(...sansStockLegacy.lignes);
+            analyse.lignesTotauxControle.push(...sansStockLegacy.lignesTotauxControle);
+            analyse.nbFacturesStockExclues += sansStockLegacy.nbFacturesStockExclues || 0;
+          }
+        }
+
+        if (!analyse) throw new Error('Aucune donnée analysée.');
+        setAnalyseProgress(94, 'Finalisation de l’analyse...');
+        analyse.fichiers = fichiersInfo;
+        analyse.doublons = detecterDoublons(analyse.factures, facturesExistantes);
+        analyse.synthese = construireSynthese(analyse);
+        const lignesParFacture = new Map();
+        for (const ligne of analyse.lignes) {
+          const id = String(ligne.idFactureParente || '');
+          if (!id) continue;
+          lignesParFacture.set(id, (lignesParFacture.get(id) || 0) + 1);
+        }
+        analyse.factures = analyse.factures.map((facture) => ({
+          ...facture,
+          nombreLignes: lignesParFacture.get(String(facture.idFacture)) || 0
+        }));
+
+        state.analyse = analyse;
+        state.preview.periods = buildPreviewPeriods();
+        state.preview.selectedYear = '';
+        state.preview.selectedMonth = '';
+        state.preview.invoiceSearch = normalizeText(document.getElementById('filtreTexte').value);
+        renderPreviewPeriodFilters();
+        state.lignesFiltrees = analyse.factures.map((f) => f.idFacture);
+        renderKpisPreAnalyse();
+        renderTableLignes();
+        renderAnomalies();
+        document.getElementById('btnValider').disabled = false;
+        document.getElementById('btnExporterControle').disabled = false;
+        setAnalyseProgress(100, 'Analyse terminée');
+        const excludedMsg = analyse.nbFacturesStockExclues
+          ? ` ${analyse.nbFacturesStockExclues} facture(s) de stock/sortie de stock ont été exclues.`
+          : '';
+        const warningsMsg = warnings.length ? ` ${warnings.length} avertissement(s) de parsing.` : '';
+        const modeMsg = usedV2 && usedLegacy ? ' Mode mixte serveur+fallback.' : (usedLegacy ? ' Mode fallback local.' : '');
+        showMessage(`✅ Analyse terminée. Vérifiez le contrôle avant validation.${excludedMsg}${warningsMsg}${modeMsg}`, 'success');
+      } finally {
+        setTimeout(() => hideAnalyseProgress(), 500);
+      }
+    }
+
+    function exportControleCsv() {
+      if (!state.analyse) return;
+      const rows = [];
+      rows.push('date_facture;numero_facture;fournisseur;ressource;designation;quantite;pu;montant');
+      for (const l of state.analyse.lignes) {
+        rows.push([
+          l.dateFacture || '',
+          l.numeroFacture || '',
+          l.fournisseur || '',
+          l.ressource || '',
+          (l.designation || '').replace(/;/g, ','),
+          l.quantite != null ? String(l.quantite).replace('.', ',') : '',
+          l.prixUnitaire != null ? String(l.prixUnitaire).replace('.', ',') : '',
+          l.montantLigne != null ? String(l.montantLigne).replace('.', ',') : ''
+        ].join(';'));
+      }
+      const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `controle_import_achats_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportHistoriqueLignesCsv() {
+      const lignes = JSON.parse(localStorage.getItem(STORAGE_KEYS.lignes) || '[]');
+      if (!lignes.length) {
+        showMessage('Aucune ligne importée à exporter.', 'warning');
+        return;
+      }
+      const rows = [];
+      rows.push('id_ligne;date_facture;numero_facture;fournisseur;ressource;designation;quantite;pu;montant');
+      for (const l of lignes) {
+        rows.push([
+          l.idLigne || '',
+          l.dateFacture || '',
+          l.numeroFacture || '',
+          l.fournisseur || '',
+          l.ressource || '',
+          (l.designation || '').replace(/;/g, ','),
+          l.quantite != null ? String(l.quantite).replace('.', ',') : '',
+          l.prixUnitaire != null ? String(l.prixUnitaire).replace('.', ',') : '',
+          l.montantLigne != null ? String(l.montantLigne).replace('.', ',') : ''
+        ].join(';'));
+      }
+      const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `lignes_achats_importees_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function recalculerClassifications() {
+      const lignes = JSON.parse(localStorage.getItem(STORAGE_KEYS.lignes) || '[]');
+      if (!lignes.length) {
+        showMessage('Aucune ligne importée à recalculer.', 'warning');
+        return;
+      }
+      for (const ligne of lignes) {
+        classerLigne(ligne, state.regles);
+      }
+      rattacherLignesAnnexesAuxProduits(lignes);
+      localStorage.setItem(STORAGE_KEYS.lignes, JSON.stringify(lignes));
+      showMessage(`✅ Recalcul terminé sur ${lignes.length} ligne(s).`, 'success');
+    }
+
+    function validerImport() {
+      try {
+        if (!state.analyse) {
+          showMessage('Aucune analyse à valider.', 'warning');
+          return;
+        }
+
+        const strategie = 'ignorer';
+        const imports = JSON.parse(localStorage.getItem(STORAGE_KEYS.imports) || '[]');
+        let factures = JSON.parse(localStorage.getItem(STORAGE_KEYS.factures) || '[]');
+        let lignes = JSON.parse(localStorage.getItem(STORAGE_KEYS.lignes) || '[]');
+
+        const idsDoublons = new Set(state.analyse.doublons.map((d) => d.idFactureImport));
+        const facturesAInserer = [];
+        const lignesAInserer = [];
+        const journal = [];
+
+        const lignesByFacture = new Map();
+        for (const ligne of state.analyse.lignes) {
+          if (!lignesByFacture.has(ligne.idFactureParente)) lignesByFacture.set(ligne.idFactureParente, []);
+          lignesByFacture.get(ligne.idFactureParente).push(ligne);
+        }
+
+        for (const facture of state.analyse.factures) {
+          const isDoublon = idsDoublons.has(facture.idFacture);
+          if (isDoublon && strategie === 'ignorer') {
+            journal.push(`Facture ${facture.numeroFacture} ignorée (doublon).`);
+            continue;
+          }
+          if (isDoublon && strategie === 'remplacer') {
+            const match = state.analyse.doublons.find((d) => d.idFactureImport === facture.idFacture);
+            const existingIds = (match?.facturesExistantes || []).map((f) => f.idFacture);
+            if (existingIds.length) {
+              factures = factures.filter((f) => !existingIds.includes(f.idFacture));
+              lignes = lignes.filter((l) => !existingIds.includes(l.idFactureParente));
+              journal.push(`Facture ${facture.numeroFacture} remplacée (${existingIds.length} ancienne(s) version(s) supprimée(s)).`);
+            }
+          }
+
+          facturesAInserer.push(facture);
+          lignesAInserer.push(...(lignesByFacture.get(facture.idFacture) || []));
+        }
+
+        factures = [...factures, ...facturesAInserer];
+        lignes = [...lignes, ...lignesAInserer];
+
+        const importRecord = {
+          idImport: `imp_${Date.now()}`,
+          batchIds: Array.isArray(state.analyse.batchIds) ? [...state.analyse.batchIds] : [],
+          dateImport: new Date().toISOString(),
+          utilisateur: Auth.getSession()?.username || 'inconnu',
+          nomFichier: state.analyse.fichiers.map((f) => f.nom).join(', '),
+          nombreFactures: facturesAInserer.length,
+          nombreLignes: lignesAInserer.length,
+          statut: facturesAInserer.length ? 'importé' : 'partiellement importé',
+          journalAnomalies: state.analyse.synthese.alertes,
+          journalOperations: journal
+        };
+        imports.push(importRecord);
+
+        localStorage.setItem(STORAGE_KEYS.imports, JSON.stringify(imports));
+        localStorage.setItem(STORAGE_KEYS.factures, JSON.stringify(factures));
+        localStorage.setItem(STORAGE_KEYS.lignes, JSON.stringify(lignes));
+
+        showMessage(`✅ Import validé : ${facturesAInserer.length} facture(s), ${lignesAInserer.length} ligne(s) enregistrée(s).`, 'success');
+        resetUIAnalyse();
+      } catch (e) {
+        showMessage(`❌ Erreur validation import: ${e.message}`, 'danger');
+      }
+    }
+
+    function annulerImport() {
+      state.fichiers = [];
+      renderFichiers();
+      resetUIAnalyse();
+      showMessage('Import annulé.', 'info');
+    }
+
+    async function supprimerHistoriqueImports() {
+      const ok = window.confirm("Confirmer la suppression de l'historique des imports ? Cette action supprimera les imports, factures et lignes enregistrés.");
+      if (!ok) return;
+
+      try {
+        const empty = JSON.stringify([]);
+        localStorage.setItem(STORAGE_KEYS.imports, empty);
+        localStorage.setItem(STORAGE_KEYS.factures, empty);
+        localStorage.setItem(STORAGE_KEYS.lignes, empty);
+
+        // Forcer la purge côté serveur legacy (pas seulement cache local).
+        await Promise.all([
+          fetchJsonSafe(SERVER_URL + '/achats-imports', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: empty
+          }, 'Suppression imports legacy'),
+          fetchJsonSafe(SERVER_URL + '/achats-factures', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: empty
+          }, 'Suppression factures legacy'),
+          fetchJsonSafe(SERVER_URL + '/achats-lignes', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: empty
+          }, 'Suppression lignes legacy')
+        ]);
+
+        // Purge serveur obligatoire pour que les imports ne soient plus sélectionnables.
+        const { res: v2Res, payload: v2Payload } = await fetchJsonSafe(
+          SERVER_URL + '/achats-v2/history',
+          { method: 'DELETE' },
+          'Suppression historique imports'
+        );
+        if (!v2Res.ok || !v2Payload?.success) {
+          throw new Error(v2Payload?.error || `Suppression serveur refusée (${v2Res.status}).`);
+        }
+
+        state.fichiers = [];
+        renderFichiers();
+        resetUIAnalyse();
+        showMessage("✅ Historique d'import supprimé (local + serveur).", 'success');
+      } catch (e) {
+        showMessage(`❌ Suppression incomplète: ${e.message}. Vérifie que le serveur est bien redémarré avec les dernières routes API.`, 'danger');
+      }
+    }
+
+    function bindEvents() {
+      const input = document.getElementById('inputFichiersAchat');
+      const dropzone = document.getElementById('dropzoneAchat');
+
+      dropzone.addEventListener('click', () => input.click());
+      input.addEventListener('change', () => {
+        state.fichiers = [...state.fichiers, ...Array.from(input.files || [])].filter((f) => /\.pdf$/i.test(f.name));
+        input.value = '';
+        renderFichiers();
+        resetUIAnalyse();
+      });
+
+      dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('dragover');
+      });
+      dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+      dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+        const files = Array.from(e.dataTransfer.files || []).filter((f) => /\.pdf$/i.test(f.name));
+        state.fichiers = [...state.fichiers, ...files];
+        renderFichiers();
+        resetUIAnalyse();
+      });
+
+      document.getElementById('btnValider').addEventListener('click', validerImport);
+      document.getElementById('btnAnnuler').addEventListener('click', annulerImport);
+      document.getElementById('btnExporterControle').addEventListener('click', exportControleCsv);
+      document.getElementById('btnAjouterArcRegle').addEventListener('click', ajouterArcRegleDepuisForm);
+      document.getElementById('btnResetArcRegles').addEventListener('click', resetArcRulesDefaut);
+
+      document.getElementById('filterPreviewYear').addEventListener('change', () => {
+        state.preview.selectedYear = document.getElementById('filterPreviewYear').value;
+        renderPreviewPeriodFilters();
+        renderTableLignes();
+      });
+      document.getElementById('filterPreviewMonth').addEventListener('change', () => {
+        state.preview.selectedMonth = document.getElementById('filterPreviewMonth').value;
+        renderTableLignes();
+      });
+      document.getElementById('filtreTexte').addEventListener('input', appliquerFiltresLignes);
+    }
+
+    let _achatsInitDone = false;
+    async function init() {
+      if (_achatsInitDone) return;
+      _achatsInitDone = true;
+
+      if (typeof window.loadServerKeys === 'function') {
+        await window.loadServerKeys([
+          'goudalle_achats_imports',
+          'goudalle_achats_factures',
+          'goudalle_achats_lignes',
+          'goudalle_achats_regles'
+        ]);
+      }
+      document.getElementById('sidebar').innerHTML = getSidebar();
+      injectAchatSecondaryBar();
+      state.regles = chargerReglesClassification();
+      state.arcRules = chargerArcRules();
+      renderArcRules();
+      renderFichiers();
+      resetUIAnalyse();
+      bindEvents();
+    }
+
+    window.initAchatsSaisie = init;
+    window.startAchatsSaisieAnalysis = async function() {
+      await init();
+      return analyserFichiers();
+    };
