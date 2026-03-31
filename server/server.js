@@ -2204,7 +2204,8 @@ function computeRHSecuritySummary(incidents = []) {
     const sorted = [...list].sort((a, b) => String(b.accidentDate || '').localeCompare(String(a.accidentDate || '')));
     const latest = sorted[0] || null;
     const latestDate = latest?.accidentDate ? new Date(`${latest.accidentDate}T00:00:00Z`) : null;
-    const daysSince = latestDate ? Math.floor((todayUtc.getTime() - latestDate.getTime()) / (24 * 60 * 60 * 1000)) : null;
+    const rawDaysSince = latestDate ? Math.floor((todayUtc.getTime() - latestDate.getTime()) / (24 * 60 * 60 * 1000)) : null;
+    const daysSince = rawDaysSince == null ? null : Math.max(0, rawDaysSince);
     const ongoing = sorted.filter((item) => {
       if (!item.stopStartDate || !item.stopEndDate) return false;
       const start = new Date(`${item.stopStartDate}T00:00:00Z`);
@@ -2218,6 +2219,7 @@ function computeRHSecuritySummary(incidents = []) {
       accidentsAvecArret: sorted.filter((item) => Number(item.stopDays || 0) > 0).length,
       joursArret: sorted.reduce((sum, item) => sum + Number(item.stopDays || 0), 0),
       joursSansAccident: daysSince,
+      hasFutureAccidentDate: rawDaysSince != null && rawDaysSince < 0,
       dernierAccidentDate: latest?.accidentDate || null,
       dernierAccidentNom: latest?.employeeName || null,
       accidentsEnCours: ongoing,
