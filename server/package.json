@@ -4,7 +4,8 @@
   "description": "Serveur API pour l'intranet Groupe Goudalle",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node ../tests/run_tests.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

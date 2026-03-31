@@ -1817,7 +1817,7 @@
     function renderFichiers() {
       const container = document.getElementById('listeFichiers');
       if (!state.fichiers.length) {
-        container.innerHTML = '<div style="color:#666;">Aucun fichier sélectionné</div>';
+        container.innerHTML = '<div style="color:var(--text-muted-dark);">Aucun fichier sélectionné</div>';
         return;
       }
       container.innerHTML = state.fichiers.map((f, idx) => `
@@ -1930,7 +1930,7 @@
           </thead>
           <tbody>
             ${lignesFacture.map((l) => {
-              const transportHint = l.idProduitRattache ? ` <small style="color:#666;">↳ ${escapeHtml(l.designationProduitRattache || '')}</small>` : '';
+              const transportHint = l.idProduitRattache ? ` <small style="color:var(--text-muted-dark);">↳ ${escapeHtml(l.designationProduitRattache || '')}</small>` : '';
               return `
                 <tr>
                   <td>${escapeHtml(l.ressource || '')}</td>

@@ -47,59 +47,6 @@
   min-height: 0;
   min-width: 0;
 }
-/* Grille principale CBCO pour alignement parfait des 4 cadres */
-.cbco-main-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
-  gap: 20px;
-  margin-bottom: 10px;
-  align-items: stretch;
-}
-
-@media (max-width: 1024px) {
-  .cbco-main-grid {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto;
-  }
-}
-/* Hauteur stricte identique pour les 4 cadres CBCO */
-.cbco-strict-equal {
-  height: 480px;
-  min-height: 480px;
-  max-height: 480px;
-  display: flex;
-  flex-direction: column;
-  justify-content: stretch;
-}
-
-@media (max-width: 1024px) {
-  .cbco-strict-equal {
-    height: auto;
-    min-height: 320px;
-    max-height: none;
-  }
-}
-
-/* Ajustement du padding pour éviter le débordement */
-.cbco-strict-equal .card-body {
-  flex: 1;
-  min-height: 0;
-  padding: 18px 12px;
-  overflow: auto;
-}
-.cbco-strict-equal .cbco-chart-container {
-  min-height: 200px;
-  max-height: 320px;
-  padding: 10px 0 0 0;
-}
-/* Forcer la même hauteur pour les cartes CBCO graphiques */
-.cbco-equal-height {
-  height: 100%;
-  min-height: 420px;
-  display: flex;
-  flex-direction: column;
-}
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
 
 /* ============ VARIABLES GLOBALES - GOUDALLE CHARPENTE ============ */
@@ -129,6 +76,14 @@
   --vert: #7bad75;
   --orange: #d4a574;
   --rouge: #b85c5c;
+
+  /* Couleurs utilitaires pour texte secondaire */
+  --text-muted:     #999;   /* Texte très atténué (notes, placeholders) */
+  --text-muted-mid: #888;   /* Texte atténué intermédiaire */
+  --text-muted-dark:#666;   /* Texte atténué plus foncé (descriptions) */
+  --text-success:   #27ae60;/* Vert vif (statut actif, succès) */
+  --text-danger:    #e74c3c;/* Rouge vif (zone danger, erreur) */
+  --text-warning:   #f39c12;/* Orange vif (en cours, attention) */
 }
 
 /* ============ RESET & BASE ============ */
@@ -680,6 +635,9 @@ a:hover {
   width: auto;
   max-height: 100px;
   max-width: 100px;
+  image-rendering: -webkit-optimize-contrast; /* Safari/Chrome */
+  image-rendering: crisp-edges;               /* Firefox */
+  image-rendering: high-quality;              /* Standard moderne */
 }
 
 /* Aperçu temps réel sur la page saisie */
@@ -1206,6 +1164,13 @@ input[type="radio"] {
 }
 
 /* ============ TABLES ============ */
+/* Conteneur responsive pour éviter les débordements horizontaux sur mobile */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;

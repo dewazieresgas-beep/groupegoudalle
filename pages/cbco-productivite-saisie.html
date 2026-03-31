@@ -82,7 +82,7 @@
           </div>
         </div>
         <div class="card-body" id="historyBody">
-          <p style="color:#999;">Aucune donnée — connectez un fichier Excel ci-dessus.</p>
+          <p style="color:var(--text-muted);">Aucune donnée — connectez un fichier Excel ci-dessus.</p>
         </div>
       </div>
     </main>
@@ -212,7 +212,7 @@
       count.className   = data.length > 0 ? 'badge badge-success' : 'badge badge-secondary';
 
       if (data.length === 0) {
-        body.innerHTML = '<p style="color:#999;">Aucune donnée importée.</p>';
+        body.innerHTML = '<p style="color:var(--text-muted);">Aucune donnée importée.</p>';
         return;
       }
 
@@ -322,7 +322,7 @@
       } else if (view === 'securite') {
         const sec = getCBCOSecuriteData();
         if (!sec || !sec.joursSansAccident) {
-          html = '<p style="color:#999;">Aucune donnée sécurité importée.</p>';
+          html = '<p style="color:var(--text-muted);">Aucune donnée sécurité importée.</p>';
         } else {
           html = `<div style="display:flex; gap:20px; flex-wrap:wrap;">
             <div style="background:#f0f8f0; border:1px solid #d3e9d3; border-radius:8px; padding:16px 24px; text-align:center;">

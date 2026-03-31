@@ -172,7 +172,7 @@
 
     function buildAmountsHtml(selectedTypes, amounts) {
       if (!selectedTypes.length) {
-        return '<em style="color:#888; font-size:0.86em;">Choisir au moins un motif</em>';
+        return '<em style="color:var(--text-muted-mid); font-size:0.86em;">Choisir au moins un motif</em>';
       }
       return selectedTypes.map(typeId => `
         <div class="pe-amount-line">

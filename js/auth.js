@@ -104,6 +104,48 @@ const Auth = {
     localStorage.setItem(this.STORAGE_KEY_USERS, JSON.stringify(users));
   },
 
+  // ============ RATE LIMITING ============
+  // Limite les tentatives de connexion pour bloquer le brute-force.
+  // Stocké en sessionStorage (local à l'onglet, non partagé entre appareils).
+  RATE_LIMIT_MAX: 5,          // Tentatives max avant blocage
+  RATE_LIMIT_WINDOW: 900000,  // Durée du blocage : 15 minutes (en ms)
+
+  _getRateKey(username) {
+    return 'rl_' + String(username).toLowerCase();
+  },
+
+  _checkRateLimit(username) {
+    const key = this._getRateKey(username);
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return { blocked: false, remaining: this.RATE_LIMIT_MAX };
+    const data = JSON.parse(raw);
+    if (data.blockedUntil && Date.now() < data.blockedUntil) {
+      const mins = Math.ceil((data.blockedUntil - Date.now()) / 60000);
+      return { blocked: true, mins };
+    }
+    return { blocked: false, remaining: this.RATE_LIMIT_MAX - (data.count || 0) };
+  },
+
+  _recordFailedAttempt(username) {
+    const key = this._getRateKey(username);
+    const raw = sessionStorage.getItem(key);
+    let data = raw ? JSON.parse(raw) : { count: 0, blockedUntil: 0 };
+    // Réinitialiser si le blocage précédent est expiré
+    if (data.blockedUntil && Date.now() >= data.blockedUntil) {
+      data = { count: 0, blockedUntil: 0 };
+    }
+    data.count = (data.count || 0) + 1;
+    if (data.count >= this.RATE_LIMIT_MAX) {
+      data.blockedUntil = Date.now() + this.RATE_LIMIT_WINDOW;
+      data.count = 0;
+    }
+    sessionStorage.setItem(key, JSON.stringify(data));
+  },
+
+  _clearRateLimit(username) {
+    sessionStorage.removeItem(this._getRateKey(username));
+  },
+
   // ============ LOGIN / LOGOUT ============
   /**
    * Authentifie un utilisateur avec ses identifiants
@@ -112,6 +154,15 @@ const Auth = {
    * @returns {Object} - { success: boolean, message: string, user?: object }
    */
   login(username, password) {
+    // ── RATE LIMITING : bloquer le brute-force ──────────────────────────
+    const rate = this._checkRateLimit(username);
+    if (rate.blocked) {
+      return {
+        success: false,
+        message: `⏳ Trop de tentatives échouées. Réessayez dans ${rate.mins} min.`
+      };
+    }
+
     const users = this.getAllUsers();
     // Recherche insensible à la casse
     const matchedKey = Object.keys(users).find(k => k.toLowerCase() === username.toLowerCase());
@@ -119,9 +170,10 @@ const Auth = {
 
     // Vérification 1 : L'utilisateur existe-t-il ?
     if (!user) {
+      this._recordFailedAttempt(username);
       return {
         success: false,
-        message: '❌ Utilisateur non trouvé'
+        message: '❌ Identifiants incorrects'
       };
     }
 
@@ -135,13 +187,19 @@ const Auth = {
 
     // Vérification 3 : Le mot de passe est-il correct ?
     if (user.password !== password) {
+      this._recordFailedAttempt(username);
+      const remaining = this._checkRateLimit(username);
+      const hint = remaining.blocked
+        ? ` Compte temporairement bloqué (${remaining.mins} min).`
+        : ` (${Math.max(0, this.RATE_LIMIT_MAX - (this.RATE_LIMIT_MAX - (remaining.remaining || 0)))} tentative(s) restante(s) avant blocage)`;
       return {
         success: false,
-        message: '❌ Mot de passe incorrect'
+        message: '❌ Mot de passe incorrect' + hint
       };
     }
 
-    // Tout est OK : créer la session utilisateur
+    // Tout est OK : réinitialiser le compteur et créer la session
+    this._clearRateLimit(username);
     const session = {
       username: user.username,
       displayName: user.displayName,
@@ -204,10 +262,12 @@ const Auth = {
   },
 
   /**
-   * Active le contrôle périodique d'expiration de session (toutes les minutes)
+   * Active le contrôle périodique d'expiration de session (toutes les minutes).
+   * Un seul timer est créé par page, nettoyé à la fermeture de la page.
    */
   initActivityTracking() {
-    setInterval(() => {
+    if (this._activityTimer) return; // Évite les doublons si appelé plusieurs fois
+    this._activityTimer = setInterval(() => {
       if (!this.isConnected()) {
         const isLoginPage = window.location.pathname.endsWith('login.html') ||
                             window.location.pathname.endsWith('register.html');
@@ -216,6 +276,13 @@ const Auth = {
         }
       }
     }, 60000);
+    // Nettoyage à la fermeture de la page pour éviter les fuites mémoire
+    window.addEventListener('beforeunload', () => {
+      if (this._activityTimer) {
+        clearInterval(this._activityTimer);
+        this._activityTimer = null;
+      }
+    }, { once: true });
   },
 
   /**

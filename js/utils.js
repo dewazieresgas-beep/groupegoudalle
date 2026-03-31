@@ -342,28 +342,6 @@ function saveKPI(year, week, m3, hours, comment, status = 'draft', timeDistribut
 }
 
 /**
- * Publie un indicateur en brouillon (le rend visible à tous)
- * @param {number} year - Année de l'indicateur
- * @param {number} week - Semaine de l'indicateur
- * @returns {Object} - { success: boolean, message: string }
- */
-function publishKPI(year, week) {
-  const kpis = getKPIs();
-  const kpi = kpis.find(k => k.year === year && k.week === week);
-  
-  if (!kpi) return { success: false, message: '❌ Indicateur non trouvé' };
-  
-  kpi.status = 'published';
-  kpi.updatedAt = new Date().toISOString();
-  kpi.updatedBy = Auth.getSession().username;
-  
-  localStorage.setItem('goudalle_kpis', JSON.stringify(kpis));
-  Auth.audit('KPI_PUBLISHED', `Indicateur S${String(week).padStart(2, '0')}/${year} publié`);
-  
-  return { success: true, message: '✅ Indicateur publié' };
-}
-
-/**
  * Supprime un indicateur pour une semaine donnée
  * @param {number} year - Année de l'indicateur
  * @param {number} week - Semaine de l'indicateur
@@ -586,7 +564,7 @@ function injectProductionSecondaryBar() {
 
   if (Auth.hasAccess('production_general')) {
     const generaleActive = currentPage === 'indicateurs-generale.html' ? ' active' : '';
-    secondaryItems += `<a href="${base}pages/indicateurs-generale.html" class="sidebar-item${generaleActive}">📈 Indicateures générale</a>`;
+    secondaryItems += `<a href="${base}pages/indicateurs-generale.html" class="sidebar-item${generaleActive}">📈 Indicateurs généraux</a>`;
   }
 
   if (Auth.canViewGM()) {
@@ -1806,17 +1784,10 @@ function formatSylveEuros(value) {
   }).format(value) + ' €';
 }
 
-// ============ SECURITY ============
+// ============ INITIALISATION ============
 /**
- * Événement déclenché au chargement complet du DOM
- * Peut être utilisé pour des vérifications de sécurité périodiques
- * Restaure aussi l'état des sous-menus
+ * Restaure l'état des sous-menus de navigation après chargement du DOM
  */
 document.addEventListener('DOMContentLoaded', function() {
-  // NOTE : Possibilité d'ajouter une vérification périodique de session
-  // Par exemple : setInterval(() => { if (!Auth.isConnected()) logout(); }, 5000);
-  // Actuellement désactivé pour éviter les déconnexions intempestives
-  
-  // Restaurer l'état des sous-menus après un court délai
   setTimeout(restoreSubMenuStates, 100);
 });

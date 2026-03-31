@@ -21,6 +21,7 @@ const SERVER_URL = window.location.origin + '/api';
 const _cache = {};
 let _serverAvailable = null; // null = pas encore testé, true/false après test
 let _refreshInProgress = false;
+let _serverToken = null;      // Token de sécurité reçu depuis /api/health
 
 function createTimeoutSignal(timeoutMs) {
   if (typeof AbortController === 'undefined') return undefined;
@@ -71,6 +72,12 @@ async function checkServerAvailable() {
       signal ? { method: 'GET', signal, cache: 'no-store' } : { method: 'GET', cache: 'no-store' }
     );
     _serverAvailable = res.ok;
+    if (res.ok) {
+      // Récupérer le token de sécurité généré au démarrage du serveur.
+      // Ce token sera inclus dans toutes les requêtes d'écriture.
+      const data = await res.json();
+      if (data && data.token) _serverToken = data.token;
+    }
   } catch {
     _serverAvailable = false;
   }
@@ -167,9 +174,13 @@ async function sendToServer(endpoint, data) {
   if (!_serverAvailable) return;
   try {
     const signal = createTimeoutSignal(5000);
+    // Le token de sécurité est inclus dans chaque requête d'écriture.
+    // Le serveur rejettera la requête avec 403 si le token est absent ou invalide.
+    const headers = { 'Content-Type': 'application/json' };
+    if (_serverToken) headers['x-goudalle-token'] = _serverToken;
     await fetch(SERVER_URL + endpoint, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(data),
       ...(signal ? { signal } : {})
     });
@@ -296,7 +307,7 @@ window.onServerReady = function(fn) {
 window.loadServerKeys = loadKeysFromServer;
 
 // ─── RAFRAÎCHISSEMENT AUTOMATIQUE TOUTES LES MINUTES ────────────────────────
-setInterval(async () => {
+const _refreshTimer = setInterval(async () => {
   if (_refreshInProgress) return;
   _refreshInProgress = true;
   try {
@@ -308,3 +319,8 @@ setInterval(async () => {
     _refreshInProgress = false;
   }
 }, 60000);
+
+// Nettoyage du timer à la fermeture de la page pour éviter les fuites mémoire
+window.addEventListener('beforeunload', () => {
+  clearInterval(_refreshTimer);
+}, { once: true });

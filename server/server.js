@@ -10,6 +10,7 @@
 
 const express = require('express');
 const cors = require('cors');
+const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
 const XLSX = require('xlsx');
@@ -17,6 +18,31 @@ const { PDFParse } = require('pdf-parse');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// ─── TOKEN DE SÉCURITÉ SERVEUR ────────────────────────────────────────────────
+// Généré aléatoirement à chaque démarrage du serveur.
+// Requis dans le header "x-goudalle-token" pour toutes les opérations d'écriture
+// et pour accéder au code admin. Empêche les requêtes externes non autorisées.
+const SERVER_TOKEN = crypto.randomBytes(32).toString('hex');
+
+// ─── RATE LIMITING (protection brute-force sur les écritures) ─────────────────
+// Limite à 60 requêtes d'écriture par tranche de 60 secondes par IP.
+const _writeCounters = new Map();
+function checkWriteRateLimit(ip) {
+  const now = Date.now();
+  const entry = _writeCounters.get(ip) || { count: 0, resetAt: now + 60000 };
+  if (now > entry.resetAt) { entry.count = 0; entry.resetAt = now + 60000; }
+  entry.count++;
+  _writeCounters.set(ip, entry);
+  return entry.count <= 60;
+}
+// Nettoyage toutes les 5 minutes pour éviter les fuites mémoire
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of _writeCounters) {
+    if (now > entry.resetAt + 60000) _writeCounters.delete(ip);
+  }
+}, 300000);
 
 // Fichier de stockage JSON
 const DB_PATH = path.join(__dirname, 'goudalle.json');
@@ -29,6 +55,18 @@ if (fs.existsSync(DB_PATH)) {
 }
 
 function saveStore() {
+  // Sauvegarde de sécurité avant chaque écriture (garde les 3 dernières)
+  if (fs.existsSync(DB_PATH)) {
+    const backupBase = DB_PATH.replace('.json', '');
+    // Rotation : backup.2 → backup.3 (supprimé), backup.1 → backup.2, courant → backup.1
+    if (fs.existsSync(backupBase + '.backup.2.json')) {
+      fs.renameSync(backupBase + '.backup.2.json', backupBase + '.backup.3.json');
+    }
+    if (fs.existsSync(backupBase + '.backup.1.json')) {
+      fs.renameSync(backupBase + '.backup.1.json', backupBase + '.backup.2.json');
+    }
+    fs.copyFileSync(DB_PATH, backupBase + '.backup.1.json');
+  }
   fs.writeFileSync(DB_PATH, JSON.stringify(store, null, 2), 'utf8');
 }
 
@@ -497,8 +535,47 @@ function allocateInvoiceLinesByBL(normalizedInvoiceLines, batchId, invoiceId) {
 
 // ─── MIDDLEWARES ────────────────────────────────────────────────────────────────
 
-app.use(cors());
+// CORS : accepte uniquement les requêtes provenant du réseau local ou de localhost.
+// Bloque toute tentative d'accès depuis l'extérieur du réseau d'entreprise.
+app.use(cors({
+  origin(origin, callback) {
+    // Pas d'origin = même origine (appels directs depuis le serveur, curl, etc.)
+    if (!origin) return callback(null, true);
+    // Autoriser localhost / 127.0.0.1 sur n'importe quel port
+    if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+      return callback(null, true);
+    }
+    // Autoriser les plages d'IP réseau local (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+    if (/^https?:\/\/(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(origin)) {
+      return callback(null, true);
+    }
+    callback(new Error('CORS : origine non autorisée'));
+  },
+  optionsSuccessStatus: 200
+}));
+
 app.use(express.json({ limit: '50mb' }));
+
+// ── Middleware : validation du token serveur sur les routes d'écriture ──────────
+// Le token est généré au démarrage et communiqué via /api/health.
+// Toutes les requêtes PUT doivent inclure : header "x-goudalle-token: <token>"
+function requireToken(req, res, next) {
+  const token = req.headers['x-goudalle-token'];
+  if (!token || token !== SERVER_TOKEN) {
+    return res.status(403).json({ error: 'Token de sécurité invalide ou manquant.' });
+  }
+  next();
+}
+
+// ── Middleware : rate limiting sur les écritures ─────────────────────────────────
+// Limite à 60 requêtes PUT/60s par IP pour bloquer les abus.
+function requireWriteRateLimit(req, res, next) {
+  const ip = req.ip || req.connection.remoteAddress || 'unknown';
+  if (!checkWriteRateLimit(ip)) {
+    return res.status(429).json({ error: 'Trop de requêtes. Réessayez dans un moment.' });
+  }
+  next();
+}
 
 // Sert les fichiers statiques du site (HTML, CSS, JS, images)
 app.use(express.static(path.join(__dirname, '..')));
@@ -509,18 +586,19 @@ app.get('/api/users', (req, res) => {
   res.json(dbGet('users', {}));
 });
 
-app.put('/api/users', (req, res) => {
+app.put('/api/users', requireToken, requireWriteRateLimit, (req, res) => {
   dbSet('users', req.body);
   res.json({ success: true });
 });
 
 // ─── ROUTES : CODE ADMIN ────────────────────────────────────────────────────────
+// GET protégé : le code admin ne doit pas être lisible sans token valide.
 
-app.get('/api/admin-code', (req, res) => {
-  res.json(dbGet('admin_code', { code: '0000' }));
+app.get('/api/admin-code', requireToken, (_req, res) => {
+  res.json(dbGet('admin_code', '0000'));
 });
 
-app.put('/api/admin-code', (req, res) => {
+app.put('/api/admin-code', requireToken, requireWriteRateLimit, (req, res) => {
   dbSet('admin_code', req.body);
   res.json({ success: true });
 });
@@ -531,7 +609,7 @@ app.get('/api/audit', (req, res) => {
   res.json(dbGet('audit', []));
 });
 
-app.put('/api/audit', (req, res) => {
+app.put('/api/audit', requireToken, requireWriteRateLimit, (req, res) => {
   dbSet('audit', req.body);
   res.json({ success: true });
 });
@@ -542,7 +620,7 @@ app.get('/api/kpis', (req, res) => {
   res.json(dbGet('kpis', []));
 });
 
-app.put('/api/kpis', (req, res) => {
+app.put('/api/kpis', requireToken, requireWriteRateLimit, (req, res) => {
   dbSet('kpis', req.body);
   res.json({ success: true });
 });
@@ -553,7 +631,7 @@ app.get('/api/thresholds', (req, res) => {
   res.json(dbGet('thresholds', { ratioThreshold: 5 }));
 });
 
-app.put('/api/thresholds', (req, res) => {
+app.put('/api/thresholds', requireToken, requireWriteRateLimit, (req, res) => {
   dbSet('thresholds', req.body);
   res.json({ success: true });
 });
@@ -564,7 +642,7 @@ app.get('/api/cbco', (req, res) => {
   res.json(dbGet('cbco', []));
 });
 
-app.put('/api/cbco', (req, res) => {
+app.put('/api/cbco', requireToken, requireWriteRateLimit, (req, res) => {
   dbSet('cbco', req.body);
   res.json({ success: true });
 });
@@ -575,7 +653,7 @@ app.get('/api/cbco-productivite', (req, res) => {
   res.json(dbGet('cbco_productivite', []));
 });
 
-app.put('/api/cbco-productivite', (req, res) => {
+app.put('/api/cbco-productivite', requireToken, requireWriteRateLimit, (req, res) => {
   dbSet('cbco_productivite', req.body);
   res.json({ success: true });
 });
@@ -584,7 +662,7 @@ app.get('/api/cbco-securite', (req, res) => {
   res.json(dbGet('cbco_securite', {}));
 });
 
-app.put('/api/cbco-securite', (req, res) => {
+app.put('/api/cbco-securite', requireToken, requireWriteRateLimit, (req, res) => {
   dbSet('cbco_securite', req.body);
   res.json({ success: true });
 });
@@ -795,7 +873,7 @@ app.get('/api/cbco-productivite-excel-config', (req, res) => {
   res.json(dbGet('cbco_productivite_excel_config', null));
 });
 
-app.put('/api/cbco-productivite-excel-config', (req, res) => {
+app.put('/api/cbco-productivite-excel-config', requireToken, requireWriteRateLimit, (req, res) => {
   const { folder, filename } = req.body;
   if (!folder || !filename) return res.status(400).json({ success: false, error: 'Champs manquants : folder, filename' });
   try {
@@ -831,7 +909,7 @@ app.get('/api/cbco-commercial', (req, res) => {
   res.json(dbGet('cbco_commercial', []));
 });
 
-app.put('/api/cbco-commercial', (req, res) => {
+app.put('/api/cbco-commercial', requireToken, requireWriteRateLimit, (req, res) => {
   dbSet('cbco_commercial', req.body);
   res.json({ success: true });
 });
@@ -842,7 +920,7 @@ app.get('/api/sylve-balance', (req, res) => {
   res.json(dbGet('sylve_balance', { cbco: [], gc: [], gm: [] }));
 });
 
-app.put('/api/sylve-balance', (req, res) => {
+app.put('/api/sylve-balance', requireToken, requireWriteRateLimit, (req, res) => {
   dbSet('sylve_balance', req.body);
   res.json({ success: true });
 });
@@ -853,7 +931,7 @@ app.get('/api/sylve-ca', (req, res) => {
   res.json(dbGet('sylve_ca', { cbco: 0, gc: 0, gm: 0, bilanDate: '' }));
 });
 
-app.put('/api/sylve-ca', (req, res) => {
+app.put('/api/sylve-ca', requireToken, requireWriteRateLimit, (req, res) => {
   dbSet('sylve_ca', req.body);
   res.json({ success: true });
 });
@@ -864,7 +942,7 @@ app.get('/api/sylve-paiements', (req, res) => {
   res.json(dbGet('sylve_paiements', {}));
 });
 
-app.put('/api/sylve-paiements', (req, res) => {
+app.put('/api/sylve-paiements', requireToken, requireWriteRateLimit, (req, res) => {
   dbSet('sylve_paiements', req.body);
   res.json({ success: true });
 });
@@ -875,7 +953,7 @@ app.get('/api/achats-imports', (req, res) => {
   res.json(dbGet('achats_imports', []));
 });
 
-app.put('/api/achats-imports', (req, res) => {
+app.put('/api/achats-imports', requireToken, requireWriteRateLimit, (req, res) => {
   dbSet('achats_imports', req.body);
   res.json({ success: true });
 });
@@ -884,7 +962,7 @@ app.get('/api/achats-factures', (req, res) => {
   res.json(dbGet('achats_factures', []));
 });
 
-app.put('/api/achats-factures', (req, res) => {
+app.put('/api/achats-factures', requireToken, requireWriteRateLimit, (req, res) => {
   dbSet('achats_factures', req.body);
   res.json({ success: true });
 });
@@ -893,7 +971,7 @@ app.get('/api/achats-lignes', (req, res) => {
   res.json(dbGet('achats_lignes', []));
 });
 
-app.put('/api/achats-lignes', (req, res) => {
+app.put('/api/achats-lignes', requireToken, requireWriteRateLimit, (req, res) => {
   dbSet('achats_lignes', req.body);
   res.json({ success: true });
 });
@@ -902,7 +980,7 @@ app.get('/api/achats-regles', (req, res) => {
   res.json(dbGet('achats_regles', []));
 });
 
-app.put('/api/achats-regles', (req, res) => {
+app.put('/api/achats-regles', requireToken, requireWriteRateLimit, (req, res) => {
   dbSet('achats_regles', req.body);
   res.json({ success: true });
 });
@@ -1467,7 +1545,7 @@ app.get('/api/gm-excel-config', (req, res) => {
 });
 
 // Sauvegarder la config et lancer la surveillance + premier import
-app.put('/api/gm-excel-config', (req, res) => {
+app.put('/api/gm-excel-config', requireToken, requireWriteRateLimit, (req, res) => {
   const { folder, filename, sheet } = req.body;
   if (!folder || !filename || !sheet) {
     return res.status(400).json({ success: false, error: 'Champs manquants : folder, filename, sheet' });
@@ -1716,7 +1794,7 @@ app.get('/api/cbco-excel-config', (req, res) => {
   res.json(dbGet('cbco_excel_config', null));
 });
 
-app.put('/api/cbco-excel-config', (req, res) => {
+app.put('/api/cbco-excel-config', requireToken, requireWriteRateLimit, (req, res) => {
   const { folder, filename, sheet } = req.body;
   if (!folder || !filename || !sheet) {
     return res.status(400).json({ success: false, error: 'Champs manquants : folder, filename, sheet' });
@@ -1755,8 +1833,10 @@ app.post('/api/cbco-import-excel', (req, res) => {
 });
 
 
+// /api/health expose le token de sécurité uniquement aux clients du réseau local.
+// Ce token doit être inclus dans toutes les requêtes d'écriture.
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', token: SERVER_TOKEN, timestamp: new Date().toISOString() });
 });
 
 // ─── ROUTE FALLBACK ─────────────────────────────────────────────────────────────

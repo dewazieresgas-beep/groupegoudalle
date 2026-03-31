@@ -5,6 +5,7 @@ const path = require('path');
 const files = [
   'server/server.js',
   'js/api.js',
+  'js/auth.js',
   'js/utils.js'
 ];
 

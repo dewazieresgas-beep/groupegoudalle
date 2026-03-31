@@ -320,7 +320,7 @@
     <div class="demo-accounts">
       <h3>👤 Comptes disponibles</h3>
       <div id="accountsList">
-        <p style="color:#999; font-size:13px; margin:0;">Chargement...</p>
+        <p style="color:var(--text-muted); font-size:13px; margin:0;">Chargement...</p>
       </div>
     </div>
   </div>
@@ -356,7 +356,7 @@
       const users = Auth.getUserList().filter(u => u.isActive);
       const container = document.getElementById('accountsList');
       if (!users || users.length === 0) {
-        container.innerHTML = '<p style="color:#999; font-size:13px; margin:0;">Aucun compte disponible</p>';
+        container.innerHTML = '<p style="color:var(--text-muted); font-size:13px; margin:0;">Aucun compte disponible</p>';
         return;
       }
       container.innerHTML = users.map(u => `

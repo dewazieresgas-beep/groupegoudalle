@@ -691,7 +691,7 @@
       const ctx = document.getElementById('commercialTauxChartCBCO').getContext('2d');
 
       if (stats.total === 0) {
-        detailsDiv.innerHTML = `<div style="color:#999;font-size:14px;"><strong>Période : ${periodLabel}</strong><br><br>Aucune affaire saisie sur cette période.</div>`;
+        detailsDiv.innerHTML = `<div style="color:var(--text-muted);font-size:14px;"><strong>Période : ${periodLabel}</strong><br><br>Aucune affaire saisie sur cette période.</div>`;
         if (commercialDonutCBCO) commercialDonutCBCO.destroy();
         commercialDonutCBCO = new Chart(ctx, { type:'doughnut', data:{ labels:['Aucune donnée'], datasets:[{data:[1],backgroundColor:['#e0e0e0'],borderWidth:0}] }, options:{ responsive:true, maintainAspectRatio:true, cutout:'70%', plugins:{legend:{display:false},tooltip:{enabled:false}} } });
         return;
@@ -704,9 +704,9 @@
         <div style="font-size:15px; line-height:2; text-align:center;">
           <div style="font-weight:700; margin-bottom:8px; color:#555;">Période : ${periodLabel}</div>
           <div style="display:inline-grid; grid-template-columns:1fr 1fr; gap:8px 24px; text-align:left; margin-bottom:12px;">
-            <span style="color:#27ae60;">✅ Gagnées</span><strong style="color:#27ae60;">${stats.gagnees}</strong>
-            <span style="color:#e74c3c;">❌ Perdues</span><strong style="color:#e74c3c;">${stats.perdues}</strong>
-            <span style="color:#f39c12;">⏳ En cours</span><strong>${stats.enCours}</strong>
+            <span style="color:var(--text-success);">✅ Gagnées</span><strong style="color:var(--text-success);">${stats.gagnees}</strong>
+            <span style="color:var(--text-danger);">❌ Perdues</span><strong style="color:var(--text-danger);">${stats.perdues}</strong>
+            <span style="color:var(--text-warning);">⏳ En cours</span><strong>${stats.enCours}</strong>
             <span>📊 Total</span><strong>${stats.total}</strong>
           </div>
           <div style="font-size:22px; font-weight:800; color:${tauxColor};">Taux de réussite : ${taux}${stats.taux !== null ? ' %' : ''}</div>
