@@ -161,6 +161,15 @@
     .mono { font-family: Consolas, monospace; }
     .invoice-summary { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .detail-placeholder { padding:8px; }
+    .period-filters {
+      display:grid; grid-template-columns: 220px 220px 1fr; gap:12px;
+      margin-bottom:12px; align-items:end;
+    }
+    .period-filters label { display:block; margin-bottom:6px; font-weight:600; color:#3a3a3a; }
+    .period-filters select, .period-filters input { width:100%; }
+    @media (max-width: 980px) {
+      .period-filters { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
@@ -231,8 +240,19 @@
       <div class="card">
         <div class="card-title"><h2>Bloc 4 - Aperçu des lignes</h2></div>
         <div class="card-body">
-          <div class="achat-flex" style="margin-bottom:10px;">
-            <input id="filtreTexte" type="text" placeholder="Filtrer (facture, fournisseur, ressource, désignation...)">
+          <div class="period-filters">
+            <div>
+              <label for="filterPreviewYear">Année</label>
+              <select id="filterPreviewYear"></select>
+            </div>
+            <div>
+              <label for="filterPreviewMonth">Mois</label>
+              <select id="filterPreviewMonth"></select>
+            </div>
+            <div>
+              <label for="filtreTexte">Recherche</label>
+              <input id="filtreTexte" type="text" placeholder="Filtrer (facture, fournisseur, chantier, libellé...)">
+            </div>
           </div>
           <div id="renderPreviewSaisie"></div>
         </div>
@@ -450,7 +470,13 @@
       analyse: null,
       lignesFiltrees: [],
       regles: [],
-      arcRules: []
+      arcRules: [],
+      preview: {
+        periods: [],
+        selectedYear: '',
+        selectedMonth: '',
+        invoiceSearch: ''
+      }
     };
 
     function showMessage(msg, type = 'info') {
@@ -1884,20 +1910,73 @@
       `).join('');
     }
 
-    function appliquerFiltresLignes() {
-      if (!state.analyse) {
-        state.lignesFiltrees = [];
-        renderTableLignes();
+    function extractYearMonth(rawDate) {
+      const txt = String(rawDate || '').trim();
+      let m = txt.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (m) return { year: m[3], month: m[2] };
+      m = txt.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (m) return { year: m[1], month: m[2] };
+      return null;
+    }
+
+    function buildPreviewPeriods() {
+      const byYear = new Map();
+      for (const facture of (state.analyse?.factures || [])) {
+        const ym = extractYearMonth(facture.dateFacture);
+        if (!ym) continue;
+        if (!byYear.has(ym.year)) byYear.set(ym.year, new Map());
+        const months = byYear.get(ym.year);
+        if (!months.has(ym.month)) {
+          months.set(ym.month, { year: ym.year, month: ym.month, invoice_count: 0 });
+        }
+        months.get(ym.month).invoice_count += 1;
+      }
+
+      const periods = [];
+      for (const [year, months] of byYear.entries()) {
+        for (const period of months.values()) periods.push(period);
+      }
+      periods.sort((a, b) => `${b.year}${b.month}`.localeCompare(`${a.year}${a.month}`));
+      return periods;
+    }
+
+    function renderPreviewPeriodFilters() {
+      const yearSel = document.getElementById('filterPreviewYear');
+      const monthSel = document.getElementById('filterPreviewMonth');
+      const periods = state.preview.periods || [];
+      const byYear = new Map();
+      for (const period of periods) {
+        if (!byYear.has(period.year)) byYear.set(period.year, []);
+        byYear.get(period.year).push(period);
+      }
+
+      const years = [...byYear.keys()].sort((a, b) => Number(b) - Number(a));
+      if (!years.length) {
+        yearSel.innerHTML = '<option value="">Aucune année</option>';
+        monthSel.innerHTML = '<option value="">Aucun mois</option>';
+        yearSel.disabled = true;
+        monthSel.disabled = true;
+        state.preview.selectedYear = '';
+        state.preview.selectedMonth = '';
         return;
       }
-      const txt = normalizeText(document.getElementById('filtreTexte').value);
-      state.lignesFiltrees = state.analyse.lignes.filter((l) => {
-        if (!txt) return true;
-        const blob = normalizeText([
-          l.dateFacture, l.numeroFacture, l.fournisseur, l.chantierOuAffaireLigne, l.ressource, l.designation
-        ].filter(Boolean).join(' '));
-        return blob.includes(txt);
-      });
+
+      yearSel.disabled = false;
+      monthSel.disabled = false;
+      if (!years.includes(state.preview.selectedYear)) state.preview.selectedYear = years[0];
+      yearSel.innerHTML = years.map((year) => `<option value="${escapeHtml(year)}"${year === state.preview.selectedYear ? ' selected' : ''}>${escapeHtml(year)}</option>`).join('');
+
+      const months = [...(byYear.get(state.preview.selectedYear) || [])].sort((a, b) => Number(a.month) - Number(b.month));
+      const monthValues = months.map((entry) => entry.month);
+      if (!monthValues.includes(state.preview.selectedMonth)) state.preview.selectedMonth = monthValues[0] || '';
+      monthSel.innerHTML = months.map((entry) => {
+        const label = MONTHS_FR[Number(entry.month) - 1] || entry.month;
+        return `<option value="${escapeHtml(entry.month)}"${entry.month === state.preview.selectedMonth ? ' selected' : ''}>${escapeHtml(label)} (${Number(entry.invoice_count || 0)})</option>`;
+      }).join('');
+    }
+
+    function appliquerFiltresLignes() {
+      state.preview.invoiceSearch = normalizeText(document.getElementById('filtreTexte').value);
       renderTableLignes();
     }
 
@@ -1950,7 +2029,7 @@
       `;
     }
 
-    function bindInvoiceAccordionSaisie(root, linesByInvoice) {
+    function bindInvoiceAccordionSaisie(root) {
       const facturesById = new Map((window.__facturesApercu || []).map((f) => [String(f.idFacture), f]));
       const rows = root.querySelectorAll('.invoice-row[data-invoice-id]');
       rows.forEach((row) => {
@@ -1972,7 +2051,9 @@
             });
             if (detail.dataset.loaded !== '1') {
               const inv = facturesById.get(String(invoiceId));
-              const invLines = (linesByInvoice.get(String(invoiceId)) || []).sort((a, b) => (a.ordreLigne || 0) - (b.ordreLigne || 0));
+              const invLines = (state.analyse?.lignes || [])
+                .filter((line) => String(line.idFactureParente) === String(invoiceId))
+                .sort((a, b) => (a.ordreLigne || 0) - (b.ordreLigne || 0));
               if (inv) detail.querySelector('.invoice-detail-inner').innerHTML = renderInvoiceDetailTableSaisie(invLines);
               detail.dataset.loaded = '1';
             }
@@ -1990,22 +2071,33 @@
 
     function renderTableLignes() {
       const root = document.getElementById('renderPreviewSaisie');
-      const lignes = state.lignesFiltrees || [];
-      if (!lignes.length) {
+      if (!state.analyse) {
         root.innerHTML = '<p class="muted">Aucune ligne pour le filtre actuel.</p>';
         return;
       }
 
-      const linesByInvoice = new Map();
-      for (const l of lignes) {
-        const id = String(l.idFactureParente || '');
-        if (!id) continue;
-        if (!linesByInvoice.has(id)) linesByInvoice.set(id, []);
-        linesByInvoice.get(id).push(l);
-      }
+      const txt = state.preview.invoiceSearch || '';
+      const factures = (state.analyse.factures || []).filter((facture) => {
+        const ym = extractYearMonth(facture.dateFacture);
+        if (!ym) return false;
+        if (ym.year !== state.preview.selectedYear || ym.month !== state.preview.selectedMonth) return false;
+        if (!txt) return true;
+        const blob = normalizeText([
+          facture.dateFacture,
+          facture.numeroFacture,
+          facture.fournisseurCode,
+          facture.chantierOuAffaire,
+          facture.libelleFacture
+        ].filter(Boolean).join(' '));
+        return blob.includes(txt);
+      });
 
-      const factures = (state.analyse?.factures || []).filter((f) => linesByInvoice.has(String(f.idFacture)));
       window.__facturesApercu = factures;
+      state.lignesFiltrees = factures.map((f) => f.idFacture);
+      if (!factures.length) {
+        root.innerHTML = '<p class="muted">Aucune facture disponible pour la période ou le filtre actuel.</p>';
+        return;
+      }
       root.innerHTML = `
         <div class="invoice-list">
           <div class="invoice-row-grid head">
@@ -2017,7 +2109,7 @@
             <div class="num">Montant H.T</div>
           </div>
           ${factures.map((f) => {
-            const count = (linesByInvoice.get(String(f.idFacture)) || []).length;
+            const count = Number(f.nombreLignes || 0) || (state.analyse.lignes || []).filter((line) => String(line.idFactureParente) === String(f.idFacture)).length;
             return `
               <section class="invoice-item" data-invoice-id="${escapeHtml(f.idFacture)}">
                 <button type="button" class="invoice-row" data-invoice-id="${escapeHtml(f.idFacture)}">
@@ -2040,7 +2132,7 @@
           }).join('')}
         </div>
       `;
-      bindInvoiceAccordionSaisie(root, linesByInvoice);
+      bindInvoiceAccordionSaisie(root);
     }
 
     function renderAnomalies() {
@@ -2154,6 +2246,12 @@
     function resetUIAnalyse() {
       state.analyse = null;
       state.lignesFiltrees = [];
+      state.preview.periods = [];
+      state.preview.selectedYear = '';
+      state.preview.selectedMonth = '';
+      state.preview.invoiceSearch = '';
+      document.getElementById('filtreTexte').value = '';
+      renderPreviewPeriodFilters();
       renderKpisPreAnalyse();
       renderTableFamilles();
       renderTableLignes();
@@ -2266,9 +2364,24 @@
       analyse.fichiers = fichiersInfo;
       analyse.doublons = detecterDoublons(analyse.factures, facturesExistantes);
       analyse.synthese = construireSynthese(analyse);
+      const lignesParFacture = new Map();
+      for (const ligne of analyse.lignes) {
+        const id = String(ligne.idFactureParente || '');
+        if (!id) continue;
+        lignesParFacture.set(id, (lignesParFacture.get(id) || 0) + 1);
+      }
+      analyse.factures = analyse.factures.map((facture) => ({
+        ...facture,
+        nombreLignes: lignesParFacture.get(String(facture.idFacture)) || 0
+      }));
 
       state.analyse = analyse;
-      state.lignesFiltrees = [...analyse.lignes];
+      state.preview.periods = buildPreviewPeriods();
+      state.preview.selectedYear = '';
+      state.preview.selectedMonth = '';
+      state.preview.invoiceSearch = normalizeText(document.getElementById('filtreTexte').value);
+      renderPreviewPeriodFilters();
+      state.lignesFiltrees = analyse.factures.map((f) => f.idFacture);
       renderKpisPreAnalyse();
       renderTableFamilles();
       renderTableLignes();
@@ -2516,6 +2629,15 @@
       document.getElementById('btnAjouterArcRegle').addEventListener('click', ajouterArcRegleDepuisForm);
       document.getElementById('btnResetArcRegles').addEventListener('click', resetArcRulesDefaut);
 
+      document.getElementById('filterPreviewYear').addEventListener('change', () => {
+        state.preview.selectedYear = document.getElementById('filterPreviewYear').value;
+        renderPreviewPeriodFilters();
+        renderTableLignes();
+      });
+      document.getElementById('filterPreviewMonth').addEventListener('change', () => {
+        state.preview.selectedMonth = document.getElementById('filterPreviewMonth').value;
+        renderTableLignes();
+      });
       document.getElementById('filtreTexte').addEventListener('input', appliquerFiltresLignes);
     }
 
