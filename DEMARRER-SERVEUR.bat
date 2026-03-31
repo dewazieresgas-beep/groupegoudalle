@@ -32,6 +32,12 @@ if not exist "node_modules" (
     echo.
 )
 
+:: Libere le port 3000 si deja utilise
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":3000 " ^| findstr "LISTENING"') do (
+    echo [INFO] Port 3000 occupe (PID %%a) - Liberation en cours...
+    taskkill /F /PID %%a >nul 2>&1
+)
+
 :: Lance le serveur
 echo  Serveur demarre sur http://localhost:3000
 echo  Pour acceder depuis le reseau : http://[IP-DU-SERVEUR]:3000
