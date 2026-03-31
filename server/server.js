@@ -1065,6 +1065,43 @@ app.delete('/api/achats-v2/import-batches/:batchId', (req, res) => {
   const rawInvoices = dbGet('achats_v2_raw_invoices', []);
   const rawInvoiceIds = new Set(rawInvoices.filter((r) => r.batch_id === batchId).map((r) => r.id));
 
+  // Purger aussi l'historique legacy correspondant à ce batch.
+  // Compatibilité :
+  // - priorité au champ sourceBatchId / batchIds si présent
+  // - fallback sur nom de fichier + date d'import pour les anciennes données
+  const legacyImports = dbGet('achats_imports', []);
+  const legacyFactures = dbGet('achats_factures', []);
+  const legacyLignes = dbGet('achats_lignes', []);
+
+  const matchesBatchFallback = (entry) => {
+    if (!entry || typeof entry !== 'object') return false;
+    if (String(entry.sourceBatchId || '') === batchId) return true;
+
+    const entryFile = String(entry.nomFichierImporte || entry.nomFichier || '').trim();
+    const batchFile = String(batch.nom_fichier || '').trim();
+    const entryDate = String(entry.dateImport || '').trim();
+    const batchDate = String(batch.date_import || '').trim();
+    return Boolean(batchFile && entryFile === batchFile && batchDate && entryDate === batchDate);
+  };
+
+  const keptLegacyFactures = legacyFactures.filter((f) => !matchesBatchFallback(f));
+  const deletedLegacyFactureIds = new Set(
+    legacyFactures
+      .filter((f) => !keptLegacyFactures.includes(f))
+      .map((f) => String(f.idFacture || ''))
+      .filter(Boolean)
+  );
+  const keptLegacyLignes = legacyLignes.filter((l) => {
+    if (String(l.sourceBatchId || '') === batchId) return false;
+    if (deletedLegacyFactureIds.has(String(l.idFactureParente || ''))) return false;
+    return true;
+  });
+  const keptLegacyImports = legacyImports.filter((imp) => {
+    const batchIds = Array.isArray(imp.batchIds) ? imp.batchIds.map((id) => String(id)) : [];
+    if (batchIds.includes(batchId)) return false;
+    return !matchesBatchFallback(imp);
+  });
+
   dbSet('achats_v2_import_batches', importBatches.filter((b) => b.id !== batchId));
   dbSet('achats_v2_raw_invoices', rawInvoices.filter((r) => r.batch_id !== batchId));
   dbSet('achats_v2_raw_invoice_lines', dbGet('achats_v2_raw_invoice_lines', []).filter((l) => !rawInvoiceIds.has(l.raw_invoice_id)));
@@ -1073,6 +1110,9 @@ app.delete('/api/achats-v2/import-batches/:batchId', (req, res) => {
   dbSet('achats_v2_invoice_render_cache', dbGet('achats_v2_invoice_render_cache', []).filter((r) => r.batch_id !== batchId));
   dbSet('achats_v2_invoice_versions', dbGet('achats_v2_invoice_versions', []).filter((v) => !rawInvoiceIds.has(v.raw_invoice_id)));
   dbSet('achats_v2_anomaly_logs', dbGet('achats_v2_anomaly_logs', []).filter((a) => a.batch_id !== batchId));
+  dbSet('achats_imports', keptLegacyImports);
+  dbSet('achats_factures', keptLegacyFactures);
+  dbSet('achats_lignes', keptLegacyLignes);
 
   return res.json({ success: true, deleted_batch_id: batchId });
 });

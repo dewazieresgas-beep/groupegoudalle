@@ -85,9 +85,12 @@ const PAGE_PRELOAD_KEYS = {
   'gc-paiement.html': ['goudalle_sylve_balance', 'goudalle_sylve_paiements_attente'],
   'cbco-paiement.html': ['goudalle_sylve_balance', 'goudalle_sylve_paiements_attente'],
   'indicateurs-generale.html': ['goudalle_cbco_productivite'],
-  'indicateurs-achat.html': ['goudalle_achats_imports'],
-  'indicateurs-achat-saisie.html': ['goudalle_achats_imports', 'goudalle_achats_factures', 'goudalle_achats_lignes', 'goudalle_achats_regles'],
-  'indicateurs-achat-controle.html': ['goudalle_achats_imports', 'goudalle_achats_factures', 'goudalle_achats_lignes', 'goudalle_achats_regles'],
+  // Les pages achats manipulent de gros volumes historiques.
+  // On évite leur préchargement global au démarrage et on laisse chaque page
+  // charger uniquement ce dont elle a besoin au moment opportun.
+  'indicateurs-achat.html': [],
+  'indicateurs-achat-saisie.html': [],
+  'indicateurs-achat-controle.html': [],
 };
 
 function getCurrentPageName() {

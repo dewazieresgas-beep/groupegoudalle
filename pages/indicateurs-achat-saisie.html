@@ -705,6 +705,7 @@
     }
 
     function mapV2ControlToAnalyse(control, fileMetaByName, facturesExistantes) {
+      const batchId = control.batch?.id || null;
       const invoices = control.invoices || [];
       const rawLines = control.lines || [];
       const linesByInvoice = new Map();
@@ -724,6 +725,7 @@
         const fileMeta = fileMetaByName.get(inv.source_file || '') || { nom: inv.source_file || 'import.pdf', taille: 0, dateAnalyse: new Date().toISOString(), lignesBrutes: 0 };
         const facture = {
           idFacture,
+          sourceBatchId: batchId,
           nomFichierImporte: fileMeta.nom,
           dateImport: control.batch?.date_import || new Date().toISOString(),
           dateFacture: inv.date || null,
@@ -758,6 +760,7 @@
           const ligne = {
             idLigne: `lig_${idFacture}_${ordre || (facture.nombreLignes + 1)}`,
             idFactureParente: idFacture,
+            sourceBatchId: batchId,
             ordreLigne: ordre || (facture.nombreLignes + 1),
             montantLigne: r.montant != null ? Number(r.montant) : null,
             ressource: r.ressource || null,
@@ -809,6 +812,7 @@
 
       return {
         idAnalyse: `analyse_${Date.now()}`,
+        batchIds: batchId ? [batchId] : [],
         dateAnalyse: new Date().toISOString(),
         fichiers: [...fichiersInfoMap.values()],
         factures: sansStock.factures,
@@ -2517,6 +2521,7 @@
 
         const importRecord = {
           idImport: `imp_${Date.now()}`,
+          batchIds: Array.isArray(state.analyse.batchIds) ? [...state.analyse.batchIds] : [],
           dateImport: new Date().toISOString(),
           utilisateur: Auth.getSession()?.username || 'inconnu',
           nomFichier: state.analyse.fichiers.map((f) => f.nom).join(', '),
