@@ -22,6 +22,7 @@ const _cache = {};
 let _serverAvailable = null; // null = pas encore testé, true/false après test
 let _refreshInProgress = false;
 let _serverToken = null;      // Token de sécurité reçu depuis /api/health
+const _loadedServerKeys = new Set();
 
 function createTimeoutSignal(timeoutMs) {
   if (typeof AbortController === 'undefined') return undefined;
@@ -62,6 +63,45 @@ const LOCAL_ONLY_KEYS = new Set([
   'GM_TREND_RANGE',
 ]);
 
+const DEFAULT_PRELOAD_KEYS = [
+  'goudalle_users',
+  'goudalle_admin_code',
+];
+
+const PAGE_PRELOAD_KEYS = {
+  'account.html': ['goudalle_users'],
+  'users-admin.html': ['goudalle_users'],
+  'users-code.html': ['goudalle_users'],
+  'gm.html': ['goudalle_kpis', 'goudalle_thresholds'],
+  'gm-saisie.html': ['goudalle_kpis', 'goudalle_thresholds'],
+  'gm-export.html': ['goudalle_kpis', 'goudalle_thresholds'],
+  'cbco.html': ['goudalle_cbco_data', 'goudalle_cbco_commercial'],
+  'cbco-saisie.html': ['goudalle_cbco_data'],
+  'cbco-usine.html': ['goudalle_cbco_productivite', 'goudalle_cbco_securite'],
+  'cbco-productivite-saisie.html': ['goudalle_cbco_productivite'],
+  'cbco-commercial.html': ['goudalle_cbco_commercial'],
+  'sylve-support.html': ['goudalle_sylve_balance', 'goudalle_sylve_ca'],
+  'sylve-support-saisie.html': ['goudalle_sylve_balance', 'goudalle_sylve_ca'],
+  'gm-paiement.html': ['goudalle_sylve_balance', 'goudalle_sylve_paiements_attente'],
+  'gc-paiement.html': ['goudalle_sylve_balance', 'goudalle_sylve_paiements_attente'],
+  'cbco-paiement.html': ['goudalle_sylve_balance', 'goudalle_sylve_paiements_attente'],
+  'indicateurs-generale.html': ['goudalle_cbco_productivite'],
+  'indicateurs-achat.html': ['goudalle_achats_imports'],
+  'indicateurs-achat-saisie.html': ['goudalle_achats_imports', 'goudalle_achats_factures', 'goudalle_achats_lignes', 'goudalle_achats_regles'],
+  'indicateurs-achat-controle.html': ['goudalle_achats_imports', 'goudalle_achats_factures', 'goudalle_achats_lignes', 'goudalle_achats_regles'],
+};
+
+function getCurrentPageName() {
+  const path = window.location.pathname || '';
+  const filename = path.substring(path.lastIndexOf('/') + 1);
+  return filename || 'index.html';
+}
+
+function getInitialPreloadKeys() {
+  const page = getCurrentPageName();
+  return [...new Set([...DEFAULT_PRELOAD_KEYS, ...(PAGE_PRELOAD_KEYS[page] || [])])];
+}
+
 // ─── VÉRIFICATION DU SERVEUR ────────────────────────────────────────────────────
 
 async function checkServerAvailable() {
@@ -91,50 +131,7 @@ async function checkServerAvailable() {
  * À appeler une seule fois au démarrage (dans chaque page).
  */
 async function loadAllFromServer() {
-  const available = await checkServerAvailable();
-  if (!available) {
-    console.warn('[API] Serveur non disponible - utilisation du localStorage de secours');
-    return false;
-  }
-
-  const endpoints = [
-    ['/users',           'goudalle_users'],
-    ['/admin-code',      'goudalle_admin_code'],
-    ['/audit',           'goudalle_audit'],
-    ['/kpis',            'goudalle_kpis'],
-    ['/thresholds',      'goudalle_thresholds'],
-    ['/cbco',            'goudalle_cbco_data'],
-    ['/cbco-productivite','goudalle_cbco_productivite'],
-    ['/cbco-securite',   'goudalle_cbco_securite'],
-    ['/cbco-commercial', 'goudalle_cbco_commercial'],
-    ['/sylve-balance',   'goudalle_sylve_balance'],
-    ['/sylve-ca',        'goudalle_sylve_ca'],
-    ['/sylve-paiements', 'goudalle_sylve_paiements_attente'],
-  ];
-
-  await Promise.all(endpoints.map(async ([endpoint, key]) => {
-    try {
-      const signal = createTimeoutSignal(5000);
-      const res = await fetch(
-        SERVER_URL + endpoint,
-        signal ? { method: 'GET', signal, cache: 'no-store' } : { method: 'GET', cache: 'no-store' }
-      );
-      if (res.ok) {
-        const data = await res.json();
-        // Ne pas écraser avec des données vides (ex: users={} au premier démarrage)
-        const isEmpty = (data && typeof data === 'object' && !Array.isArray(data) && Object.keys(data).length === 0)
-                     || (Array.isArray(data) && data.length === 0 && key === 'goudalle_audit');
-        if (!isEmpty || key !== 'goudalle_users') {
-          _cache[key] = data;
-        }
-      }
-    } catch (e) {
-      console.warn(`[API] Impossible de charger ${endpoint}:`, e.message);
-    }
-  }));
-
-  console.log('[API] Données chargées depuis le serveur ✅');
-  return true;
+  return loadKeysFromServer(getInitialPreloadKeys(), { force: true });
 }
 
 /**
@@ -144,14 +141,22 @@ async function loadAllFromServer() {
  * @param {string[]} keys
  * @returns {Promise<boolean>}
  */
-async function loadKeysFromServer(keys = []) {
+async function loadKeysFromServer(keys = [], options = {}) {
   const available = await checkServerAvailable();
   if (!available) return false;
 
-  const uniqueKeys = [...new Set(keys)].filter(Boolean);
+  const force = options && options.force === true;
+  const uniqueKeys = [...new Set(keys)]
+    .filter(Boolean)
+    .filter((key) => KEY_TO_ENDPOINT[key])
+    .filter((key) => force || !_loadedServerKeys.has(key));
+
+  if (uniqueKeys.length === 0) {
+    return true;
+  }
+
   await Promise.all(uniqueKeys.map(async (key) => {
     const endpoint = KEY_TO_ENDPOINT[key];
-    if (!endpoint) return;
     try {
       const signal = createTimeoutSignal(7000);
       const res = await fetch(
@@ -159,7 +164,16 @@ async function loadKeysFromServer(keys = []) {
         signal ? { method: 'GET', signal, cache: 'no-store' } : { method: 'GET', cache: 'no-store' }
       );
       if (res.ok) {
-        _cache[key] = await res.json();
+        const data = await res.json();
+        const isEmptyUsersObject = key === 'goudalle_users'
+          && data
+          && typeof data === 'object'
+          && !Array.isArray(data)
+          && Object.keys(data).length === 0;
+        if (!isEmptyUsersObject) {
+          _cache[key] = data;
+        }
+        _loadedServerKeys.add(key);
       }
     } catch (e) {
       console.warn(`[API] Impossible de charger la clé ${key}:`, e.message);
@@ -280,7 +294,7 @@ localStorage.removeItem = apiRemoveItem;
  * @returns {Promise<boolean>} true si le serveur est disponible
  */
 async function initServerStorage() {
-  return await loadAllFromServer();
+  return await loadKeysFromServer(getInitialPreloadKeys(), { force: true });
 }
 
 // Lancer automatiquement au chargement du script
@@ -311,7 +325,10 @@ const _refreshTimer = setInterval(async () => {
   if (_refreshInProgress) return;
   _refreshInProgress = true;
   try {
-    const loaded = await loadAllFromServer();
+    const keysToRefresh = _loadedServerKeys.size > 0
+      ? [..._loadedServerKeys]
+      : getInitialPreloadKeys();
+    const loaded = await loadKeysFromServer(keysToRefresh, { force: true });
     if (loaded) {
       window.dispatchEvent(new CustomEvent('serverDataRefreshed'));
     }
