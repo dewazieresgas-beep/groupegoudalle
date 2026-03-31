@@ -179,9 +179,12 @@
     const API = window.location.origin + '/api';
     const MONTHS_FR = ['01 - Janvier', '02 - Février', '03 - Mars', '04 - Avril', '05 - Mai', '06 - Juin', '07 - Juillet', '08 - Août', '09 - Septembre', '10 - Octobre', '11 - Novembre', '12 - Décembre'];
     const controlState = {
+      periods: [],
       factures: [],
+      activeBatchId: '',
       selectedYear: '',
-      selectedMonth: ''
+      selectedMonth: '',
+      invoiceDetailsById: new Map()
     };
 
     function showMessage(msg, type='info') {
@@ -280,60 +283,6 @@
       };
     }
 
-    function applyChantierInheritance(factures) {
-      return (factures || []).map((facture) => ({
-        ...facture,
-        lignes: (facture.lignes || []).map((ligne) => ({
-          ...ligne,
-          chantier: (ligne.chantier == null || String(ligne.chantier).trim() === '')
-            ? (facture.chantier || '')
-            : ligne.chantier
-        }))
-      }));
-    }
-
-    function computeSafeInvoiceTotal(headerTotal, lines) {
-      const h = Number.isFinite(Number(headerTotal)) ? Number(headerTotal) : null;
-      const s = (lines || []).reduce((acc, l) => acc + (Number(l.montant) || 0), 0);
-      if (h == null) return s;
-      const ratio = s !== 0 ? Math.abs(h / s) : null;
-      const mismatch = ratio != null && (ratio > 100 || ratio < 0.01 || Math.abs(h - s) > Math.max(5000, Math.abs(s) * 0.9));
-      return mismatch ? s : h;
-    }
-
-    function composeFactures(invoices, lines) {
-      const linesByInvoice = new Map();
-      for (const l of (lines || [])) {
-        if (!linesByInvoice.has(l.raw_invoice_id)) linesByInvoice.set(l.raw_invoice_id, []);
-        linesByInvoice.get(l.raw_invoice_id).push(l);
-      }
-      for (const arr of linesByInvoice.values()) {
-        arr.sort((a, b) => (a.line_order || 0) - (b.line_order || 0));
-      }
-      // On conserve l'ordre d'apparition du PDF (ordre parser/API), sans re-tri UI.
-      const factures = [...(invoices || [])].map((inv) => ({
-        id: inv.id,
-        date: inv.date || '',
-        fournisseur: inv.fournisseur || '',
-        chantier: inv.chantier || '',
-        montant: inv.montant_ht,
-        libelle: inv.libelle_facture || '',
-        lignes: (linesByInvoice.get(inv.id) || []).map((l) => ({
-          ressource: l.ressource || '',
-          bl_numero: l.bl_numero || '',
-          arc: l.arc || '',
-          chantier: l.chantier_ligne || '',
-          libelle_ligne: l.libelle_ligne || '',
-          unite: l.unite || '',
-          qte: l.qte_fact,
-          pu: l.pu,
-          montant: l.montant
-        }))
-      }));
-      const withChantier = applyChantierInheritance(factures);
-      return withChantier.map((f) => ({ ...f, montant: computeSafeInvoiceTotal(f.montant, f.lignes) }));
-    }
-
     function extractYearMonth(rawDate) {
       const txt = String(rawDate || '').trim();
       let m = txt.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
@@ -343,21 +292,14 @@
       return null;
     }
 
-    function buildPeriodIndex(factures) {
-      const byYear = new Map();
-      for (const f of (factures || [])) {
-        const ym = extractYearMonth(f.date);
-        if (!ym) continue;
-        if (!byYear.has(ym.year)) byYear.set(ym.year, new Set());
-        byYear.get(ym.year).add(ym.month);
-      }
-      return byYear;
-    }
-
-    function renderPeriodFilters(factures) {
+    function renderPeriodFilters(periods) {
       const yearSel = document.getElementById('filterYear');
       const monthSel = document.getElementById('filterMonth');
-      const idx = buildPeriodIndex(factures);
+      const idx = new Map();
+      for (const period of (periods || [])) {
+        if (!idx.has(period.year)) idx.set(period.year, []);
+        idx.get(period.year).push(period);
+      }
       const years = [...idx.keys()].sort((a, b) => Number(b) - Number(a));
 
       if (!years.length) {
@@ -375,23 +317,28 @@
       if (!years.includes(controlState.selectedYear)) controlState.selectedYear = years[0];
       yearSel.innerHTML = years.map((y) => `<option value="${esc(y)}"${y === controlState.selectedYear ? ' selected' : ''}>${esc(y)}</option>`).join('');
 
-      const months = [...(idx.get(controlState.selectedYear) || [])].sort((a, b) => Number(a) - Number(b));
-      if (!months.includes(controlState.selectedMonth)) controlState.selectedMonth = months[0] || '';
-      monthSel.innerHTML = months.map((m) => {
-        const label = MONTHS_FR[Number(m) - 1] || m;
-        return `<option value="${esc(m)}"${m === controlState.selectedMonth ? ' selected' : ''}>${esc(label)}</option>`;
+      const months = [...(idx.get(controlState.selectedYear) || [])].sort((a, b) => Number(a.month) - Number(b.month));
+      const monthValues = months.map((entry) => entry.month);
+      if (!monthValues.includes(controlState.selectedMonth)) controlState.selectedMonth = monthValues[0] || '';
+      monthSel.innerHTML = months.map((entry) => {
+        const label = MONTHS_FR[Number(entry.month) - 1] || entry.month;
+        return `<option value="${esc(entry.month)}"${entry.month === controlState.selectedMonth ? ' selected' : ''}>${esc(label)} (${Number(entry.invoice_count || 0)})</option>`;
       }).join('');
     }
 
-    function getFilteredFactures(factures) {
-      return (factures || []).filter((f) => {
-        const ym = extractYearMonth(f.date);
-        if (!ym) return false;
-        return ym.year === controlState.selectedYear && ym.month === controlState.selectedMonth;
-      });
+    function normalizeInvoiceSummary(inv) {
+      return {
+        id: inv.id,
+        date: inv.date || '',
+        fournisseur: inv.fournisseur || '',
+        chantier: inv.chantier || '',
+        montant: inv.montant_ht,
+        libelle: inv.libelle_facture || '',
+        lineCount: Number(inv.line_count || 0)
+      };
     }
 
-    function renderInvoiceDetailTable(inv) {
+    function renderInvoiceDetailTable(lines, invoice) {
       return `
         <table>
           <colgroup>
@@ -419,15 +366,15 @@
             </tr>
           </thead>
           <tbody>
-            ${inv.lignes.map((l) => `
+            ${(lines || []).map((l) => `
               <tr>
                 <td>${esc(l.ressource)}</td>
                 <td class="mono">${esc(l.bl_numero)}</td>
                 <td class="mono">${esc(l.arc)}</td>
-                <td class="mono">${esc(l.chantier)}</td>
+                <td class="mono">${esc(l.chantier_ligne || invoice?.chantier || '')}</td>
                 <td>${esc(l.libelle_ligne)}</td>
                 <td class="num">${esc(l.unite)}</td>
-                <td class="num">${l.qte != null ? fmt(l.qte) : '—'}</td>
+                <td class="num">${l.qte_fact != null ? fmt(l.qte_fact) : '—'}</td>
                 <td class="num">${l.pu != null ? fmt(l.pu) : '—'}</td>
                 <td class="num montant-col">${l.montant != null ? fmt(l.montant) : '—'}</td>
               </tr>
@@ -438,10 +385,9 @@
     }
 
     function bindInvoiceAccordion(root) {
-      const facturesById = new Map((window.__facturesControle || []).map((f) => [String(f.id), f]));
       const rows = root.querySelectorAll('.invoice-row[data-invoice-id]');
       rows.forEach((row) => {
-        row.addEventListener('click', () => {
+        row.addEventListener('click', async () => {
           const invoiceId = row.getAttribute('data-invoice-id');
           const item = root.querySelector(`.invoice-item[data-invoice-id="${invoiceId}"]`);
           const detail = root.querySelector(`.invoice-detail[data-invoice-id="${invoiceId}"]`);
@@ -458,9 +404,17 @@
               if (i !== item) i.classList.remove('open');
             });
             if (detail.dataset.loaded !== '1') {
-              const inv = facturesById.get(String(invoiceId));
-              if (inv) detail.querySelector('.invoice-detail-inner').innerHTML = renderInvoiceDetailTable(inv);
-              detail.dataset.loaded = '1';
+              const detailInner = detail.querySelector('.invoice-detail-inner');
+              detailInner.innerHTML = '<div class="detail-placeholder muted">Chargement du détail...</div>';
+              try {
+                const payload = await apiGet(`/achats-v2/control/${encodeURIComponent(controlState.activeBatchId)}/invoices/${encodeURIComponent(invoiceId)}/lines`);
+                const invoice = controlState.factures.find((f) => String(f.id) === String(invoiceId)) || normalizeInvoiceSummary(payload.invoice || {});
+                controlState.invoiceDetailsById.set(String(invoiceId), payload.lines || []);
+                detailInner.innerHTML = renderInvoiceDetailTable(payload.lines || [], invoice);
+                detail.dataset.loaded = '1';
+              } catch (err) {
+                detailInner.innerHTML = `<div class="detail-placeholder muted">${esc(err.message || 'Erreur de chargement du détail.')}</div>`;
+              }
             }
           }
           detail.classList.toggle('open');
@@ -476,7 +430,6 @@
 
     function renderReconstructionList(factures) {
       const root = document.getElementById('renderPreview');
-      window.__facturesControle = factures;
       if (!factures.length) {
         root.innerHTML = '<p class="muted">Aucune facture disponible pour la période sélectionnée.</p>';
         return;
@@ -500,7 +453,7 @@
                     <div>${esc(inv.date)}</div>
                     <div>${esc(inv.fournisseur)}</div>
                     <div class="mono">${esc(inv.chantier)}</div>
-                    <div class="invoice-summary">${esc(inv.libelle)} <span class="line-count">${inv.lignes.length}</span></div>
+                    <div class="invoice-summary">${esc(inv.libelle)} <span class="line-count">${inv.lineCount}</span></div>
                     <div class="num invoice-montant">${fmt(inv.montant)}</div>
                   </div>
                 </button>
@@ -517,23 +470,26 @@
       bindInvoiceAccordion(root);
     }
 
-    function refreshFilteredView() {
-      renderPeriodFilters(controlState.factures);
-      const filtered = getFilteredFactures(controlState.factures);
-      renderReconstructionList(filtered);
-    }
-
-    function renderReconstructionFromData(invoices, lines) {
-      controlState.factures = composeFactures(invoices, lines);
-      refreshFilteredView();
+    async function loadPeriodInvoices() {
+      if (!controlState.activeBatchId || !controlState.selectedYear || !controlState.selectedMonth) {
+        controlState.factures = [];
+        renderReconstructionList([]);
+        return;
+      }
+      const payload = await apiGet(`/achats-v2/control/${encodeURIComponent(controlState.activeBatchId)}/invoices?year=${encodeURIComponent(controlState.selectedYear)}&month=${encodeURIComponent(controlState.selectedMonth)}`);
+      controlState.factures = (payload.invoices || []).map(normalizeInvoiceSummary);
+      controlState.invoiceDetailsById = new Map();
+      renderReconstructionList(controlState.factures);
     }
 
     async function loadControl(batchId) {
       clearMessage();
-      const payload = await apiGet(`/achats-v2/control/${encodeURIComponent(batchId)}`);
-      const invoices = payload.invoices || [];
-      const lines = payload.lines || [];
-      renderReconstructionFromData(invoices, lines);
+      controlState.activeBatchId = batchId;
+      controlState.invoiceDetailsById = new Map();
+      const payload = await apiGet(`/achats-v2/control/${encodeURIComponent(batchId)}/periods`);
+      controlState.periods = payload.periods || [];
+      renderPeriodFilters(controlState.periods);
+      await loadPeriodInvoices();
 
       const b = payload.batch || {};
       document.getElementById('batchInfo').textContent =
@@ -587,8 +543,10 @@
         // Si l'API répond mais qu'il n'y a plus d'imports, on n'affiche pas le fallback local
         // pour éviter de montrer d'anciennes données après suppression serveur.
         if (!localMode) {
+          controlState.periods = [];
           controlState.factures = [];
-          renderPeriodFilters([]);
+          controlState.invoiceDetailsById = new Map();
+          renderPeriodFilters(controlState.periods);
           document.getElementById('importsList').innerHTML = '<p class="muted">Aucun import.</p>';
           document.getElementById('batchInfo').textContent = 'Aucun import disponible.';
           document.getElementById('renderPreview').innerHTML = '<p class="muted">Aucune reconstruction disponible.</p>';
@@ -601,10 +559,15 @@
           document.getElementById('importsList').innerHTML = '<p class="muted">Mode fallback local (sans gestion de suppression ciblée).</p>';
           const payload = toLocalControlPayload();
           const invoices = payload.invoices || [];
-          const lines = payload.lines || [];
-          renderReconstructionFromData(invoices, lines);
+          controlState.periods = [];
+          controlState.factures = invoices.map((inv) => {
+            const count = (payload.lines || []).filter((line) => line.raw_invoice_id === inv.id).length;
+            return normalizeInvoiceSummary({ ...inv, line_count: count });
+          });
+          renderPeriodFilters(controlState.periods);
+          renderReconstructionList(controlState.factures);
           document.getElementById('batchInfo').textContent =
-            `Mode fallback local | Factures: ${invoices.length} | Lignes: ${lines.length}`;
+            `Mode fallback local | Factures: ${invoices.length} | Lignes: ${(payload.lines || []).length}`;
           showMessage('⚠️ API imports indisponible. Affichage fallback des données validées locales.', 'warning');
           return;
         }
@@ -621,13 +584,14 @@
 
       const yearSel = document.getElementById('filterYear');
       const monthSel = document.getElementById('filterMonth');
-      yearSel.onchange = () => {
+      yearSel.onchange = async () => {
         controlState.selectedYear = yearSel.value;
-        refreshFilteredView();
+        renderPeriodFilters(controlState.periods);
+        await loadPeriodInvoices().catch((err) => showMessage(`❌ ${err.message}`, 'danger'));
       };
-      monthSel.onchange = () => {
+      monthSel.onchange = async () => {
         controlState.selectedMonth = monthSel.value;
-        refreshFilteredView();
+        await loadPeriodInvoices().catch((err) => showMessage(`❌ ${err.message}`, 'danger'));
       };
 
       const root = document.getElementById('importsList');
@@ -661,14 +625,6 @@
     async function init() {
       if (_initDone) return;
       _initDone = true;
-      if (typeof window.loadServerKeys === 'function') {
-        await window.loadServerKeys([
-          'goudalle_achats_imports',
-          'goudalle_achats_factures',
-          'goudalle_achats_lignes',
-          'goudalle_achats_regles'
-        ]);
-      }
       await initPage();
     }
     window.onServerReady(init);

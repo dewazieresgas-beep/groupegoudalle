@@ -1077,6 +1077,139 @@ app.delete('/api/achats-v2/import-batches/:batchId', (req, res) => {
   return res.json({ success: true, deleted_batch_id: batchId });
 });
 
+function extractYearMonthFromRawDate(rawDate) {
+  const txt = String(rawDate || '').trim();
+  let m = txt.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (m) return { year: m[3], month: m[2] };
+  m = txt.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return { year: m[1], month: m[2] };
+  return null;
+}
+
+function getBatchInvoices(batchId) {
+  return dbGet('achats_v2_raw_invoices', []).filter((r) => r.batch_id === batchId);
+}
+
+function getBatchLines(batchId) {
+  const invoiceIds = new Set(getBatchInvoices(batchId).map((inv) => inv.id));
+  return dbGet('achats_v2_raw_invoice_lines', []).filter((line) => invoiceIds.has(line.raw_invoice_id));
+}
+
+function buildInvoiceSummary(invoice, lines = []) {
+  const sumLines = (lines || []).reduce((acc, line) => acc + (Number(line.montant) || 0), 0);
+  return {
+    id: invoice.id,
+    date: invoice.date || '',
+    numero_facture: invoice.numero_facture || '',
+    fournisseur: invoice.fournisseur || '',
+    chantier: invoice.chantier || '',
+    libelle_facture: invoice.libelle_facture || '',
+    montant_ht: pickRobustInvoiceTotal(invoice.montant_ht, invoice.total_bon, sumLines),
+    line_count: Array.isArray(lines) ? lines.length : 0,
+    excluded_from_indicators: Number(invoice.excluded_from_indicators || 0),
+  };
+}
+
+app.get('/api/achats-v2/control/:batchId/periods', (req, res) => {
+  const batchId = String(req.params.batchId || '');
+  const batch = dbGet('achats_v2_import_batches', []).find((b) => b.id === batchId);
+  if (!batch) {
+    return res.status(404).json({ success: false, error: 'Batch introuvable.' });
+  }
+
+  const invoices = getBatchInvoices(batchId);
+  const byPeriod = new Map();
+  for (const invoice of invoices) {
+    const ym = extractYearMonthFromRawDate(invoice.date);
+    if (!ym) continue;
+    const key = `${ym.year}-${ym.month}`;
+    if (!byPeriod.has(key)) {
+      byPeriod.set(key, {
+        year: ym.year,
+        month: ym.month,
+        invoice_count: 0,
+      });
+    }
+    byPeriod.get(key).invoice_count += 1;
+  }
+
+  const periods = [...byPeriod.values()].sort((a, b) => `${b.year}${b.month}`.localeCompare(`${a.year}${a.month}`));
+  return res.json({ success: true, batch, periods });
+});
+
+app.get('/api/achats-v2/control/:batchId/invoices', (req, res) => {
+  const batchId = String(req.params.batchId || '');
+  const year = String(req.query.year || '').trim();
+  const month = String(req.query.month || '').trim().padStart(2, '0');
+  const batch = dbGet('achats_v2_import_batches', []).find((b) => b.id === batchId);
+  if (!batch) {
+    return res.status(404).json({ success: false, error: 'Batch introuvable.' });
+  }
+  if (!/^\d{4}$/.test(year) || !/^\d{2}$/.test(month)) {
+    return res.status(400).json({ success: false, error: 'Paramètres year/month invalides.' });
+  }
+
+  const invoices = getBatchInvoices(batchId);
+  const filteredInvoices = invoices.filter((invoice) => {
+    const ym = extractYearMonthFromRawDate(invoice.date);
+    return ym && ym.year === year && ym.month === month;
+  });
+  const invoiceIds = new Set(filteredInvoices.map((invoice) => invoice.id));
+  const lines = dbGet('achats_v2_raw_invoice_lines', []).filter((line) => invoiceIds.has(line.raw_invoice_id));
+  const linesByInvoiceId = new Map();
+  for (const line of lines) {
+    if (!linesByInvoiceId.has(line.raw_invoice_id)) linesByInvoiceId.set(line.raw_invoice_id, []);
+    linesByInvoiceId.get(line.raw_invoice_id).push(line);
+  }
+
+  const summaries = filteredInvoices.map((invoice) => buildInvoiceSummary(invoice, linesByInvoiceId.get(invoice.id) || []));
+  return res.json({
+    success: true,
+    batch,
+    year,
+    month,
+    invoices: summaries,
+  });
+});
+
+app.get('/api/achats-v2/control/:batchId/invoices/:invoiceId/lines', (req, res) => {
+  const batchId = String(req.params.batchId || '');
+  const invoiceId = String(req.params.invoiceId || '');
+  const batch = dbGet('achats_v2_import_batches', []).find((b) => b.id === batchId);
+  if (!batch) {
+    return res.status(404).json({ success: false, error: 'Batch introuvable.' });
+  }
+
+  const invoice = getBatchInvoices(batchId).find((inv) => inv.id === invoiceId);
+  if (!invoice) {
+    return res.status(404).json({ success: false, error: 'Facture introuvable pour ce batch.' });
+  }
+
+  const lines = dbGet('achats_v2_raw_invoice_lines', [])
+    .filter((line) => line.raw_invoice_id === invoiceId)
+    .sort((a, b) => Number(a.line_order || 0) - Number(b.line_order || 0))
+    .map((line) => ({
+      raw_invoice_id: line.raw_invoice_id,
+      line_order: line.line_order,
+      ressource: line.ressource || '',
+      bl_numero: line.bl_numero || '',
+      arc: line.arc || '',
+      chantier_ligne: line.chantier_ligne || invoice.chantier || '',
+      libelle_ligne: line.libelle_ligne || '',
+      unite: line.unite || '',
+      qte_fact: line.qte_fact,
+      pu: line.pu,
+      montant: line.montant
+    }));
+
+  return res.json({
+    success: true,
+    batch,
+    invoice: buildInvoiceSummary(invoice, lines),
+    lines,
+  });
+});
+
 app.get('/api/achats-v2/control/:batchId', (req, res) => {
   const batchId = String(req.params.batchId || '');
   const batch = dbGet('achats_v2_import_batches', []).find((b) => b.id === batchId);
