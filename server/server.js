@@ -589,6 +589,242 @@ app.put('/api/cbco-securite', (req, res) => {
   res.json({ success: true });
 });
 
+// ─── EXCEL CBCO PRODUCTIVITÉ : CONFIG + WATCHER + AUTO-IMPORT ────────────────
+
+function parseCBCOProdExcel(cfg) {
+  const excelPath = path.join(cfg.folder, cfg.filename);
+  if (!fs.existsSync(excelPath)) throw new Error(`Fichier introuvable : "${excelPath}"`);
+
+  const wb = XLSX.readFile(excelPath);
+  const normName = (n) => String(n || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '');
+
+  const toNum = (v) => {
+    if (v === null || v === undefined || v === '') return null;
+    if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+    const raw = String(v).trim();
+    if (raw.startsWith('#')) return null;
+    const isPct = raw.includes('%');
+    const cleaned = raw.replace(/\s/g,'').replace('%','').replace(',','.');
+    const m = cleaned.match(/-?\d+(\.\d+)?/);
+    const p = m ? parseFloat(m[0]) : NaN;
+    if (!Number.isFinite(p)) return null;
+    return isPct ? p / 100 : p;
+  };
+
+  const toDur = (v) => {
+    if (v === null || v === undefined || v === '') return null;
+    if (typeof v === 'number') {
+      if (!Number.isFinite(v)) return null;
+      if (v >= 0 && v <= 60) return v * 24;
+      return v;
+    }
+    const raw = String(v).trim();
+    const hms = raw.match(/^(\d{1,3}):(\d{1,2})(?::(\d{1,2}))?$/);
+    if (hms) return parseInt(hms[1]) + parseInt(hms[2]) / 60 + parseInt(hms[3] || '0') / 3600;
+    return toNum(v);
+  };
+
+  const toRatio = (v) => {
+    const n = toNum(v);
+    if (n === null) return null;
+    return n > 1 ? n / 100 : n;
+  };
+
+  const hasVal = (v) => v !== null && v !== undefined && String(v).trim() !== '';
+
+  function parseMachine(sheetKey, colCfg) {
+    const sheetName = wb.SheetNames.find(n => normName(n) === sheetKey);
+    if (!sheetName) return [];
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, defval: '' });
+    const byWeek = {};
+    let emptyStreak = 0;
+    for (let r = 3; r < rows.length; r++) {
+      const row = rows[r] || [];
+      const cubageVal = toNum(row[colCfg.F]);
+      if (cubageVal === null) { if (++emptyStreak >= 50) break; continue; }
+      emptyStreak = 0;
+      const semaineAnnuelle = toNum(row[colCfg.B]);
+      const semaineCumulee  = toNum(row[colCfg.C]);
+      const heuresOnaya     = toDur(row[colCfg.D]);
+      const heuresPerdues   = toDur(row[colCfg.E]);
+      const cubage          = cubageVal;
+      const productivite    = colCfg.productiviteDur ? toDur(row[colCfg.G]) : toNum(row[colCfg.G]);
+      const remarques       = hasVal(row[colCfg.H]) ? String(row[colCfg.H]).trim() : null;
+      const cible           = colCfg.cibleDur ? toDur(row[colCfg.J]) : toNum(row[colCfg.J]);
+      const trs             = colCfg.TRS !== undefined ? toRatio(row[colCfg.TRS]) : null;
+      const tempsUtil       = colCfg.TEMPS !== undefined ? toDur(row[colCfg.TEMPS]) : null;
+      const prodHM          = colCfg.PRODHM !== undefined ? toNum(row[colCfg.PRODHM]) : null;
+      const volume          = colCfg.VOLUME !== undefined ? toNum(row[colCfg.VOLUME]) : null;
+      const presses         = colCfg.PRESSES !== undefined ? toNum(row[colCfg.PRESSES]) : null;
+      const caissons        = colCfg.CAISSONS !== undefined ? toNum(row[colCfg.CAISSONS]) : null;
+
+      if (semaineCumulee === null && semaineAnnuelle === null) continue;
+      const req = colCfg.required || ['heuresOnaya', 'cubage'];
+      const vals = { heuresOnaya, heuresPerdues, cubage, productivite };
+      if (req.some(f => vals[f] === null)) continue;
+
+      let week = null, year = null;
+      if (semaineCumulee !== null && semaineCumulee > 0) {
+        const c = Math.round(semaineCumulee);
+        year = 2023 + Math.floor((c - 1) / 52);
+        week = ((c - 1) % 52) + 1;
+      } else if (semaineAnnuelle !== null && semaineAnnuelle > 0) {
+        week = Math.round(semaineAnnuelle); year = 2023;
+      }
+      if (!week || !year) continue;
+
+      const heuresUtiles = (heuresOnaya !== null && heuresPerdues !== null) ? Math.max(0, heuresOnaya - heuresPerdues) : null;
+      const prod = (cubage !== null && heuresUtiles !== null && heuresUtiles > 0) ? (cubage / heuresUtiles) : productivite;
+      const key = `${year}-${String(week).padStart(2,'0')}`;
+      byWeek[key] = { week, year, semaineAnnuelle, semaineCumulee, heuresOnaya, heuresPerdues, heuresUtiles, cubage, productivite: prod, remarques, cibleProductivite: cible, trs, tempsUtilisationMachine: tempsUtil, productiviteHeuresMachines: prodHM, volume, nombrePressees: presses, nombreCaissons: caissons };
+    }
+    return Object.values(byWeek);
+  }
+
+  function parseQualite() {
+    const sheetName = wb.SheetNames.find(n => normName(n) === 'qualite');
+    if (!sheetName) return [];
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, defval: '' });
+    const byWeek = {};
+    let emptyStreak = 0;
+    for (let r = 3; r < rows.length; r++) {
+      const row = rows[r] || [];
+      if (!hasVal(row[3]) && !hasVal(row[4]) && !hasVal(row[5]) && !hasVal(row[6]) && !hasVal(row[7])) {
+        if (++emptyStreak >= 50) break; continue;
+      }
+      emptyStreak = 0;
+      const semaineAnnuelle = toNum(row[1]);
+      const semaineCumulee  = toNum(row[2]);
+      const tests           = toNum(row[3]);
+      const nonConformites  = toNum(row[4]);
+      const detail          = hasVal(row[5]) ? String(row[5]).trim() : null;
+      const reclamations    = toNum(row[6]);
+      const anneeCol        = toNum(row[7]);
+      if (semaineCumulee === null && semaineAnnuelle === null) continue;
+      let week = null, year = null;
+      if (anneeCol !== null && semaineAnnuelle !== null && semaineAnnuelle > 0) {
+        week = Math.round(semaineAnnuelle); year = Math.round(anneeCol);
+      } else if (semaineCumulee !== null && semaineCumulee > 0) {
+        const c = Math.round(semaineCumulee);
+        year = 2023 + Math.floor((c - 1) / 52);
+        week = ((c - 1) % 52) + 1;
+      }
+      if (!week || !year) continue;
+      const key = `${year}-${String(week).padStart(2,'0')}`;
+      byWeek[key] = { week, year, semaineAnnuelle, semaineCumulee, tests, nonConformites, detail, reclamationsClients: reclamations, annee: anneeCol !== null ? Math.round(anneeCol) : year };
+    }
+    return Object.values(byWeek);
+  }
+
+  const sc         = parseMachine('sc',         { B:1, C:2, D:3, E:4, F:5, G:6, H:7, J:9,  TRS:11, TEMPS:13 });
+  const ultra      = parseMachine('ultra',       { B:1, C:2, D:3, E:4, F:5, G:6, H:7, J:9,  TRS:10, TEMPS:8  });
+  const extra      = parseMachine('extra',       { B:1, C:2, D:3, E:4, F:5, G:6, H:7, J:9,  TRS:11, TEMPS:8, PRODHM:10, VOLUME:12 });
+  const collage    = parseMachine('collage',     { B:1, C:2, D:3, E:4, F:5, G:6, H:7, J:9,  TEMPS:3, PRESSES:5, CAISSONS:8, productiviteDur:true, cibleDur:true });
+  const assemblage = parseMachine('assemblage',  { B:1, C:2, D:3, E:4, F:5, G:6, H:7, TEMPS:8, VOLUME:8, required:['heuresOnaya','heuresPerdues','cubage'] });
+  const qualite    = parseQualite();
+
+  const merged = {};
+  const ensureWeek = (week, year) => {
+    const key = `${year}-${String(week).padStart(2,'0')}`;
+    if (!merged[key]) merged[key] = { id: `prod-${key}`, week, year, semaineLabel: `S${week} ${year}`, importDate: new Date().toISOString() };
+    return merged[key];
+  };
+
+  sc.forEach(e => { const r = ensureWeek(e.week, e.year); r.speedcutM3=e.cubage; r.speedcutHeuresOnaya=e.heuresOnaya; r.speedcutHeuresPerdues=e.heuresPerdues; r.speedcutHeuresUtiles=e.heuresUtiles; r.speedcutProductivite=e.productivite; r.speedcutCibleProductivite=e.cibleProductivite; r.speedcutTRS=e.trs; r.speedcutTempsUtilisation=e.tempsUtilisationMachine; r.speedcutRemarques=e.remarques; });
+  ultra.forEach(e => { const r = ensureWeek(e.week, e.year); r.ultraM3=e.cubage; r.ultraHeuresOnaya=e.heuresOnaya; r.ultraHeuresPerdues=e.heuresPerdues; r.ultraHeuresUtiles=e.heuresUtiles; r.ultraProductivite=e.productivite; r.ultraCibleProductivite=e.cibleProductivite; r.ultraTRS=e.trs; r.ultraTempsUtilisation=e.tempsUtilisationMachine; r.ultraRemarques=e.remarques; });
+  extra.forEach(e => { const r = ensureWeek(e.week, e.year); r.extraM2=e.cubage; r.extraHeuresOnaya=e.heuresOnaya; r.extraHeuresPerdues=e.heuresPerdues; r.extraHeuresUtiles=e.heuresUtiles; r.extraProductivite=e.productivite; r.extraCibleProductivite=e.cibleProductivite; r.extraTRS=e.trs; r.extraTempsUtilisation=e.tempsUtilisationMachine; r.extraRemarques=e.remarques; r.extraProductiviteHeuresMachines=e.productiviteHeuresMachines; r.extraVolume=e.volume; });
+  collage.forEach(e => { const r = ensureWeek(e.week, e.year); r.collageHeures=e.heuresOnaya; r.collagePresses=e.nombrePressees; r.collageTempsPressee=e.productivite; r.collageCommentaire=e.remarques; r.collageNombreCaissons=e.nombreCaissons; r.collageCibleTempsPressee=e.cibleProductivite; });
+  assemblage.forEach(e => { const r = ensureWeek(e.week, e.year); r.assemblageTempsRealise=e.heuresOnaya; r.assemblageTempsTheorique=e.heuresPerdues; r.assemblageNombreCaissons=e.nombreCaissons; r.assemblageVariation=(e.heuresOnaya!==null&&e.heuresPerdues!==null&&e.heuresPerdues>0)?((e.heuresOnaya-e.heuresPerdues)/e.heuresPerdues)*100:e.productivite; r.assemblageCommentaire=e.remarques; r.assemblageSurface=e.volume; });
+  qualite.forEach(e => { const r = ensureWeek(e.week, e.year); r.qualiteTests=e.tests; r.qualiteNonConformites=e.nonConformites; r.qualiteDetail=e.detail; r.qualiteReclamationsClients=e.reclamationsClients; r.qualiteAnnee=e.annee; });
+
+  const entries = Object.values(merged).sort((a,b) => a.year !== b.year ? a.year - b.year : a.week - b.week);
+  return { entries, stats: { sc: sc.length, ultra: ultra.length, extra: extra.length, collage: collage.length, assemblage: assemblage.length, qualite: qualite.length } };
+}
+
+function applyCBCOProdData(entries) {
+  const existing = dbGet('cbco_productivite', []);
+  const now = new Date().toISOString();
+  let added = 0, updated = 0;
+  const excelKeys = new Set(entries.map(e => `${e.year}_${e.week}`));
+  const kept = existing.filter(k => {
+    if (k.createdBy === 'excel-auto' && !excelKeys.has(`${k.year}_${k.week}`)) return false;
+    return true;
+  });
+  for (const entry of entries) {
+    const idx = kept.findIndex(k => k.year === entry.year && k.week === entry.week);
+    if (idx >= 0) { kept[idx] = { ...kept[idx], ...entry, updatedAt: now, updatedBy: 'excel-auto' }; updated++; }
+    else { kept.push({ ...entry, status: 'published', createdAt: now, createdBy: 'excel-auto', updatedAt: now, updatedBy: 'excel-auto' }); added++; }
+  }
+  dbSet('cbco_productivite', kept);
+  return { added, updated };
+}
+
+let cbcoProdWatcher = null;
+
+function startCBCOProdWatcher(cfg) {
+  if (cbcoProdWatcher) { clearInterval(cbcoProdWatcher); cbcoProdWatcher = null; }
+  const excelPath = path.join(cfg.folder, cfg.filename);
+  if (!fs.existsSync(excelPath)) { console.log(`[CBCO-Prod-Watch] Fichier introuvable : ${excelPath}`); return; }
+  let lastMtime = fs.statSync(excelPath).mtimeMs;
+  cbcoProdWatcher = setInterval(() => {
+    try {
+      if (!fs.existsSync(excelPath)) return;
+      const mtime = fs.statSync(excelPath).mtimeMs;
+      if (mtime !== lastMtime) {
+        lastMtime = mtime;
+        console.log(`[CBCO-Prod-Watch] Modification détectée : ${cfg.filename}`);
+        try {
+          const parsed = parseCBCOProdExcel(cfg);
+          const result = applyCBCOProdData(parsed.entries);
+          const cfg2 = dbGet('cbco_productivite_excel_config', {});
+          dbSet('cbco_productivite_excel_config', { ...cfg2, lastSync: new Date().toISOString(), lastSyncResult: result });
+          console.log(`[CBCO-Prod-Watch] Import OK — ${result.added} ajouté(s), ${result.updated} mis à jour`);
+        } catch(e) { console.error(`[CBCO-Prod-Watch] Erreur : ${e.message}`); }
+      }
+    } catch(e) { console.error(`[CBCO-Prod-Watch] Erreur stat : ${e.message}`); }
+  }, 30000);
+  console.log(`[CBCO-Prod-Watch] Surveillance active (polling 30s) : ${excelPath}`);
+}
+
+(function resumeCBCOProdWatcher() {
+  const cfg = dbGet('cbco_productivite_excel_config', null);
+  if (cfg && cfg.active) { console.log('[CBCO-Prod-Watch] Reprise surveillance au démarrage...'); startCBCOProdWatcher(cfg); }
+})();
+
+app.get('/api/cbco-productivite-excel-config', (req, res) => {
+  res.json(dbGet('cbco_productivite_excel_config', null));
+});
+
+app.put('/api/cbco-productivite-excel-config', (req, res) => {
+  const { folder, filename } = req.body;
+  if (!folder || !filename) return res.status(400).json({ success: false, error: 'Champs manquants : folder, filename' });
+  try {
+    const parsed = parseCBCOProdExcel({ folder, filename });
+    const result = applyCBCOProdData(parsed.entries);
+    const cfg = { folder, filename, active: true, lastSync: new Date().toISOString(), lastSyncResult: result };
+    dbSet('cbco_productivite_excel_config', cfg);
+    startCBCOProdWatcher(cfg);
+    res.json({ success: true, result, stats: parsed.stats });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.delete('/api/cbco-productivite-excel-config', (req, res) => {
+  if (cbcoProdWatcher) { clearInterval(cbcoProdWatcher); cbcoProdWatcher = null; }
+  dbSet('cbco_productivite_excel_config', null);
+  res.json({ success: true });
+});
+
+app.post('/api/cbco-productivite-import-excel', (req, res) => {
+  const cfg = dbGet('cbco_productivite_excel_config', null);
+  if (!cfg || !cfg.active) return res.status(400).json({ success: false, error: 'Aucune synchronisation configurée.' });
+  try {
+    const parsed = parseCBCOProdExcel(cfg);
+    const result = applyCBCOProdData(parsed.entries);
+    dbSet('cbco_productivite_excel_config', { ...cfg, lastSync: new Date().toISOString(), lastSyncResult: result });
+    res.json({ success: true, result, stats: parsed.stats, source: cfg.filename });
+  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // ─── ROUTES : CBCO COMMERCIAL ───────────────────────────────────────────────────
 
 app.get('/api/cbco-commercial', (req, res) => {
@@ -1564,6 +1800,17 @@ app.listen(PORT, '0.0.0.0', () => {
     }
   } else {
     console.log(`⚠️  [Excel CBCO] Aucun fichier Excel configuré`);
+  }
+  const cbcoProdCfg = dbGet('cbco_productivite_excel_config', null);
+  if (cbcoProdCfg && cbcoProdCfg.active) {
+    const excelPath = path.join(cbcoProdCfg.folder, cbcoProdCfg.filename);
+    if (fs.existsSync(excelPath)) {
+      console.log(`✅ [Excel CBCO Prod] Connecté : ${excelPath}`);
+    } else {
+      console.log(`❌ [Excel CBCO Prod] Fichier introuvable : ${excelPath}`);
+    }
+  } else {
+    console.log(`⚠️  [Excel CBCO Prod] Aucun fichier Excel configuré`);
   }
   console.log('');
 });

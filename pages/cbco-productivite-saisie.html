@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Saisie Productivité Usine - Intranet</title>
   <link rel="stylesheet" href="../css/style.css">
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
   <script src="../js/api.js"></script>
@@ -21,24 +20,51 @@
   <div class="app-container">
     <div id="sidebar"></div>
     <main class="main-content">
-      <h1>🏭 CBCO - Productivité usine</h1>
-      <p class="subtitle" style="margin-bottom: 24px; color: #666;">Import Excel complet Speedcut + Ultra + Extra + Collage + Assemblage - remplace l'historique précédent</p>
-      <div id="message" class="alert" style="display:none;"></div>
+      <h1>🏭 CBCO — Productivité Usine</h1>
 
-      <div class="card">
-        <div class="card-title"><h2 style="margin:0;">📥 Nouvel import Excel</h2></div>
+      <div id="pageMessage" class="alert" style="display:none;"></div>
+
+      <!-- ═══ BLOC : CONFIG EXCEL ═══ -->
+      <div id="blockConfig" class="card">
+        <div class="card-title">
+          <h2 id="cfgCardTitle">🔗 Connexion fichier Excel</h2>
+        </div>
         <div class="card-body">
-          <div id="dropZone" class="ss-import-zone" onclick="document.getElementById('fileInput').click()">
-            <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none;" onchange="handleFileSelect(this)">
-            <div class="ss-import-icon">📊</div>
-            <p><strong>Glissez-déposez</strong> le fichier Excel ici<br>ou <span style="color:var(--accent-dark); text-decoration:underline;">cliquez pour sélectionner</span></p>
-            <p style="font-size:0.82em; color:#999;">Sources utilisées: feuilles SC, ULTRA, EXTRA, COLLAGE et ASSEMBLAGE (ligne 4+).</p>
-          </div>
-          <div id="preview" style="display:none;"></div>
+          <form onsubmit="handleConnect(event)" id="cfgForm">
+            <div class="form-group">
+              <label for="cfgFolder">📁 Chemin du dossier</label>
+              <input type="text" id="cfgFolder" placeholder="ex: Z:\03-BE\CBCO\Productivite" required>
+            </div>
+            <div class="form-group">
+              <label for="cfgFilename">📄 Nom du fichier</label>
+              <input type="text" id="cfgFilename" placeholder="ex: Productivite CBCO.xlsx" required>
+            </div>
+            <p style="font-size:0.83em; color:#888; margin-bottom:12px;">
+              Les feuilles <strong>SC, ULTRA, EXTRA, COLLAGE, ASSEMBLAGE, QUALITÉ, SÉCURITÉ</strong> sont lues automatiquement. La synchronisation se fait toutes les 30 secondes dès qu'une modification du fichier est détectée.
+            </p>
+            <div id="cfgLastSync" style="display:none; font-size:13px; color:var(--text-light); margin-bottom:12px;">
+              Dernière sync : <strong id="cfgDisplayLastSync">—</strong>
+            </div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <button type="submit" id="btnConnect" class="btn btn-success" style="padding:12px 24px; font-size:15px;">
+                🔗 Connecter et synchroniser
+              </button>
+              <button type="button" id="btnModifier" class="btn btn-secondary" style="display:none;" onclick="unlockConfig()">
+                ✏️ Modifier
+              </button>
+              <button type="button" id="btnForceSync" class="btn btn-primary" style="display:none;" onclick="handleForceSync()">
+                🔄 Sync maintenant
+              </button>
+              <button type="button" id="btnDesync" class="btn btn-danger" style="display:none;" onclick="handleDesync()">
+                🔌 Désynchroniser
+              </button>
+            </div>
+          </form>
         </div>
       </div>
 
-      <div class="card">
+      <!-- ═══ HISTORIQUE ═══ -->
+      <div class="card" style="margin-top:20px;">
         <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
           <h2 style="margin:0;">📁 Historique semaines importées</h2>
           <div style="display:flex; gap:10px; align-items:center;">
@@ -55,825 +81,280 @@
             <span class="badge badge-secondary" id="countImports">0 semaine</span>
           </div>
         </div>
-        <div class="card-body" id="historyBody"></div>
+        <div class="card-body" id="historyBody">
+          <p style="color:#999;">Aucune donnée — connectez un fichier Excel ci-dessus.</p>
+        </div>
       </div>
     </main>
   </div>
 
   <script>
-    function showMessage(message, type) {
-      const msgDiv = document.getElementById('message');
-      msgDiv.textContent = message;
-      msgDiv.className = `alert alert-${type}`;
-      msgDiv.style.display = 'block';
+    function showMessage(msg, type) {
+      const d = document.getElementById('pageMessage');
+      d.textContent = msg;
+      d.className = `alert alert-${type}`;
+      d.style.display = 'block';
       window.scrollTo(0, 0);
-      if (type === 'success') setTimeout(() => { msgDiv.style.display = 'none'; }, 5000);
+      if (type === 'success') setTimeout(() => { d.style.display = 'none'; }, 6000);
     }
 
-    /**
-     * Retourne true si la cellule contient une vraie donnée.
-     */
-    function hasCellValue(value) {
-      return value !== null && value !== undefined && String(value).trim() !== '';
-    }
-
-    /**
-     * Parse nombre générique (gère texte/virgule/pourcentage)
-     * Retourne null si vide/non parsable.
-     */
-    function parseNumber(value) {
-      if (!hasCellValue(value)) return null;
-      if (typeof value === 'number') return Number.isFinite(value) ? value : null;
-      const raw = String(value).trim();
-      if (raw.startsWith('#')) return null;
-      const isPercent = raw.includes('%');
-      const cleaned = raw.replace(/\s/g, '').replace('%', '').replace(',', '.');
-      const match = cleaned.match(/-?\d+(\.\d+)?/);
-      const parsed = match ? parseFloat(match[0]) : NaN;
-      if (!Number.isFinite(parsed)) return null;
-      return isPercent ? (parsed / 100) : parsed;
-    }
-
-    /**
-     * Parse une durée Excel en heures décimales.
-     * Accepte:
-     * - HH:MM ou HH:MM:SS (texte)
-     * - fraction de jour Excel (nombre < 2 en général)
-     * - nombre déjà en heures
-     */
-    function parseDurationHours(value) {
-      if (!hasCellValue(value)) return null;
-      if (typeof value === 'number') {
-        if (!Number.isFinite(value)) return null;
-        if (value >= 0 && value <= 60) return value * 24;
-        return value;
+    function lockConfig(cfg) {
+      ['cfgFolder', 'cfgFilename'].forEach(id => { document.getElementById(id).disabled = true; });
+      document.getElementById('btnConnect').style.display   = 'none';
+      document.getElementById('btnModifier').style.display  = 'inline-flex';
+      document.getElementById('btnForceSync').style.display = 'inline-flex';
+      document.getElementById('btnDesync').style.display    = 'inline-flex';
+      document.getElementById('cfgCardTitle').textContent   = '✅ Synchronisation active';
+      document.getElementById('cfgLastSync').style.display  = 'block';
+      if (cfg && cfg.lastSync) {
+        document.getElementById('cfgDisplayLastSync').textContent = new Date(cfg.lastSync).toLocaleString('fr-FR');
       }
-      const raw = String(value).trim();
-      const hms = raw.match(/^(\d{1,3}):(\d{1,2})(?::(\d{1,2}))?$/);
-      if (hms) {
-        const h = parseInt(hms[1], 10) || 0;
-        const m = parseInt(hms[2], 10) || 0;
-        const s = parseInt(hms[3] || '0', 10) || 0;
-        return h + (m / 60) + (s / 3600);
-      }
-      return parseNumber(value);
     }
 
-    /**
-     * Parse un ratio pourcentage:
-     * - "85%" => 0.85
-     * - 85 => 0.85
-     * - 0.85 => 0.85
-     */
-    function parseRatio(value) {
-      const n = parseNumber(value);
-      if (n === null) return null;
-      return n > 1 ? (n / 100) : n;
+    function unlockConfig() {
+      ['cfgFolder', 'cfgFilename'].forEach(id => { document.getElementById(id).disabled = false; });
+      document.getElementById('btnConnect').style.display   = 'inline-flex';
+      document.getElementById('btnModifier').style.display  = 'none';
+      document.getElementById('btnForceSync').style.display = 'none';
+      document.getElementById('btnDesync').style.display    = 'none';
+      document.getElementById('cfgCardTitle').textContent   = '✏️ Modifier la connexion';
+      document.getElementById('cfgLastSync').style.display  = 'none';
     }
 
-    function parseMachineSheet(workbook, config) {
-      const normalizeName = (name) => String(name || '').toLowerCase().replace(/\s+/g, '');
-      const sheetName = workbook.SheetNames.find(name => normalizeName(name) === config.sheetKey);
-      const sheet = sheetName ? workbook.Sheets[sheetName] : null;
-      if (!sheet) return [];
-
-      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-      const byWeek = {};
-      let emptyUsefulStreak = 0;
-
-      for (let r = 3; r < rows.length; r++) {
-        const row = rows[r] || [];
-        const cubageSearch = parseNumber(row[config.COL.F]);
-        const hasUsefulData = cubageSearch !== null;
-        if (!hasUsefulData) {
-          emptyUsefulStreak++;
-          if (emptyUsefulStreak >= 50) break;
-          continue;
+    async function loadConfig() {
+      try {
+        const res = await fetch(SERVER_URL + '/cbco-productivite-excel-config', { cache: 'no-store' });
+        const cfg = await res.json();
+        if (cfg && cfg.active) {
+          document.getElementById('cfgFolder').value   = cfg.folder;
+          document.getElementById('cfgFilename').value = cfg.filename;
+          lockConfig(cfg);
         }
-        emptyUsefulStreak = 0;
-
-        const semaineAnnuelle = parseNumber(row[config.COL.B]);
-        const semaineCumulee = parseNumber(row[config.COL.C]);
-        const heuresOnaya = parseDurationHours(row[config.COL.D]);
-        const heuresPerdues = parseDurationHours(row[config.COL.E]);
-        const cubage = cubageSearch;
-        const productiviteCell = config.productiviteAsDuration
-          ? parseDurationHours(row[config.COL.G])
-          : parseNumber(row[config.COL.G]);
-        const remarques = hasCellValue(row[config.COL.H]) ? String(row[config.COL.H]).trim() : null;
-        const cibleProductivite = config.targetAsDuration
-          ? parseDurationHours(row[config.COL.J])
-          : parseNumber(row[config.COL.J]);
-        const trs = parseRatio(row[config.COL.TRS]);
-        const tempsUtilisationMachine = parseDurationHours(row[config.COL.TEMPS]);
-        const productiviteHeuresMachines = config.COL.PRODHM === undefined ? null : parseNumber(row[config.COL.PRODHM]);
-        const volume = config.COL.VOLUME === undefined ? null : parseNumber(row[config.COL.VOLUME]);
-        const nombrePressees = config.COL.PRESSES === undefined ? null : parseNumber(row[config.COL.PRESSES]);
-        const nombreCaissons = config.COL.CAISSONS === undefined ? null : parseNumber(row[config.COL.CAISSONS]);
-
-        if (semaineCumulee === null && semaineAnnuelle === null) continue;
-        const valueByField = {
-          heuresOnaya,
-          heuresPerdues,
-          cubage,
-          productiviteCell,
-          trs,
-          tempsUtilisationMachine,
-          productiviteHeuresMachines,
-          volume,
-          nombrePressees,
-          nombreCaissons
-        };
-        const requiredFields = config.requiredFields || ['heuresOnaya', 'cubage'];
-        const hasAllRequired = requiredFields.every(field => valueByField[field] !== null);
-        if (!hasAllRequired) continue;
-
-        let week = null;
-        let year = null;
-        if (semaineCumulee !== null && semaineCumulee > 0) {
-          const c = Math.round(semaineCumulee);
-          year = 2023 + Math.floor((c - 1) / 52);
-          week = ((c - 1) % 52) + 1;
-        } else if (semaineAnnuelle !== null && semaineAnnuelle > 0) {
-          week = Math.round(semaineAnnuelle);
-          year = 2023;
-        }
-        if (!week || !year) continue;
-
-        const heuresUtiles = (heuresOnaya !== null && heuresPerdues !== null) ? Math.max(0, heuresOnaya - heuresPerdues) : null;
-        const productivite = (cubage !== null && heuresUtiles !== null && heuresUtiles > 0) ? (cubage / heuresUtiles) : productiviteCell;
-        const key = `${year}-${String(week).padStart(2, '0')}`;
-        byWeek[key] = {
-          week,
-          year,
-          semaineLabel: `S${week} ${year}`,
-          semaineAnnuelle,
-          semaineCumulee,
-          heuresOnaya,
-          heuresPerdues,
-          heuresUtiles,
-          cubage,
-          productivite,
-          remarques,
-          cibleProductivite,
-          trs,
-          tempsUtilisationMachine,
-          productiviteHeuresMachines,
-          volume,
-          nombrePressees,
-          nombreCaissons
-        };
-      }
-
-      return Object.values(byWeek);
+      } catch { /* pas de config, formulaire reste déverrouillé */ }
     }
 
-    function parseProductiviteExcel(workbook) {
-      const scEntries = parseMachineSheet(workbook, {
-        sheetKey: 'sc',
-        requiredFields: ['heuresOnaya', 'cubage'],
-        COL: { B: 1, C: 2, D: 3, E: 4, F: 5, G: 6, H: 7, J: 9, TRS: 11, TEMPS: 13 }
-      });
-      const ultraEntries = parseMachineSheet(workbook, {
-        sheetKey: 'ultra',
-        requiredFields: ['heuresOnaya', 'cubage'],
-        COL: { B: 1, C: 2, D: 3, E: 4, F: 5, G: 6, H: 7, J: 9, TRS: 10, TEMPS: 8 }
-      });
-      const extraEntries = parseMachineSheet(workbook, {
-        sheetKey: 'extra',
-        requiredFields: ['heuresOnaya', 'cubage'],
-        COL: { B: 1, C: 2, D: 3, E: 4, F: 5, G: 6, H: 7, J: 9, TRS: 11, TEMPS: 8, PRODHM: 10, VOLUME: 12 }
-      });
-      const collageEntries = parseMachineSheet(workbook, {
-        sheetKey: 'collage',
-        requiredFields: ['heuresOnaya', 'cubage'],
-        productiviteAsDuration: true,
-        targetAsDuration: true,
-        COL: { B: 1, C: 2, D: 3, E: 4, F: 5, G: 6, H: 7, J: 9, TEMPS: 3, PRESSES: 5, CAISSONS: 8 }
-      });
-      const assemblageEntries = parseMachineSheet(workbook, {
-        sheetKey: 'assemblage',
-        requiredFields: ['heuresOnaya', 'heuresPerdues', 'cubage'],
-        COL: { B: 1, C: 2, D: 3, E: 4, F: 5, G: 6, H: 7, TEMPS: 8, VOLUME: 8 }
-      });
-      const qualiteEntries = parseQualiteSheet(workbook);
-
-      if (!scEntries.length && !ultraEntries.length && !extraEntries.length && !collageEntries.length && !assemblageEntries.length && !qualiteEntries.length) {
-        throw new Error('Aucune donnée exploitable trouvée dans les feuilles SC/ULTRA/EXTRA/COLLAGE/ASSEMBLAGE/QUALITÉ.');
-      }
-
-      const merged = {};
-      function ensureWeekBase(week, year) {
-        const key = `${year}-${String(week).padStart(2, '0')}`;
-        if (!merged[key]) {
-          merged[key] = {
-            id: `prod-${key}`,
-            week,
-            year,
-            semaineLabel: `S${week} ${year}`,
-            importDate: new Date().toISOString(),
-            updatedBy: Auth.getSession()?.username || 'system',
-            // Speedcut
-            semaine_annuelle: null, semaine_cumulee: null, heures_onaya: null, heures_perdues: null,
-            cubage: null, productivite: null, remarques: null, cible_productivite: null, trs: null, temps_utilisation_machine: null,
-            speedcutM3: null, speedcutHeuresOnaya: null, speedcutHeuresPerdues: null, speedcutHeuresUtiles: null,
-            speedcutProductivite: null, speedcutCibleProductivite: null, speedcutTRS: null, speedcutTempsUtilisation: null, speedcutRemarques: null,
-            // Ultra
-            ultra_semaine_annuelle: null, ultra_semaine_cumulee: null, ultra_heures_onaya: null, ultra_heures_perdues: null,
-            ultra_cubage: null, ultra_productivite: null, ultra_remarques: null, ultra_cible_productivite: null, ultra_trs: null, ultra_temps_utilisation_machine: null,
-            ultraM3: null, ultraHeuresOnaya: null, ultraHeuresPerdues: null, ultraHeuresUtiles: null,
-            ultraProductivite: null, ultraCibleProductivite: null, ultraTRS: null, ultraTempsUtilisation: null, ultraRemarques: null,
-            // autres machines
-            extra_semaine_annuelle: null, extra_semaine_cumulee: null, extra_heures_onaya: null, extra_heures_perdues: null,
-            extra_surface: null, extra_productivite: null, extra_remarques: null, extra_temps_usinage: null,
-            extra_cible_productivite: null, extra_productivite_heures_machines: null, extra_trs: null, extra_volume: null,
-            extraM2: null, extraHeuresOnaya: null, extraHeuresPerdues: null, extraHeuresUtiles: null,
-            extraProductivite: null, extraCibleProductivite: null, extraTRS: null, extraTempsUtilisation: null, extraRemarques: null,
-            extraProductiviteHeuresMachines: null, extraVolume: null,
-            collage_semaine_annuelle: null, collage_semaine_cumulee: null, collage_heures_onaya: null, collage_heures_perdues: null,
-            collage_nombre_pressees: null, collage_temps_pressee: null, collage_commentaire: null, collage_nombre_caissons: null, collage_cible_temps_pressee: null,
-            collageHeures: null, collagePresses: null, collageTempsPressee: null, collageCommentaire: null, collageNombreCaissons: null, collageCibleTempsPressee: null,
-            assemblage_temps_realise: null, assemblage_temps_theorique: null, assemblage_nombre_caissons: null,
-            assemblage_variation: null, assemblage_commentaire: null, assemblage_surface: null,
-            assemblageTempsRealise: null, assemblageTempsTheorique: null, assemblageNombreCaissons: null,
-            assemblageVariation: null, assemblageCommentaire: null, assemblageSurface: null,
-            qualite_semaine_annuelle: null, qualite_semaine_cumulee: null, qualite_tests: null, qualite_non_conformites: null,
-            qualite_detail: null, qualite_reclamations_clients: null, qualite_annee: null,
-            qualiteTests: null, qualiteNonConformites: null, qualiteDetail: null, qualiteReclamationsClients: null, qualiteAnnee: null
-          };
-        }
-        return merged[key];
-      }
-
-      scEntries.forEach(e => {
-        const row = ensureWeekBase(e.week, e.year);
-        row.semaine_annuelle = e.semaineAnnuelle;
-        row.semaine_cumulee = e.semaineCumulee;
-        row.heures_onaya = e.heuresOnaya;
-        row.heures_perdues = e.heuresPerdues;
-        row.cubage = e.cubage;
-        row.productivite = e.productivite;
-        row.remarques = e.remarques;
-        row.cible_productivite = e.cibleProductivite;
-        row.trs = e.trs;
-        row.temps_utilisation_machine = e.tempsUtilisationMachine;
-        row.speedcutM3 = e.cubage;
-        row.speedcutHeuresOnaya = e.heuresOnaya;
-        row.speedcutHeuresPerdues = e.heuresPerdues;
-        row.speedcutHeuresUtiles = e.heuresUtiles;
-        row.speedcutProductivite = e.productivite;
-        row.speedcutCibleProductivite = e.cibleProductivite;
-        row.speedcutTRS = e.trs;
-        row.speedcutTempsUtilisation = e.tempsUtilisationMachine;
-        row.speedcutRemarques = e.remarques;
-      });
-
-      ultraEntries.forEach(e => {
-        const row = ensureWeekBase(e.week, e.year);
-        row.ultra_semaine_annuelle = e.semaineAnnuelle;
-        row.ultra_semaine_cumulee = e.semaineCumulee;
-        row.ultra_heures_onaya = e.heuresOnaya;
-        row.ultra_heures_perdues = e.heuresPerdues;
-        row.ultra_cubage = e.cubage;
-        row.ultra_productivite = e.productivite;
-        row.ultra_remarques = e.remarques;
-        row.ultra_cible_productivite = e.cibleProductivite;
-        row.ultra_trs = e.trs;
-        row.ultra_temps_utilisation_machine = e.tempsUtilisationMachine;
-        row.ultraM3 = e.cubage;
-        row.ultraHeuresOnaya = e.heuresOnaya;
-        row.ultraHeuresPerdues = e.heuresPerdues;
-        row.ultraHeuresUtiles = e.heuresUtiles;
-        row.ultraProductivite = e.productivite;
-        row.ultraCibleProductivite = e.cibleProductivite;
-        row.ultraTRS = e.trs;
-        row.ultraTempsUtilisation = e.tempsUtilisationMachine;
-        row.ultraRemarques = e.remarques;
-      });
-
-      extraEntries.forEach(e => {
-        const row = ensureWeekBase(e.week, e.year);
-        row.extra_semaine_annuelle = e.semaineAnnuelle;
-        row.extra_semaine_cumulee = e.semaineCumulee;
-        row.extra_heures_onaya = e.heuresOnaya;
-        row.extra_heures_perdues = e.heuresPerdues;
-        row.extra_surface = e.cubage;
-        row.extra_productivite = e.productivite;
-        row.extra_remarques = e.remarques;
-        row.extra_temps_usinage = e.tempsUtilisationMachine;
-        row.extra_cible_productivite = e.cibleProductivite;
-        row.extra_productivite_heures_machines = e.productiviteHeuresMachines;
-        row.extra_trs = e.trs;
-        row.extra_volume = e.volume;
-        row.extraM2 = e.cubage;
-        row.extraHeuresOnaya = e.heuresOnaya;
-        row.extraHeuresPerdues = e.heuresPerdues;
-        row.extraHeuresUtiles = e.heuresUtiles;
-        row.extraProductivite = e.productivite;
-        row.extraCibleProductivite = e.cibleProductivite;
-        row.extraTRS = e.trs;
-        row.extraTempsUtilisation = e.tempsUtilisationMachine;
-        row.extraRemarques = e.remarques;
-        row.extraProductiviteHeuresMachines = e.productiviteHeuresMachines;
-        row.extraVolume = e.volume;
-      });
-
-      collageEntries.forEach(e => {
-        const row = ensureWeekBase(e.week, e.year);
-        row.collage_semaine_annuelle = e.semaineAnnuelle;
-        row.collage_semaine_cumulee = e.semaineCumulee;
-        row.collage_heures_onaya = e.heuresOnaya;
-        row.collage_heures_perdues = e.heuresPerdues;
-        row.collage_nombre_pressees = e.nombrePressees;
-        row.collage_temps_pressee = e.productivite;
-        row.collage_commentaire = e.remarques;
-        row.collage_nombre_caissons = e.nombreCaissons;
-        row.collage_cible_temps_pressee = e.cibleProductivite;
-        row.collageHeures = e.heuresOnaya;
-        row.collagePresses = e.nombrePressees;
-        row.collageTempsPressee = e.productivite;
-        row.collageCommentaire = e.remarques;
-        row.collageNombreCaissons = e.nombreCaissons;
-        row.collageCibleTempsPressee = e.cibleProductivite;
-      });
-
-      assemblageEntries.forEach(e => {
-        const row = ensureWeekBase(e.week, e.year);
-        const tempsRealise = e.heuresOnaya;
-        const tempsTheorique = e.heuresPerdues;
-        const variationCalc = (tempsRealise !== null && tempsTheorique !== null && tempsTheorique > 0)
-          ? ((tempsRealise - tempsTheorique) / tempsTheorique) * 100
-          : null;
-        row.assemblage_temps_realise = tempsRealise;
-        row.assemblage_temps_theorique = tempsTheorique;
-        row.assemblage_nombre_caissons = e.nombreCaissons;
-        row.assemblage_variation = variationCalc !== null ? variationCalc : e.productivite;
-        row.assemblage_commentaire = e.remarques;
-        row.assemblage_surface = e.volume;
-        row.assemblageTempsRealise = tempsRealise;
-        row.assemblageTempsTheorique = tempsTheorique;
-        row.assemblageNombreCaissons = e.nombreCaissons;
-        row.assemblageVariation = row.assemblage_variation;
-        row.assemblageCommentaire = e.remarques;
-        row.assemblageSurface = e.volume;
-      });
-
-      qualiteEntries.forEach(e => {
-        const row = ensureWeekBase(e.week, e.year);
-        row.qualite_semaine_annuelle = e.semaineAnnuelle;
-        row.qualite_semaine_cumulee = e.semaineCumulee;
-        row.qualite_tests = e.tests;
-        row.qualite_non_conformites = e.nonConformites;
-        row.qualite_detail = e.detail;
-        row.qualite_reclamations_clients = e.reclamationsClients;
-        row.qualite_annee = e.annee;
-        row.qualiteTests = e.tests;
-        row.qualiteNonConformites = e.nonConformites;
-        row.qualiteDetail = e.detail;
-        row.qualiteReclamationsClients = e.reclamationsClients;
-        row.qualiteAnnee = e.annee;
-      });
-
-      const entries = Object.values(merged).sort((a, b) => a.year !== b.year ? a.year - b.year : a.week - b.week);
-      return {
-        entries,
-        stats: {
-          sc: scEntries.length,
-          ultra: ultraEntries.length,
-          extra: extraEntries.length,
-          collage: collageEntries.length,
-          assemblage: assemblageEntries.length,
-          qualite: qualiteEntries.length
-        }
+    async function handleConnect(event) {
+      event.preventDefault();
+      const btn = document.getElementById('btnConnect');
+      btn.textContent = '⏳ Connexion...'; btn.disabled = true;
+      const body = {
+        folder:   document.getElementById('cfgFolder').value.trim(),
+        filename: document.getElementById('cfgFilename').value.trim()
       };
-    }
-
-    function parseQualiteSheet(workbook) {
-      const normalizeName = (name) => String(name || '')
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/\s+/g, '');
-      const sheetName = workbook.SheetNames.find(name => normalizeName(name) === 'qualite');
-      const sheet = sheetName ? workbook.Sheets[sheetName] : null;
-      if (!sheet) return [];
-
-      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-      const byWeek = {};
-      let emptyStreak = 0;
-      const COL = { B: 1, C: 2, D: 3, E: 4, F: 5, G: 6, H: 7 };
-
-      for (let r = 3; r < rows.length; r++) {
-        const row = rows[r] || [];
-        // Qualité: D=tests, E=non-conformités, F=détail, G=réclamations client, H=année
-        const hasUsefulData =
-          hasCellValue(row[COL.D]) ||
-          hasCellValue(row[COL.E]) ||
-          hasCellValue(row[COL.F]) ||
-          hasCellValue(row[COL.G]) ||
-          hasCellValue(row[COL.H]);
-        if (!hasUsefulData) {
-          emptyStreak++;
-          if (emptyStreak >= 50) break;
-          continue;
-        }
-        emptyStreak = 0;
-
-        const semaineAnnuelle = parseNumber(row[COL.B]);
-        const semaineCumulee = parseNumber(row[COL.C]);
-        const tests = parseNumber(row[COL.D]);
-        const nonConformites = parseNumber(row[COL.E]);
-        const detail = hasCellValue(row[COL.F]) ? String(row[COL.F]).trim() : null;
-        const reclamationsClients = parseNumber(row[COL.G]);
-        const anneeCol = parseNumber(row[COL.H]);
-
-        if (semaineCumulee === null && semaineAnnuelle === null) continue;
-
-        let week = null;
-        let year = null;
-        if (anneeCol !== null && semaineAnnuelle !== null && semaineAnnuelle > 0) {
-          week = Math.round(semaineAnnuelle);
-          year = Math.round(anneeCol);
-        } else if (semaineCumulee !== null && semaineCumulee > 0) {
-          const c = Math.round(semaineCumulee);
-          year = 2023 + Math.floor((c - 1) / 52);
-          week = ((c - 1) % 52) + 1;
-        }
-        if (!week || !year) continue;
-
-        const key = `${year}-${String(week).padStart(2, '0')}`;
-        byWeek[key] = {
-          week,
-          year,
-          semaineAnnuelle,
-          semaineCumulee,
-          tests,
-          nonConformites,
-          detail,
-          reclamationsClients,
-          annee: anneeCol !== null ? Math.round(anneeCol) : year
-        };
-      }
-      return Object.values(byWeek);
-    }
-
-    function parseSecuriteExcel(workbook) {
-      const normalizeName = (name) => String(name || '')
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/\s+/g, '');
-      const sheetName = workbook.SheetNames.find(name => normalizeName(name) === 'securite');
-      const sheet = sheetName ? workbook.Sheets[sheetName] : null;
-      if (!sheet) return null;
-
-      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-      const entries = [];
-      for (let r = 1; r < rows.length; r++) {
-        const row = rows[r] || [];
-        const date = hasCellValue(row[0]) ? String(row[0]).trim() : '';
-        const accident = hasCellValue(row[1]) ? String(row[1]).trim() : '';
-        const jours = parseNumber(row[2]);
-        const annee = parseNumber(row[3]);
-        if (jours === null) continue;
-        entries.push({
-          date,
-          accident,
-          joursDepuisDernierAccident: Math.round(jours),
-          annee: annee !== null ? Math.round(annee) : null
+      try {
+        const res = await fetch(SERVER_URL + '/cbco-productivite-excel-config', {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
         });
+        const result = await res.json();
+        if (!result.success) { showMessage(`❌ ${result.error}`, 'error'); return; }
+        const r = result.result;
+        const s = result.stats || {};
+        showMessage(`✅ Connexion réussie ! ${r.added} semaine(s) ajoutée(s), ${r.updated} mise(s) à jour. SC:${s.sc||0} Ultra:${s.ultra||0} Extra:${s.extra||0} Collage:${s.collage||0} Assemblage:${s.assemblage||0} Qualité:${s.qualite||0}. La synchronisation est maintenant automatique.`, 'success');
+        lockConfig({ ...body, lastSync: new Date().toISOString() });
+        refreshHistory();
+      } catch(e) {
+        showMessage(`❌ Erreur : ${e.message}`, 'error');
+      } finally {
+        btn.textContent = '🔗 Connecter et synchroniser'; btn.disabled = false;
       }
-      if (!entries.length) return null;
-
-      const currentYear = entries[0].annee || new Date().getFullYear();
-      return {
-        joursSansAccident: entries[0].joursDepuisDernierAccident,
-        nombreAnnuelAccidents: entries.filter(e => e.annee === currentYear).length,
-        recordJoursSansAccident: Math.max(...entries.map(e => e.joursDepuisDernierAccident)),
-        anneeReference: currentYear,
-        lastAccidentDate: entries[0].date,
-        lastAccidentPerson: entries[0].accident,
-        lignesRecuperees: entries.length
-      };
     }
 
-    function handleFileSelect(input) {
-      const file = input.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        try {
-          const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, { type: 'array' });
-          const parsed = parseProductiviteExcel(workbook);
-          const securite = parseSecuriteExcel(workbook);
-          showPreview(file.name, parsed, securite);
-        } catch (error) {
-          showMessage('❌ ' + error.message, 'error');
-        }
-      };
-      reader.readAsArrayBuffer(file);
+    async function handleForceSync() {
+      const btn = document.getElementById('btnForceSync');
+      btn.textContent = '⏳ Sync...'; btn.disabled = true;
+      try {
+        const res = await fetch(SERVER_URL + '/cbco-productivite-import-excel', { method: 'POST' });
+        const result = await res.json();
+        if (!result.success) { showMessage(`❌ ${result.error}`, 'error'); return; }
+        const r = result.result;
+        showMessage(`✅ Synchronisation effectuée — ${r.added} ajouté(s), ${r.updated} mis à jour.`, 'success');
+        document.getElementById('cfgDisplayLastSync').textContent = new Date().toLocaleString('fr-FR');
+        refreshHistory();
+      } catch(e) {
+        showMessage(`❌ Erreur : ${e.message}`, 'error');
+      } finally {
+        btn.textContent = '🔄 Sync maintenant'; btn.disabled = false;
+      }
     }
 
-    function showPreview(fileName, parsed, securite) {
-      const entries = parsed.entries || [];
-      const stats = parsed.stats || {};
-      const preview = document.getElementById('preview');
-      const first = entries[0];
-      const last = entries[entries.length - 1];
-      const existingCount = getCBCOProductiviteData().length;
-      const securiteCount = securite?.lignesRecuperees || 0;
-
-      preview.innerHTML = `
-        <div style="border:2px solid var(--accent); border-radius:8px; padding:16px; margin-top:12px; background:#f9fdf9;">
-          <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
-            <div><strong>📄 ${escapeHtml(fileName)}</strong> - ${entries.length} semaines détectées</div>
-            <div><span class="badge badge-primary">Aperçu avant validation</span></div>
-          </div>
-          <p style="margin:0 0 10px 0;">Période: <strong>${escapeHtml(first.semaineLabel)}</strong> à <strong>${escapeHtml(last.semaineLabel)}</strong></p>
-          <p style="margin:0 0 14px 0; color:var(--danger);">⚠️ La validation remplacera tout l'historique actuel (${existingCount} semaine${existingCount > 1 ? 's' : ''}).</p>
-          <table style="font-size:0.9em; max-width:520px;">
-            <thead>
-              <tr>
-                <th>Feuille</th>
-                <th>Lignes récupérées</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td>SC</td><td>${formatNumber(stats.sc || 0)}</td></tr>
-              <tr><td>Ultra</td><td>${formatNumber(stats.ultra || 0)}</td></tr>
-              <tr><td>Extra</td><td>${formatNumber(stats.extra || 0)}</td></tr>
-              <tr><td>Collage</td><td>${formatNumber(stats.collage || 0)}</td></tr>
-              <tr><td>Assemblage</td><td>${formatNumber(stats.assemblage || 0)}</td></tr>
-              <tr><td>Qualité</td><td>${formatNumber(stats.qualite || 0)}</td></tr>
-              <tr><td>Sécurité</td><td>${formatNumber(securiteCount)}</td></tr>
-            </tbody>
-          </table>
-          <div style="display:flex; gap:10px; margin-top:14px;">
-            <button class="btn btn-primary" onclick="confirmImport()">✅ Valider l'import</button>
-            <button class="btn btn-secondary" onclick="cancelPreview()">❌ Annuler</button>
-          </div>
-        </div>`;
-
-      preview.style.display = 'block';
-      document.getElementById('dropZone').style.display = 'none';
-      window._pendingProductivite = { entries, securite };
+    async function handleDesync() {
+      if (!confirm('Désynchroniser le fichier Excel ? Les données déjà importées sont conservées.')) return;
+      try {
+        await fetch(SERVER_URL + '/cbco-productivite-excel-config', { method: 'DELETE' });
+        showMessage('🔌 Désynchronisé. Vous pouvez connecter un nouveau fichier.', 'success');
+        unlockConfig();
+      } catch(e) {
+        showMessage(`❌ Erreur : ${e.message}`, 'error');
+      }
     }
 
-    function confirmImport() {
-      const p = window._pendingProductivite;
-      if (!p) return;
-      const saved = replaceCBCOProductiviteData(p.entries);
-      if (p.securite) replaceCBCOSecuriteData(p.securite);
-      Auth.audit('CBCO_PRODUCTIVITE_IMPORT', `Import productivité usine: ${saved.length} semaines (remplacement complet)`);
-      showMessage(`✅ Import validé: ${saved.length} semaines enregistrées (historique remplacé).`, 'success');
-      cancelPreview();
-      refreshHistory();
+    function fmtH(h) {
+      if (h === null || h === undefined) return '—';
+      return parseFloat(h).toFixed(2) + ' h';
     }
-
-    function cancelPreview() {
-      document.getElementById('preview').style.display = 'none';
-      document.getElementById('preview').innerHTML = '';
-      document.getElementById('dropZone').style.display = '';
-      document.getElementById('fileInput').value = '';
-      delete window._pendingProductivite;
+    function fmtN(v, dec = 2) {
+      if (v === null || v === undefined) return '—';
+      return parseFloat(v).toFixed(dec);
     }
-
-    function deleteImport(id) {
-      const entry = getCBCOProductiviteData().find(e => e.id === id);
-      if (!entry) return;
-      if (!confirm(`Supprimer l'import ${entry.semaineLabel} ?`)) return;
-      deleteCBCOProductiviteEntry(id);
-      Auth.audit('CBCO_PRODUCTIVITE_DELETED', `Suppression productivité ${entry.semaineLabel}`);
-      showMessage(`🗑️ Import ${entry.semaineLabel} supprimé`, 'success');
-      refreshHistory();
+    function fmtPct(v) {
+      if (v === null || v === undefined) return '—';
+      return (parseFloat(v) * 100).toFixed(1) + ' %';
     }
 
     function refreshHistory() {
-      const entries = getCBCOProductiviteData();
-      const body = document.getElementById('historyBody');
+      const view  = document.getElementById('machineViewSelect').value;
+      const data  = getCBCOProductiviteData();
       const count = document.getElementById('countImports');
-      const machine = document.getElementById('machineViewSelect')?.value || 'speedcut';
-      if (machine === 'securite') {
-        const s = getCBCOSecuriteData();
-        count.textContent = '1 fiche';
-        count.className = 'badge badge-success';
-        body.innerHTML = `<table style="font-size:0.9em;">
-          <thead><tr><th>Jours sans accident</th><th>Accidents annuels</th><th>Record</th><th>Dernier accident</th><th>Personne</th><th>Année</th></tr></thead>
-          <tbody><tr>
-            <td>${formatNumber(s.joursSansAccident || 0)}</td>
-            <td>${formatNumber(s.nombreAnnuelAccidents || 0)}</td>
-            <td>${formatNumber(s.recordJoursSansAccident || 0)}</td>
-            <td>${s.lastAccidentDate ? escapeHtml(s.lastAccidentDate) : '—'}</td>
-            <td>${s.lastAccidentPerson ? escapeHtml(s.lastAccidentPerson) : '—'}</td>
-            <td>${formatNumber(s.anneeReference || 0)}</td>
-          </tr></tbody>
-        </table>`;
+      const body  = document.getElementById('historyBody');
+
+      count.textContent = data.length + ' semaine' + (data.length > 1 ? 's' : '');
+      count.className   = data.length > 0 ? 'badge badge-success' : 'badge badge-secondary';
+
+      if (data.length === 0) {
+        body.innerHTML = '<p style="color:#999;">Aucune donnée importée.</p>';
         return;
       }
 
-      if (machine === 'qualite') {
-        const qualEntries = entries.filter(e =>
-          e.qualiteTests !== null || e.qualiteNonConformites !== null || e.qualiteReclamationsClients !== null || (e.qualiteDetail && String(e.qualiteDetail).trim() !== '')
-        );
-        count.textContent = `${qualEntries.length} semaine${qualEntries.length > 1 ? 's' : ''}`;
-        count.className = qualEntries.length > 0 ? 'badge badge-success' : 'badge badge-secondary';
-        if (qualEntries.length === 0) {
-          body.innerHTML = '<p style="color:#999; margin:0;">Aucune donnée Qualité trouvée</p>';
-          return;
+      let html = '';
+
+      if (view === 'speedcut') {
+        html = `<table style="font-size:0.88em;"><thead><tr>
+          <th>Semaine</th><th>m³</th><th>H. Onaya</th><th>H. Perdues</th><th>H. Utiles</th>
+          <th>Productivité</th><th>Cible</th><th>TRS</th><th>T. Util. Machine</th><th>Remarques</th>
+        </tr></thead><tbody>`;
+        data.forEach(e => {
+          html += `<tr>
+            <td><strong>${escapeHtml(e.semaineLabel||'')}</strong></td>
+            <td>${fmtN(e.speedcutM3)}</td><td>${fmtH(e.speedcutHeuresOnaya)}</td>
+            <td>${fmtH(e.speedcutHeuresPerdues)}</td><td>${fmtH(e.speedcutHeuresUtiles)}</td>
+            <td>${fmtN(e.speedcutProductivite)}</td><td>${fmtN(e.speedcutCibleProductivite)}</td>
+            <td>${fmtPct(e.speedcutTRS)}</td><td>${fmtH(e.speedcutTempsUtilisation)}</td>
+            <td><small>${escapeHtml(e.speedcutRemarques||'')}</small></td>
+          </tr>`;
+        });
+        html += '</tbody></table>';
+
+      } else if (view === 'ultra') {
+        html = `<table style="font-size:0.88em;"><thead><tr>
+          <th>Semaine</th><th>m³</th><th>H. Onaya</th><th>H. Perdues</th><th>H. Utiles</th>
+          <th>Productivité</th><th>Cible</th><th>TRS</th><th>T. Util. Machine</th><th>Remarques</th>
+        </tr></thead><tbody>`;
+        data.forEach(e => {
+          html += `<tr>
+            <td><strong>${escapeHtml(e.semaineLabel||'')}</strong></td>
+            <td>${fmtN(e.ultraM3)}</td><td>${fmtH(e.ultraHeuresOnaya)}</td>
+            <td>${fmtH(e.ultraHeuresPerdues)}</td><td>${fmtH(e.ultraHeuresUtiles)}</td>
+            <td>${fmtN(e.ultraProductivite)}</td><td>${fmtN(e.ultraCibleProductivite)}</td>
+            <td>${fmtPct(e.ultraTRS)}</td><td>${fmtH(e.ultraTempsUtilisation)}</td>
+            <td><small>${escapeHtml(e.ultraRemarques||'')}</small></td>
+          </tr>`;
+        });
+        html += '</tbody></table>';
+
+      } else if (view === 'extra') {
+        html = `<table style="font-size:0.88em;"><thead><tr>
+          <th>Semaine</th><th>m²</th><th>H. Onaya</th><th>H. Perdues</th><th>H. Utiles</th>
+          <th>Productivité</th><th>Cible</th><th>TRS</th><th>T. Usinage</th><th>Prod. H/Machine</th><th>Volume</th><th>Remarques</th>
+        </tr></thead><tbody>`;
+        data.forEach(e => {
+          html += `<tr>
+            <td><strong>${escapeHtml(e.semaineLabel||'')}</strong></td>
+            <td>${fmtN(e.extraM2)}</td><td>${fmtH(e.extraHeuresOnaya)}</td>
+            <td>${fmtH(e.extraHeuresPerdues)}</td><td>${fmtH(e.extraHeuresUtiles)}</td>
+            <td>${fmtN(e.extraProductivite)}</td><td>${fmtN(e.extraCibleProductivite)}</td>
+            <td>${fmtPct(e.extraTRS)}</td><td>${fmtH(e.extraTempsUtilisation)}</td>
+            <td>${fmtN(e.extraProductiviteHeuresMachines)}</td><td>${fmtN(e.extraVolume)}</td>
+            <td><small>${escapeHtml(e.extraRemarques||'')}</small></td>
+          </tr>`;
+        });
+        html += '</tbody></table>';
+
+      } else if (view === 'collage') {
+        html = `<table style="font-size:0.88em;"><thead><tr>
+          <th>Semaine</th><th>Heures</th><th>Nb Pressées</th><th>Temps/Presse</th><th>Cible Temps/Presse</th><th>Nb Caissons</th><th>Commentaire</th>
+        </tr></thead><tbody>`;
+        data.forEach(e => {
+          html += `<tr>
+            <td><strong>${escapeHtml(e.semaineLabel||'')}</strong></td>
+            <td>${fmtH(e.collageHeures)}</td><td>${fmtN(e.collagePresses,0)}</td>
+            <td>${fmtH(e.collageTempsPressee)}</td><td>${fmtH(e.collageCibleTempsPressee)}</td>
+            <td>${fmtN(e.collageNombreCaissons,0)}</td>
+            <td><small>${escapeHtml(e.collageCommentaire||'')}</small></td>
+          </tr>`;
+        });
+        html += '</tbody></table>';
+
+      } else if (view === 'assemblage') {
+        html = `<table style="font-size:0.88em;"><thead><tr>
+          <th>Semaine</th><th>T. Réalisé</th><th>T. Théorique</th><th>Nb Caissons</th><th>Surface</th><th>Variation %</th><th>Commentaire</th>
+        </tr></thead><tbody>`;
+        data.forEach(e => {
+          const variation = e.assemblageVariation;
+          const varColor  = variation !== null && variation !== undefined ? (variation > 0 ? 'var(--danger)' : '#27ae60') : 'inherit';
+          html += `<tr>
+            <td><strong>${escapeHtml(e.semaineLabel||'')}</strong></td>
+            <td>${fmtH(e.assemblageTempsRealise)}</td><td>${fmtH(e.assemblageTempsTheorique)}</td>
+            <td>${fmtN(e.assemblageNombreCaissons,0)}</td><td>${fmtN(e.assemblageSurface)}</td>
+            <td style="color:${varColor}; font-weight:600;">${variation !== null && variation !== undefined ? fmtN(variation,1)+' %' : '—'}</td>
+            <td><small>${escapeHtml(e.assemblageCommentaire||'')}</small></td>
+          </tr>`;
+        });
+        html += '</tbody></table>';
+
+      } else if (view === 'qualite') {
+        html = `<table style="font-size:0.88em;"><thead><tr>
+          <th>Semaine</th><th>Année</th><th>Tests</th><th>Non-conformités</th><th>Réclamations clients</th><th>Détail</th>
+        </tr></thead><tbody>`;
+        data.forEach(e => {
+          if (e.qualiteTests === null && e.qualiteNonConformites === null && e.qualiteReclamationsClients === null) return;
+          html += `<tr>
+            <td><strong>${escapeHtml(e.semaineLabel||'')}</strong></td>
+            <td>${e.qualiteAnnee||'—'}</td>
+            <td>${fmtN(e.qualiteTests,0)}</td>
+            <td style="color:${(e.qualiteNonConformites||0)>0?'var(--danger)':'inherit'}; font-weight:600;">${fmtN(e.qualiteNonConformites,0)}</td>
+            <td style="color:${(e.qualiteReclamationsClients||0)>0?'var(--danger)':'inherit'}; font-weight:600;">${fmtN(e.qualiteReclamationsClients,0)}</td>
+            <td><small>${escapeHtml(e.qualiteDetail||'')}</small></td>
+          </tr>`;
+        });
+        html += '</tbody></table>';
+
+      } else if (view === 'securite') {
+        const sec = getCBCOSecuriteData();
+        if (!sec || !sec.joursSansAccident) {
+          html = '<p style="color:#999;">Aucune donnée sécurité importée.</p>';
+        } else {
+          html = `<div style="display:flex; gap:20px; flex-wrap:wrap;">
+            <div style="background:#f0f8f0; border:1px solid #d3e9d3; border-radius:8px; padding:16px 24px; text-align:center;">
+              <div style="font-size:2em; font-weight:700; color:#27ae60;">${sec.joursSansAccident}</div>
+              <div style="font-size:0.85em; color:#555;">Jours sans accident</div>
+            </div>
+            <div style="background:#fdf6f0; border:1px solid #f5dfc2; border-radius:8px; padding:16px 24px; text-align:center;">
+              <div style="font-size:2em; font-weight:700; color:#e67e22;">${sec.nombreAnnuelAccidents}</div>
+              <div style="font-size:0.85em; color:#555;">Accidents ${sec.anneeReference||''}</div>
+            </div>
+            <div style="background:#f0f4ff; border:1px solid #d0d8f0; border-radius:8px; padding:16px 24px; text-align:center;">
+              <div style="font-size:2em; font-weight:700; color:var(--accent);">${sec.recordJoursSansAccident}</div>
+              <div style="font-size:0.85em; color:#555;">Record jours sans accident</div>
+            </div>
+          </div>
+          <p style="margin-top:16px; color:#666; font-size:0.88em;">Dernier accident : <strong>${escapeHtml(sec.lastAccidentDate||'—')}</strong>${sec.lastAccidentPerson ? ' — ' + escapeHtml(sec.lastAccidentPerson) : ''}</p>`;
         }
-        body.innerHTML = `<table style="font-size:0.9em;">
-          <thead><tr><th>Semaine</th><th>Tests (D)</th><th>Non conformités (E)</th><th>Réclamations clients (G)</th><th>Détail (F)</th><th>Année (H)</th></tr></thead>
-          <tbody>
-            ${qualEntries.map(e => `<tr>
-              <td><strong>${escapeHtml(e.semaineLabel || ('S' + e.week + ' ' + e.year))}</strong></td>
-              <td>${formatNumber(e.qualiteTests || 0)}</td>
-              <td>${formatNumber(e.qualiteNonConformites || 0)}</td>
-              <td>${formatNumber(e.qualiteReclamationsClients || 0)}</td>
-              <td>${e.qualiteDetail ? escapeHtml(e.qualiteDetail) : '—'}</td>
-              <td>${formatNumber(e.qualiteAnnee || e.year || 0)}</td>
-            </tr>`).join('')}
-          </tbody>
-        </table>`;
-        return;
       }
 
-      if (entries.length === 0) {
-        count.textContent = '0 semaine';
-        count.className = 'badge badge-secondary';
-        body.innerHTML = '<p style="color:#999; margin:0;">Aucune semaine importée</p>';
-        return;
-      }
-
-      const cfg = machine === 'ultra'
-        ? {
-            label: 'Ultra',
-            hOnaya: 'ultra_heures_onaya',
-            hPerdues: 'ultra_heures_perdues',
-            cubage: 'ultra_cubage',
-            prod: 'ultra_productivite',
-            remarques: 'ultra_remarques',
-            cible: 'ultra_cible_productivite',
-            trs: 'ultra_trs',
-            temps: 'ultra_temps_utilisation_machine',
-            prodHm: null,
-            volume: null,
-            cubageCol: 'Cubage (F)',
-            trsCol: 'TRS (K)',
-            tempsCol: "Tps utilisation (I)"
-          }
-        : machine === 'extra'
-        ? {
-            label: 'Extra',
-            hOnaya: 'extra_heures_onaya',
-            hPerdues: 'extra_heures_perdues',
-            cubage: 'extra_surface',
-            prod: 'extra_productivite',
-            remarques: 'extra_remarques',
-            cible: 'extra_cible_productivite',
-            trs: 'extra_trs',
-            temps: 'extra_temps_usinage',
-            prodHm: 'extra_productivite_heures_machines',
-            volume: 'extra_volume',
-            cubageCol: 'Surface (F)',
-            trsCol: 'TRS (L)',
-            tempsCol: 'Tps usinage (I)'
-          }
-        : machine === 'collage'
-        ? {
-            label: 'Collage',
-            hOnaya: 'collage_heures_onaya',
-            hPerdues: 'collage_heures_perdues',
-            cubage: 'collage_nombre_pressees',
-            prod: 'collage_temps_pressee',
-            remarques: 'collage_commentaire',
-            cible: 'collage_cible_temps_pressee',
-            trs: null,
-            temps: null,
-            prodHm: 'collage_nombre_caissons',
-            volume: null,
-            cubageCol: 'Nb pressées (F)',
-            trsCol: '',
-            tempsCol: ''
-          }
-        : machine === 'assemblage'
-        ? {
-            label: 'Assemblage',
-            hOnaya: 'assemblage_temps_realise',
-            hPerdues: 'assemblage_temps_theorique',
-            cubage: 'assemblage_nombre_caissons',
-            prod: 'assemblage_variation',
-            remarques: 'assemblage_commentaire',
-            cible: null,
-            trs: null,
-            temps: 'assemblage_surface',
-            prodHm: null,
-            volume: null,
-            cubageCol: 'Nb caissons (F)',
-            trsCol: '',
-            tempsCol: 'Surface (I)'
-          }
-        : {
-            label: 'Speedcut',
-            hOnaya: 'heures_onaya',
-            hPerdues: 'heures_perdues',
-            cubage: 'cubage',
-            prod: 'productivite',
-            remarques: 'remarques',
-            cible: 'cible_productivite',
-            trs: 'trs',
-            temps: 'temps_utilisation_machine',
-            prodHm: null,
-            volume: null,
-            cubageCol: 'Cubage (F)',
-            trsCol: 'TRS (L)',
-            tempsCol: 'Tps utilisation (N)'
-          };
-
-      const filteredEntries = entries.filter(e => {
-        const hasHours = e[cfg.hOnaya] !== null && e[cfg.hOnaya] !== undefined;
-        if (machine === 'assemblage') {
-          const hasTheo = e[cfg.hPerdues] !== null && e[cfg.hPerdues] !== undefined;
-          return hasHours && hasTheo;
-        }
-        const hasF = e[cfg.cubage] !== null && e[cfg.cubage] !== undefined;
-        return hasF && hasHours;
-      });
-      count.textContent = `${filteredEntries.length} semaine${filteredEntries.length > 1 ? 's' : ''}`;
-      count.className = filteredEntries.length > 0 ? 'badge badge-success' : 'badge badge-secondary';
-      if (filteredEntries.length === 0) {
-        body.innerHTML = `<p style="color:#999; margin:0;">Aucune donnée ${cfg.label} trouvée</p>`;
-        return;
-      }
-
-      body.innerHTML = `<table style="font-size:0.88em;">
-        <thead>
-          <tr>
-            <th>Semaine</th>
-            <th>Machine</th>
-            <th>${machine === 'assemblage' ? 'Temps réalisé (D)' : 'H Onaya (D)'}</th>
-            <th>${machine === 'assemblage' ? 'Temps théorique (E)' : 'H perdues (E)'}</th>
-            <th>${cfg.cubageCol}</th>
-            <th>${machine === 'assemblage' ? 'Variation % (G)' : 'Prod (G)'}</th>
-            <th>Remarques (H)</th>
-            ${cfg.cible ? '<th>Cible (J)</th>' : ''}
-            ${machine === 'collage' ? '<th>Nb caissons (I)</th>' : (cfg.prodHm ? '<th>Prod h machines (K)</th>' : '')}
-            ${cfg.trs ? `<th>${cfg.trsCol}</th>` : ''}
-            ${cfg.temps ? `<th>${cfg.tempsCol}</th>` : ''}
-            ${cfg.volume ? '<th>Volume (M)</th>' : ''}
-            <th style="text-align:center;">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${filteredEntries.map(e => `
-            <tr>
-              <td><strong>${escapeHtml(e.semaineLabel || ('S' + e.week + ' ' + e.year))}</strong></td>
-              <td>${cfg.label}</td>
-              <td>${e[cfg.hOnaya] === null || e[cfg.hOnaya] === undefined ? '—' : formatNumber(e[cfg.hOnaya])}</td>
-              <td>${e[cfg.hPerdues] === null || e[cfg.hPerdues] === undefined ? '—' : formatNumber(e[cfg.hPerdues])}</td>
-              <td>${e[cfg.cubage] === null || e[cfg.cubage] === undefined ? '—' : formatNumber(e[cfg.cubage])}</td>
-              <td>${e[cfg.prod] === null || e[cfg.prod] === undefined ? '—' : formatNumber(e[cfg.prod])}</td>
-              <td>${e[cfg.remarques] ? escapeHtml(e[cfg.remarques]) : '—'}</td>
-              ${cfg.cible ? `<td>${e[cfg.cible] === null || e[cfg.cible] === undefined ? '—' : formatNumber(e[cfg.cible])}</td>` : ''}
-              ${machine === 'collage' ? `<td>${e[cfg.prodHm] === null || e[cfg.prodHm] === undefined ? '—' : formatNumber(e[cfg.prodHm])}</td>` : (cfg.prodHm ? `<td>${e[cfg.prodHm] === null || e[cfg.prodHm] === undefined ? '—' : formatNumber(e[cfg.prodHm])}</td>` : '')}
-              ${cfg.trs ? `<td>${e[cfg.trs] === null || e[cfg.trs] === undefined ? '—' : formatNumber(e[cfg.trs])}</td>` : ''}
-              ${cfg.temps ? `<td>${e[cfg.temps] === null || e[cfg.temps] === undefined ? '—' : formatNumber(e[cfg.temps])}</td>` : ''}
-              ${cfg.volume ? `<td>${e[cfg.volume] === null || e[cfg.volume] === undefined ? '—' : formatNumber(e[cfg.volume])}</td>` : ''}
-              <td style="text-align:center;"><button class="btn btn-small btn-danger" onclick="deleteImport('${e.id}')">🗑️</button></td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>`;
-    }
-
-    function setupDragDrop() {
-      const zone = document.getElementById('dropZone');
-      if (!zone) return;
-      zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('ss-import-zone-active'); });
-      zone.addEventListener('dragleave', () => zone.classList.remove('ss-import-zone-active'));
-      zone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        zone.classList.remove('ss-import-zone-active');
-        const file = e.dataTransfer.files[0];
-        if (!file) return;
-        const input = document.getElementById('fileInput');
-        const dt = new DataTransfer();
-        dt.items.add(file);
-        input.files = dt.files;
-        handleFileSelect(input);
-      });
+      body.innerHTML = html;
     }
 
     function init() {
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectProductionSecondaryBar();
-      setupDragDrop();
+      loadConfig();
       refreshHistory();
     }
 
     window.onServerReady(init);
   </script>
+
   <footer class="site-footer"></footer>
 </body>
 </html>
