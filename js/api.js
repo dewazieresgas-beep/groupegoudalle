@@ -35,7 +35,6 @@ function createTimeoutSignal(timeoutMs) {
 const KEY_TO_ENDPOINT = {
   'goudalle_users':                  '/users',
   'goudalle_admin_code':             '/admin-code',
-  'goudalle_audit':                  '/audit',
   'goudalle_session':                null, // Session gardée en localStorage (propre à chaque navigateur)
   'goudalle_kpis':                   '/kpis',
   'goudalle_thresholds':             '/thresholds',

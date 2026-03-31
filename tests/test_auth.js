@@ -2,8 +2,8 @@
 /**
  * TESTS FONCTIONNELS — js/auth.js
  *
- * Teste le système d'authentification : login, rate limiting, permissions,
- * gestion des utilisateurs et journalisation d'audit.
+ * Teste le système d'authentification : login, rate limiting, permissions
+ * et gestion des utilisateurs.
  * Lancer : node tests/test_auth.js
  */
 
@@ -82,7 +82,6 @@ function resetUsers() {
   delete _localStorage['goudalle_users'];
   delete _localStorage['goudalle_admin_code'];
   delete _localStorage['goudalle_session'];
-  delete _localStorage['goudalle_audit'];
   Object.keys(_sessionStorage).forEach(k => delete _sessionStorage[k]);
   Auth.init();
 }
@@ -299,31 +298,6 @@ test('getAdminCode() retourne le nouveau code', () => {
 test('getAdminCode() retourne null sans droits direction', () => {
   Auth.logout();
   expect(Auth.getAdminCode()).toBeNull();
-});
-
-// ─── Tests : audit trail ─────────────────────────────────────────────────────────
-console.log('\n📋 Journalisation audit');
-resetUsers();
-Auth.login('acgoudalle', '123');
-test('le login est enregistré dans l\'audit', () => {
-  const trail = Auth.getAuditTrail();
-  const loginEntry = trail.find(e => e.action === 'LOGIN');
-  expect(loginEntry !== undefined).toBeTrue();
-});
-test('les entrées d\'audit ont les propriétés requises', () => {
-  const trail = Auth.getAuditTrail();
-  const entry = trail[0];
-  expect(entry).toHaveProperty('action');
-  expect(entry).toHaveProperty('timestamp');
-  expect(entry).toHaveProperty('user');
-});
-test('l\'audit est limité à 1000 entrées', () => {
-  // Générer des entrées en excès
-  for (let i = 0; i < 50; i++) {
-    Auth.audit('TEST', `Test entry ${i}`);
-  }
-  const trail = Auth.getAuditTrail();
-  expect(trail.length <= 1000).toBeTrue();
 });
 
 // ─── Résumé ───────────────────────────────────────────────────────────────────────

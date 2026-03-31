@@ -9,7 +9,6 @@ const Auth = {
   STORAGE_KEY_SESSION: 'goudalle_session',      // Session utilisateur actuelle
   STORAGE_KEY_USERS: 'goudalle_users',          // Base de données des utilisateurs
   STORAGE_KEY_ADMIN_CODE: 'goudalle_admin_code', // Code pour créer des comptes direction/référent
-  STORAGE_KEY_AUDIT: 'goudalle_audit',          // Journal d'audit des actions
   SESSION_TIMEOUT: 3600000,                     // Durée de session : 1 heure (en ms)
 
   // Rôles disponibles dans le système (hiérarchie décroissante)
@@ -211,9 +210,6 @@ const Auth = {
 
     // Sauvegarder la session dans localStorage
     localStorage.setItem(this.STORAGE_KEY_SESSION, JSON.stringify(session));
-    // Enregistrer la connexion dans l'audit
-    this.audit('LOGIN', `Connexion de ${username}`);
-
     return {
       success: true,
       message: '✅ Connexion réussie',
@@ -223,13 +219,9 @@ const Auth = {
 
   /**
    * Déconnecte l'utilisateur actuel
-   * Supprime la session et enregistre l'action dans l'audit
+   * Supprime la session active
    */
   logout() {
-    const session = this.getSession();
-    if (session) {
-      this.audit('LOGOUT', `Déconnexion de ${session.username}`);
-    }
     // Supprimer la session du localStorage
     localStorage.removeItem(this.STORAGE_KEY_SESSION);
   },
@@ -353,7 +345,6 @@ const Auth = {
     }
     users[username].customPermissions = permissions;
     localStorage.setItem(this.STORAGE_KEY_USERS, JSON.stringify(users));
-    this.audit('PERMISSIONS_UPDATED', `Permissions mises à jour : ${username}`);
     return { success: true, message: '✅ Permissions mises à jour' };
   },
 
@@ -470,9 +461,6 @@ const Auth = {
     // Ajouter à la base de données
     users[username] = newUser;
     localStorage.setItem(this.STORAGE_KEY_USERS, JSON.stringify(users));
-    
-    // Enregistrer dans l'audit
-    this.audit('USER_CREATED', `Création utilisateur : ${username} (${role})`);
 
     return { 
       success: true, 
@@ -511,7 +499,6 @@ const Auth = {
     // Marquer le compte comme inactif (ne peut plus se connecter)
     users[username].isActive = false;
     localStorage.setItem(this.STORAGE_KEY_USERS, JSON.stringify(users));
-    this.audit('USER_DISABLED', `Desactivation : ${username}`);
 
     return { success: true, message: '✅ Utilisateur désactivé' };
   },
@@ -536,7 +523,6 @@ const Auth = {
     // Marquer le compte comme actif
     users[username].isActive = true;
     localStorage.setItem(this.STORAGE_KEY_USERS, JSON.stringify(users));
-    this.audit('USER_ENABLED', `Réactivation : ${username}`);
 
     return { success: true, message: '✅ Utilisateur réactivé' };
   },
@@ -563,7 +549,6 @@ const Auth = {
 
     delete users[username];
     localStorage.setItem(this.STORAGE_KEY_USERS, JSON.stringify(users));
-    this.audit('USER_DELETED', `Suppression définitive : ${username}`);
 
     return { success: true, message: '✅ Utilisateur supprimé définitivement' };
   },
@@ -592,7 +577,6 @@ const Auth = {
     // Mettre à jour le mot de passe
     users[username].password = newPassword;
     localStorage.setItem(this.STORAGE_KEY_USERS, JSON.stringify(users));
-    this.audit('PASSWORD_CHANGED', `Changement mot de passe : ${username}`);
 
     return { success: true, message: '✅ Mot de passe changé' };
   },
@@ -657,8 +641,6 @@ const Auth = {
       localStorage.setItem(this.STORAGE_KEY_SESSION, JSON.stringify(session));
     }
 
-    this.audit('PROFILE_UPDATED', `Mise à jour profil : ${username}${effectiveNewUsername && effectiveNewUsername !== username ? ' → ' + effectiveNewUsername : ''}`);
-
     return { success: true, message: '✅ Profil mis à jour' };
   },
 
@@ -683,7 +665,6 @@ const Auth = {
     }
 
     localStorage.setItem(this.STORAGE_KEY_ADMIN_CODE, newCode);
-    this.audit('ADMIN_CODE_CHANGED', 'Code d\'administration mis à jour');
 
     return { success: true, message: '✅ Code d\'administration mis à jour' };
   },
@@ -695,37 +676,18 @@ const Auth = {
     return localStorage.getItem(this.STORAGE_KEY_ADMIN_CODE);
   },
 
-  // ============ AUDIT TRAIL ============
+  // ============ COMPATIBILITÉ ============
   /**
-   * Enregistre une action dans le journal d'audit
-   * Permet de tracer toutes les actions importantes du système
-   * @param {string} action - Type d'action (ex: 'LOGIN', 'USER_CREATED')
-   * @param {string} details - Détails de l'action
+   * Compatibilité avec les appels existants dans l'interface.
+   * Le suivi d'audit est volontairement désactivé.
    */
   audit(action, details) {
-    const audit = this.getAuditTrail();
-    const session = this.getSession();
-
-    // Créer une nouvelle entrée d'audit
-    audit.push({
-      id: Date.now(),                              // ID unique basé sur le timestamp
-      action,                                      // Type d'action
-      details,                                     // Description détaillée
-      user: session?.username || 'SYSTEM',         // Qui a fait l'action
-      timestamp: new Date().toISOString()          // Quand (format ISO)
-    });
-
-    // Limiter le journal à 1000 entrées pour ne pas surcharger localStorage
-    if (audit.length > 1000) {
-      audit.shift();  // Supprimer la plus ancienne entrée
-    }
-
-    localStorage.setItem(this.STORAGE_KEY_AUDIT, JSON.stringify(audit));
+    void action;
+    void details;
   },
 
   getAuditTrail() {
-    const audit = localStorage.getItem(this.STORAGE_KEY_AUDIT);
-    return audit ? JSON.parse(audit) : [];
+    return [];
   },
 
   // ============ UTILITIES ============

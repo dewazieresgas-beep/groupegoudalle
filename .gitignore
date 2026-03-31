@@ -1,8 +1,10 @@
 # Dépendances Node.js
 node_modules/
+server/node_modules/
 
 # Base de données (données métier - sauvegardées sur le serveur, pas dans git)
 server/goudalle.json
+server/goudalle.backup.*.json
 
 # Fichiers système
 .DS_Store
