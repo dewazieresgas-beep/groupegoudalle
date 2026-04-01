@@ -1816,12 +1816,22 @@ function deleteKpiFromExcel(year, week, cfg) {
   XLSX.writeFile(workbook, excelPath);
 }
 
-// Gestionnaire du watcher (référence pour pouvoir l'arrêter)
+// Helper : récupérer la config GM (retourne null si non configurée)
+function getGMConfig() {
+  return dbGet('gm_excel_config', null);
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// NOTE : L'Excel est le seul stockage. Plus de watcher ni de JSON store pour
+//        les KPIs GM. Toutes les lectures/écritures vont directement dans Excel.
+// ──────────────────────────────────────────────────────────────────────────────
+
+// Gestionnaire du watcher (conservé pour compatibilité ascendante mais inutilisé)
 let gmWatcher = null;
 
 function startGMWatcher(cfg) {
   if (gmWatcher) { clearInterval(gmWatcher); gmWatcher = null; }
-  
+
   // Ajouter automatiquement l'extension .xlsx si elle n'est pas présente
   let filename = cfg.filename;
   if (!filename.toLowerCase().endsWith('.xlsx') && !filename.toLowerCase().endsWith('.xls')) {
@@ -1875,19 +1885,18 @@ app.get('/api/gm-excel-config', (req, res) => {
   res.json(dbGet('gm_excel_config', null));
 });
 
-// Sauvegarder la config et lancer la surveillance + premier import
+// Sauvegarder la config Excel (l'Excel devient le stockage unique)
 app.put('/api/gm-excel-config', requireToken, requireWriteRateLimit, (req, res) => {
   const { folder, filename, sheet } = req.body;
   if (!folder || !filename || !sheet) {
     return res.status(400).json({ success: false, error: 'Champs manquants : folder, filename, sheet' });
   }
   try {
+    // Vérifier que le fichier est lisible et compter les lignes
     const data = parseGMExcel({ folder, filename, sheet });
-    const result = applyExcelDataToKpis(data);
-    const cfg = { folder, filename, sheet, active: true, lastSync: new Date().toISOString(), lastSyncResult: result };
+    const cfg = { folder, filename, sheet, active: true, lastSync: new Date().toISOString() };
     dbSet('gm_excel_config', cfg);
-    startGMWatcher(cfg);
-    res.json({ success: true, result, rowCount: data.length });
+    res.json({ success: true, result: { added: 0, updated: 0 }, rowCount: data.length });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
@@ -1900,17 +1909,16 @@ app.delete('/api/gm-excel-config', (req, res) => {
   res.json({ success: true });
 });
 
-// Import manuel (forcer une relecture immédiate)
+// Vérifier la connexion à l'Excel (lecture directe)
 app.post('/api/gm-import-excel', (req, res) => {
-  const cfg = dbGet('gm_excel_config', null);
+  const cfg = getGMConfig();
   if (!cfg || !cfg.active) {
     return res.status(400).json({ success: false, error: 'Aucune synchronisation configurée.' });
   }
   try {
     const data = parseGMExcel(cfg);
-    const result = applyExcelDataToKpis(data);
-    dbSet('gm_excel_config', { ...cfg, lastSync: new Date().toISOString(), lastSyncResult: result });
-    res.json({ success: true, result, source: cfg.filename });
+    dbSet('gm_excel_config', { ...cfg, lastSync: new Date().toISOString() });
+    res.json({ success: true, result: { added: 0, updated: 0 }, rowCount: data.length, source: cfg.filename });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
@@ -1918,16 +1926,20 @@ app.post('/api/gm-import-excel', (req, res) => {
 
 // ─── ROUTES : CRUD KPI MAÇONNERIE ────────────────────────────────────────────────
 
-// Créer ou mettre à jour un KPI (écrit dans le store + Excel)
+// Créer ou mettre à jour un KPI (écriture directe dans Excel)
 app.post('/api/gm-kpi', requireToken, requireWriteRateLimit, (req, res) => {
-  const { year, week, m3, hours, tempsBeton, tempsAciers, tempsChargement, tempsCentrale, qtAcierFaconne, objectifRatio, comment } = req.body;
-  
-  // Validation
+  const { year, week, m3, hours, tempsBeton, tempsAciers, tempsChargement, tempsCentrale, comment } = req.body;
+
   if (!year || !week) {
     return res.status(400).json({ success: false, error: 'Année et semaine sont obligatoires.' });
   }
   if (!comment || comment.trim() === '') {
     return res.status(400).json({ success: false, error: 'Le commentaire est obligatoire.' });
+  }
+
+  const cfg = getGMConfig();
+  if (!cfg || !cfg.active) {
+    return res.status(400).json({ success: false, error: 'Aucun fichier Excel configuré. Veuillez connecter le fichier Excel en bas de page.' });
   }
 
   const kpi = {
@@ -1939,60 +1951,24 @@ app.post('/api/gm-kpi', requireToken, requireWriteRateLimit, (req, res) => {
     tempsAciers: tempsAciers !== null && tempsAciers !== '' ? parseFloat(tempsAciers) : null,
     tempsChargement: tempsChargement !== null && tempsChargement !== '' ? parseFloat(tempsChargement) : null,
     tempsCentrale: tempsCentrale !== null && tempsCentrale !== '' ? parseFloat(tempsCentrale) : null,
-    qtAcierFaconne: qtAcierFaconne !== null && qtAcierFaconne !== '' ? parseFloat(qtAcierFaconne) : null,
-    objectifRatio: objectifRatio !== null && objectifRatio !== '' ? parseFloat(objectifRatio) : null,
     comment: comment.trim()
   };
 
   try {
-    const now = new Date().toISOString();
-    const kpis = dbGet('kpis', []);
-    
-    // Chercher si le KPI existe déjà
-    const existingIndex = kpis.findIndex(k => k.year === kpi.year && k.week === kpi.week);
-    
-    if (existingIndex >= 0) {
-      // Mise à jour
-      kpis[existingIndex] = { ...kpis[existingIndex], ...kpi, updatedAt: now, updatedBy: 'manual' };
-    } else {
-      // Création
-      const maxId = kpis.reduce((max, k) => Math.max(max, k.id || 0), 0);
-      kpis.push({ 
-        id: maxId + 1, 
-        ...kpi, 
-        status: 'published', 
-        createdAt: now, 
-        createdBy: 'manual',
-        updatedAt: now, 
-        updatedBy: 'manual' 
-      });
-    }
+    // Vérifier si la semaine existe déjà dans l'Excel
+    const existing = parseGMExcel(cfg);
+    const action = existing.find(k => k.year === kpi.year && k.week === kpi.week) ? 'updated' : 'created';
 
-    // Sauvegarder dans le store
-    dbSet('kpis', kpis);
+    // Écriture directe dans l'Excel
+    writeKpiToExcel(kpi, cfg);
 
-    // Écrire dans l'Excel si une config est active
-    const cfg = dbGet('gm_excel_config', null);
-    if (cfg && cfg.active) {
-      try {
-        writeKpiToExcel(kpi, cfg);
-      } catch (excelError) {
-        console.error(`[GM-KPI] Erreur écriture Excel : ${excelError.message}`);
-        // On continue malgré l'erreur Excel (données sauvegardées dans le store)
-      }
-    }
-
-    res.json({ 
-      success: true, 
-      action: existingIndex >= 0 ? 'updated' : 'created',
-      kpi: existingIndex >= 0 ? kpis[existingIndex] : kpis[kpis.length - 1]
-    });
+    res.json({ success: true, action, kpi });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
 });
 
-// Supprimer un KPI (du store + Excel)
+// Supprimer un KPI (suppression directe dans Excel)
 app.delete('/api/gm-kpi/:year/:week', requireToken, requireWriteRateLimit, (req, res) => {
   const year = parseInt(req.params.year);
   const week = parseInt(req.params.week);
@@ -2001,28 +1977,19 @@ app.delete('/api/gm-kpi/:year/:week', requireToken, requireWriteRateLimit, (req,
     return res.status(400).json({ success: false, error: 'Année et semaine invalides.' });
   }
 
+  const cfg = getGMConfig();
+  if (!cfg || !cfg.active) {
+    return res.status(400).json({ success: false, error: 'Aucun fichier Excel configuré.' });
+  }
+
   try {
-    const kpis = dbGet('kpis', []);
-    const filteredKpis = kpis.filter(k => !(k.year === year && k.week === week));
-
-    if (filteredKpis.length === kpis.length) {
-      return res.status(404).json({ success: false, error: 'KPI introuvable.' });
+    // Vérifier que la ligne existe
+    const existing = parseGMExcel(cfg);
+    if (!existing.find(k => k.year === year && k.week === week)) {
+      return res.status(404).json({ success: false, error: 'KPI introuvable dans l\'Excel.' });
     }
 
-    // Sauvegarder dans le store
-    dbSet('kpis', filteredKpis);
-
-    // Supprimer de l'Excel si une config est active
-    const cfg = dbGet('gm_excel_config', null);
-    if (cfg && cfg.active) {
-      try {
-        deleteKpiFromExcel(year, week, cfg);
-      } catch (excelError) {
-        console.error(`[GM-KPI] Erreur suppression Excel : ${excelError.message}`);
-        // On continue malgré l'erreur Excel
-      }
-    }
-
+    deleteKpiFromExcel(year, week, cfg);
     res.json({ success: true, deleted: { year, week } });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -2030,75 +1997,68 @@ app.delete('/api/gm-kpi/:year/:week', requireToken, requireWriteRateLimit, (req,
 });
 
 // Récupérer les KPIs filtrés par année et/ou mois
+// Helper : calcule le mois (1-12) d'une semaine ISO
+function weekToMonth(year, week) {
+  const jan1 = new Date(year, 0, 1);
+  const weekDate = new Date(jan1.getTime() + (week - 1) * 7 * 24 * 60 * 60 * 1000);
+  return weekDate.getMonth() + 1;
+}
+
+// Récupérer les KPIs filtrés par année et/ou mois (lecture directe Excel)
 app.get('/api/gm-kpis-by-period', (req, res) => {
-  const { year, month } = req.query;
-  let kpis = dbGet('kpis', []);
-
-  // Filtrer par année
-  if (year) {
-    const yearNum = parseInt(year);
-    if (!isNaN(yearNum)) {
-      kpis = kpis.filter(k => k.year === yearNum);
-    }
+  const cfg = getGMConfig();
+  if (!cfg || !cfg.active) {
+    return res.json({ success: true, kpis: [], count: 0 });
   }
 
-  // Filtrer par mois (calcul basé sur la vraie date de la semaine)
-  if (month) {
-    const monthNum = parseInt(month);
-    if (!isNaN(monthNum) && monthNum >= 1 && monthNum <= 12) {
-      kpis = kpis.filter(k => {
-        // Calculer le mois de la semaine
-        const jan1 = new Date(k.year, 0, 1);
-        const daysOffset = (k.week - 1) * 7;
-        const weekDate = new Date(jan1.getTime() + daysOffset * 24 * 60 * 60 * 1000);
-        const weekMonth = weekDate.getMonth() + 1;
-        return weekMonth === monthNum;
-      });
+  try {
+    const { year, month } = req.query;
+    let kpis = parseGMExcel(cfg);
+
+    if (year) {
+      const yearNum = parseInt(year);
+      if (!isNaN(yearNum)) kpis = kpis.filter(k => k.year === yearNum);
     }
+
+    if (month) {
+      const monthNum = parseInt(month);
+      if (!isNaN(monthNum) && monthNum >= 1 && monthNum <= 12) {
+        kpis = kpis.filter(k => weekToMonth(k.year, k.week) === monthNum);
+      }
+    }
+
+    kpis.sort((a, b) => b.year !== a.year ? b.year - a.year : b.week - a.week);
+    res.json({ success: true, kpis, count: kpis.length });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
   }
-
-  // Trier par ordre chronologique décroissant (plus récent en premier)
-  kpis.sort((a, b) => {
-    if (b.year !== a.year) return b.year - a.year;
-    return b.week - a.week;
-  });
-
-  res.json({ success: true, kpis, count: kpis.length });
 });
 
-// Récupérer les années et mois disponibles (pour les filtres)
+// Récupérer les années et mois disponibles (lecture directe Excel)
 app.get('/api/gm-available-periods', (req, res) => {
-  const kpis = dbGet('kpis', []);
-  const { year } = req.query; // Paramètre optionnel pour filtrer par année
-  
-  const years = [...new Set(kpis.map(k => k.year))].sort((a, b) => b - a);
-  
-  // Calculer les mois disponibles (optionnellement pour une année spécifique)
-  let filteredKpis = kpis;
-  if (year) {
-    const yearNum = parseInt(year);
-    if (!isNaN(yearNum)) {
-      filteredKpis = kpis.filter(k => k.year === yearNum);
-    }
+  const cfg = getGMConfig();
+  if (!cfg || !cfg.active) {
+    return res.json({ success: true, years: [], months: [] });
   }
-  
-  const monthsSet = new Set();
-  filteredKpis.forEach(k => {
-    // Calculer le mois de la semaine
-    const jan1 = new Date(k.year, 0, 1);
-    const daysOffset = (k.week - 1) * 7;
-    const weekDate = new Date(jan1.getTime() + daysOffset * 24 * 60 * 60 * 1000);
-    const month = weekDate.getMonth() + 1; // 1-12
-    monthsSet.add(month);
-  });
-  
-  const months = [...monthsSet].sort((a, b) => a - b);
-  
-  res.json({ 
-    success: true, 
-    years, 
-    months
-  });
+
+  try {
+    const { year } = req.query;
+    const allKpis = parseGMExcel(cfg);
+
+    const years = [...new Set(allKpis.map(k => k.year))].sort((a, b) => b - a);
+
+    let filteredKpis = allKpis;
+    if (year) {
+      const yearNum = parseInt(year);
+      if (!isNaN(yearNum)) filteredKpis = allKpis.filter(k => k.year === yearNum);
+    }
+
+    const months = [...new Set(filteredKpis.map(k => weekToMonth(k.year, k.week)))].sort((a, b) => a - b);
+
+    res.json({ success: true, years, months });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 // ─── EXCEL CBCO (CHIFFRE D'AFFAIRES) : CONFIG + WATCHER + AUTO-IMPORT ───────────

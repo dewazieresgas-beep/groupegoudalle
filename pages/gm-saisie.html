@@ -151,11 +151,11 @@
       <!-- ═══ BLOC : SYNCHRONISATION EXCEL (en bas) ═══ -->
       <div id="blockConfig" class="card" style="margin-top:20px;">
         <div class="card-title">
-          <h2 id="cfgCardTitle">🔗 Synchronisation avec fichier Excel</h2>
+          <h2 id="cfgCardTitle">🔗 Fichier Excel (stockage des données)</h2>
         </div>
         <div class="card-body">
           <p style="font-size:0.9em; color:#666; margin-bottom:15px;">
-            La synchronisation bidirectionnelle permet d'importer les données depuis l'Excel et d'y écrire les nouvelles saisies automatiquement.
+            Le fichier Excel est le seul stockage. Toute saisie sur le site écrit directement dans l'Excel, et le site lit toujours depuis l'Excel.
           </p>
           <form onsubmit="handleConnect(event)" id="cfgForm">
             <div class="form-group">
@@ -183,7 +183,7 @@
                 ✏️ Modifier
               </button>
               <button type="button" id="btnForceSync" class="btn btn-primary" style="display:none;" onclick="handleForceSync()">
-                🔄 Sync maintenant
+                🔄 Vérifier connexion
               </button>
               <button type="button" id="btnDesync" class="btn btn-danger" style="display:none;" onclick="handleDesync()">
                 🔌 Désynchroniser
@@ -552,7 +552,7 @@
       document.getElementById('btnModifier').style.display = 'inline-flex';
       document.getElementById('btnForceSync').style.display = 'inline-flex';
       document.getElementById('btnDesync').style.display = 'inline-flex';
-      document.getElementById('cfgCardTitle').textContent = '✅ Synchronisation active';
+      document.getElementById('cfgCardTitle').textContent = '✅ Fichier Excel connecté';
       document.getElementById('cfgLastSync').style.display = 'block';
       if (cfg && cfg.lastSync) {
         document.getElementById('cfgDisplayLastSync').textContent = new Date(cfg.lastSync).toLocaleString('fr-FR');
@@ -568,7 +568,7 @@
       document.getElementById('btnModifier').style.display = 'none';
       document.getElementById('btnForceSync').style.display = 'none';
       document.getElementById('btnDesync').style.display = 'none';
-      document.getElementById('cfgCardTitle').textContent = '✏️ Modifier la connexion';
+      document.getElementById('cfgCardTitle').textContent = '🔗 Fichier Excel (stockage des données)';
       document.getElementById('cfgLastSync').style.display = 'none';
     }
 
@@ -603,7 +603,7 @@
         });
         const result = await res.json();
         if (!result.success) { showMessage(`❌ ${result.error}`, 'error'); return; }
-        showMessage(`✅ Connexion réussie ! ${result.result.added} semaine(s) ajoutée(s), ${result.result.updated} mise(s) à jour. La synchronisation est maintenant automatique.`, 'success');
+        showMessage(`✅ Connexion réussie ! ${result.rowCount} semaine(s) trouvée(s) dans l'Excel. Le site lit et écrit directement dans ce fichier.`, 'success');
         lockConfig({ folder: body.folder, filename: body.filename, sheet: body.sheet, lastSync: new Date().toISOString() });
         await loadKPIs();
       } catch (e) {
@@ -619,7 +619,7 @@
         const res = await fetch(SERVER_URL + '/gm-import-excel', { method: 'POST' });
         const result = await res.json();
         if (!result.success) { showMessage(`❌ ${result.error}`, 'error'); return; }
-        showMessage(`✅ Synchronisation effectuée — ${result.result.added} ajouté(s), ${result.result.updated} mis à jour.`, 'success');
+        showMessage(`✅ Connexion vérifiée — ${result.rowCount} semaine(s) trouvée(s) dans l'Excel.`, 'success');
         document.getElementById('cfgDisplayLastSync').textContent = new Date().toLocaleString('fr-FR');
         await loadKPIs();
       } catch (e) {
