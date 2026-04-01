@@ -1588,7 +1588,13 @@ app.get('/api/achats-v2/indicators-monthly', (req, res) => {
 
 // Fonction qui parse le fichier Excel et retourne les données
 function parseGMExcel(cfg) {
-  const excelPath = path.join(cfg.folder, cfg.filename);
+  // Ajouter automatiquement l'extension .xlsx si elle n'est pas présente
+  let filename = cfg.filename;
+  if (!filename.toLowerCase().endsWith('.xlsx') && !filename.toLowerCase().endsWith('.xls')) {
+    filename += '.xlsx';
+  }
+  
+  const excelPath = path.join(cfg.folder, filename);
   if (!fs.existsSync(excelPath)) {
     throw new Error(`Fichier introuvable : "${excelPath}"`);
   }
@@ -1673,7 +1679,13 @@ function applyExcelDataToKpis(data) {
  * @param {Object} cfg - Configuration Excel (folder, filename, sheet)
  */
 function writeKpiToExcel(kpi, cfg) {
-  const excelPath = path.join(cfg.folder, cfg.filename);
+  // Ajouter automatiquement l'extension .xlsx si elle n'est pas présente
+  let filename = cfg.filename;
+  if (!filename.toLowerCase().endsWith('.xlsx') && !filename.toLowerCase().endsWith('.xls')) {
+    filename += '.xlsx';
+  }
+  
+  const excelPath = path.join(cfg.folder, filename);
   if (!fs.existsSync(excelPath)) {
     throw new Error(`Fichier Excel introuvable : "${excelPath}"`);
   }
@@ -1758,7 +1770,13 @@ function writeKpiToExcel(kpi, cfg) {
  * @param {Object} cfg - Configuration Excel (folder, filename, sheet)
  */
 function deleteKpiFromExcel(year, week, cfg) {
-  const excelPath = path.join(cfg.folder, cfg.filename);
+  // Ajouter automatiquement l'extension .xlsx si elle n'est pas présente
+  let filename = cfg.filename;
+  if (!filename.toLowerCase().endsWith('.xlsx') && !filename.toLowerCase().endsWith('.xls')) {
+    filename += '.xlsx';
+  }
+  
+  const excelPath = path.join(cfg.folder, filename);
   if (!fs.existsSync(excelPath)) {
     throw new Error(`Fichier Excel introuvable : "${excelPath}"`);
   }
@@ -1809,7 +1827,14 @@ let gmWatcher = null;
 
 function startGMWatcher(cfg) {
   if (gmWatcher) { clearInterval(gmWatcher); gmWatcher = null; }
-  const excelPath = path.join(cfg.folder, cfg.filename);
+  
+  // Ajouter automatiquement l'extension .xlsx si elle n'est pas présente
+  let filename = cfg.filename;
+  if (!filename.toLowerCase().endsWith('.xlsx') && !filename.toLowerCase().endsWith('.xls')) {
+    filename += '.xlsx';
+  }
+  
+  const excelPath = path.join(cfg.folder, filename);
   if (!fs.existsSync(excelPath)) {
     console.log(`[GM-Watch] Fichier introuvable, surveillance impossible : ${excelPath}`);
     return;
