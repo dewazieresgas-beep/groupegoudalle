@@ -18,18 +18,145 @@
 
     <main class="main-content">
       <div class="d-flex justify-between items-center mb-3" style="gap:12px; flex-wrap:wrap;">
-        <h1 class="mb-0">Synchronisation Excel - Goudalle Maçonnerie</h1>
+        <h1 class="mb-0">📊 Indicateurs Maçonnerie - Saisie & Gestion</h1>
         <button type="button" class="btn btn-secondary" onclick="downloadGMIndicators()">📥 Télécharger indicateurs</button>
       </div>
 
       <div id="pageMessage" class="alert" style="display:none;"></div>
 
-      <!-- ═══ BLOC : CONFIG (formulaire unique, verrouillé après connexion) ═══ -->
-      <div id="blockConfig" class="card">
+      <!-- ═══ FORMULAIRE DE SAISIE ═══ -->
+      <div class="card" style="margin-top:20px;">
         <div class="card-title">
-          <h2 id="cfgCardTitle">🔗 Connexion fichier Excel</h2>
+          <h2 id="formTitle">📝 Saisie nouvel indicateur</h2>
         </div>
         <div class="card-body">
+          <form id="kpiForm" onsubmit="handleKpiSubmit(event)">
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; margin-bottom:20px;">
+              <!-- Année et Semaine -->
+              <div class="form-group">
+                <label for="inputYear">📅 Année</label>
+                <input type="number" id="inputYear" min="2020" max="2050" required>
+              </div>
+              <div class="form-group">
+                <label for="inputWeek">📅 Semaine</label>
+                <input type="number" id="inputWeek" min="1" max="53" required>
+              </div>
+              <!-- Résultat en temps réel -->
+              <div class="form-group" style="display:flex; flex-direction:column; justify-content:flex-end;">
+                <label style="margin-bottom:8px;">Résultat h/m³</label>
+                <div id="realtimeResult" style="display:flex; align-items:center; gap:10px; padding:10px; background:#f5f5f5; border-radius:6px; min-height:48px;">
+                  <span id="realtimeRatio" style="font-size:20px; font-weight:700;">—</span>
+                  <span id="realtimeSmiley"></span>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;">
+              <!-- m³ et Heures -->
+              <div class="form-group">
+                <label for="inputM3">🧱 m³ coulés</label>
+                <input type="number" id="inputM3" step="0.01" placeholder="Ex: 30.50">
+              </div>
+              <div class="form-group">
+                <label for="inputHours">⏱️ Heures MO</label>
+                <input type="number" id="inputHours" step="0.01" placeholder="Ex: 121.00">
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:20px; margin-bottom:20px;">
+              <!-- Temps détaillés -->
+              <div class="form-group">
+                <label for="inputBeton">Béton (h)</label>
+                <input type="number" id="inputBeton" step="0.01" placeholder="Optionnel">
+              </div>
+              <div class="form-group">
+                <label for="inputAciers">Aciers (h)</label>
+                <input type="number" id="inputAciers" step="0.01" placeholder="Optionnel">
+              </div>
+              <div class="form-group">
+                <label for="inputChargement">Chargement (h)</label>
+                <input type="number" id="inputChargement" step="0.01" placeholder="Optionnel">
+              </div>
+              <div class="form-group">
+                <label for="inputCentrale">Centrale (h)</label>
+                <input type="number" id="inputCentrale" step="0.01" placeholder="Optionnel">
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 3fr; gap:20px; margin-bottom:20px;">
+              <div class="form-group">
+                <label for="inputAcierFaconne">Acier façonné (T)</label>
+                <input type="number" id="inputAcierFaconne" step="0.01" placeholder="Optionnel">
+              </div>
+              <div class="form-group">
+                <label for="inputComment">💬 Commentaire <span style="color:var(--danger);">*</span></label>
+                <textarea id="inputComment" rows="3" placeholder="Le commentaire est obligatoire..." required></textarea>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:10px; align-items:center;">
+              <button type="submit" id="btnSubmitKpi" class="btn btn-success" style="padding:12px 24px;">
+                ✅ Valider
+              </button>
+              <button type="button" id="btnCancelEdit" class="btn btn-secondary" style="display:none;" onclick="cancelEditMode()">
+                Annuler
+              </button>
+              <span id="formMessage" style="margin-left:10px; font-size:14px;"></span>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- ═══ TABLEAU DES INDICATEURS ═══ -->
+      <div class="card" style="margin-top:20px;">
+        <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px;">
+          <h2 style="margin:0;">Indicateurs importés - Goudalle Maçonnerie</h2>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <label for="filterYear" style="font-size:0.9em; font-weight:600;">Année</label>
+            <select id="filterYear" onchange="applyFilters()" style="min-width:100px;">
+              <option value="">Toutes</option>
+            </select>
+            <label for="filterMonth" style="font-size:0.9em; font-weight:600;">Mois</label>
+            <select id="filterMonth" onchange="applyFilters()" style="min-width:120px;">
+              <option value="">Tous</option>
+            </select>
+            <span class="badge badge-secondary" id="kpiCount">0 indicateur</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+          <table id="kpiTable">
+            <thead>
+              <tr>
+                <th>Semaine</th>
+                <th>m³</th>
+                <th>Heures MO</th>
+                <th>h/m³</th>
+                <th>Béton</th>
+                <th>Aciers</th>
+                <th>Chargement</th>
+                <th>Centrale</th>
+                <th>Commentaire</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="10" style="text-align:center; padding:20px;">Chargement...</td></tr>
+            </tbody>
+          </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ BLOC : SYNCHRONISATION EXCEL (en bas) ═══ -->
+      <div id="blockConfig" class="card" style="margin-top:20px;">
+        <div class="card-title">
+          <h2 id="cfgCardTitle">🔗 Synchronisation avec fichier Excel</h2>
+        </div>
+        <div class="card-body">
+          <p style="font-size:0.9em; color:#666; margin-bottom:15px;">
+            La synchronisation bidirectionnelle permet d'importer les données depuis l'Excel et d'y écrire les nouvelles saisies automatiquement.
+          </p>
           <form onsubmit="handleConnect(event)" id="cfgForm">
             <div class="form-group">
               <label for="cfgFolder">📁 Chemin du dossier</label>
@@ -65,48 +192,265 @@
           </form>
         </div>
       </div>
-
-      <!-- ═══ TABLEAU DES INDICATEURS ═══ -->
-      <div class="card" style="margin-top:20px;">
-        <div class="card-title"><h2>Indicateurs importés - Goudalle Maçonnerie</h2></div>
-        <div class="card-body">
-          <div class="table-responsive">
-          <table id="kpiTable">
-            <thead>
-              <tr>
-                <th>Semaine</th>
-                <th>m³</th>
-                <th>Heures MO</th>
-                <th>h/m³</th>
-                <th>Béton</th>
-                <th>Aciers</th>
-                <th>Chargement</th>
-                <th>Centrale</th>
-                <th>Commentaire</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td colspan="10" style="text-align:center; padding:20px;">Chargement...</td></tr>
-            </tbody>
-          </table>
-          </div>
-        </div>
-      </div>
     </main>
   </div>
 
   <script>
+    // ═══ ÉTAT GLOBAL ═══
+    let currentEditMode = null; // { year, week } si en mode édition, null sinon
+
     function showMessage(msg, type) {
       const d = document.getElementById('pageMessage');
       d.innerHTML = msg;
       d.className = `alert alert-${type}`;
       d.style.display = 'block';
       window.scrollTo(0, 0);
+      if (type === 'success') {
+        setTimeout(() => { d.style.display = 'none'; }, 5000);
+      }
     }
 
-    function loadKPIs() {
-      const kpis = getKPIs().sort(compareByYearWeekDesc);
+    function showFormMessage(msg, type) {
+      const d = document.getElementById('formMessage');
+      d.textContent = msg;
+      d.style.color = type === 'error' ? 'var(--danger)' : 'var(--success)';
+      setTimeout(() => { d.textContent = ''; }, 4000);
+    }
+
+    // ═══ CALCUL TEMPS RÉEL DU RATIO ═══
+    function updateRealtimeRatio() {
+      const m3 = parseFloat(document.getElementById('inputM3').value) || 0;
+      const hours = parseFloat(document.getElementById('inputHours').value) || 0;
+      const ratioDisplay = document.getElementById('realtimeRatio');
+      const smileyDisplay = document.getElementById('realtimeSmiley');
+
+      if (m3 > 0 && hours > 0) {
+        const ratio = hours / m3;
+        const smiley = getSmiley(ratio);
+        ratioDisplay.textContent = ratio.toFixed(2);
+        ratioDisplay.style.color = smiley === 'vert' ? 'var(--success)' : 'var(--danger)';
+        smileyDisplay.innerHTML = getSmileyEmoji(smiley);
+      } else {
+        ratioDisplay.textContent = '—';
+        ratioDisplay.style.color = '#666';
+        smileyDisplay.innerHTML = '';
+      }
+    }
+
+    // ═══ INITIALISATION DU FORMULAIRE ═══
+    function initForm() {
+      // Semaine en cours par défaut
+      const now = new Date();
+      const startOfYear = new Date(now.getFullYear(), 0, 1);
+      const days = Math.floor((now - startOfYear) / (24 * 60 * 60 * 1000));
+      const currentWeek = Math.ceil((days + startOfYear.getDay() + 1) / 7);
+      
+      document.getElementById('inputYear').value = now.getFullYear();
+      document.getElementById('inputWeek').value = currentWeek;
+
+      // Écouter les changements pour le calcul temps réel
+      document.getElementById('inputM3').addEventListener('input', updateRealtimeRatio);
+      document.getElementById('inputHours').addEventListener('input', updateRealtimeRatio);
+    }
+
+    // ═══ SOUMISSION DU FORMULAIRE ═══
+    async function handleKpiSubmit(event) {
+      event.preventDefault();
+      
+      const btn = document.getElementById('btnSubmitKpi');
+      const originalText = btn.textContent;
+      btn.textContent = '⏳ En cours...';
+      btn.disabled = true;
+
+      const data = {
+        year: document.getElementById('inputYear').value,
+        week: document.getElementById('inputWeek').value,
+        m3: document.getElementById('inputM3').value || null,
+        hours: document.getElementById('inputHours').value || null,
+        tempsBeton: document.getElementById('inputBeton').value || null,
+        tempsAciers: document.getElementById('inputAciers').value || null,
+        tempsChargement: document.getElementById('inputChargement').value || null,
+        tempsCentrale: document.getElementById('inputCentrale').value || null,
+        qtAcierFaconne: document.getElementById('inputAcierFaconne').value || null,
+        comment: document.getElementById('inputComment').value
+      };
+
+      try {
+        const res = await fetch(SERVER_URL + '/gm-kpi', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        const result = await res.json();
+        
+        if (!result.success) {
+          showFormMessage(`❌ ${result.error}`, 'error');
+          return;
+        }
+
+        const action = result.action === 'updated' ? 'mis à jour' : 'créé';
+        showMessage(`✅ Indicateur ${action} avec succès !`, 'success');
+        
+        // Réinitialiser le formulaire
+        if (currentEditMode) {
+          cancelEditMode();
+        } else {
+          document.getElementById('kpiForm').reset();
+          initForm(); // Réinitialiser la semaine en cours
+        }
+        
+        updateRealtimeRatio();
+        await loadKPIs();
+      } catch (e) {
+        showFormMessage(`❌ Erreur : ${e.message}`, 'error');
+      } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+      }
+    }
+
+    // ═══ MODE ÉDITION ═══
+    function enterEditMode(year, week) {
+      currentEditMode = { year, week };
+      
+      // Récupérer les données du KPI
+      const kpis = getKPIs();
+      const kpi = kpis.find(k => k.year === year && k.week === week);
+      if (!kpi) return;
+
+      // Remplir le formulaire
+      document.getElementById('inputYear').value = kpi.year;
+      document.getElementById('inputWeek').value = kpi.week;
+      document.getElementById('inputM3').value = kpi.m3 || '';
+      document.getElementById('inputHours').value = kpi.hours || '';
+      document.getElementById('inputBeton').value = kpi.tempsBeton || '';
+      document.getElementById('inputAciers').value = kpi.tempsAciers || '';
+      document.getElementById('inputChargement').value = kpi.tempsChargement || '';
+      document.getElementById('inputCentrale').value = kpi.tempsCentrale || '';
+      document.getElementById('inputAcierFaconne').value = kpi.qtAcierFaconne || '';
+      document.getElementById('inputComment').value = kpi.comment || '';
+
+      // Mettre à jour l'UI
+      document.getElementById('formTitle').textContent = `✏️ Modification — S${String(week).padStart(2,'0')}/${year}`;
+      document.getElementById('btnSubmitKpi').textContent = '💾 Enregistrer les modifications';
+      document.getElementById('btnCancelEdit').style.display = 'inline-flex';
+
+      // Calculer le ratio initial
+      updateRealtimeRatio();
+
+      // Scroll vers le formulaire
+      document.getElementById('kpiForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function cancelEditMode() {
+      currentEditMode = null;
+      document.getElementById('kpiForm').reset();
+      document.getElementById('formTitle').textContent = '📝 Saisie nouvel indicateur';
+      document.getElementById('btnSubmitKpi').textContent = '✅ Valider';
+      document.getElementById('btnCancelEdit').style.display = 'none';
+      initForm();
+      updateRealtimeRatio();
+    }
+
+    // ═══ SUPPRESSION ═══
+    async function deleteKpi(year, week) {
+      if (!confirm(`Supprimer l'indicateur de la semaine S${String(week).padStart(2,'0')}/${year} ?\n\nCette action supprimera également la ligne dans le fichier Excel.`)) {
+        return;
+      }
+
+      try {
+        const res = await fetch(SERVER_URL + `/gm-kpi/${year}/${week}`, { method: 'DELETE' });
+        const result = await res.json();
+        
+        if (!result.success) {
+          showMessage(`❌ ${result.error}`, 'error');
+          return;
+        }
+
+        showMessage('✅ Indicateur supprimé avec succès !', 'success');
+        await loadKPIs();
+      } catch (e) {
+        showMessage(`❌ Erreur : ${e.message}`, 'error');
+      }
+    }
+
+    // ═══ CHARGEMENT DES FILTRES ═══
+    async function loadFilters() {
+      try {
+        const res = await fetch(SERVER_URL + '/gm-available-periods');
+        const data = await res.json();
+        
+        if (!data.success) return;
+
+        const yearSelect = document.getElementById('filterYear');
+        const monthSelect = document.getElementById('filterMonth');
+
+        // Remplir les années
+        yearSelect.innerHTML = '<option value="">Toutes</option>' + 
+          data.years.map(y => `<option value="${y}">${y}</option>`).join('');
+
+        // Remplir les mois (seulement ceux où il y a des données)
+        const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
+                           'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+        monthSelect.innerHTML = '<option value="">Tous</option>' + 
+          data.months.map(m => `<option value="${m}">${monthNames[m-1]}</option>`).join('');
+
+        // Sélectionner automatiquement l'année et le mois en cours
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth() + 1;
+
+        // Si l'année courante existe dans les données, la sélectionner
+        if (data.years.includes(currentYear)) {
+          yearSelect.value = currentYear;
+        }
+
+        // Si le mois courant existe dans les données, le sélectionner
+        if (data.months.includes(currentMonth)) {
+          monthSelect.value = currentMonth;
+        }
+      } catch (e) {
+        console.error('Erreur chargement filtres:', e);
+      }
+    }
+
+    // ═══ APPLICATION DES FILTRES ═══
+    async function applyFilters() {
+      const year = document.getElementById('filterYear').value;
+      const month = document.getElementById('filterMonth').value;
+      
+      let url = SERVER_URL + '/gm-kpis-by-period?';
+      if (year) url += `year=${year}&`;
+      if (month) url += `month=${month}`;
+
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        
+        if (!data.success) {
+          showMessage(`❌ ${data.error || 'Erreur lors du chargement'}`, 'error');
+          return;
+        }
+
+        renderKpiTable(data.kpis);
+      } catch (e) {
+        showMessage(`❌ Erreur : ${e.message}`, 'error');
+      }
+    }
+
+    // ═══ AFFICHAGE DU TABLEAU ═══
+    function renderKpiTable(kpis) {
       const tbody = document.querySelector('#kpiTable tbody');
+      const count = document.getElementById('kpiCount');
+      
+      count.textContent = `${kpis.length} indicateur${kpis.length > 1 ? 's' : ''}`;
+      count.className = kpis.length > 0 ? 'badge badge-success' : 'badge badge-secondary';
+
+      if (kpis.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:20px;">Aucun indicateur pour cette période</td></tr>`;
+        return;
+      }
+
       tbody.innerHTML = kpis.map(k => {
         const ratio = calculateRatio(k.hours, k.m3);
         const smiley = getSmiley(ratio);
@@ -115,16 +459,27 @@
           <td>${k.m3 != null ? parseFloat(k.m3).toFixed(2) : '—'}</td>
           <td>${k.hours != null ? parseFloat(k.hours).toFixed(2) : '—'}</td>
           <td><span class="badge badge-${smiley}">${ratio !== null ? ratio.toFixed(2) : '—'} ${getSmileyEmoji(smiley)}</span></td>
-          <td>${k.tempsBeton != null ? k.tempsBeton : '—'}</td>
-          <td>${k.tempsAciers != null ? k.tempsAciers : '—'}</td>
-          <td>${k.tempsChargement != null ? k.tempsChargement : '—'}</td>
-          <td>${k.tempsCentrale != null ? k.tempsCentrale : '—'}</td>
+          <td>${k.tempsBeton != null ? parseFloat(k.tempsBeton).toFixed(2) : '—'}</td>
+          <td>${k.tempsAciers != null ? parseFloat(k.tempsAciers).toFixed(2) : '—'}</td>
+          <td>${k.tempsChargement != null ? parseFloat(k.tempsChargement).toFixed(2) : '—'}</td>
+          <td>${k.tempsCentrale != null ? parseFloat(k.tempsCentrale).toFixed(2) : '—'}</td>
           <td><small style="white-space:pre-wrap;">${escapeHtml(k.comment || '')}</small></td>
+          <td style="white-space:nowrap;">
+            <button onclick="enterEditMode(${k.year}, ${k.week})" class="btn btn-primary" style="padding:4px 10px; font-size:12px; margin-right:5px;">
+              ✏️ Éditer
+            </button>
+            <button onclick="deleteKpi(${k.year}, ${k.week})" class="btn btn-danger" style="padding:4px 10px; font-size:12px;">
+              🗑️ Supprimer
+            </button>
+          </td>
         </tr>`;
       }).join('');
-      if (kpis.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:20px;">Aucun indicateur — connectez un fichier Excel ci-dessus</td></tr>`;
-      }
+    }
+
+    // ═══ CHARGEMENT INITIAL DES KPIs ═══
+    async function loadKPIs() {
+      await applyFilters(); // Utilise la même logique que les filtres
+      await loadFilters();  // Recharger les filtres (nouvelles années/mois possibles)
     }
 
     function downloadGMIndicators() {
@@ -193,7 +548,8 @@
         if (!result.success) { showMessage(`❌ ${result.error}`, 'error'); return; }
         showMessage(`✅ Connexion réussie ! ${result.result.added} semaine(s) ajoutée(s), ${result.result.updated} mise(s) à jour. La synchronisation est maintenant automatique.`, 'success');
         lockConfig({ folder: body.folder, filename: body.filename, sheet: body.sheet, lastSync: new Date().toISOString() });
-        loadKPIs();
+        await loadKPIs();
+      } catch (e) {
         showMessage(`❌ Erreur : ${e.message}`, 'error');
       } finally {
         btn.textContent = '🔗 Connecter et synchroniser'; btn.disabled = false;
@@ -208,7 +564,7 @@
         if (!result.success) { showMessage(`❌ ${result.error}`, 'error'); return; }
         showMessage(`✅ Synchronisation effectuée — ${result.result.added} ajouté(s), ${result.result.updated} mis à jour.`, 'success');
         document.getElementById('cfgDisplayLastSync').textContent = new Date().toLocaleString('fr-FR');
-        loadKPIs();
+        await loadKPIs();
       } catch (e) {
         showMessage(`❌ Erreur : ${e.message}`, 'error');
       }
@@ -226,11 +582,13 @@
       }
     }
 
-    function init() {
+    async function init() {
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectProductionSecondaryBar();
+      initForm();
       loadConfig();
-      loadKPIs();
+      await loadFilters(); // Charger les filtres en premier pour pré-sélectionner année/mois
+      await loadKPIs();    // Ensuite charger les KPIs avec les filtres actifs
     }
 
     window.onServerReady(init);

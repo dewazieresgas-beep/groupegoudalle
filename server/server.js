@@ -1665,6 +1665,145 @@ function applyExcelDataToKpis(data) {
   return { added, updated, removed };
 }
 
+// ─── ÉCRITURE DANS L'EXCEL ───────────────────────────────────────────────────────
+
+/**
+ * Écrit ou met à jour un KPI dans l'Excel
+ * @param {Object} kpi - Données du KPI (year, week, m3, hours, etc.)
+ * @param {Object} cfg - Configuration Excel (folder, filename, sheet)
+ */
+function writeKpiToExcel(kpi, cfg) {
+  const excelPath = path.join(cfg.folder, cfg.filename);
+  if (!fs.existsSync(excelPath)) {
+    throw new Error(`Fichier Excel introuvable : "${excelPath}"`);
+  }
+
+  const workbook = XLSX.readFile(excelPath);
+  const sheet = workbook.Sheets[cfg.sheet];
+  if (!sheet) {
+    throw new Error(`Feuille "${cfg.sheet}" introuvable. Feuilles disponibles : ${workbook.SheetNames.join(', ')}`);
+  }
+
+  // Lire toutes les lignes
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
+  
+  // Trouver la ligne correspondante (même année et semaine)
+  let targetRowIndex = -1;
+  for (let i = 1; i < rows.length; i++) {
+    const rowYear = parseInt(rows[i][0]);
+    const rowWeekRaw = String(rows[i][1] || '');
+    const weekMatch = rowWeekRaw.match(/(\d+)/);
+    if (weekMatch) {
+      const rowWeek = parseInt(weekMatch[1]);
+      if (rowYear === kpi.year && rowWeek === kpi.week) {
+        targetRowIndex = i;
+        break;
+      }
+    }
+  }
+
+  // Préparer la ligne de données (format Excel : A=Année, B=Semaine, C=m³, etc.)
+  const newRow = [
+    kpi.year,                                    // A : Année
+    `S${String(kpi.week).padStart(2, '0')}`,    // B : Semaine (format S01, S02...)
+    kpi.m3 !== null ? kpi.m3 : null,            // C : m³
+    kpi.hours !== null ? kpi.hours : null,      // D : Heures MO
+    null,                                        // E : h/m³ (calculé automatiquement dans Excel généralement)
+    kpi.objectifRatio !== null ? kpi.objectifRatio : null,  // F : Objectif h/m³
+    kpi.tempsBeton !== null ? kpi.tempsBeton : null,        // G : Heures béton
+    kpi.tempsAciers !== null ? kpi.tempsAciers : null,      // H : Heures acier
+    kpi.tempsChargement !== null ? kpi.tempsChargement : null,  // I : Heures Chargement
+    kpi.tempsCentrale !== null ? kpi.tempsCentrale : null,      // J : Heures Centrale
+    kpi.qtAcierFaconne !== null ? kpi.qtAcierFaconne : null,    // K : Qté Acier façonné
+    null, null, null, null, null,                               // L-P : colonnes vides
+    kpi.comment || ''                                           // Q : Commentaire (colonne 16)
+  ];
+
+  if (targetRowIndex >= 0) {
+    // Mise à jour de la ligne existante
+    rows[targetRowIndex] = newRow;
+  } else {
+    // Ajout d'une nouvelle ligne
+    rows.push(newRow);
+  }
+
+  // Trier les lignes par ordre chronologique (ignorer la ligne d'en-tête)
+  const header = rows[0];
+  const dataRows = rows.slice(1).filter(row => row[0] && row[1]); // Filtrer les lignes vides
+  dataRows.sort((a, b) => {
+    const yearA = parseInt(a[0]) || 0;
+    const yearB = parseInt(b[0]) || 0;
+    if (yearA !== yearB) return yearA - yearB;
+    
+    const weekA = parseInt(String(a[1]).match(/(\d+)/)?.[1] || '0');
+    const weekB = parseInt(String(b[1]).match(/(\d+)/)?.[1] || '0');
+    return weekA - weekB;
+  });
+
+  // Reconstruire les lignes avec l'en-tête
+  const sortedRows = [header, ...dataRows];
+
+  // Recréer la feuille
+  const newSheet = XLSX.utils.aoa_to_sheet(sortedRows);
+  workbook.Sheets[cfg.sheet] = newSheet;
+
+  // Sauvegarder le fichier
+  XLSX.writeFile(workbook, excelPath);
+}
+
+/**
+ * Supprime un KPI de l'Excel
+ * @param {number} year - Année
+ * @param {number} week - Numéro de semaine
+ * @param {Object} cfg - Configuration Excel (folder, filename, sheet)
+ */
+function deleteKpiFromExcel(year, week, cfg) {
+  const excelPath = path.join(cfg.folder, cfg.filename);
+  if (!fs.existsSync(excelPath)) {
+    throw new Error(`Fichier Excel introuvable : "${excelPath}"`);
+  }
+
+  const workbook = XLSX.readFile(excelPath);
+  const sheet = workbook.Sheets[cfg.sheet];
+  if (!sheet) {
+    throw new Error(`Feuille "${cfg.sheet}" introuvable.`);
+  }
+
+  // Lire toutes les lignes
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
+  
+  // Filtrer pour supprimer la ligne correspondante
+  const header = rows[0];
+  const filteredRows = [];
+  
+  for (let i = 1; i < rows.length; i++) {
+    const rowYear = parseInt(rows[i][0]);
+    const rowWeekRaw = String(rows[i][1] || '');
+    const weekMatch = rowWeekRaw.match(/(\d+)/);
+    
+    if (weekMatch) {
+      const rowWeek = parseInt(weekMatch[1]);
+      // Garder toutes les lignes sauf celle à supprimer
+      if (!(rowYear === year && rowWeek === week)) {
+        filteredRows.push(rows[i]);
+      }
+    } else if (rows[i][0] || rows[i][2]) {
+      // Garder les lignes non vides qui ne correspondent pas au critère
+      filteredRows.push(rows[i]);
+    }
+  }
+
+  // Reconstruire avec l'en-tête
+  const newRows = [header, ...filteredRows];
+
+  // Recréer la feuille
+  const newSheet = XLSX.utils.aoa_to_sheet(newRows);
+  workbook.Sheets[cfg.sheet] = newSheet;
+
+  // Sauvegarder
+  XLSX.writeFile(workbook, excelPath);
+}
+
 // Gestionnaire du watcher (référence pour pouvoir l'arrêter)
 let gmWatcher = null;
 
@@ -1756,6 +1895,183 @@ app.post('/api/gm-import-excel', (req, res) => {
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
+});
+
+// ─── ROUTES : CRUD KPI MAÇONNERIE ────────────────────────────────────────────────
+
+// Créer ou mettre à jour un KPI (écrit dans le store + Excel)
+app.post('/api/gm-kpi', requireToken, requireWriteRateLimit, (req, res) => {
+  const { year, week, m3, hours, tempsBeton, tempsAciers, tempsChargement, tempsCentrale, qtAcierFaconne, objectifRatio, comment } = req.body;
+  
+  // Validation
+  if (!year || !week) {
+    return res.status(400).json({ success: false, error: 'Année et semaine sont obligatoires.' });
+  }
+  if (!comment || comment.trim() === '') {
+    return res.status(400).json({ success: false, error: 'Le commentaire est obligatoire.' });
+  }
+
+  const kpi = {
+    year: parseInt(year),
+    week: parseInt(week),
+    m3: m3 !== null && m3 !== '' ? parseFloat(m3) : null,
+    hours: hours !== null && hours !== '' ? parseFloat(hours) : null,
+    tempsBeton: tempsBeton !== null && tempsBeton !== '' ? parseFloat(tempsBeton) : null,
+    tempsAciers: tempsAciers !== null && tempsAciers !== '' ? parseFloat(tempsAciers) : null,
+    tempsChargement: tempsChargement !== null && tempsChargement !== '' ? parseFloat(tempsChargement) : null,
+    tempsCentrale: tempsCentrale !== null && tempsCentrale !== '' ? parseFloat(tempsCentrale) : null,
+    qtAcierFaconne: qtAcierFaconne !== null && qtAcierFaconne !== '' ? parseFloat(qtAcierFaconne) : null,
+    objectifRatio: objectifRatio !== null && objectifRatio !== '' ? parseFloat(objectifRatio) : null,
+    comment: comment.trim()
+  };
+
+  try {
+    const now = new Date().toISOString();
+    const kpis = dbGet('kpis', []);
+    
+    // Chercher si le KPI existe déjà
+    const existingIndex = kpis.findIndex(k => k.year === kpi.year && k.week === kpi.week);
+    
+    if (existingIndex >= 0) {
+      // Mise à jour
+      kpis[existingIndex] = { ...kpis[existingIndex], ...kpi, updatedAt: now, updatedBy: 'manual' };
+    } else {
+      // Création
+      const maxId = kpis.reduce((max, k) => Math.max(max, k.id || 0), 0);
+      kpis.push({ 
+        id: maxId + 1, 
+        ...kpi, 
+        status: 'published', 
+        createdAt: now, 
+        createdBy: 'manual',
+        updatedAt: now, 
+        updatedBy: 'manual' 
+      });
+    }
+
+    // Sauvegarder dans le store
+    dbSet('kpis', kpis);
+
+    // Écrire dans l'Excel si une config est active
+    const cfg = dbGet('gm_excel_config', null);
+    if (cfg && cfg.active) {
+      try {
+        writeKpiToExcel(kpi, cfg);
+      } catch (excelError) {
+        console.error(`[GM-KPI] Erreur écriture Excel : ${excelError.message}`);
+        // On continue malgré l'erreur Excel (données sauvegardées dans le store)
+      }
+    }
+
+    res.json({ 
+      success: true, 
+      action: existingIndex >= 0 ? 'updated' : 'created',
+      kpi: existingIndex >= 0 ? kpis[existingIndex] : kpis[kpis.length - 1]
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Supprimer un KPI (du store + Excel)
+app.delete('/api/gm-kpi/:year/:week', requireToken, requireWriteRateLimit, (req, res) => {
+  const year = parseInt(req.params.year);
+  const week = parseInt(req.params.week);
+
+  if (isNaN(year) || isNaN(week)) {
+    return res.status(400).json({ success: false, error: 'Année et semaine invalides.' });
+  }
+
+  try {
+    const kpis = dbGet('kpis', []);
+    const filteredKpis = kpis.filter(k => !(k.year === year && k.week === week));
+
+    if (filteredKpis.length === kpis.length) {
+      return res.status(404).json({ success: false, error: 'KPI introuvable.' });
+    }
+
+    // Sauvegarder dans le store
+    dbSet('kpis', filteredKpis);
+
+    // Supprimer de l'Excel si une config est active
+    const cfg = dbGet('gm_excel_config', null);
+    if (cfg && cfg.active) {
+      try {
+        deleteKpiFromExcel(year, week, cfg);
+      } catch (excelError) {
+        console.error(`[GM-KPI] Erreur suppression Excel : ${excelError.message}`);
+        // On continue malgré l'erreur Excel
+      }
+    }
+
+    res.json({ success: true, deleted: { year, week } });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Récupérer les KPIs filtrés par année et/ou mois
+app.get('/api/gm-kpis-by-period', (req, res) => {
+  const { year, month } = req.query;
+  let kpis = dbGet('kpis', []);
+
+  // Filtrer par année
+  if (year) {
+    const yearNum = parseInt(year);
+    if (!isNaN(yearNum)) {
+      kpis = kpis.filter(k => k.year === yearNum);
+    }
+  }
+
+  // Filtrer par mois (calcul basé sur la vraie date de la semaine)
+  if (month) {
+    const monthNum = parseInt(month);
+    if (!isNaN(monthNum) && monthNum >= 1 && monthNum <= 12) {
+      kpis = kpis.filter(k => {
+        // Calculer le mois de la semaine
+        const jan1 = new Date(k.year, 0, 1);
+        const daysOffset = (k.week - 1) * 7;
+        const weekDate = new Date(jan1.getTime() + daysOffset * 24 * 60 * 60 * 1000);
+        const weekMonth = weekDate.getMonth() + 1;
+        return weekMonth === monthNum;
+      });
+    }
+  }
+
+  // Trier par ordre chronologique décroissant (plus récent en premier)
+  kpis.sort((a, b) => {
+    if (b.year !== a.year) return b.year - a.year;
+    return b.week - a.week;
+  });
+
+  res.json({ success: true, kpis, count: kpis.length });
+});
+
+// Récupérer les années et mois disponibles (pour les filtres)
+app.get('/api/gm-available-periods', (req, res) => {
+  const kpis = dbGet('kpis', []);
+  const years = [...new Set(kpis.map(k => k.year))].sort((a, b) => b - a);
+  
+  // Calculer les vrais mois à partir de l'année et de la semaine ISO
+  const yearMonths = new Set();
+  kpis.forEach(k => {
+    // Calculer la date approximative du lundi de la semaine
+    const jan1 = new Date(k.year, 0, 1);
+    const daysOffset = (k.week - 1) * 7;
+    const weekDate = new Date(jan1.getTime() + daysOffset * 24 * 60 * 60 * 1000);
+    const month = weekDate.getMonth() + 1; // 1-12
+    yearMonths.add(`${k.year}-${month}`);
+  });
+  
+  // Extraire les mois uniques (tous les mois où il y a au moins une donnée)
+  const months = [...new Set([...yearMonths].map(ym => parseInt(ym.split('-')[1])))].sort((a, b) => a - b);
+  
+  res.json({ 
+    success: true, 
+    years, 
+    months,
+    yearMonths: [...yearMonths].sort() // Format "YYYY-M" pour debug
+  });
 });
 
 // ─── EXCEL CBCO (CHIFFRE D'AFFAIRES) : CONFIG + WATCHER + AUTO-IMPORT ───────────
