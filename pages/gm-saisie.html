@@ -113,7 +113,7 @@
           <h2 style="margin:0;">Indicateurs importés - Goudalle Maçonnerie</h2>
           <div style="display:flex; gap:10px; align-items:center;">
             <label for="filterYear" style="font-size:0.9em; font-weight:600;">Année</label>
-            <select id="filterYear" onchange="applyFilters()" style="min-width:100px;">
+            <select id="filterYear" onchange="onYearChange()" style="min-width:100px;">
               <option value="">Toutes</option>
             </select>
             <label for="filterMonth" style="font-size:0.9em; font-weight:600;">Mois</label>
@@ -398,43 +398,77 @@
     }
 
     // ═══ CHARGEMENT DES FILTRES ═══
-    async function loadFilters() {
+    // init=true : premier chargement, pré-sélectionne année/mois en cours
+    // init=false : rechargement après saisie, préserve la sélection courante
+    async function loadFilters(init = false) {
       try {
-        const res = await fetch(SERVER_URL + '/gm-available-periods');
-        const data = await res.json();
-        
-        if (!data.success) return;
-
-        const yearSelect = document.getElementById('filterYear');
-        const monthSelect = document.getElementById('filterMonth');
-
-        // Remplir les années
-        yearSelect.innerHTML = '<option value="">Toutes</option>' + 
-          data.years.map(y => `<option value="${y}">${y}</option>`).join('');
-
-        // Remplir les mois (seulement ceux où il y a des données)
-        const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
-                           'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-        monthSelect.innerHTML = '<option value="">Tous</option>' + 
-          data.months.map(m => `<option value="${m}">${monthNames[m-1]}</option>`).join('');
-
-        // Sélectionner automatiquement l'année et le mois en cours
         const now = new Date();
         const currentYear = now.getFullYear();
         const currentMonth = now.getMonth() + 1;
 
-        // Si l'année courante existe dans les données, la sélectionner
-        if (data.years.includes(currentYear)) {
-          yearSelect.value = currentYear;
-        }
+        const yearSelect = document.getElementById('filterYear');
+        const monthSelect = document.getElementById('filterMonth');
 
-        // Si le mois courant existe dans les données, le sélectionner
-        if (data.months.includes(currentMonth)) {
-          monthSelect.value = currentMonth;
-        }
+        // Mémoriser la sélection courante avant de remplir
+        const prevYear = yearSelect.value || String(currentYear);
+        const prevMonth = monthSelect.value || String(currentMonth);
+
+        // Charger toutes les années disponibles
+        const resYears = await fetch(SERVER_URL + '/gm-available-periods');
+        const dataYears = await resYears.json();
+        if (!dataYears.success) return;
+
+        // Remplir les années (en s'assurant que l'année en cours apparaît toujours)
+        const years = dataYears.years.includes(currentYear)
+          ? dataYears.years
+          : [...dataYears.years, currentYear].sort((a, b) => b - a);
+        yearSelect.innerHTML = '<option value="">Toutes</option>' +
+          years.map(y => `<option value="${y}">${y}</option>`).join('');
+
+        const activeYear = init ? currentYear : parseInt(prevYear) || currentYear;
+        yearSelect.value = activeYear;
+
+        // Charger les mois pour l'année active
+        const resMonths = await fetch(SERVER_URL + `/gm-available-periods?year=${activeYear}`);
+        const dataMonths = await resMonths.json();
+
+        const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                           'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+        monthSelect.innerHTML = '<option value="">Tous</option>' +
+          (dataMonths.months || []).map(m => `<option value="${m}">${monthNames[m-1]}</option>`).join('');
+
+        const activeMonth = init ? currentMonth : parseInt(prevMonth) || currentMonth;
+        monthSelect.value = activeMonth;
+
       } catch (e) {
         console.error('Erreur chargement filtres:', e);
       }
+    }
+
+    // ═══ CHANGEMENT D'ANNÉE : RECHARGER LES MOIS ═══
+    async function onYearChange() {
+      const yearSelect = document.getElementById('filterYear');
+      const monthSelect = document.getElementById('filterMonth');
+      const year = yearSelect.value;
+
+      const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                         'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+
+      if (!year) {
+        // "Toutes les années" : charger tous les mois disponibles
+        const res = await fetch(SERVER_URL + '/gm-available-periods');
+        const data = await res.json();
+        monthSelect.innerHTML = '<option value="">Tous</option>' +
+          (data.months || []).map(m => `<option value="${m}">${monthNames[m-1]}</option>`).join('');
+      } else {
+        // Recharger les mois pour l'année sélectionnée
+        const res = await fetch(SERVER_URL + `/gm-available-periods?year=${year}`);
+        const data = await res.json();
+        monthSelect.innerHTML = '<option value="">Tous</option>' +
+          (data.months || []).map(m => `<option value="${m}">${monthNames[m-1]}</option>`).join('');
+      }
+
+      await applyFilters();
     }
 
     // ═══ APPLICATION DES FILTRES ═══
@@ -501,8 +535,8 @@
 
     // ═══ CHARGEMENT INITIAL DES KPIs ═══
     async function loadKPIs() {
-      await applyFilters(); // Utilise la même logique que les filtres
-      await loadFilters();  // Recharger les filtres (nouvelles années/mois possibles)
+      await loadFilters(false); // Recharger les filtres en préservant la sélection
+      await applyFilters();     // Charger les KPIs selon les filtres actifs
     }
 
     function downloadGMIndicators() {
@@ -610,8 +644,8 @@
       injectProductionSecondaryBar();
       initForm();
       loadConfig();
-      await loadFilters(); // Charger les filtres en premier pour pré-sélectionner année/mois
-      await loadKPIs();    // Ensuite charger les KPIs avec les filtres actifs
+      await loadFilters(true); // Premier chargement : pré-sélectionner année/mois en cours
+      await applyFilters();    // Charger les KPIs selon les filtres pré-sélectionnés
     }
 
     window.onServerReady(init);

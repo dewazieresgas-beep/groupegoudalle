@@ -2075,27 +2075,35 @@ app.get('/api/gm-kpis-by-period', (req, res) => {
 // Récupérer les années et mois disponibles (pour les filtres)
 app.get('/api/gm-available-periods', (req, res) => {
   const kpis = dbGet('kpis', []);
+  const { year } = req.query; // Paramètre optionnel pour filtrer par année
+  
   const years = [...new Set(kpis.map(k => k.year))].sort((a, b) => b - a);
   
-  // Calculer les vrais mois à partir de l'année et de la semaine ISO
-  const yearMonths = new Set();
-  kpis.forEach(k => {
-    // Calculer la date approximative du lundi de la semaine
+  // Calculer les mois disponibles (optionnellement pour une année spécifique)
+  let filteredKpis = kpis;
+  if (year) {
+    const yearNum = parseInt(year);
+    if (!isNaN(yearNum)) {
+      filteredKpis = kpis.filter(k => k.year === yearNum);
+    }
+  }
+  
+  const monthsSet = new Set();
+  filteredKpis.forEach(k => {
+    // Calculer le mois de la semaine
     const jan1 = new Date(k.year, 0, 1);
     const daysOffset = (k.week - 1) * 7;
     const weekDate = new Date(jan1.getTime() + daysOffset * 24 * 60 * 60 * 1000);
     const month = weekDate.getMonth() + 1; // 1-12
-    yearMonths.add(`${k.year}-${month}`);
+    monthsSet.add(month);
   });
   
-  // Extraire les mois uniques (tous les mois où il y a au moins une donnée)
-  const months = [...new Set([...yearMonths].map(ym => parseInt(ym.split('-')[1])))].sort((a, b) => a - b);
+  const months = [...monthsSet].sort((a, b) => a - b);
   
   res.json({ 
     success: true, 
     years, 
-    months,
-    yearMonths: [...yearMonths].sort() // Format "YYYY-M" pour debug
+    months
   });
 });
 
