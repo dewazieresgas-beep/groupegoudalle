@@ -1621,13 +1621,11 @@ function parseGMExcel(cfg) {
       year, week,
       m3:              toNum(m3Raw),
       hours:           toNum(row[3]),   // D : Heures MO
-      objectifRatio:   toNum(row[5]),   // F : Objectif h/m³
-      tempsBeton:      toNum(row[6]),   // G : Heures béton
-      tempsAciers:     toNum(row[7]),   // H : Heures acier
-      tempsChargement: toNum(row[8]),   // I : Heures Chargement
-      tempsCentrale:   toNum(row[9]),   // J : Heures Centrale à béton
-      qtAcierFaconne:  toNum(row[10]),  // K : Qté Acier façonné (T)
-      comment:         row[16] ? String(row[16]).trim() : ''  // Q : Commentaire
+      tempsBeton:      toNum(row[4]),   // E : Heures béton
+      tempsAciers:     toNum(row[5]),   // F : Heures acier
+      tempsChargement: toNum(row[6]),   // G : Heures Chargement
+      tempsCentrale:   toNum(row[7]),   // H : Heures Centrale à béton
+      comment:         row[8] ? String(row[8]).trim() : ''  // I : Commentaire de la semaine
     });
   }
   return data;
@@ -1716,19 +1714,15 @@ function writeKpiToExcel(kpi, cfg) {
 
   // Préparer la ligne de données (format Excel : A=Année, B=Semaine, C=m³, etc.)
   const newRow = [
-    kpi.year,                                    // A : Année
-    `S${String(kpi.week).padStart(2, '0')}`,    // B : Semaine (format S01, S02...)
-    kpi.m3 !== null ? kpi.m3 : null,            // C : m³
-    kpi.hours !== null ? kpi.hours : null,      // D : Heures MO
-    null,                                        // E : h/m³ (calculé automatiquement dans Excel généralement)
-    kpi.objectifRatio !== null ? kpi.objectifRatio : null,  // F : Objectif h/m³
-    kpi.tempsBeton !== null ? kpi.tempsBeton : null,        // G : Heures béton
-    kpi.tempsAciers !== null ? kpi.tempsAciers : null,      // H : Heures acier
-    kpi.tempsChargement !== null ? kpi.tempsChargement : null,  // I : Heures Chargement
-    kpi.tempsCentrale !== null ? kpi.tempsCentrale : null,      // J : Heures Centrale
-    kpi.qtAcierFaconne !== null ? kpi.qtAcierFaconne : null,    // K : Qté Acier façonné
-    null, null, null, null, null,                               // L-P : colonnes vides
-    kpi.comment || ''                                           // Q : Commentaire (colonne 16)
+    kpi.year,                                                      // A : Année
+    `S${String(kpi.week).padStart(2, '0')}`,                      // B : Semaine (format S01, S02...)
+    kpi.m3 !== null ? kpi.m3 : null,                              // C : m³ béton coulé
+    kpi.hours !== null ? kpi.hours : null,                        // D : Heures MO
+    kpi.tempsBeton !== null ? kpi.tempsBeton : null,              // E : Heures béton
+    kpi.tempsAciers !== null ? kpi.tempsAciers : null,            // F : Heures acier
+    kpi.tempsChargement !== null ? kpi.tempsChargement : null,    // G : Heures Chargement
+    kpi.tempsCentrale !== null ? kpi.tempsCentrale : null,        // H : Heures Centrale à béton
+    kpi.comment || ''                                             // I : Commentaire de la semaine
   ];
 
   if (targetRowIndex >= 0) {
