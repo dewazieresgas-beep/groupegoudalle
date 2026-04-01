@@ -79,11 +79,10 @@ function getKpiRatioThreshold() {
  * @param {number|null} ratio - Ratio h/m³ calculé
  * @returns {string} - 'vert' (bon), 'rouge' (mauvais) ou 'neutral' (pas de données)
  */
-function getSmiley(ratio) {
+function getSmiley(ratio, objectif = null) {
   if (ratio === null) return 'neutral';
 
-  const threshold = getKpiRatioThreshold();
-  // Si ratio <= seuil : performance bonne (vert), sinon mauvaise (rouge)
+  const threshold = objectif !== null && objectif > 0 ? objectif : getKpiRatioThreshold();
   return ratio <= threshold ? 'vert' : 'rouge';
 }
 

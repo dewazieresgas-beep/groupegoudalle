@@ -1621,11 +1621,13 @@ function parseGMExcel(cfg) {
       year, week,
       m3:              toNum(m3Raw),
       hours:           toNum(row[3]),   // D : Heures MO
-      tempsBeton:      toNum(row[4]),   // E : Heures béton
-      tempsAciers:     toNum(row[5]),   // F : Heures acier
-      tempsChargement: toNum(row[6]),   // G : Heures Chargement
-      tempsCentrale:   toNum(row[7]),   // H : Heures Centrale à béton
-      comment:         row[8] ? String(row[8]).trim() : ''  // I : Commentaire de la semaine
+      objectifRatio:   toNum(row[4]),   // E : Objectif h/m³
+      tempsBeton:      toNum(row[5]),   // F : Heures béton
+      tempsAciers:     toNum(row[6]),   // G : Heures acier
+      tempsChargement: toNum(row[7]),   // H : Heures Chargement
+      tempsCentrale:   toNum(row[8]),   // I : Heures Centrale à béton
+      qtAcierFaconne:  toNum(row[9]),   // J : Qté acier façonné (T)
+      comment:         row[10] ? String(row[10]).trim() : ''  // K : Commentaire de la semaine
     });
   }
   return data;
@@ -1714,15 +1716,17 @@ function writeKpiToExcel(kpi, cfg) {
 
   // Préparer la ligne de données (format Excel : A=Année, B=Semaine, C=m³, etc.)
   const newRow = [
-    kpi.year,                                                      // A : Année
-    `S${String(kpi.week).padStart(2, '0')}`,                      // B : Semaine (format S01, S02...)
-    kpi.m3 !== null ? kpi.m3 : null,                              // C : m³ béton coulé
-    kpi.hours !== null ? kpi.hours : null,                        // D : Heures MO
-    kpi.tempsBeton !== null ? kpi.tempsBeton : null,              // E : Heures béton
-    kpi.tempsAciers !== null ? kpi.tempsAciers : null,            // F : Heures acier
-    kpi.tempsChargement !== null ? kpi.tempsChargement : null,    // G : Heures Chargement
-    kpi.tempsCentrale !== null ? kpi.tempsCentrale : null,        // H : Heures Centrale à béton
-    kpi.comment || ''                                             // I : Commentaire de la semaine
+    kpi.year,                                                            // A : Année
+    `S${String(kpi.week).padStart(2, '0')}`,                            // B : Semaine
+    kpi.m3 !== null ? kpi.m3 : null,                                    // C : m³ béton coulé
+    kpi.hours !== null ? kpi.hours : null,                              // D : Heures MO
+    kpi.objectifRatio !== null ? kpi.objectifRatio : null,              // E : Objectif h/m³
+    kpi.tempsBeton !== null ? kpi.tempsBeton : null,                    // F : Heures béton
+    kpi.tempsAciers !== null ? kpi.tempsAciers : null,                  // G : Heures acier
+    kpi.tempsChargement !== null ? kpi.tempsChargement : null,          // H : Heures Chargement
+    kpi.tempsCentrale !== null ? kpi.tempsCentrale : null,              // I : Heures Centrale à béton
+    kpi.qtAcierFaconne !== null ? kpi.qtAcierFaconne : null,            // J : Qté acier façonné (T)
+    kpi.comment || ''                                                   // K : Commentaire de la semaine
   ];
 
   if (targetRowIndex >= 0) {
@@ -1821,6 +1825,17 @@ function getGMConfig() {
   return dbGet('gm_excel_config', null);
 }
 
+// Helper : message d'erreur lisible pour les erreurs fichier Excel
+function excelErrorMessage(e) {
+  if (e.code === 'EBUSY' || (e.message && e.message.includes('EBUSY'))) {
+    return 'Le fichier Excel est ouvert dans Excel. Fermez Excel puis réessayez.';
+  }
+  if (e.code === 'ENOENT' || (e.message && e.message.includes('ENOENT'))) {
+    return 'Fichier Excel introuvable. Vérifiez le chemin dans la configuration.';
+  }
+  return e.message;
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // NOTE : L'Excel est le seul stockage. Plus de watcher ni de JSON store pour
 //        les KPIs GM. Toutes les lectures/écritures vont directement dans Excel.
@@ -1898,7 +1913,7 @@ app.put('/api/gm-excel-config', requireToken, requireWriteRateLimit, (req, res) 
     dbSet('gm_excel_config', cfg);
     res.json({ success: true, result: { added: 0, updated: 0 }, rowCount: data.length });
   } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
+    res.status(500).json({ success: false, error: excelErrorMessage(e) });
   }
 });
 
@@ -1920,7 +1935,7 @@ app.post('/api/gm-import-excel', (req, res) => {
     dbSet('gm_excel_config', { ...cfg, lastSync: new Date().toISOString() });
     res.json({ success: true, result: { added: 0, updated: 0 }, rowCount: data.length, source: cfg.filename });
   } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
+    res.status(500).json({ success: false, error: excelErrorMessage(e) });
   }
 });
 
@@ -1928,7 +1943,7 @@ app.post('/api/gm-import-excel', (req, res) => {
 
 // Créer ou mettre à jour un KPI (écriture directe dans Excel)
 app.post('/api/gm-kpi', requireToken, requireWriteRateLimit, (req, res) => {
-  const { year, week, m3, hours, tempsBeton, tempsAciers, tempsChargement, tempsCentrale, comment } = req.body;
+  const { year, week, m3, hours, objectifRatio, tempsBeton, tempsAciers, tempsChargement, tempsCentrale, qtAcierFaconne, comment } = req.body;
 
   if (!year || !week) {
     return res.status(400).json({ success: false, error: 'Année et semaine sont obligatoires.' });
@@ -1947,10 +1962,12 @@ app.post('/api/gm-kpi', requireToken, requireWriteRateLimit, (req, res) => {
     week: parseInt(week),
     m3: m3 !== null && m3 !== '' ? parseFloat(m3) : null,
     hours: hours !== null && hours !== '' ? parseFloat(hours) : null,
+    objectifRatio: objectifRatio !== null && objectifRatio !== '' ? parseFloat(objectifRatio) : null,
     tempsBeton: tempsBeton !== null && tempsBeton !== '' ? parseFloat(tempsBeton) : null,
     tempsAciers: tempsAciers !== null && tempsAciers !== '' ? parseFloat(tempsAciers) : null,
     tempsChargement: tempsChargement !== null && tempsChargement !== '' ? parseFloat(tempsChargement) : null,
     tempsCentrale: tempsCentrale !== null && tempsCentrale !== '' ? parseFloat(tempsCentrale) : null,
+    qtAcierFaconne: qtAcierFaconne !== null && qtAcierFaconne !== '' ? parseFloat(qtAcierFaconne) : null,
     comment: comment.trim()
   };
 
@@ -1964,7 +1981,7 @@ app.post('/api/gm-kpi', requireToken, requireWriteRateLimit, (req, res) => {
 
     res.json({ success: true, action, kpi });
   } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
+    res.status(500).json({ success: false, error: excelErrorMessage(e) });
   }
 });
 
@@ -1992,7 +2009,7 @@ app.delete('/api/gm-kpi/:year/:week', requireToken, requireWriteRateLimit, (req,
     deleteKpiFromExcel(year, week, cfg);
     res.json({ success: true, deleted: { year, week } });
   } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
+    res.status(500).json({ success: false, error: excelErrorMessage(e) });
   }
 });
 
@@ -2030,7 +2047,7 @@ app.get('/api/gm-kpis-by-period', (req, res) => {
     kpis.sort((a, b) => b.year !== a.year ? b.year - a.year : b.week - a.week);
     res.json({ success: true, kpis, count: kpis.length });
   } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
+    res.status(500).json({ success: false, error: excelErrorMessage(e) });
   }
 });
 
@@ -2057,7 +2074,7 @@ app.get('/api/gm-available-periods', (req, res) => {
 
     res.json({ success: true, years, months });
   } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
+    res.status(500).json({ success: false, error: excelErrorMessage(e) });
   }
 });
 

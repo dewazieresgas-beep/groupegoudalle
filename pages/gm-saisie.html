@@ -44,15 +44,20 @@
               <!-- Résultat en temps réel -->
               <div class="form-group" style="display:flex; flex-direction:column; justify-content:flex-end;">
                 <label style="margin-bottom:8px;">Résultat h/m³</label>
-                <div id="realtimeResult" style="display:flex; align-items:center; gap:10px; padding:10px; background:#f5f5f5; border-radius:6px; min-height:48px;">
-                  <span id="realtimeRatio" style="font-size:20px; font-weight:700;">—</span>
-                  <span id="realtimeSmiley"></span>
+                <div id="realtimeResult" class="ratio-card">
+                  <div class="ratio-card__value">
+                    <span id="realtimeRatio" class="ratio-card__number">—</span>
+                    <span class="ratio-card__unit">h / m³</span>
+                    <span id="realtimeLabel" class="ratio-card__label">En attente de saisie</span>
+                  </div>
+                  <div class="ratio-card__smiley">
+                    <span id="realtimeSmiley"></span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;">
-              <!-- m³ et Heures -->
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; margin-bottom:20px;">
               <div class="form-group">
                 <label for="inputM3">🧱 m³ coulés</label>
                 <input type="number" id="inputM3" step="0.01" placeholder="Ex: 30.50">
@@ -61,36 +66,40 @@
                 <label for="inputHours">⏱️ Heures MO</label>
                 <input type="number" id="inputHours" step="0.01" placeholder="Ex: 121.00">
               </div>
+              <div class="form-group">
+                <label for="inputObjectif">🎯 Objectif h/m³</label>
+                <input type="number" id="inputObjectif" step="0.01">
+              </div>
             </div>
 
             <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:20px; margin-bottom:20px;">
               <!-- Temps détaillés -->
               <div class="form-group">
                 <label for="inputBeton">Heures béton</label>
-                <input type="number" id="inputBeton" step="0.01" placeholder="Optionnel">
+                <input type="number" id="inputBeton" step="0.01">
               </div>
               <div class="form-group">
                 <label for="inputAciers">Heures acier</label>
-                <input type="number" id="inputAciers" step="0.01" placeholder="Optionnel">
+                <input type="number" id="inputAciers" step="0.01">
               </div>
               <div class="form-group">
                 <label for="inputChargement">Heures Chargement</label>
-                <input type="number" id="inputChargement" step="0.01" placeholder="Optionnel">
+                <input type="number" id="inputChargement" step="0.01">
               </div>
               <div class="form-group">
                 <label for="inputCentrale">Heures Centrale à béton</label>
-                <input type="number" id="inputCentrale" step="0.01" placeholder="Optionnel">
+                <input type="number" id="inputCentrale" step="0.01">
               </div>
             </div>
 
             <div style="display:grid; grid-template-columns:1fr 3fr; gap:20px; margin-bottom:20px;">
               <div class="form-group">
                 <label for="inputAcierFaconne">Acier façonné (T)</label>
-                <input type="number" id="inputAcierFaconne" step="0.01" placeholder="Optionnel">
+                <input type="number" id="inputAcierFaconne" step="0.01">
               </div>
               <div class="form-group">
                 <label for="inputComment">💬 Commentaire <span style="color:var(--danger);">*</span></label>
-                <textarea id="inputComment" rows="3" placeholder="Le commentaire est obligatoire..." required></textarea>
+                <textarea id="inputComment" rows="3" required></textarea>
               </div>
             </div>
 
@@ -131,17 +140,19 @@
                 <th>Semaine</th>
                 <th>m³ béton coulé</th>
                 <th>Heures MO</th>
+                <th>Objectif</th>
                 <th>h/m³</th>
-                <th>H. béton</th>
-                <th>H. acier</th>
-                <th>H. Chargement</th>
-                <th>H. Centrale à béton</th>
+                <th>Béton (h)</th>
+                <th>Acier (h)</th>
+                <th>Chargement (h)</th>
+                <th>Centrale à béton (h)</th>
+                <th>Acier façonné (T)</th>
                 <th>Commentaire</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              <tr><td colspan="10" style="text-align:center; padding:20px;">Chargement...</td></tr>
+              <tr><td colspan="12" style="text-align:center; padding:20px;">Chargement...</td></tr>
             </tbody>
           </table>
           </div>
@@ -198,6 +209,7 @@
   <script>
     // ═══ ÉTAT GLOBAL ═══
     let currentEditMode = null; // { year, week } si en mode édition, null sinon
+    let loadedKpis = [];        // KPIs actuellement affichés (chargés depuis Excel via serveur)
 
     // ═══ HELPER: RÉCUPÉRER LE TOKEN DE SÉCURITÉ ═══
     function getSecurityToken() {
@@ -245,19 +257,30 @@
     function updateRealtimeRatio() {
       const m3 = parseFloat(document.getElementById('inputM3').value) || 0;
       const hours = parseFloat(document.getElementById('inputHours').value) || 0;
+      const objectif = parseFloat(document.getElementById('inputObjectif').value) || null;
+      const card = document.getElementById('realtimeResult');
       const ratioDisplay = document.getElementById('realtimeRatio');
+      const labelDisplay = document.getElementById('realtimeLabel');
       const smileyDisplay = document.getElementById('realtimeSmiley');
+
+      card.classList.remove('ratio-card--vert', 'ratio-card--rouge');
 
       if (m3 > 0 && hours > 0) {
         const ratio = hours / m3;
-        const smiley = getSmiley(ratio);
+        const smiley = getSmiley(ratio, objectif);
         ratioDisplay.textContent = ratio.toFixed(2);
-        ratioDisplay.style.color = smiley === 'vert' ? 'var(--success)' : 'var(--danger)';
         smileyDisplay.innerHTML = getSmileyEmoji(smiley);
+        if (smiley === 'vert') {
+          card.classList.add('ratio-card--vert');
+          labelDisplay.textContent = 'Bonne performance ✓';
+        } else {
+          card.classList.add('ratio-card--rouge');
+          labelDisplay.textContent = 'À améliorer';
+        }
       } else {
         ratioDisplay.textContent = '—';
-        ratioDisplay.style.color = '#666';
         smileyDisplay.innerHTML = '';
+        labelDisplay.textContent = 'En attente de saisie';
       }
     }
 
@@ -275,6 +298,7 @@
       // Écouter les changements pour le calcul temps réel
       document.getElementById('inputM3').addEventListener('input', updateRealtimeRatio);
       document.getElementById('inputHours').addEventListener('input', updateRealtimeRatio);
+      document.getElementById('inputObjectif').addEventListener('input', updateRealtimeRatio);
     }
 
     // ═══ SOUMISSION DU FORMULAIRE ═══
@@ -291,6 +315,7 @@
         week: document.getElementById('inputWeek').value,
         m3: document.getElementById('inputM3').value || null,
         hours: document.getElementById('inputHours').value || null,
+        objectifRatio: document.getElementById('inputObjectif').value || null,
         tempsBeton: document.getElementById('inputBeton').value || null,
         tempsAciers: document.getElementById('inputAciers').value || null,
         tempsChargement: document.getElementById('inputChargement').value || null,
@@ -336,9 +361,8 @@
     function enterEditMode(year, week) {
       currentEditMode = { year, week };
       
-      // Récupérer les données du KPI
-      const kpis = getKPIs();
-      const kpi = kpis.find(k => k.year === year && k.week === week);
+      // Récupérer les données du KPI depuis les données chargées (Excel via serveur)
+      const kpi = loadedKpis.find(k => k.year === year && k.week === week);
       if (!kpi) return;
 
       // Remplir le formulaire
@@ -346,6 +370,7 @@
       document.getElementById('inputWeek').value = kpi.week;
       document.getElementById('inputM3').value = kpi.m3 || '';
       document.getElementById('inputHours').value = kpi.hours || '';
+      document.getElementById('inputObjectif').value = kpi.objectifRatio || '';
       document.getElementById('inputBeton').value = kpi.tempsBeton || '';
       document.getElementById('inputAciers').value = kpi.tempsAciers || '';
       document.getElementById('inputChargement').value = kpi.tempsChargement || '';
@@ -425,7 +450,16 @@
         yearSelect.innerHTML = '<option value="">Toutes</option>' +
           years.map(y => `<option value="${y}">${y}</option>`).join('');
 
-        const activeYear = init ? currentYear : parseInt(prevYear) || currentYear;
+        // Au premier chargement : prendre l'année/mois de la dernière semaine importée
+        // Sinon : conserver la sélection courante
+        let activeYear, activeMonth;
+        if (init) {
+          // years est trié décroissant → years[0] = année la plus récente avec données
+          const lastDataYear = dataYears.years.length > 0 ? dataYears.years[0] : currentYear;
+          activeYear = lastDataYear;
+        } else {
+          activeYear = parseInt(prevYear) || currentYear;
+        }
         yearSelect.value = activeYear;
 
         // Charger les mois pour l'année active
@@ -437,7 +471,13 @@
         monthSelect.innerHTML = '<option value="">Tous</option>' +
           (dataMonths.months || []).map(m => `<option value="${m}">${monthNames[m-1]}</option>`).join('');
 
-        const activeMonth = init ? currentMonth : parseInt(prevMonth) || currentMonth;
+        if (init) {
+          // Prendre le dernier mois disponible (months est trié croissant → dernier = plus récent)
+          const months = dataMonths.months || [];
+          activeMonth = months.length > 0 ? months[months.length - 1] : currentMonth;
+        } else {
+          activeMonth = parseInt(prevMonth) || currentMonth;
+        }
         monthSelect.value = activeMonth;
 
       } catch (e) {
@@ -489,6 +529,7 @@
           return;
         }
 
+        loadedKpis = data.kpis;
         renderKpiTable(data.kpis);
       } catch (e) {
         showMessage(`❌ Erreur : ${e.message}`, 'error');
@@ -504,22 +545,24 @@
       count.className = kpis.length > 0 ? 'badge badge-success' : 'badge badge-secondary';
 
       if (kpis.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:20px;">Aucun indicateur pour cette période</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;padding:20px;">Aucun indicateur pour cette période</td></tr>`;
         return;
       }
 
       tbody.innerHTML = kpis.map(k => {
         const ratio = calculateRatio(k.hours, k.m3);
-        const smiley = getSmiley(ratio);
+        const smiley = getSmiley(ratio, k.objectifRatio);
         return `<tr>
           <td><strong>S${String(k.week).padStart(2,'0')}/${k.year}</strong></td>
           <td>${k.m3 != null ? parseFloat(k.m3).toFixed(2) : '—'}</td>
           <td>${k.hours != null ? parseFloat(k.hours).toFixed(2) : '—'}</td>
+          <td>${k.objectifRatio != null ? parseFloat(k.objectifRatio).toFixed(2) : '—'}</td>
           <td><span class="badge badge-${smiley}">${ratio !== null ? ratio.toFixed(2) : '—'} ${getSmileyEmoji(smiley)}</span></td>
           <td>${k.tempsBeton != null ? parseFloat(k.tempsBeton).toFixed(2) : '—'}</td>
           <td>${k.tempsAciers != null ? parseFloat(k.tempsAciers).toFixed(2) : '—'}</td>
           <td>${k.tempsChargement != null ? parseFloat(k.tempsChargement).toFixed(2) : '—'}</td>
           <td>${k.tempsCentrale != null ? parseFloat(k.tempsCentrale).toFixed(2) : '—'}</td>
+          <td>${k.qtAcierFaconne != null ? parseFloat(k.qtAcierFaconne).toFixed(2) : '—'}</td>
           <td><small style="white-space:pre-wrap;">${escapeHtml(k.comment || '')}</small></td>
           <td style="white-space:nowrap;">
             <button onclick="enterEditMode(${k.year}, ${k.week})" class="btn btn-primary" style="padding:4px 10px; font-size:12px; margin-right:5px;">
