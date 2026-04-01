@@ -199,6 +199,30 @@
     // ═══ ÉTAT GLOBAL ═══
     let currentEditMode = null; // { year, week } si en mode édition, null sinon
 
+    // ═══ HELPER: RÉCUPÉRER LE TOKEN DE SÉCURITÉ ═══
+    function getSecurityToken() {
+      // Le token est stocké dans api.js dans la variable _serverToken
+      // On doit le récupérer via le localStorage ou attendre qu'il soit disponible
+      return window._serverToken || localStorage.getItem('_serverToken') || null;
+    }
+
+    // ═══ HELPER: FETCH AVEC TOKEN ═══
+    async function fetchWithToken(url, options = {}) {
+      // Attendre que le serveur soit prêt et que le token soit disponible
+      await window.serverReady;
+      
+      const headers = options.headers || {};
+      headers['Content-Type'] = 'application/json';
+      
+      // Ajouter le token de sécurité s'il est disponible
+      const token = window._serverToken;
+      if (token) {
+        headers['x-goudalle-token'] = token;
+      }
+
+      return fetch(url, { ...options, headers });
+    }
+
     function showMessage(msg, type) {
       const d = document.getElementById('pageMessage');
       d.innerHTML = msg;
@@ -276,9 +300,8 @@
       };
 
       try {
-        const res = await fetch(SERVER_URL + '/gm-kpi', {
+        const res = await fetchWithToken(SERVER_URL + '/gm-kpi', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
         });
         const result = await res.json();
@@ -359,7 +382,7 @@
       }
 
       try {
-        const res = await fetch(SERVER_URL + `/gm-kpi/${year}/${week}`, { method: 'DELETE' });
+        const res = await fetchWithToken(SERVER_URL + `/gm-kpi/${year}/${week}`, { method: 'DELETE' });
         const result = await res.json();
         
         if (!result.success) {
@@ -540,8 +563,8 @@
         sheet:    document.getElementById('cfgSheet').value.trim()
       };
       try {
-        const res = await fetch(SERVER_URL + '/gm-excel-config', {
-          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        const res = await fetchWithToken(SERVER_URL + '/gm-excel-config', {
+          method: 'PUT',
           body: JSON.stringify(body)
         });
         const result = await res.json();

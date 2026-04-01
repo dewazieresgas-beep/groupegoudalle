@@ -305,6 +305,12 @@ const _serverReady = initServerStorage();
 // ─── EXPORT D'UN INDICATEUR DE DISPONIBILITÉ ────────────────────────────────────
 // Les pages peuvent attendre que les données soient chargées avant d'afficher
 window.serverReady = _serverReady;
+window._serverToken = null; // Exposer le token pour les requêtes personnalisées
+
+// Mettre à jour le token exposé quand il est disponible
+_serverReady.then(() => {
+  window._serverToken = _serverToken;
+});
 
 /**
  * Lance une fonction après que le serveur ait chargé toutes les données.
