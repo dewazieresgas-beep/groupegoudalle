@@ -262,7 +262,7 @@
         const dateTxt = ca.bilanDate ? new Date(ca.bilanDate).toLocaleDateString('fr-FR') : 'date non renseignée';
         caBar.innerHTML = `CA de reference (HT) — bilan du ${dateTxt}: <strong>CBCO</strong> ${formatSylveEuros(ca.cbco)} · <strong>GC</strong> ${formatSylveEuros(ca.gc)} · <strong>GM</strong> ${formatSylveEuros(ca.gm)}`;
       } else {
-        caBar.innerHTML = '<em>Aucun CA de reference renseigne — <a href="sylve-support-saisie.html">Saisir le CA de reference</a></em>';
+        caBar.innerHTML = '<em>Aucun CA de reference renseigne — <a href="compta-saisie.html">Saisir le CA de reference</a></em>';
       }
 
       if (retardCA.length === 0) return;

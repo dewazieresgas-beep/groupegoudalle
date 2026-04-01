@@ -253,13 +253,13 @@
       // Récupérer la session et les données utilisateur
       const session = Auth.getSession();
       if (!session) {
-        window.location.href = '../login.html';
+        window.location.href = '../connexion.html';
         return;
       }
 
       const user = Auth.getCurrentUser();
       if (!user) {
-        window.location.href = '../login.html';
+        window.location.href = '../connexion.html';
         return;
       }
 
@@ -378,7 +378,7 @@
     function resetSession() {
       if (confirm('Êtes-vous sûr ? Vous serez immédiatement déconnecté.')) {
         Auth.logout();
-        window.location.href = '../login.html';
+        window.location.href = '../connexion.html';
       }
     }
 

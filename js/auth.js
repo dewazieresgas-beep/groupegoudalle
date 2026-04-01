@@ -261,8 +261,8 @@ const Auth = {
     if (this._activityTimer) return; // Évite les doublons si appelé plusieurs fois
     this._activityTimer = setInterval(() => {
       if (!this.isConnected()) {
-        const isLoginPage = window.location.pathname.endsWith('login.html') ||
-                            window.location.pathname.endsWith('register.html');
+        const isLoginPage = window.location.pathname.endsWith('connexion.html') ||
+                            window.location.pathname.endsWith('inscription.html');
         if (!isLoginPage) {
           window.location.href = this._getLoginUrl();
         }
@@ -282,7 +282,7 @@ const Auth = {
    * @returns {string}
    */
   _getLoginUrl() {
-    return window.location.pathname.includes('/pages/') ? '../login.html' : './login.html';
+    return window.location.pathname.includes('/pages/') ? '../connexion.html' : './connexion.html';
   },
 
   /**
@@ -721,7 +721,7 @@ const Auth = {
     const check = () => {
       if (!this.hasAccess(permission)) {
         const base = window.location.pathname.includes('/pages/') ? '' : 'pages/';
-        window.location.href = `./${base}error-access.html`;
+        window.location.href = `./${base}erreur-acces.html`;
       } else {
         // Afficher le contenu maintenant que la permission est confirmée
         document.documentElement.style.visibility = '';

@@ -205,8 +205,8 @@
         </div>
       </div>
       <nav class="sidebar-nav">
-        <a href="./login.html" class="sidebar-item">Connexion</a>
-        <a href="./register.html" class="sidebar-item">Créer un compte</a>
+        <a href="./connexion.html" class="sidebar-item">Connexion</a>
+        <a href="./inscription.html" class="sidebar-item">Créer un compte</a>
       </nav>
     </div>
   </header>
@@ -411,7 +411,7 @@
         // Inscription réussie : rediriger vers la page de connexion
         showMessage(result.message, 'success');
         setTimeout(() => {
-          window.location.href = './login.html';
+          window.location.href = './connexion.html';
         }, 1500);
       } else {
         // Erreur : afficher le message d'erreur
@@ -423,7 +423,7 @@
      * Redirige vers la page de connexion
      */
     function goLogin() {
-      window.location.href = './login.html';
+      window.location.href = './connexion.html';
     }
 
     // ===== VÉRIFICATION INITIALE =====

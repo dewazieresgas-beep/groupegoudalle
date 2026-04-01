@@ -68,29 +68,29 @@ const DEFAULT_PRELOAD_KEYS = [
 ];
 
 const PAGE_PRELOAD_KEYS = {
-  'account.html': ['goudalle_users'],
-  'users-admin.html': ['goudalle_users'],
-  'users-code.html': ['goudalle_users'],
-  'gm.html': ['goudalle_kpis', 'goudalle_thresholds'],
-  'gm-saisie.html': ['goudalle_kpis', 'goudalle_thresholds'],
-  'gm-export.html': ['goudalle_kpis', 'goudalle_thresholds'],
-  'cbco.html': ['goudalle_cbco_data', 'goudalle_cbco_commercial'],
-  'cbco-saisie.html': ['goudalle_cbco_data'],
-  'cbco-usine.html': ['goudalle_cbco_productivite', 'goudalle_cbco_securite'],
-  'cbco-productivite-saisie.html': ['goudalle_cbco_productivite'],
-  'cbco-commercial.html': ['goudalle_cbco_commercial'],
-  'sylve-support.html': ['goudalle_sylve_balance', 'goudalle_sylve_ca'],
-  'sylve-support-saisie.html': ['goudalle_sylve_balance', 'goudalle_sylve_ca'],
-  'gm-paiement.html': ['goudalle_sylve_balance', 'goudalle_sylve_paiements_attente'],
-  'gc-paiement.html': ['goudalle_sylve_balance', 'goudalle_sylve_paiements_attente'],
-  'cbco-paiement.html': ['goudalle_sylve_balance', 'goudalle_sylve_paiements_attente'],
-  'indicateurs-generale.html': ['goudalle_cbco_productivite'],
+  'profil.html': ['goudalle_users'],
+  'utilisateurs.html': ['goudalle_users'],
+  'utilisateurs-code-admin.html': ['goudalle_users'],
+  'production-indicateurs-maconnerie.html': ['goudalle_kpis', 'goudalle_thresholds'],
+  'production-saisie-maconnerie.html': ['goudalle_kpis', 'goudalle_thresholds'],
+  'production-export-maconnerie.html': ['goudalle_kpis', 'goudalle_thresholds'],
+  'commerce-indicateurs.html': ['goudalle_cbco_data', 'goudalle_cbco_commercial'],
+  'commerce-saisie-ca.html': ['goudalle_cbco_data'],
+  'production-indicateurs-usine-cbco.html': ['goudalle_cbco_productivite', 'goudalle_cbco_securite'],
+  'production-saisie-productivite-usine.html': ['goudalle_cbco_productivite'],
+  'commerce-saisie-indicateurs.html': ['goudalle_cbco_commercial'],
+  'compta-indicateurs.html': ['goudalle_sylve_balance', 'goudalle_sylve_ca'],
+  'compta-saisie.html': ['goudalle_sylve_balance', 'goudalle_sylve_ca'],
+  'compta-paiements-maconnerie.html': ['goudalle_sylve_balance', 'goudalle_sylve_paiements_attente'],
+  'compta-paiements-charpente.html': ['goudalle_sylve_balance', 'goudalle_sylve_paiements_attente'],
+  'compta-paiements-cbco.html': ['goudalle_sylve_balance', 'goudalle_sylve_paiements_attente'],
+  'production-indicateurs-generaux.html': ['goudalle_cbco_productivite'],
   // Les pages achats manipulent de gros volumes historiques.
   // On évite leur préchargement global au démarrage et on laisse chaque page
   // charger uniquement ce dont elle a besoin au moment opportun.
-  'indicateurs-achat.html': [],
-  'indicateurs-achat-saisie.html': [],
-  'indicateurs-achat-controle.html': [],
+  'achat-indicateurs.html': [],
+  'achat-saisie.html': [],
+  'achat-controle.html': [],
 };
 
 function getCurrentPageName() {

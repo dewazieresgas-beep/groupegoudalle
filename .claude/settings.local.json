@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git config:*)"
+      "Bash(git config:*)",
+      "Bash(grep -n \"gc\\\\.html\\\\|gc-saisie\\\\.html\\\\|gm-export\\\\.html\" c:/Users/gdewazieres/Desktop/groupegoudalle/pages/*.html c:/Users/gdewazieres/Desktop/groupegoudalle/*.html c:/Users/gdewazieres/Desktop/groupegoudalle/js/*.js)",
+      "Bash(grep -rn \"indicateurs-achat-saisie-page\" c:/Users/gdewazieres/Desktop/groupegoudalle/pages/ c:/Users/gdewazieres/Desktop/groupegoudalle/*.html)",
+      "Bash(grep -rn \"href=['\\\\\"].*\\\\.html\\\\|src=['\\\\\"].*\\\\.html\" c:/Users/gdewazieres/Desktop/groupegoudalle/pages/*.html c:/Users/gdewazieres/Desktop/groupegoudalle/*.html)",
+      "Bash(grep -rn \"users-code\\\\|users-admin\" c:/Users/gdewazieres/Desktop/groupegoudalle/pages/*.html)",
+      "Bash(grep -v \"^\\\\s*//\")"
     ]
   }
 }

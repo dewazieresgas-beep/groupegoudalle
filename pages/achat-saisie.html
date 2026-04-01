@@ -343,7 +343,7 @@
       window.__setAnalyseProgress(4, 'Chargement du module d\'analyse...');
       achatsLogicPromise = new Promise((resolve, reject) => {
         const script = document.createElement('script');
-        script.src = '../js/indicateurs-achat-saisie-page.js';
+        script.src = '../js/achat-saisie.js';
         script.onload = async () => {
           try {
             window.__setAnalyseProgress(12, 'Initialisation du module...');
