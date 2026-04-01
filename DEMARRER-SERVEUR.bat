@@ -1,18 +1,18 @@
 @echo off
 setlocal
-title Intranet Groupe Goudalle - Serveur
+title Serveur Intranet Groupe Goudalle
 echo.
 echo  ============================================
-echo   Intranet Groupe Goudalle - Demarrage
+echo   Intranet Groupe Goudalle
 echo  ============================================
 echo.
 
 cd /d "%~dp0server"
 
-:: Vérifie si Node.js est installé
+:: Verifie si Node.js est installe
 node --version >nul 2>&1
 if %errorlevel% neq 0 (
-    echo ERREUR: Node.js n'est pas installe !
+    echo ERREUR: Node.js n est pas installe !
     echo.
     echo Telecharger Node.js sur : https://nodejs.org
     echo Choisir la version LTS puis relancer ce fichier.
@@ -34,25 +34,26 @@ if not exist "node_modules" (
 
 :: Libere le port 3000 si deja utilise
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":3000 " ^| findstr "LISTENING"') do (
-    echo [INFO] Port 3000 occupe (PID %%a) - Liberation en cours...
+    echo [INFO] Port 3000 occupe - Liberation en cours...
     taskkill /F /PID %%a >nul 2>&1
 )
 
 :: Lance le serveur
+echo.
 echo  Serveur demarre sur http://localhost:3000
-echo  Pour acceder depuis le reseau : http://[IP-DU-SERVEUR]:3000
+echo  Pour acceder depuis le reseau : http://[IP]:3000
 echo.
-echo  Pour connaitre l'IP du serveur : ouvrir cmd et taper "ipconfig"
+echo  Pour connaitre l IP du serveur : cmd puis "ipconfig"
 echo.
-echo  NE PAS FERMER CETTE FENETRE (le serveur s'arrete sinon)
+echo  NE PAS FERMER CETTE FENETRE
 echo.
 :RESTART
 echo [%date% %time%] Demarrage du serveur...
 node server.js
 set EXITCODE=%ERRORLEVEL%
 echo.
-echo [%date% %time%] ATTENTION: serveur arrete (code %EXITCODE%).
-echo Redemarrage automatique dans 5 secondes...
+echo [%date% %time%] Serveur arrete (code %EXITCODE%).
+echo Redemarrage dans 5 secondes...
 timeout /t 5 /nobreak >nul
 goto RESTART
 
