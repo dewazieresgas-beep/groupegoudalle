@@ -379,7 +379,8 @@
     <main class="main-content">
       <div class="d-flex justify-between items-center mb-3" style="gap: 12px; flex-wrap: wrap;">
         <h1 class="mb-0">Indicateurs RH</h1>
-        <a href="./rh-saisie.html" id="rhConfigLink" class="btn btn-secondary" style="display:none;">🔗 Lier les Excel sécurité</a>
+        <a href="./rh-saisie.html" class="btn btn-primary">📝 Déclarer un accident</a>
+        <a href="./rh-saisie.html" id="rhConfigLink" class="btn btn-secondary" style="display:none;">⚙️ Config Excel</a>
       </div>
 
       <div id="pageMessage" class="alert" style="display:none;"></div>
@@ -410,10 +411,10 @@
   <script>
     const RH_HISTORY_START_ISO = '2019-09-01';
     const RH_COMPANIES = [
-      { id: 'cbco', label: 'CBCO' },
+      { id: 'cbco',      label: 'Concept Bois Côte d\'Opale' },
       { id: 'charpente', label: 'Goudalle Charpente' },
-      { id: 'macons', label: 'Goudalle Maçonnerie' }
-    ];
+      { id: 'macons',    label: 'Nouvelle Goudalle Maçonnerie' },
+      ];
     let rhState = {
       incidents: [],
       selectedExercise: null
@@ -546,7 +547,7 @@
           id,
           label,
           totalAccidents: sorted.length,
-          accidentsAvecArret: sorted.filter((item) => Number(item.stopDays || 0) > 0).length,
+          accidentsAvecArret: sorted.filter((item) => item.gravite === 'Avec arrêt' || Number(item.stopDays || 0) > 0).length,
           joursArret: sorted.reduce((sum, item) => sum + Number(item.stopDays || 0), 0),
           joursSansAccident: daysSince,
           plusLonguePeriodeSansAccident: longestStreakDays,
@@ -649,8 +650,23 @@
       `;
     }
 
+    function graviteChip(gravite) {
+      const map = {
+        'Avec arrêt':      'background:#fff0e8; color:#c0480d; border-color:#f4c4a8;',
+        'IPP':             'background:#fdf0e0; color:#9a4e00; border-color:#f0d0a0;',
+        'Décès':           'background:#fde8e8; color:#a01010; border-color:#f4a0a0;',
+        'Soins ponctuels': 'background:#fff8e0; color:#8a6000; border-color:#f0dca0;',
+        'Sans arrêt':      'background:#edf4ee; color:#345441; border-color:#cfe0d2;',
+      };
+      const style = map[gravite] || 'background:#f5f5f5; color:#555; border-color:#ddd;';
+      return `<span class="rh-chip" style="${style}">${escapeHtml(gravite || '—')}</span>`;
+    }
+
     function renderRecentIncident(item) {
-      const stopLabel = item.stopDays ? `${item.stopDays} jour${item.stopDays > 1 ? 's' : ''} d'arrêt` : 'Sans durée d\'arrêt renseignée';
+      const stopInfo = item.stopDays
+        ? `${item.stopDays} jour${item.stopDays > 1 ? 's' : ''} d'arrêt`
+        : '';
+      const typeLabel = item.type ? `<span class="rh-chip" style="font-size:11px;">${escapeHtml(item.type)}</span>` : '';
       return `
         <article class="rh-incident">
           <div class="rh-incident-top">
@@ -658,10 +674,13 @@
               <div class="rh-incident-title">${escapeHtml(item.employeeName || 'Salarié non renseigné')}</div>
               <div class="rh-incident-meta">${escapeHtml(item.companyLabel || '—')} · ${formatDateFr(item.accidentDate)}</div>
             </div>
-            <span class="rh-chip">${stopLabel}</span>
+            <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+              ${typeLabel}
+              ${graviteChip(item.gravite)}
+            </div>
           </div>
-          <div class="rh-incident-meta">Arrêt : ${item.stopRaw ? escapeHtml(item.stopRaw) : 'non renseigné'}</div>
-          <div class="rh-incident-cause">${escapeHtml(item.cause || 'Cause non renseignée')}</div>
+          ${stopInfo ? `<div class="rh-incident-meta" style="margin-bottom:4px;">${stopInfo}</div>` : ''}
+          <div class="rh-incident-cause">${escapeHtml(item.cause || 'Cause non renseignée')}${item.description ? ` — ${escapeHtml(item.description)}` : ''}</div>
         </article>
       `;
     }
@@ -818,7 +837,7 @@
       }
 
       if (!cfg || !cfg.active) {
-        showMessage('⚠️ Aucun fichier Excel sécurité n’est encore lié. Connecte les 3 fichiers depuis la page de liaison RH.', 'warning');
+        showMessage("⚠️ Aucun dossier Excel sécurité n'est encore configuré. Connecte le dossier depuis la page de saisie RH (admin).", "warning");
       }
 
       const historyStart = getHistoryStartDate();
