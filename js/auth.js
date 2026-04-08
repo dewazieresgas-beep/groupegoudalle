@@ -11,25 +11,14 @@ const Auth = {
   STORAGE_KEY_ADMIN_CODE: 'goudalle_admin_code', // Code pour créer des comptes direction/référent
   SESSION_TIMEOUT: 3600000,                     // Durée de session : 1 heure (en ms)
 
-  // Rôles disponibles dans le système (hiérarchie décroissante)
+  // Rôles disponibles dans le système
   ROLES: {
     DIRECTION: 'direction',  // Accès complet : gestion + administration + audit
-    REFERENT: 'referent',    // Accès intermédiaire : gestion + saisie
-    REFERENT_CBCO: 'referent_cbco',  // Référent CBCO : suivi chiffre d'affaires
-    REFERENT_SYLVE: 'referent_sylve',  // Référent Sylve Support
-    REFERENT_GC: 'referent_gc', // Référent Goudalle Charpente
-    LECTURE: 'lecture'       // Accès minimal : consultation uniquement
   },
 
-  // Permissions par rôle - définit ce que chaque rôle peut faire
-  PERMISSIONS: {
-    direction: ['gm', 'gm_saisie', 'gm_paiement', 'gc', 'gc_saisie', 'gc_paiement', 'cbco', 'cbco_usine', 'cbco_saisie', 'cbco_productivite_saisie', 'cbco_paiement', 'cbco_commercial', 'sylve', 'sylve_saisie', 'users_admin', 'thresholds', 'production_general', 'rh', 'rh_security_admin'],
-    referent: ['gm', 'gm_saisie', 'gm_paiement', 'thresholds', 'production_general'],
-    referent_cbco: ['cbco', 'cbco_usine', 'cbco_saisie', 'cbco_productivite_saisie', 'cbco_paiement', 'cbco_commercial', 'production_general'],
-    referent_sylve: ['sylve', 'sylve_saisie'],
-    referent_gc: ['gc', 'gc_saisie', 'gc_paiement'],
-    lecture: ['gm']
-  },
+  // Permissions : la direction a toujours accès à tout (bypass dans hasAccess).
+  // Les autres utilisateurs utilisent customPermissions (géré depuis la page utilisateurs).
+  PERMISSIONS: {},
 
   // ============ INITIALIZATION ============
   /**
@@ -348,51 +337,9 @@ const Auth = {
     return { success: true, message: '✅ Permissions mises à jour' };
   },
 
-  canViewGM() {
-    return this.hasAccess('gm');
-  },
-
-  canEditGM() {
-    return this.hasAccess('gm_saisie');
-  },
-
-  canManageUsers() {
-    return this.hasAccess('users_admin');
-  },
-
-  canManageThresholds() {
-    return this.hasAccess('thresholds');
-  },
-
   isDirection() {
     const session = this.getSession();
     return session && session.role === this.ROLES.DIRECTION;
-  },
-
-  isReferent() {
-    const session = this.getSession();
-    return session && session.role === this.ROLES.REFERENT;
-  },
-
-  isReferentCBCO() {
-    const session = this.getSession();
-    return session && session.role === this.ROLES.REFERENT_CBCO;
-  },
-
-  canViewCBCO() {
-    return this.hasAccess('cbco');
-  },
-
-  canEditCBCO() {
-    return this.hasAccess('cbco_saisie');
-  },
-
-  canViewSylve() {
-    return this.hasAccess('sylve');
-  },
-
-  canEditSylve() {
-    return this.hasAccess('sylve_saisie');
   },
 
   // ============ USER MANAGEMENT ============
@@ -406,7 +353,7 @@ const Auth = {
    * @param {string} adminCode - Code admin requis pour rôles direction/référent
    * @returns {Object} - { success: boolean, message: string, user?: object }
    */
-  registerUser(username, password, displayName, email, role = this.ROLES.LECTURE, adminCode = null, customPermissions = null) {
+  registerUser(username, password, displayName, email, role = 'lecture', adminCode = null, customPermissions = null) {
     // ===== ÉTAPE 1 : VALIDATIONS DES DONNÉES =====
     if (!username || username.length < 3) {
       return { success: false, message: '❌ Nom d\'utilisateur : 3 caractères minimum' };
@@ -431,8 +378,8 @@ const Auth = {
     }
 
     // ===== ÉTAPE 3 : CONTRÔLE DE SÉCURITÉ POUR RÔLES PRIVILÉGIÉS =====
-    // Les rôles DIRECTION et REFERENT nécessitent un code admin pour être créés
-    if (role !== this.ROLES.LECTURE) {
+    // Seul le rôle direction nécessite un code admin
+    if (role !== 'lecture') {
       const correctCode = localStorage.getItem(this.STORAGE_KEY_ADMIN_CODE);
       if (adminCode !== correctCode) {
         return { 

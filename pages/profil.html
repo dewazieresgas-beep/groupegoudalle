@@ -271,11 +271,7 @@
       // ===== AFFICHAGE DU RÔLE AVEC BADGE =====
       const roleNames = {
         'direction': '🗝️ Direction',
-        'referent': '📊 Référent',
-        'referent_cbco': '🏢 Référent CBCO',
-        'referent_sylve': '📒 Référent Sylve Support',
-        'referent_gc': '🏗️ Référent Goudalle Charpente',
-        'lecture': '👁️ Consultation'
+        'lecture': '👤 Utilisateur'
       };
       document.getElementById('roleDisplay').innerHTML = `<span class="role-badge">${roleNames[session.role] || session.role}</span>`;
 

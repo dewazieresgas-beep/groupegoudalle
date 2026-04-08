@@ -146,13 +146,18 @@
       const perms = Array.isArray(u.customPermissions) ? u.customPermissions : [];
 
       const sections = [];
-      const commercial = ['cbco', 'cbco_saisie', 'cbco_commercial'];
-      const compta = ['sylve', 'sylve_saisie', 'gc_paiement', 'gm_paiement', 'cbco_paiement'];
-      const production = ['production_general', 'gm', 'gm_saisie', 'cbco_usine', 'cbco_productivite_saisie'];
+      const production = ['production_indicateurs_generaux', 'production_indicateurs_maconnerie', 'production_export_maconnerie', 'production_indicateurs_usine', 'production_saisie_maconnerie', 'production_saisie_productivite'];
+      const commerce = ['commerce_indicateurs', 'commerce_saisie_ca', 'commerce_saisie_indicateurs'];
+      const compta = ['compta_indicateurs', 'compta_saisie', 'compta_paiements_charpente', 'compta_paiements_maconnerie', 'compta_paiements_cbco'];
+      const achat = ['achat_indicateurs', 'achat_saisie', 'achat_controle'];
+      const rh = ['rh_indicateurs', 'rh_saisie', 'rh_security_admin'];
 
-      if (commercial.some(k => perms.includes(k))) sections.push('💼 Commercial');
-      if (compta.some(k => perms.includes(k))) sections.push('📒 Comptabilité');
       if (production.some(k => perms.includes(k))) sections.push('🏭 Production');
+      if (commerce.some(k => perms.includes(k))) sections.push('💼 Commerce');
+      if (compta.some(k => perms.includes(k))) sections.push('📒 Comptabilité');
+      if (achat.some(k => perms.includes(k))) sections.push('🛒 Achat');
+      if (perms.includes('chantiers')) sections.push('🚧 Chantiers');
+      if (rh.some(k => perms.includes(k))) sections.push('👷 RH');
       if (perms.includes('users_admin')) sections.push('⚙️ Admin');
       if (sections.length > 0) return sections.join(', ');
       return '👁️ Accès limité';
@@ -270,45 +275,60 @@
   <script>
     const ALL_PAGES_GROUPS = [
       {
-        group: '💼 Indicateurs Commerciaux',
+        group: '🏭 Production',
         pages: [
-          { key: 'cbco',             label: "🏢 Indicateurs Comercial" },
-          { key: 'cbco_saisie',      label: "✏️ Saisie Chiffre d'Affaires" },
-          { key: 'cbco_commercial',  label: '💼 Saisie Indicateurs Commerciaux' },
+          { key: 'production_indicateurs_generaux',  label: '📈 Indicateurs Généraux' },
+          { key: 'production_indicateurs_maconnerie', label: '📊 Indicateurs Maçonnerie' },
+          { key: 'production_export_maconnerie',      label: '📤 Exports Maçonnerie' },
+          { key: 'production_indicateurs_usine',      label: '🏭 Indicateurs Usine CBCO' },
+          { key: 'production_saisie_maconnerie',      label: '✏️ Saisie Indicateurs Maçonnerie' },
+          { key: 'production_saisie_productivite',    label: '✏️ Saisie Productivité Usine' },
         ]
       },
       {
-        group: '📒 Indicateurs Comptabilité',
+        group: '💼 Commerce',
         pages: [
-          { key: 'sylve',        label: '📊 Indicateurs Balance Âgée' },
-          { key: 'sylve_saisie', label: '✏️ Saisie Factures' },
-          { key: 'gc_paiement',  label: '💳 Paiements en Attente — Charpente' },
-          { key: 'gm_paiement',  label: '💳 Paiements en Attente — Maçonnerie' },
-          { key: 'cbco_paiement',label: '💳 Paiements en Attente — CBCO' },
+          { key: 'commerce_indicateurs',        label: '📊 Indicateurs Commercial' },
+          { key: 'commerce_saisie_ca',          label: "✏️ Saisie Chiffre d'Affaires" },
+          { key: 'commerce_saisie_indicateurs', label: '✏️ Saisie Indicateurs Commerciaux' },
         ]
       },
       {
-        group: '🏭 Indicateurs Production',
+        group: '📒 Comptabilité',
         pages: [
-          { key: 'production_general',       label: '📈 Indicateures générale' },
-          { key: 'gm',                       label: '📊 Indicateurs Maçonnerie' },
-          { key: 'cbco_usine',               label: '🏭 Indicateurs Usine CBCO' },
-          { key: 'gm_saisie',                label: '✏️ Saisie Indicateurs Maçonnerie' },
-          { key: 'cbco_productivite_saisie', label: '✏️ Saisie Productivité Usine' },
+          { key: 'compta_indicateurs',          label: '📊 Indicateurs Comptabilité — Balance Âgée' },
+          { key: 'compta_saisie',               label: '✏️ Saisie Factures' },
+          { key: 'compta_paiements_charpente',  label: '💳 Paiements en Attente — Charpente' },
+          { key: 'compta_paiements_maconnerie', label: '💳 Paiements en Attente — Maçonnerie' },
+          { key: 'compta_paiements_cbco',       label: '💳 Paiements en Attente — CBCO' },
+        ]
+      },
+      {
+        group: '🛒 Achat',
+        pages: [
+          { key: 'achat_indicateurs', label: '📊 Indicateurs Achat' },
+          { key: 'achat_saisie',      label: '✏️ Saisie Indicateurs Achats' },
+          { key: 'achat_controle',    label: '🔍 Contrôle Imports Achats' },
+        ]
+      },
+      {
+        group: '🚧 Chantiers',
+        pages: [
+          { key: 'chantiers', label: '🏗️ Indicateurs Chantiers' },
+        ]
+      },
+      {
+        group: '👷 RH',
+        pages: [
+          { key: 'rh_indicateurs',    label: '🦺 Indicateurs RH' },
+          { key: 'rh_saisie',         label: '📝 Déclaration Accident' },
+          { key: 'rh_security_admin', label: '⚙️ Config Admin RH' },
         ]
       },
       {
         group: '⚙️ Administration',
         pages: [
           { key: 'users_admin', label: '👥 Gestion Utilisateurs' },
-          { key: 'thresholds',  label: '🎯 Seuils & Paramètres' },
-        ]
-      },
-      {
-        group: '👷 RH',
-        pages: [
-          { key: 'rh',                label: '🦺 Indicateurs Sécurité RH' },
-          { key: 'rh_security_admin', label: '🔗 Liaison Excel Sécurité RH' },
         ]
       },
     ]

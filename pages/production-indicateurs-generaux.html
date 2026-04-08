@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Indicateures générale - Production</title>
+  <title>Indicateurs Généraux - Production</title>
   <link rel="stylesheet" href="../css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
@@ -35,7 +35,7 @@
   <script src="../js/utils.js"></script>
   <script>
     window.APP_LOGO = 'cbco';
-    Auth.requireAuth();
+    Auth.requirePermission('production_indicateurs_generaux');
   </script>
 
   <div class="app-container">
@@ -43,7 +43,7 @@
 
     <main class="main-content">
       <div class="d-flex justify-between items-center mb-3" style="gap: 12px; flex-wrap: wrap;">
-        <h1 class="mb-0">Indicateures générale</h1>
+        <h1 class="mb-0">Indicateurs Généraux</h1>
         <div class="d-flex items-center" style="gap: 8px;">
           <label for="igYearSelect" class="mb-0" style="margin:0;">Année :</label>
           <select id="igYearSelect" class="ig-year-select"></select>
@@ -84,7 +84,7 @@
 
   <script>
     function hasProductionAccess() {
-      return Auth.hasAccess('production_general');
+      return Auth.hasAccess('production_indicateurs_generaux');
     }
 
     function cssVar(name, fallback) {
