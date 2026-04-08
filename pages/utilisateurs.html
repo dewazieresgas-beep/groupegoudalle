@@ -220,7 +220,12 @@
       renderAccessCheckboxes('createAccessCheckboxes', []);
     }
 
-    window.onServerReady(init);
+    window.addEventListener('load', async () => {
+      await window.serverReady;
+      init();
+    });
+    // Sur refresh automatique : mettre à jour la liste uniquement, sans réinitialiser les sidebars ni les cases à cocher
+    window.addEventListener('serverDataRefreshed', () => loadUsers());
   </script>
 
   <!-- Modale Gérer les accès -->

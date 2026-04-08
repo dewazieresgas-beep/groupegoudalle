@@ -189,17 +189,27 @@ async function loadKeysFromServer(keys = [], options = {}) {
 async function sendToServer(endpoint, data) {
   if (!_serverAvailable) return;
   try {
-    const signal = createTimeoutSignal(5000);
-    // Le token de sécurité est inclus dans chaque requête d'écriture.
-    // Le serveur rejettera la requête avec 403 si le token est absent ou invalide.
     const headers = { 'Content-Type': 'application/json' };
     if (_serverToken) headers['x-goudalle-token'] = _serverToken;
-    await fetch(SERVER_URL + endpoint, {
+    const signal = createTimeoutSignal(5000);
+    const res = await fetch(SERVER_URL + endpoint, {
       method: 'PUT',
       headers,
       body: JSON.stringify(data),
       ...(signal ? { signal } : {})
     });
+    // Si le token est invalide (ex: serveur redémarré), on re-fetch le token et on réessaie
+    if (res.status === 403) {
+      await checkServerAvailable();
+      if (_serverToken) {
+        headers['x-goudalle-token'] = _serverToken;
+        await fetch(SERVER_URL + endpoint, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify(data),
+        });
+      }
+    }
   } catch (e) {
     console.warn(`[API] Erreur envoi ${endpoint}:`, e.message);
   }
