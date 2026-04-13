@@ -360,11 +360,18 @@
     function renderAccountsList() {
       const users = Auth.getUserList().filter(u => u.isActive);
       const container = document.getElementById('accountsList');
+
+      // Avertir si le serveur est inaccessible (liste potentiellement incomplète)
+      const serverOk = window._serverAvailable === true;
+      const warningHtml = !serverOk
+        ? '<p style="color:#b85c5c; font-size:12px; margin:0 0 10px 0; padding:8px; background:#fdf5f5; border-radius:4px; border-left:3px solid #b85c5c;">Serveur inaccessible — liste potentiellement incomplète. Vérifiez la connexion réseau.</p>'
+        : '';
+
       if (!users || users.length === 0) {
-        container.innerHTML = '<p style="color:var(--text-muted); font-size:13px; margin:0;">Aucun compte disponible</p>';
+        container.innerHTML = warningHtml + '<p style="color:var(--text-muted); font-size:13px; margin:0;">Aucun compte disponible</p>';
         return;
       }
-      container.innerHTML = users.map(u => `
+      container.innerHTML = warningHtml + users.map(u => `
         <div class="demo-account" onclick="autofill('${escapeHtml(u.username)}')">
           <div class="demo-account-header">
             <span class="demo-account-user">${escapeHtml(u.username)}</span>

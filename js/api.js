@@ -171,20 +171,66 @@ async function loadKeysFromServer(keys = [], options = {}) {
       );
       if (res.ok) {
         const data = await res.json();
-        const isEmptyUsersObject = key === 'goudalle_users'
-          && data
-          && typeof data === 'object'
-          && !Array.isArray(data)
-          && Object.keys(data).length === 0;
-        if (!isEmptyUsersObject) {
+
+        if (key === 'goudalle_users') {
+          const serverUsers = (data && typeof data === 'object' && !Array.isArray(data)) ? data : {};
+          const isEmptyServer = Object.keys(serverUsers).length === 0;
+
+          if (!isEmptyServer) {
+            // Fusionner les utilisateurs créés localement avant que le serveur réponde
+            // (ex: inscription soumise pendant le chargement initial)
+            let localUsers = {};
+            try {
+              const localRaw = _origGet('goudalle_users');
+              if (localRaw) localUsers = JSON.parse(localRaw);
+            } catch {}
+
+            const merged = { ...serverUsers };
+            let hasLocalOnly = false;
+            for (const [username, userData] of Object.entries(localUsers)) {
+              if (!merged[username] && userData && userData.createdBy !== 'SYSTEM') {
+                // Utilisateur créé localement et absent du serveur → l'ajouter
+                merged[username] = userData;
+                hasLocalOnly = true;
+              }
+            }
+
+            _cache[key] = merged;
+            // Synchroniser le localStorage natif avec la donnée serveur fusionnée
+            try { _origSet(key, JSON.stringify(merged)); } catch {}
+
+            if (hasLocalOnly) {
+              // Remonter les comptes locaux manquants vers le serveur
+              sendToServer('/users', merged);
+            }
+          }
+          // Si le serveur renvoie {}, on garde le cache local (compte par défaut)
+        } else {
           _cache[key] = data;
+          // Synchroniser le localStorage natif
+          try { _origSet(key, JSON.stringify(data)); } catch {}
         }
+
         _loadedServerKeys.add(key);
       }
     } catch (e) {
       console.warn(`[API] Impossible de charger la clé ${key}:`, e.message);
     }
   }));
+
+  // Envoyer les écritures mises en file d'attente pendant l'initialisation
+  // (comptes créés avant que le serveur ait répondu)
+  if (_pendingWrites.size > 0) {
+    for (const [endpoint, data] of _pendingWrites) {
+      // Ne pas écraser les utilisateurs du serveur avec la liste locale initiale
+      // sauf si l'endpoint n'est pas /users (pour /users la fusion a déjà eu lieu)
+      if (endpoint !== '/users') {
+        sendToServer(endpoint, data);
+      }
+    }
+    _pendingWrites.clear();
+  }
+
   return true;
 }
 
@@ -259,8 +305,14 @@ function apiSetItem(key, value) {
 
   // Envoyer au serveur si un endpoint existe pour cette clé
   const endpoint = KEY_TO_ENDPOINT[key];
-  if (endpoint && _serverAvailable) {
-    sendToServer(endpoint, _cache[key]);
+  if (endpoint) {
+    if (_serverAvailable === true) {
+      sendToServer(endpoint, _cache[key]);
+    } else if (_serverAvailable === null) {
+      // Serveur pas encore connu : mettre en file d'attente (remplace si déjà présent)
+      _pendingWrites.set(endpoint, _cache[key]);
+    }
+    // Si false (serveur inaccessible) : la donnée reste en cache/localStorage local
   }
 
   // Toujours aussi écrire en localStorage natif (double sécurité / fallback)
@@ -320,10 +372,12 @@ const _serverReady = initServerStorage();
 // Les pages peuvent attendre que les données soient chargées avant d'afficher
 window.serverReady = _serverReady;
 window._serverToken = null; // Exposer le token pour les requêtes personnalisées
+window._serverAvailable = null; // Exposer la disponibilité du serveur pour les pages
 
-// Mettre à jour le token exposé quand il est disponible
+// Mettre à jour les valeurs exposées quand le serveur répond
 _serverReady.then(() => {
   window._serverToken = _serverToken;
+  window._serverAvailable = _serverAvailable;
 });
 
 /**
