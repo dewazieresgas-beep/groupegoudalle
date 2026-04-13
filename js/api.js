@@ -24,6 +24,10 @@ let _refreshInProgress = false;
 let _serverToken = null;      // Token de sécurité reçu depuis /api/health
 const _loadedServerKeys = new Set();
 
+// File d'attente pour les écritures qui surviennent avant que le serveur réponde.
+// Clé = endpoint, Valeur = dernière donnée à envoyer (on garde seulement la plus récente).
+const _pendingWrites = new Map();
+
 function createTimeoutSignal(timeoutMs) {
   if (typeof AbortController === 'undefined') return undefined;
   const controller = new AbortController();

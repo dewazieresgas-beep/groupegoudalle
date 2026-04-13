@@ -101,6 +101,7 @@
       line-height: 1;
       font-weight: 700;
       margin-bottom: 8px;
+      font-variant-numeric: tabular-nums;
     }
     .rh-stat-sub {
       color: #6a7c6d;
@@ -134,9 +135,23 @@
     .rh-company-card {
       background: linear-gradient(180deg, #ffffff 0%, #fbfdfb 100%);
       border: 1px solid #d8e4da;
+      border-top: 4px solid #cfe0d2;
       border-radius: 22px;
       padding: 18px;
       box-shadow: 0 14px 28px rgba(24, 43, 28, 0.06);
+    }
+    .rh-company-card.card-alert {
+      border-top-color: #f0a070;
+    }
+    .rh-company-card.card-ok {
+      border-top-color: #5f8667;
+    }
+    .rh-company-logo {
+      width: 38px;
+      height: 38px;
+      object-fit: contain;
+      border-radius: 8px;
+      flex-shrink: 0;
     }
     .rh-company-head {
       display: flex;
@@ -179,12 +194,16 @@
       font-size: 28px;
       font-weight: 700;
       line-height: 1;
+      font-variant-numeric: tabular-nums;
     }
     .rh-mini .sub {
       margin-top: 7px;
       color: #6e8371;
       font-size: 12px;
       line-height: 1.4;
+    }
+    .rh-mini {
+      min-height: 84px;
     }
     .rh-safety-meter {
       margin-top: 16px;
@@ -210,7 +229,22 @@
       color: var(--rh-ink);
       font-weight: 800;
       line-height: 1;
+      font-variant-numeric: tabular-nums;
     }
+    .rh-safety-meter-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .rh-safety-meter-inner img {
+      width: 56px;
+      height: 56px;
+      object-fit: contain;
+      flex-shrink: 0;
+      margin-top: 4px;
+    }
+
     .rh-safety-meter.alert .days {
       color: var(--rh-danger);
     }
@@ -278,6 +312,43 @@
       color: var(--text-muted-dark);
       padding: 24px 0;
       text-align: center;
+    }
+    .rh-last-accident {
+      margin-top: 12px;
+      padding: 12px 14px;
+      background: #fff8f5;
+      border: 1px solid #f0c4a8;
+      border-left: 3px solid var(--rh-danger);
+      border-radius: 10px;
+    }
+    .rh-last-accident-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .rh-last-accident-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--rh-danger);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .rh-last-accident-who {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--rh-ink);
+      margin-bottom: 4px;
+    }
+    .rh-last-accident-desc {
+      font-size: 12px;
+      color: #5a5a5a;
+      line-height: 1.5;
+      font-style: italic;
     }
     .rh-toolbar {
       display: flex;
@@ -378,31 +449,20 @@
 
     <main class="main-content">
       <div class="d-flex justify-between items-center mb-3" style="gap: 12px; flex-wrap: wrap;">
-        <h1 class="mb-0">Indicateurs RH</h1>
-        <a href="./rh-saisie.html" class="btn btn-primary">📝 Déclarer un accident</a>
-        <a href="./rh-saisie.html" id="rhConfigLink" class="btn btn-secondary" style="display:none;">⚙️ Config Excel</a>
+        <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+          <h1 class="mb-0">Indicateurs RH</h1>
+          <div class="rh-filter">
+            <label for="exerciseSelect">Exercice affiché</label>
+            <select id="exerciseSelect"></select>
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+          <a href="./rh-saisie.html" class="btn btn-primary">📝 Déclarer un accident</a>
+          <a href="./rh-saisie.html" id="rhConfigLink" class="btn btn-secondary" style="display:none;">⚙️ Config Excel</a>
+        </div>
       </div>
 
       <div id="pageMessage" class="alert" style="display:none;"></div>
-
-      <section class="rh-hero">
-        <h2 class="rh-hero-title">Sécurité du groupe</h2>
-        <p class="rh-hero-text">
-          Tableau de bord sécurité RH pour suivre les accidents du travail, comparer les entreprises
-          et lire rapidement les points de vigilance sur l'exercice sélectionné.
-        </p>
-        <div class="rh-hero-meta">
-          <span class="rh-chip">Historique suivi depuis le 01/09/2019</span>
-          <span class="rh-chip">Exercice du 1 octobre au 30 septembre</span>
-        </div>
-      </section>
-
-      <div class="rh-toolbar">
-        <div class="rh-filter">
-          <label for="exerciseSelect">Exercice affiché</label>
-          <select id="exerciseSelect"></select>
-        </div>
-      </div>
 
       <div id="rhRoot"></div>
     </main>
@@ -410,6 +470,12 @@
 
   <script>
     const RH_HISTORY_START_ISO = '2019-09-01';
+    const COMPANY_ASSETS = {
+      cbco:      { logo: 'cbco.png'                },
+      charpente: { logo: 'goudalle-charpente.png'  },
+      macons:    { logo: 'goudalle-maconnerie.png' },
+    };
+    const GROUP_ASSETS = { logo: 'groupe.png' };
     const RH_COMPANIES = [
       { id: 'cbco',      label: 'Concept Bois Côte d\'Opale' },
       { id: 'charpente', label: 'Goudalle Charpente' },
@@ -554,6 +620,10 @@
           dureeMoyenneArret: averageStopDays,
           dernierAccidentDate: latest?.accidentDate || null,
           dernierAccidentNom: latest?.employeeName || null,
+          dernierAccidentGravite: latest?.gravite || null,
+          dernierAccidentCause: latest?.cause || null,
+          dernierAccidentDescription: latest?.description || null,
+          dernierAccidentStopDays: latest?.stopDays || null,
           accidentsEnCours: ongoing
         };
       };
@@ -588,9 +658,8 @@
     function renderCompanyCard(company, isClosedExercise) {
       const days = isClosedExercise ? company.plusLonguePeriodeSansAccident : company.joursSansAccident;
       const alertClass = days !== null && days < 30 ? ' alert' : '';
-      const statusLabel = isClosedExercise
-        ? (company.totalAccidents > 0 ? 'Exercice avec sinistres' : 'Aucun accident sur l’exercice')
-        : (company.accidentsEnCours > 0 ? 'Arrêt en cours' : 'Situation stable');
+      const cardClass = days === null || days >= 90 ? 'card-ok' : (days < 30 ? 'card-alert' : '');
+      const assets = COMPANY_ASSETS[company.id] || {};
       const fourthBlock = isClosedExercise
         ? `
             <div class="rh-mini">
@@ -611,13 +680,12 @@
         ? `Dernier accident de l'exercice : ${company.dernierAccidentDate ? `${formatDateFr(company.dernierAccidentDate)}${company.dernierAccidentNom ? ` · ${escapeHtml(company.dernierAccidentNom)}` : ''}` : 'aucun'}`
         : `Dernier accident : ${company.dernierAccidentDate ? `${formatDateFr(company.dernierAccidentDate)}${company.dernierAccidentNom ? ` · ${escapeHtml(company.dernierAccidentNom)}` : ''}` : 'aucun'}`;
       return `
-        <article class="rh-company-card">
+        <article class="rh-company-card ${cardClass}">
           <div class="rh-company-head">
-            <div>
+            <div style="display:flex; align-items:center; gap:10px;">
+              ${assets.logo ? `<img src="../assets/${assets.logo}" alt="" class="rh-company-logo">` : ''}
               <h3 class="rh-company-title">${escapeHtml(company.label)}</h3>
-              <div class="rh-company-caption">Lecture rapide des indicateurs de l’entreprise</div>
             </div>
-            <span class="rh-chip ${company.totalAccidents > 0 ? '' : 'status'}">${statusLabel}</span>
           </div>
 
           <div class="rh-mini-grid">
@@ -640,12 +708,30 @@
           </div>
 
           <div class="rh-safety-meter${alertClass}">
-            <div class="headline">${meterHeadline}</div>
-            <div class="days">${days == null ? '—' : days}</div>
-            <div class="rh-stat-sub" style="margin-top:8px;">
-              ${meterSub}
+            <div class="rh-safety-meter-inner">
+              <div>
+                <div class="headline">${meterHeadline}</div>
+                <div class="days">${days == null ? '—' : days}</div>
+                <div class="rh-stat-sub" style="margin-top:8px;">${meterSub}</div>
+              </div>
             </div>
           </div>
+
+          ${company.dernierAccidentDate ? `
+            <div class="rh-last-accident">
+              <div class="rh-last-accident-head">
+                <span class="rh-last-accident-label">⚠ Dernier accident</span>
+                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                  ${company.dernierAccidentGravite ? graviteChip(company.dernierAccidentGravite) : ''}
+                  ${company.dernierAccidentStopDays ? `<span class="rh-chip" style="font-size:11px; background:#fff0e8; color:#c0480d; border-color:#f4c4a8;">${company.dernierAccidentStopDays}j d'arrêt</span>` : ''}
+                </div>
+              </div>
+              <div class="rh-last-accident-who">${escapeHtml(company.dernierAccidentNom || 'Salarié non renseigné')} · ${formatDateFr(company.dernierAccidentDate)}</div>
+              ${(company.dernierAccidentCause || company.dernierAccidentDescription) ? `
+                <div class="rh-last-accident-desc">${escapeHtml(company.dernierAccidentCause || '')}${company.dernierAccidentCause && company.dernierAccidentDescription ? ' — ' : ''}${escapeHtml(company.dernierAccidentDescription || '')}</div>
+              ` : ''}
+            </div>
+          ` : ''}
         </article>
       `;
     }
@@ -712,20 +798,19 @@
         accidentsEnCours: 0
       };
       const companies = summaryPayload.companies || [];
-      const recentIncidents = filteredIncidents.slice(0, 8);
       const entreprisesTouchees = companies.filter((company) => company.totalAccidents > 0).length;
       const groupCards = isClosedExercise
         ? `
-            ${renderStatCard('Accidents enregistrés', group.totalAccidents, `exercice ${exerciseLabel}`)}
-            ${renderStatCard('Accidents avec arrêt', group.accidentsAvecArret, 'arrêts renseignés')}
-            ${renderStatCard('Jours d’arrêt cumulés', group.joursArret, 'toutes entreprises')}
-            ${renderStatCard('Entreprises touchées', entreprisesTouchees, 'sur l’exercice')}
+            ${renderStatCard("Accidents enregistrés", group.totalAccidents, `exercice ${exerciseLabel}`)}
+            ${renderStatCard("Accidents avec arrêt", group.accidentsAvecArret, "arrêts renseignés")}
+            ${renderStatCard("Jours d'arrêt cumulés", group.joursArret, "toutes entreprises")}
+            ${renderStatCard("Entreprises touchées", entreprisesTouchees, "sur l'exercice")}
           `
         : `
-            ${renderStatCard('Accidents enregistrés', group.totalAccidents, `exercice ${exerciseLabel}`)}
-            ${renderStatCard('Accidents avec arrêt', group.accidentsAvecArret, 'arrêts renseignés')}
-            ${renderStatCard('Jours d’arrêt cumulés', group.joursArret, 'toutes entreprises')}
-            ${renderStatCard('Arrêts en cours', group.accidentsEnCours, 'sur cet exercice')}
+            ${renderStatCard("Accidents enregistrés", group.totalAccidents, `exercice ${exerciseLabel}`)}
+            ${renderStatCard("Accidents avec arrêt", group.accidentsAvecArret, "arrêts renseignés")}
+            ${renderStatCard("Jours d'arrêt cumulés", group.joursArret, "toutes entreprises")}
+            ${renderStatCard("Arrêts en cours", group.accidentsEnCours, "sur cet exercice")}
           `;
       const bannerTitle = isClosedExercise
         ? (group.plusLonguePeriodeSansAccident == null
@@ -737,26 +822,11 @@
       const bannerSub = isClosedExercise
         ? `Dernier accident de l'exercice : ${group.dernierAccidentDate ? `${formatDateFr(group.dernierAccidentDate)}${group.dernierAccidentNom ? ` · ${escapeHtml(group.dernierAccidentNom)}` : ''}` : 'aucun'}`
         : `Dernier accident groupe : ${group.dernierAccidentDate ? `${formatDateFr(group.dernierAccidentDate)}${group.dernierAccidentNom ? ` · ${escapeHtml(group.dernierAccidentNom)}` : ''}` : 'aucun'}`;
+
       const statusChip = isClosedExercise
         ? '<span class="rh-chip status closed">Exercice clôturé</span>'
         : '<span class="rh-chip status">Exercice en cours</span>';
-      const toolbar = document.querySelector('.rh-toolbar');
-      if (toolbar) {
-        toolbar.innerHTML = `
-          <div class="rh-filter">
-            <label for="exerciseSelect">Exercice affiché</label>
-            <select id="exerciseSelect"></select>
-          </div>
-          <div class="rh-kicker">
-            ${isClosedExercise ? 'Lecture bilan annuelle' : 'Lecture opérationnelle en temps réel'}
-          </div>
-        `;
-        renderExerciseSelect(exerciseOptions, rhState.selectedExercise);
-        document.getElementById('exerciseSelect').addEventListener('change', (event) => {
-          rhState.selectedExercise = Number(event.target.value);
-          renderDashboard();
-        });
-      }
+      renderExerciseSelect(exerciseOptions, rhState.selectedExercise);
 
       root.innerHTML = `
         <div class="rh-layout">
@@ -764,7 +834,7 @@
           <div class="rh-panel-head">
             <div>
               <h2>Vue groupe</h2>
-              <p>Bilan consolidé de l’exercice ${exerciseLabel}</p>
+              <p>Bilan consolidé de l'exercice ${exerciseLabel}</p>
             </div>
             ${statusChip}
           </div>
@@ -776,9 +846,7 @@
             <div class="rh-banner">
               <div>
                 <strong>${bannerTitle}</strong>
-                <div style="color:#8a6a37; margin-top:4px; line-height:1.5;">
-                  ${bannerSub}
-                </div>
+                <div style="color:#8a6a37; margin-top:4px; line-height:1.5;">${bannerSub}</div>
               </div>
               <div class="rh-chip">Exercice ${exerciseLabel}</div>
             </div>
@@ -800,24 +868,6 @@
           </div>
         </section>
 
-        <section class="rh-panel">
-          <div class="rh-panel-head">
-            <div>
-              <h2>Accidents de l'exercice</h2>
-              <p>Les événements les plus récents pour l’exercice sélectionné</p>
-            </div>
-            <span class="rh-chip">${recentIncidents.length} fiche${recentIncidents.length > 1 ? 's' : ''}</span>
-          </div>
-          <div class="rh-panel-body">
-            ${recentIncidents.length ? `
-              <div class="rh-recent-list">
-                ${recentIncidents.map(renderRecentIncident).join('')}
-              </div>
-            ` : `
-              <div class="rh-empty">Aucun accident enregistré sur l'exercice ${exerciseLabel}.</div>
-            `}
-          </div>
-        </section>
         </div>
       `;
     }
@@ -851,6 +901,10 @@
     function init() {
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectRHSecondaryBar();
+      document.getElementById('exerciseSelect').addEventListener('change', (event) => {
+        rhState.selectedExercise = Number(event.target.value);
+        renderDashboard();
+      });
       loadDashboard().catch((e) => showMessage(`❌ Erreur de chargement RH : ${e.message}`, 'danger'));
     }
 

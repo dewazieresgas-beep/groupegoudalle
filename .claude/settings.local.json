@@ -16,7 +16,8 @@
       "Bash(sed -i \"s/requirePermission\\('sylve'\\)/requirePermission\\('compta_indicateurs'\\)/g\" \"c:/Users/gdewazieres/Desktop/groupegoudalle/pages/compta-indicateurs.html\")",
       "Bash(sed -i \"s/requirePermission\\('sylve_saisie'\\)/requirePermission\\('compta_saisie'\\)/g\" \"c:/Users/gdewazieres/Desktop/groupegoudalle/pages/compta-saisie.html\")",
       "Bash(node -e \"const fs=require\\('fs'\\); const d=JSON.parse\\(fs.readFileSync\\('c:/Users/gdewazieres/Desktop/groupegoudalle/server/goudalle.json','utf8'\\)\\); console.log\\('Keys:', Object.keys\\(d\\)\\); if\\(d.users\\) { console.log\\('Users count:', Object.keys\\(d.users\\).length\\); Object.keys\\(d.users\\).forEach\\(u => console.log\\(' -', u, '| role:', d.users[u].role, '| active:', d.users[u].isActive\\)\\); }\")",
-      "Bash(node -e \"const fs=require\\('fs'\\); const d=JSON.parse\\(fs.readFileSync\\('c:/Users/gdewazieres/Desktop/groupegoudalle/server/goudalle.json','utf8'\\)\\); console.log\\(JSON.stringify\\(d.users, null, 2\\)\\);\")"
+      "Bash(node -e \"const fs=require\\('fs'\\); const d=JSON.parse\\(fs.readFileSync\\('c:/Users/gdewazieres/Desktop/groupegoudalle/server/goudalle.json','utf8'\\)\\); console.log\\(JSON.stringify\\(d.users, null, 2\\)\\);\")",
+      "Bash(node -e \"require\\('./server.js'\\)\")"
     ]
   }
 }

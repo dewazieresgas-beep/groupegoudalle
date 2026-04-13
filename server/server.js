@@ -2774,6 +2774,140 @@ async function writeAccidentToExcel(folderPath, companyId, data) {
   return { row: nextRow, num: nextNum };
 }
 
+async function updateAccidentInExcel(folderPath, companyId, rowIndex, data) {
+  const company = RH_SECURITY_COMPANIES.find((c) => c.id === companyId);
+  if (!company) throw new Error(`Entreprise inconnue : ${companyId}`);
+
+  const resolved = resolveExistingExcelPath(folderPath, company.filename);
+  const excelPath = resolved.fullPath;
+
+  const workbook = await XlsxPopulate.fromFileAsync(excelPath);
+  const sheet = workbook.sheet('Saisie');
+  if (!sheet) throw new Error('Feuille "Saisie" introuvable dans ' + company.filename);
+
+  // Vérifier que la ligne cible n'est pas vide (sécurité)
+  const nomCell = sheet.cell(rowIndex, 2).value();
+  if (nomCell == null || String(nomCell).trim() === '') {
+    throw new Error(`Ligne ${rowIndex} introuvable ou vide dans ${company.filename}`);
+  }
+
+  let joursArret = 0;
+  if (data.debutArret) {
+    const start = new Date(data.debutArret + 'T00:00:00Z');
+    const endStr = data.prolongation || data.finArret;
+    if (endStr) {
+      const end = new Date(endStr + 'T00:00:00Z');
+      joursArret = Math.max(0, Math.floor((end - start) / 86400000) + 1);
+    }
+  }
+
+  const setV = (col, val) => { sheet.cell(rowIndex, col).value(val != null && val !== '' ? val : null); };
+  const setD = (col, isoStr) => {
+    if (!isoStr) { sheet.cell(rowIndex, col).value(null); return; }
+    const d = new Date(isoStr + 'T00:00:00Z');
+    if (!isNaN(d.getTime())) sheet.cell(rowIndex, col).value(d);
+    else sheet.cell(rowIndex, col).value(null);
+  };
+
+  // Col 1 (N°) non modifié
+  setV(2,  String(data.nom || '').toUpperCase());
+  setV(3,  data.prenom || null);
+  setV(4,  data.statut || null);
+  setD(5,  data.dateAccident);
+  setV(6,  data.type || null);
+  setV(7,  data.gravite || null);
+  setV(8,  data.cause || null);
+  setV(9,  data.description || null);
+  setD(10, data.debutArret || null);
+  setD(11, data.finArret || null);
+  setD(12, data.prolongation || null);
+  setV(13, joursArret || 0);
+  setV(14, data.soins || null);
+  setD(15, data.debutSoins || null);
+  setD(16, data.finSoins || null);
+  setV(17, data.siege || null);
+  setV(18, data.nature || null);
+
+  await workbook.toFileAsync(excelPath);
+}
+
+// ─── RECHERCHE ACCIDENT (fuzzy, léger, depuis le cache) ──────────────────────
+
+app.get('/api/rh-security-search', (req, res) => {
+  const q = String(req.query.q || '').trim();
+  if (!q || q.length < 2) return res.json([]);
+
+  const normalize = (s) =>
+    String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
+  const terms = normalize(q).split(/\s+/).filter(Boolean);
+  const incidents = dbGet('rh_security_incidents', []);
+  const modifications = dbGet('rh_security_modifications', {});
+
+  const matches = incidents.filter((inc) => {
+    const nom = normalize(inc.nom);
+    const prenom = normalize(inc.prenom);
+    const full1 = `${nom} ${prenom}`;
+    const full2 = `${prenom} ${nom}`;
+    return terms.every((t) => full1.includes(t) || full2.includes(t) || nom.includes(t) || prenom.includes(t));
+  });
+
+  res.json(matches.slice(0, 30).map((inc) => ({
+    id: inc.id,
+    employeeName: inc.employeeName,
+    accidentDate: inc.accidentDate,
+    companyLabel: inc.companyLabel,
+    companyId: inc.companyId,
+    gravite: inc.gravite,
+    cause: inc.cause,
+    modifiedAt: modifications[inc.id]?.modifiedAt || null,
+  })));
+});
+
+// ─── DÉTAIL D'UN ACCIDENT (chargement lazy au clic) ─────────────────────────
+
+app.get('/api/rh-security-incident/:id', (req, res) => {
+  const incidents = dbGet('rh_security_incidents', []);
+  const inc = incidents.find((i) => i.id === req.params.id);
+  if (!inc) return res.status(404).json({ success: false, error: 'Accident introuvable.' });
+  const modifications = dbGet('rh_security_modifications', {});
+  res.json({ ...inc, modifiedAt: modifications[inc.id]?.modifiedAt || null });
+});
+
+// ─── MODIFICATION D'UN ACCIDENT ───────────────────────────────────────────────
+
+app.put('/api/rh-security-update-accident', requireToken, requireWriteRateLimit, async (req, res) => {
+  const cfg = dbGet('rh_security_excel_config', null);
+  if (!cfg || !cfg.active) {
+    return res.status(400).json({ success: false, error: "Aucun dossier Excel configuré." });
+  }
+  const { id, ...data } = req.body || {};
+  if (!id) return res.status(400).json({ success: false, error: 'Champ id manquant.' });
+
+  // id format : rhsec_<companyId>_<rowIndex>
+  const match = id.match(/^rhsec_(.+)_(\d+)$/);
+  if (!match) return res.status(400).json({ success: false, error: 'ID invalide.' });
+  const companyId = match[1];
+  const rowIndex = parseInt(match[2], 10);
+
+  try {
+    await updateAccidentInExcel(cfg.folder, companyId, rowIndex, data);
+
+    // Enregistrer la date de modification
+    const modifications = dbGet('rh_security_modifications', {});
+    modifications[id] = { modifiedAt: new Date().toISOString() };
+    dbSet('rh_security_modifications', modifications);
+
+    // Re-sync du cache
+    const incidents = parseRHSecurityExcels(cfg);
+    applyRHSecurityIncidents(incidents);
+
+    res.json({ success: true, incidentCount: incidents.length });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 app.get('/api/rh-security-excel-config', (req, res) => {
   res.json(dbGet('rh_security_excel_config', null));
 });

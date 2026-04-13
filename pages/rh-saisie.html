@@ -47,6 +47,140 @@
       color: var(--text-muted-dark, #9ca3af);
       margin-bottom: 12px;
     }
+
+    /* ── Recherche / Modification ── */
+    .rh-search-bar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .rh-search-bar input {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1px solid var(--border-light, #e5e7eb);
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    .rh-search-bar input:focus {
+      outline: none;
+      border-color: var(--accent, #4b6cb7);
+      box-shadow: 0 0 0 3px rgba(75,108,183,0.1);
+    }
+    .rh-search-hint {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--text-light, #6b7280);
+    }
+    .rh-result-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    .rh-result-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 14px;
+      border: 1px solid var(--border-light, #e5e7eb);
+      border-radius: 10px;
+      background: #fff;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      gap: 12px;
+    }
+    .rh-result-item:hover {
+      border-color: var(--accent, #4b6cb7);
+      box-shadow: 0 2px 8px rgba(75,108,183,0.12);
+    }
+    .rh-result-item.selected {
+      border-color: var(--accent, #4b6cb7);
+      background: #f0f4ff;
+    }
+    .rh-result-name {
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .rh-result-meta {
+      font-size: 12px;
+      color: var(--text-light, #6b7280);
+      margin-top: 2px;
+    }
+    .rh-result-badges {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .rh-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      border: 1px solid;
+    }
+    .rh-badge-gravite-arret   { background:#fff0e8; color:#c0480d; border-color:#f4c4a8; }
+    .rh-badge-gravite-ipp     { background:#fdf0e0; color:#9a4e00; border-color:#f0d0a0; }
+    .rh-badge-gravite-deces   { background:#fde8e8; color:#a01010; border-color:#f4a0a0; }
+    .rh-badge-gravite-soins   { background:#fff8e0; color:#8a6000; border-color:#f0dca0; }
+    .rh-badge-gravite-sans    { background:#edf4ee; color:#345441; border-color:#cfe0d2; }
+    .rh-badge-gravite-default { background:#f5f5f5; color:#555;    border-color:#ddd;    }
+    .rh-badge-modified        { background:#e8f0ff; color:#2a4db0; border-color:#b0c4f8; }
+    .rh-no-results {
+      padding: 20px 0;
+      text-align: center;
+      color: var(--text-light, #6b7280);
+      font-size: 14px;
+    }
+    .rh-edit-panel {
+      margin-top: 20px;
+      border: 2px solid var(--accent, #4b6cb7);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .rh-edit-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 18px;
+      background: linear-gradient(135deg, #f0f4ff 0%, #e8eeff 100%);
+      border-bottom: 1px solid #d0daf8;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .rh-edit-header-title {
+      font-weight: 700;
+      font-size: 15px;
+    }
+    .rh-edit-header-meta {
+      font-size: 12px;
+      color: var(--text-light, #6b7280);
+      margin-top: 2px;
+    }
+    .rh-edit-body {
+      padding: 20px 18px;
+    }
+    .rh-section-divider {
+      margin: 24px 0;
+      border: none;
+      border-top: 2px dashed #e2e8f0;
+      text-align: center;
+      position: relative;
+    }
+    .rh-section-divider::after {
+      content: 'ou déclarer un nouvel accident';
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #fff;
+      padding: 0 12px;
+      font-size: 12px;
+      color: var(--text-light, #6b7280);
+      white-space: nowrap;
+    }
   </style>
 </head>
 <body>
@@ -64,6 +198,27 @@
       </div>
 
       <div id="pageMessage" class="alert" style="display:none;"></div>
+
+      <!-- ── Recherche / Modification ── -->
+      <div class="card">
+        <div class="card-title">
+          <h2>🔍 Modifier un accident existant</h2>
+        </div>
+        <div class="card-body">
+          <div class="rh-search-bar">
+            <input type="text" id="rhSearchInput"
+              placeholder="Nom, prénom ou les deux (ex : DUPONT Jean)..."
+              autocomplete="off"
+              onkeydown="if(event.key==='Enter') rhSearch()">
+            <button class="btn btn-primary" onclick="rhSearch()" id="rhSearchBtn">Rechercher</button>
+          </div>
+          <div class="rh-search-hint">La recherche est insensible aux majuscules, accents et à l'ordre nom/prénom.</div>
+          <div id="rhSearchResults"></div>
+          <div id="rhEditContainer"></div>
+        </div>
+      </div>
+
+      <div class="rh-section-divider"></div>
 
       <div class="card">
         <div class="card-title">
@@ -233,9 +388,9 @@
               </div>
             </div>
 
-            <!-- Soins ponctuels (conditionnel) -->
-            <div id="blockSoins" style="display:none;" class="form-section">
-              <div class="form-section-title">Soins ponctuels</div>
+            <!-- Soins -->
+            <div id="blockSoins" class="form-section">
+              <div class="form-section-title">Soins (optionnel)</div>
               <div class="conditional-block">
                 <div class="field-grid-2">
                   <div class="form-group">
@@ -296,9 +451,7 @@
     function handleGraviteChange() {
       const g = document.getElementById('fGravite').value;
       const showArret = g === 'Avec arrêt' || g === 'IPP';
-      const showSoins = g === 'Soins ponctuels';
       document.getElementById('blockArret').style.display = showArret ? '' : 'none';
-      document.getElementById('blockSoins').style.display = showSoins ? '' : 'none';
       updateJoursArretPreview();
     }
 
@@ -336,7 +489,8 @@
 
       const gravite = document.getElementById('fGravite').value;
       const showArret = gravite === 'Avec arrêt' || gravite === 'IPP';
-      const showSoins = gravite === 'Soins ponctuels';
+      const debutSoins = document.getElementById('fDebutSoins').value || null;
+      const finSoins   = document.getElementById('fFinSoins').value || null;
 
       const body = {
         companyId:    document.getElementById('fCompany').value,
@@ -353,9 +507,9 @@
         debutArret:   showArret ? (document.getElementById('fDebutArret').value || null) : null,
         finArret:     showArret ? (document.getElementById('fFinArret').value || null) : null,
         prolongation: showArret ? (document.getElementById('fProlongation').value || null) : null,
-        soins:        showSoins ? 'Oui' : null,
-        debutSoins:   showSoins ? (document.getElementById('fDebutSoins').value || null) : null,
-        finSoins:     showSoins ? (document.getElementById('fFinSoins').value || null) : null,
+        soins:        (debutSoins || finSoins) ? 'Oui' : null,
+        debutSoins,
+        finSoins,
       };
 
       try {
@@ -473,6 +627,379 @@
     }
 
     window.onServerReady(init);
+  </script>
+
+  <!-- ── Recherche / Modification — JavaScript ── -->
+  <script>
+    /* ── Helpers ── */
+    function escapeHtml(s) {
+      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function formatDateFrS(iso) {
+      if (!iso) return '—';
+      const [y, m, d] = iso.split('-');
+      return `${d}/${m}/${y}`;
+    }
+    function graviteClass(g) {
+      if (!g) return 'rh-badge-gravite-default';
+      if (g === 'Avec arrêt') return 'rh-badge-gravite-arret';
+      if (g === 'IPP')        return 'rh-badge-gravite-ipp';
+      if (g === 'Décès')      return 'rh-badge-gravite-deces';
+      if (g === 'Soins ponctuels') return 'rh-badge-gravite-soins';
+      if (g === 'Sans arrêt') return 'rh-badge-gravite-sans';
+      return 'rh-badge-gravite-default';
+    }
+
+    /* ── État local ── */
+    let rhSearchResults = [];
+    let rhSelectedId    = null;
+    let rhCurrentIncident = null;
+
+    /* ── Recherche ── */
+    async function rhSearch() {
+      const q = document.getElementById('rhSearchInput').value.trim();
+      if (q.length < 2) {
+        document.getElementById('rhSearchResults').innerHTML =
+          '<div class="rh-no-results">Saisissez au moins 2 caractères pour rechercher.</div>';
+        document.getElementById('rhEditContainer').innerHTML = '';
+        rhSelectedId = null;
+        return;
+      }
+      const btn = document.getElementById('rhSearchBtn');
+      btn.disabled = true;
+      btn.textContent = '⏳';
+      try {
+        const res = await fetch(SERVER_URL + '/rh-security-search?q=' + encodeURIComponent(q), { cache: 'no-store' });
+        rhSearchResults = await res.json();
+        renderSearchResults();
+      } catch (e) {
+        document.getElementById('rhSearchResults').innerHTML =
+          `<div class="rh-no-results" style="color:red;">Erreur : ${escapeHtml(e.message)}</div>`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Rechercher';
+      }
+    }
+
+    function renderSearchResults() {
+      const container = document.getElementById('rhSearchResults');
+      if (!rhSearchResults.length) {
+        container.innerHTML = '<div class="rh-no-results">Aucun accident trouvé pour cette recherche.</div>';
+        return;
+      }
+      const items = rhSearchResults.map((inc) => {
+        const isSelected = inc.id === rhSelectedId;
+        const modifiedBadge = inc.modifiedAt
+          ? `<span class="rh-badge rh-badge-modified">Modifié le ${formatDateFrS(inc.modifiedAt.slice(0,10))}</span>`
+          : '';
+        return `
+          <div class="rh-result-item${isSelected ? ' selected' : ''}" onclick="rhSelectIncident('${escapeHtml(inc.id)}')">
+            <div>
+              <div class="rh-result-name">${escapeHtml(inc.employeeName)}</div>
+              <div class="rh-result-meta">${escapeHtml(inc.companyLabel)} · ${formatDateFrS(inc.accidentDate)}${inc.cause ? ' · ' + escapeHtml(inc.cause) : ''}</div>
+            </div>
+            <div class="rh-result-badges">
+              ${modifiedBadge}
+              ${inc.gravite ? `<span class="rh-badge ${graviteClass(inc.gravite)}">${escapeHtml(inc.gravite)}</span>` : ''}
+              <span style="font-size:18px; color:#9ca3af;">›</span>
+            </div>
+          </div>`;
+      }).join('');
+      container.innerHTML = `<div class="rh-result-list">${items}</div>`;
+    }
+
+    /* ── Sélection d'un accident → chargement lazy des détails ── */
+    async function rhSelectIncident(id) {
+      if (rhSelectedId === id) {
+        // Désélectionner
+        rhSelectedId = null;
+        rhCurrentIncident = null;
+        renderSearchResults();
+        document.getElementById('rhEditContainer').innerHTML = '';
+        return;
+      }
+      rhSelectedId = id;
+      renderSearchResults();
+      const container = document.getElementById('rhEditContainer');
+      container.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-light);">⏳ Chargement...</div>';
+      try {
+        const res = await fetch(SERVER_URL + '/rh-security-incident/' + encodeURIComponent(id), { cache: 'no-store' });
+        if (!res.ok) throw new Error((await res.json()).error || 'Erreur serveur');
+        rhCurrentIncident = await res.json();
+        renderEditForm(rhCurrentIncident);
+        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (e) {
+        container.innerHTML = `<div style="padding:20px; color:red;">Erreur : ${escapeHtml(e.message)}</div>`;
+      }
+    }
+
+    /* ── Formulaire d'édition ── */
+    function renderEditForm(inc) {
+      const container = document.getElementById('rhEditContainer');
+      const showArret = inc.gravite === 'Avec arrêt' || inc.gravite === 'IPP';
+      const modInfo = inc.modifiedAt
+        ? `<span class="rh-badge rh-badge-modified" style="margin-left:8px;">Modifié le ${formatDateFrS(inc.modifiedAt.slice(0,10))}</span>`
+        : '';
+
+      container.innerHTML = `
+        <div class="rh-edit-panel">
+          <div class="rh-edit-header">
+            <div>
+              <div class="rh-edit-header-title">${escapeHtml(inc.employeeName)}${modInfo}</div>
+              <div class="rh-edit-header-meta">${escapeHtml(inc.companyLabel)} · Accident du ${formatDateFrS(inc.accidentDate)}</div>
+            </div>
+            <button class="btn btn-secondary" onclick="rhCloseEdit()" style="white-space:nowrap;">✕ Fermer</button>
+          </div>
+          <div class="rh-edit-body">
+            <form id="rhEditForm" onsubmit="rhConfirmSave(event)">
+
+              <div class="form-section">
+                <div class="form-section-title">Entreprise</div>
+                <div style="padding:8px 12px; background:var(--lighter,#f9fafb); border-radius:8px; font-size:14px; color:var(--text-light);">
+                  ${escapeHtml(inc.companyLabel)} <em style="font-size:12px;">(non modifiable)</em>
+                </div>
+              </div>
+
+              <div class="form-section">
+                <div class="form-section-title">Salarié</div>
+                <div class="field-grid-3">
+                  <div class="form-group">
+                    <label for="eNom">Nom *</label>
+                    <input type="text" id="eNom" value="${escapeHtml(inc.nom)}" required style="text-transform:uppercase;">
+                  </div>
+                  <div class="form-group">
+                    <label for="ePrenom">Prénom</label>
+                    <input type="text" id="ePrenom" value="${escapeHtml(inc.prenom || '')}">
+                  </div>
+                  <div class="form-group">
+                    <label for="eStatut">Statut *</label>
+                    <select id="eStatut" required>
+                      <option value="">— Sélectionner —</option>
+                      ${['CDI/CDD','Intérimaire','Apprenti','Stagiaire'].map(v =>
+                        `<option value="${v}"${inc.statut===v?' selected':''}>${v}</option>`).join('')}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-section">
+                <div class="form-section-title">Accident</div>
+                <div class="field-grid-2">
+                  <div class="form-group">
+                    <label for="eDate">Date de l'accident *</label>
+                    <input type="date" id="eDate" value="${inc.accidentDate || ''}" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="eType">Type d'accident *</label>
+                    <select id="eType" required>
+                      <option value="">— Sélectionner —</option>
+                      ${['AT Travail','AT Trajet','Maladie Professionnelle','Accident Bénin'].map(v =>
+                        `<option value="${v}"${inc.type===v?' selected':''}>${v}</option>`).join('')}
+                    </select>
+                  </div>
+                </div>
+                <div class="field-grid-2" style="margin-top:12px;">
+                  <div class="form-group">
+                    <label for="eGravite">Gravité *</label>
+                    <select id="eGravite" required onchange="eHandleGravite()">
+                      <option value="">— Sélectionner —</option>
+                      ${['Sans arrêt','Soins ponctuels','Avec arrêt','IPP','Décès'].map(v =>
+                        `<option value="${v}"${inc.gravite===v?' selected':''}>${v}</option>`).join('')}
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="eCause">Cause principale *</label>
+                    <select id="eCause" required>
+                      <option value="">— Sélectionner —</option>
+                      ${['Chute de plain-pied','Chute de hauteur','Manutention manuelle','Heurt / Collision',
+                         'Coupure / Piqûre','Écrasement','Projection','Sur-effort / TMS','Brûlure',
+                         'Électrisation','Produit chimique','Autre'].map(v =>
+                        `<option value="${v}"${inc.cause===v?' selected':''}>${v}</option>`).join('')}
+                    </select>
+                  </div>
+                </div>
+                <div class="form-group" style="margin-top:12px;">
+                  <label for="eDescription">Description</label>
+                  <textarea id="eDescription" rows="3">${escapeHtml(inc.description || '')}</textarea>
+                </div>
+              </div>
+
+              <div class="form-section">
+                <div class="form-section-title">Lésion</div>
+                <div class="field-grid-2">
+                  <div class="form-group">
+                    <label for="eSiege">Siège de la lésion</label>
+                    <select id="eSiege">
+                      <option value="">— Sélectionner —</option>
+                      ${['Tête / Visage','Œil','Épaule','Bras / Jambe','Poignet','Main / Doigt',
+                         'Dos / Colonne','Thorax / Abdomen','Hanche / Cuisse','Genou','Cheville','Pied','Multiple'].map(v =>
+                        `<option value="${v}"${inc.siege===v?' selected':''}>${v}</option>`).join('')}
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="eNature">Nature de la lésion</label>
+                    <select id="eNature">
+                      <option value="">— Sélectionner —</option>
+                      ${['Plaie / Coupure','Fracture','Entorse / Luxation','Contusion / Hématome','Brûlure',
+                         'Douleur / TMS','Corps étranger','Malaise / Convulsion','Autre'].map(v =>
+                        `<option value="${v}"${inc.nature===v?' selected':''}>${v}</option>`).join('')}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div id="eBlockArret" class="form-section" style="${showArret ? '' : 'display:none;'}">
+                <div class="form-section-title">Arrêt de travail</div>
+                <div class="conditional-block">
+                  <div class="field-grid-3">
+                    <div class="form-group">
+                      <label for="eDebutArret">Début de l'arrêt</label>
+                      <input type="date" id="eDebutArret" value="${inc.debutArret || ''}" onchange="eUpdateJours()">
+                    </div>
+                    <div class="form-group">
+                      <label for="eFinArret">Fin prévue de l'arrêt</label>
+                      <input type="date" id="eFinArret" value="${inc.finArret || ''}" onchange="eUpdateJours()">
+                    </div>
+                    <div class="form-group">
+                      <label for="eProlongation">Prolongation jusqu'au</label>
+                      <input type="date" id="eProlongation" value="${inc.prolongation || ''}" onchange="eUpdateJours()">
+                    </div>
+                  </div>
+                  <div id="eJoursPreview" style="margin-top:10px; font-size:13px; color:var(--text-light);"></div>
+                </div>
+              </div>
+
+              <div id="eBlockSoins" class="form-section">
+                <div class="form-section-title">Soins (optionnel)</div>
+                <div class="conditional-block">
+                  <div class="field-grid-2">
+                    <div class="form-group">
+                      <label for="eDebutSoins">Début des soins</label>
+                      <input type="date" id="eDebutSoins" value="${inc.debutSoins || ''}">
+                    </div>
+                    <div class="form-group">
+                      <label for="eFinSoins">Fin des soins</label>
+                      <input type="date" id="eFinSoins" value="${inc.finSoins || ''}">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="margin-top:20px; display:flex; gap:12px; flex-wrap:wrap;">
+                <button type="submit" class="btn btn-success" style="padding:11px 24px; font-size:14px;">
+                  💾 Enregistrer les modifications
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="rhCloseEdit()">Annuler</button>
+              </div>
+
+            </form>
+          </div>
+        </div>`;
+
+      // Init aperçu jours
+      eUpdateJours();
+    }
+
+    /* ── Gestion gravité dans le form d'édition ── */
+    function eHandleGravite() {
+      const g = document.getElementById('eGravite')?.value;
+      if (!g) return;
+      const showArret = g === 'Avec arrêt' || g === 'IPP';
+      const ba = document.getElementById('eBlockArret');
+      if (ba) ba.style.display = showArret ? '' : 'none';
+      eUpdateJours();
+    }
+
+    function eUpdateJours() {
+      const debut = document.getElementById('eDebutArret')?.value;
+      const fin   = document.getElementById('eFinArret')?.value;
+      const prol  = document.getElementById('eProlongation')?.value;
+      const preview = document.getElementById('eJoursPreview');
+      if (!preview) return;
+      if (!debut) { preview.textContent = ''; return; }
+      const endStr = prol || fin;
+      if (!endStr) { preview.textContent = "Renseigner la fin d'arrêt pour calculer la durée."; return; }
+      const jours = Math.max(0, Math.floor((new Date(endStr) - new Date(debut)) / 86400000) + 1);
+      preview.textContent = `→ ${jours} jour${jours > 1 ? 's' : ''} d'arrêt${prol ? ' (avec prolongation)' : ''}`;
+    }
+
+    /* ── Confirmation + sauvegarde ── */
+    async function rhConfirmSave(event) {
+      event.preventDefault();
+      if (!rhCurrentIncident) return;
+
+      const gravite = document.getElementById('eGravite').value;
+      const showArret = gravite === 'Avec arrêt' || gravite === 'IPP';
+
+      const nom    = document.getElementById('eNom').value.trim().toUpperCase();
+      const prenom = document.getElementById('ePrenom').value.trim();
+      const dateAcc = document.getElementById('eDate').value;
+      const debutSoins = document.getElementById('eDebutSoins').value || null;
+      const finSoins   = document.getElementById('eFinSoins').value || null;
+
+      const msg = `Confirmez-vous la modification de l'accident de ${nom}${prenom ? ' ' + prenom : ''} du ${formatDateFrS(dateAcc)} ?`;
+      if (!confirm(msg)) return;
+
+      const body = {
+        id:           rhCurrentIncident.id,
+        nom,
+        prenom,
+        statut:       document.getElementById('eStatut').value,
+        dateAccident: dateAcc,
+        type:         document.getElementById('eType').value,
+        gravite,
+        cause:        document.getElementById('eCause').value,
+        description:  document.getElementById('eDescription').value.trim(),
+        siege:        document.getElementById('eSiege').value || null,
+        nature:       document.getElementById('eNature').value || null,
+        debutArret:   showArret ? (document.getElementById('eDebutArret').value || null) : null,
+        finArret:     showArret ? (document.getElementById('eFinArret').value || null) : null,
+        prolongation: showArret ? (document.getElementById('eProlongation').value || null) : null,
+        soins:        (debutSoins || finSoins) ? 'Oui' : null,
+        debutSoins,
+        finSoins,
+      };
+
+      const btn = document.querySelector('#rhEditForm button[type="submit"]');
+      if (btn) { btn.disabled = true; btn.textContent = '⏳ Enregistrement...'; }
+
+      try {
+        const headers = await getWriteHeaders();
+        const res = await fetch(SERVER_URL + '/rh-security-update-accident', {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify(body),
+        });
+        const result = await res.json();
+        if (!result.success) {
+          alert('Erreur : ' + result.error);
+          return;
+        }
+        showMessage(`✅ Accident de ${nom}${prenom ? ' ' + prenom : ''} modifié avec succès.`, 'success');
+
+        // Mettre à jour la date de modification dans les résultats locaux
+        const now = new Date().toISOString();
+        const found = rhSearchResults.find((r) => r.id === rhCurrentIncident.id);
+        if (found) found.modifiedAt = now;
+        rhCurrentIncident.modifiedAt = now;
+
+        rhCloseEdit();
+        renderSearchResults();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (e) {
+        alert('Erreur : ' + e.message);
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '💾 Enregistrer les modifications'; }
+      }
+    }
+
+    /* ── Fermeture du formulaire d'édition ── */
+    function rhCloseEdit() {
+      rhSelectedId = null;
+      rhCurrentIncident = null;
+      document.getElementById('rhEditContainer').innerHTML = '';
+      renderSearchResults();
+    }
   </script>
 </body>
 </html>
