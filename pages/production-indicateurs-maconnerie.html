@@ -473,7 +473,7 @@
           // Graphique d'évolution empilé
           const weeksForEvolution = published
             .filter(k => k.tempsBeton != null || k.tempsAciers != null || k.tempsChargement != null || k.tempsCentrale != null)
-            .slice(0, initialWeeks)
+            .slice(0, 4)
             .reverse();
 
           if (weeksForEvolution.length > 0) {
