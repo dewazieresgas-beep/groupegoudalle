@@ -340,7 +340,6 @@ function saveKPI(year, week, m3, hours, comment, status = 'draft', timeDistribut
   filtered.push(kpi);
   
   localStorage.setItem('goudalle_kpis', JSON.stringify(filtered));
-  Auth.audit('KPI_SAVED', `Indicateur S${String(week).padStart(2, '0')}/${year} - Status: ${status}`);
   
   return kpi;
 }
@@ -359,7 +358,6 @@ function deleteKPI(year, week) {
 
   kpis.splice(index, 1);
   localStorage.setItem('goudalle_kpis', JSON.stringify(kpis));
-  Auth.audit('KPI_DELETED', `Indicateur S${String(week).padStart(2, '0')}/${year} supprimé`);
 
   return { success: true, message: '🗑️ Indicateur supprimé' };
 }
@@ -373,25 +371,7 @@ function getBasePath() {
   return window.location.pathname.includes('/pages/') ? '../' : './';
 }
 
-/**
- * Génère le chemin vers le logo approprié
- * Variable globale APP_LOGO détermine quel logo afficher
- * @returns {string} - Chemin vers le fichier logo
- */
-function getLogoPath() {
-  const base = getBasePath();
-  let logoFile = 'groupe.png';  // Logo par défaut
-  if (window.APP_LOGO === 'maconnerie') {
-    logoFile = 'goudalle-maconnerie.png';
-  } else if (window.APP_LOGO === 'charpente') {
-    logoFile = 'goudalle-charpente.png';
-  } else if (window.APP_LOGO === 'cbco') {
-    logoFile = 'cbco.png';
-  } else if (window.APP_LOGO === 'sylve') {
-    logoFile = 'sylve-support.png';
-  }
-  return `${base}assets/${logoFile}`;
-}
+
 
 /**
  * Génère le code HTML de la barre latérale (sidebar)
@@ -746,7 +726,6 @@ function saveCBCOEntry(year, month, montantChantiersCours, montantChantiersTermi
   calculateCBCOCumuls(sorted);
   
   localStorage.setItem('goudalle_cbco_data', JSON.stringify(sorted));
-  Auth.audit('CBCO_SAVED', `Entrée CBCO ${month}/${year} enregistrée`);
   
   return entry;
 }
@@ -802,7 +781,6 @@ function deleteCBCOEntry(year, month) {
   // Recalculer les cumuls
   calculateCBCOCumuls(data);
   localStorage.setItem('goudalle_cbco_data', JSON.stringify(data));
-  Auth.audit('CBCO_DELETED', `Entrée CBCO ${month}/${year} supprimée`);
 
   return { success: true, message: '✅ Entrée supprimée' };
 }
@@ -1833,12 +1811,7 @@ function getSylveRetardMensuel() {
     }));
 }
 
-/**
- * Formate un montant en M€
- */
-function formatMEuros(value) {
-  return (value / 1000000).toFixed(2) + ' M€';
-}
+
 
 /**
  * Formate un montant en € lisible

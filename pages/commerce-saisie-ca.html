@@ -402,12 +402,7 @@
       return normalizeNumber(kValue) * 1000;
     }
 
-    function formatCurrency(value) {
-      return new Intl.NumberFormat('fr-FR', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-      }).format(value) + ' K€';
-    }
+
 
     function normalizeNumber(value) {
       if (value === null || value === undefined || value === '') return 0;

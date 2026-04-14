@@ -623,20 +623,6 @@ const Auth = {
     return localStorage.getItem(this.STORAGE_KEY_ADMIN_CODE);
   },
 
-  // ============ COMPATIBILITÉ ============
-  /**
-   * Compatibilité avec les appels existants dans l'interface.
-   * Le suivi d'audit est volontairement désactivé.
-   */
-  audit(action, details) {
-    void action;
-    void details;
-  },
-
-  getAuditTrail() {
-    return [];
-  },
-
   // ============ UTILITIES ============
   /**
    * Vérifie qu'un utilisateur est connecté, sinon redirige vers login
