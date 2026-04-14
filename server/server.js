@@ -3026,8 +3026,16 @@ app.get('/api/rh-security-summary', (req, res) => {
 });
 
 
+// Servir les fichiers PDF du planning avec logging
+app.use('/server/uploads', (req, res, next) => {
+  console.log('[Planning PDF] Accès demandé:', req.path);
+  next();
+}, express.static(path.join(__dirname, 'uploads'), {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.pdf')) {
+      res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      console.log('[Planning PDF] Fichier servi:', path);
+      console.log('[Planning PDF] Fichier servi:', filePath);
     }
   }
 }));

@@ -89,6 +89,14 @@
   </div>
 
   <script>
+    async function getWriteHeaders() {
+      const res = await fetch(SERVER_URL + '/health', { cache: 'no-store' });
+      const payload = await res.json();
+      const headers = { 'Content-Type': 'application/json' };
+      if (payload?.token) headers['x-goudalle-token'] = payload.token;
+      return headers;
+    }
+
     function showMessage(msg, type) {
       const d = document.getElementById('pageMessage');
       d.textContent = msg;
@@ -142,8 +150,9 @@
         filename: document.getElementById('cfgFilename').value.trim()
       };
       try {
+        const headers = await getWriteHeaders();
         const res = await fetch(SERVER_URL + '/cbco-productivite-excel-config', {
-          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          method: 'PUT', headers,
           body: JSON.stringify(body)
         });
         const result = await res.json();
