@@ -7,9 +7,37 @@
   <link rel="stylesheet" href="./css/style.css">
   <style>
     body {
-      background: linear-gradient(180deg, #faf8f5 0%, #f0e9df 100%);
+      background: linear-gradient(135deg, #faf8f5 0%, #f5f1ed 50%, #ede8e1 100%);
       min-height: 100vh;
       display: block;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(139, 168, 138, 0.15) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::after {
+      content: '';
+      position: absolute;
+      bottom: -30%;
+      left: -15%;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(90, 74, 58, 0.1) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
     }
 
     .auth-wrap {
@@ -17,62 +45,92 @@
       align-items: center;
       justify-content: center;
       padding: 40px 20px 60px;
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
     }
     
     .register-container {
       width: 100%;
-      max-width: 500px;
+      max-width: 560px;
       background: white;
-      padding: 40px;
-      border-radius: 6px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
-      border: 1px solid #f0ece6;
+      padding: 50px 45px;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 0 40px rgba(139, 168, 138, 0.1);
+      border: 1px solid rgba(139, 168, 138, 0.2);
+      animation: slideUp 0.6s ease;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     .register-header {
       text-align: center;
-      margin-bottom: 30px;
+      margin-bottom: 40px;
     }
 
     .register-header h1 {
-      font-size: 28px;
-      margin: 0 0 10px 0;
-      color: #5a4a3a;
-      letter-spacing: 0.6px;
+      font-size: 36px;
+      margin: 0 0 8px 0;
+      background: linear-gradient(135deg, #5a4a3a 0%, #6b8e6f 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      font-weight: 700;
+      letter-spacing: 0.5px;
     }
 
     .register-header p {
       color: #8ba88a;
       margin: 0;
-      font-size: 12px;
-      text-transform: uppercase;
+      font-size: 14px;
       letter-spacing: 0.6px;
+      font-weight: 500;
     }
 
     .form-group {
-      margin-bottom: 18px;
+      margin-bottom: 20px;
     }
 
     .form-group label {
       display: block;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
       color: #5a4a3a;
       font-weight: 600;
-      font-size: 12px;
-      text-transform: uppercase;
+      font-size: 13px;
       letter-spacing: 0.4px;
     }
 
     .form-group input,
     .form-group select {
       width: 100%;
-      padding: 11px;
-      border: 2px solid #f0ece6;
-      border-radius: 4px;
-      font-size: 13px;
-      transition: border-color 0.3s, background-color 0.3s;
+      padding: 14px 16px;
+      border: 2px solid #e8e2db;
+      border-radius: 10px;
+      font-size: 14px;
+      transition: all 0.3s ease;
       box-sizing: border-box;
       background: #faf8f5;
+      font-family: inherit;
+    }
+
+    .form-group input::placeholder,
+    .form-group select::placeholder {
+      color: #c9bdb1;
+    }
+
+    .form-group input:hover,
+    .form-group select:hover {
+      border-color: #d4ccc3;
+      background: #fcfaf7;
     }
 
     .form-group input:focus,
@@ -80,6 +138,7 @@
       outline: none;
       border-color: #8ba88a;
       background: white;
+      box-shadow: 0 0 0 4px rgba(139, 168, 138, 0.1);
     }
 
     .form-grid {
@@ -88,67 +147,104 @@
       gap: 15px;
     }
 
+    @media (max-width: 600px) {
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
     .message {
-      padding: 12px;
-      margin-bottom: 20px;
-      border-radius: 5px;
+      padding: 16px;
+      margin-bottom: 24px;
+      border-radius: 10px;
       font-size: 13px;
       display: none;
+      border-left: 5px solid;
+      animation: slideUp 0.4s ease;
     }
 
     .message.success {
       background: #f0f9f6;
       color: #2d5f4f;
-      border: 1px solid #e2f0ea;
+      border-left-color: #7bad75;
+      display: block;
     }
 
     .message.error {
       background: #fdf5f5;
       color: #5c3c3c;
-      border: 1px solid #f3dfdf;
+      border-left-color: #b85c5c;
+      display: block;
     }
 
     .message.info {
       background: #f5f7f8;
       color: #385a6b;
-      border: 1px solid #e1e7ea;
+      border-left-color: #6b8e9f;
+      display: block;
     }
 
     .form-actions {
       display: flex;
-      gap: 10px;
-      margin-top: 20px;
+      gap: 12px;
+      margin-top: 28px;
     }
 
     .btn {
       flex: 1;
-      padding: 11px;
+      padding: 14px 20px;
       border: none;
-      border-radius: 4px;
-      font-size: 13px;
-      font-weight: 700;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
       cursor: pointer;
-      transition: all 0.3s;
-      text-transform: uppercase;
+      transition: all 0.3s ease;
       letter-spacing: 0.4px;
     }
 
     .btn-primary {
       background: linear-gradient(135deg, #8ba88a 0%, #6b8e6f 100%);
       color: white;
-      border: 1px solid #6b8e6f;
+      border: 2px solid transparent;
     }
 
     .btn-primary:hover {
       transform: translateY(-2px);
-      box-shadow: 0 6px 12px rgba(107, 142, 111, 0.3);
+      box-shadow: 0 10px 25px rgba(107, 142, 111, 0.4);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
     }
 
     .btn-secondary {
-      background: #f5f1ed;
+      background: #f0ece6;
       color: #5a4a3a;
-      border: 1px solid #d4ccc3;
+      border: 2px solid #e8e2db;
+      font-weight: 600;
     }
+
+    .btn-secondary:hover {
+      background: #e8e2db;
+      border-color: #d4ccc3;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .loading {
+      display: none;
+      text-align: center;
+      color: #8ba88a;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #8ba88a;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
 
     .btn-secondary:hover {
       background: #d4ccc3;
