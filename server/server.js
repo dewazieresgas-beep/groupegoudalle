@@ -714,8 +714,13 @@ app.put('/api/cbco-securite', requireToken, requireWriteRateLimit, (req, res) =>
 // ─── EXCEL CBCO PRODUCTIVITÉ : CONFIG + WATCHER + AUTO-IMPORT ────────────────
 
 function parseCBCOProdExcel(cfg) {
-  const excelPath = path.join(cfg.folder, cfg.filename);
-  if (!fs.existsSync(excelPath)) throw new Error(`Fichier introuvable : "${excelPath}"`);
+  let excelPath = path.join(cfg.folder, cfg.filename);
+  if (!fs.existsSync(excelPath)) {
+    const candidates = ['.xlsx', '.xlsm', '.xls'];
+    const found = candidates.find(ext => fs.existsSync(excelPath + ext));
+    if (found) excelPath = excelPath + found;
+    else throw new Error(`Fichier introuvable : "${excelPath}"`);
+  }
 
   const wb = XLSX.readFile(excelPath);
   const normName = (n) => String(n || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '');
