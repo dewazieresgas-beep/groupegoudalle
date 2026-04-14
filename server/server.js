@@ -16,6 +16,7 @@ const fs = require('fs');
 const XLSX = require('xlsx');
 const XlsxPopulate = require('xlsx-populate');
 const { PDFParse } = require('pdf-parse');
+const multer = require('multer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -580,6 +581,36 @@ function requireWriteRateLimit(req, res, next) {
 
 // Sert les fichiers statiques du site (HTML, CSS, JS, images)
 app.use(express.static(path.join(__dirname, '..')));
+
+// ─── CONFIGURATION MULTER POUR LES UPLOADS DE PDFs ─────────────────────────────
+// Créer le dossier des uploads s'il n'existe pas
+const uploadsDir = path.join(__dirname, 'planning-pdfs');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadsDir);
+  },
+  filename: function (req, file, cb) {
+    // Garder le nom original avec timestamp
+    const timestamp = Date.now();
+    cb(null, `planning-${timestamp}.pdf`);
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  fileFilter: function (req, file, cb) {
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Seuls les fichiers PDF sont acceptés'), false);
+    }
+  },
+  limits: { fileSize: 100 * 1024 * 1024 } // 100MB
+});
 
 // ─── ROUTES : UTILISATEURS ──────────────────────────────────────────────────────
 
@@ -2982,6 +3013,88 @@ app.get('/api/rh-security-summary', (req, res) => {
   res.json({ success: true, ...computeRHSecuritySummary(incidents) });
 });
 
+// ─── ROUTES : PLANNING PDF USINE CBCO ────────────────────────────────────────────
+
+/**
+ * POST /api/planning-pdf-upload
+ * Upload un PDF de planning de production
+ * Ancien PDF est supprimé, seul le dernier remain en place
+ */
+app.post('/api/planning-pdf-upload', upload.single('file'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ success: false, error: 'Aucun fichier envoyé' });
+  }
+
+  // Supprimer les anciens PDFs
+  try {
+    const files = fs.readdirSync(uploadsDir);
+    for (const file of files) {
+      if (file.startsWith('planning-') && file.endsWith('.pdf')) {
+        fs.unlinkSync(path.join(uploadsDir, file));
+      }
+    }
+  } catch (err) {
+    console.error('Erreur suppression anciens PDFs:', err);
+  }
+
+  // Sauvegarder les infos du nouveau PDF
+  dbSet('planning_pdf_current', {
+    filename: req.file.filename,
+    originalname: req.file.originalname,
+    uploadedAt: new Date().toISOString(),
+    filesize: req.file.size
+  });
+
+  res.json({ success: true, filename: req.file.filename });
+});
+
+/**
+ * GET /api/planning-pdf-get
+ * Retourne l'URL du PDF actuel
+ */
+app.get('/api/planning-pdf-get', (req, res) => {
+  const pdfInfo = dbGet('planning_pdf_current', null);
+  
+  if (!pdfInfo) {
+    return res.json({ success: false, pdfUrl: null });
+  }
+
+  const pdfPath = path.join(uploadsDir, pdfInfo.filename);
+  
+  // Vérifier que le fichier existe
+  if (!fs.existsSync(pdfPath)) {
+    dbSet('planning_pdf_current', null);
+    return res.json({ success: false, pdfUrl: null });
+  }
+
+  // Retourner l'URL d'accès
+  const pdfUrl = `/server/planning-pdfs/${pdfInfo.filename}`;
+  res.json({ success: true, pdfUrl, filename: pdfInfo.originalname });
+});
+
+/**
+ * GET /api/planning-pdf-status
+ * Vérifier si un PDF est actuellement en place
+ */
+app.get('/api/planning-pdf-status', (req, res) => {
+  const pdfInfo = dbGet('planning_pdf_current', null);
+  
+  if (!pdfInfo) {
+    return res.json({ hasPdf: false, filename: null });
+  }
+
+  const pdfPath = path.join(uploadsDir, pdfInfo.filename);
+  
+  if (!fs.existsSync(pdfPath)) {
+    dbSet('planning_pdf_current', null);
+    return res.json({ hasPdf: false, filename: null });
+  }
+
+  res.json({ hasPdf: true, filename: pdfInfo.originalname });
+});
+
+// Servir les fichiers PDF du planning
+app.use('/server/planning-pdfs', express.static(uploadsDir));
 
 // /api/health expose le token de sécurité uniquement aux clients du réseau local.
 // Ce token doit être inclus dans toutes les requêtes d'écriture.

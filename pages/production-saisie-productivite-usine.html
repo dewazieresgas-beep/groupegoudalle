@@ -63,6 +63,29 @@
         </div>
       </div>
 
+      <!-- ═══ PLANNING DE PRODUCTION ═══ -->
+      <div class="card" style="margin-top:20px;">
+        <div class="card-title">
+          <h2>📋 Planning de Production</h2>
+        </div>
+        <div class="card-body">
+          <p style="color:#666; margin-bottom:12px; font-size:0.9em;">Importez un PDF du planning de production. Le PDF s'affichera sur la page <strong>Planning Usine CBCO</strong> avec zoom, pan et plein écran.</p>
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <label for="planningPdfInput" class="btn btn-primary" style="cursor:pointer; margin:0;">
+              📤 Importer un PDF
+            </label>
+            <input type="file" id="planningPdfInput" accept=".pdf" style="display:none;">
+            <span id="planningPdfStatus" style="font-size:0.9em; color:#666;"></span>
+            <button type="button" id="planningViewBtn" class="btn btn-secondary" style="display:none;" onclick="window.location.href='planning-usine-cbco.html'">
+              👁️ Voir le planning
+            </button>
+          </div>
+          <div id="planningProgressBar" style="display:none; margin-top:10px; background:#e0e0e0; border-radius:4px; height:6px; overflow:hidden;">
+            <div id="planningProgressFill" style="background:#27ae60; height:100%; width:0%; transition:width 0.3s;"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- ═══ HISTORIQUE ═══ -->
       <div class="card" style="margin-top:20px;">
         <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
@@ -350,6 +373,91 @@
       injectProductionSecondaryBar();
       loadConfig();
       refreshHistory();
+      initPlanningPdfUpload();
+    }
+
+    function initPlanningPdfUpload() {
+      const input = document.getElementById('planningPdfInput');
+      input.addEventListener('change', handlePlanningPdfUpload);
+      updatePlanningPdfStatus();
+    }
+
+    async function handlePlanningPdfUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      if (file.type !== 'application/pdf') {
+        alert('❌ Veuillez sélectionner un fichier PDF');
+        return;
+      }
+
+      const progressBar = document.getElementById('planningProgressBar');
+      const progressFill = document.getElementById('planningProgressFill');
+      const statusSpan = document.getElementById('planningPdfStatus');
+      
+      progressBar.style.display = 'block';
+      statusSpan.textContent = '⏳ Upload en cours...';
+
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const xhr = new XMLHttpRequest();
+        
+        xhr.upload.addEventListener('progress', (e) => {
+          if (e.lengthComputable) {
+            const percentComplete = (e.loaded / e.total) * 100;
+            progressFill.style.width = percentComplete + '%';
+          }
+        });
+
+        xhr.addEventListener('load', async () => {
+          if (xhr.status === 200) {
+            const result = JSON.parse(xhr.responseText);
+            if (result.success) {
+              statusSpan.textContent = '✅ PDF importé avec succès !';
+              document.getElementById('planningViewBtn').style.display = 'inline-flex';
+              progressBar.style.display = 'none';
+              setTimeout(() => { progressFill.style.width = '0%'; }, 300);
+              showMessage('✅ Planning PDF importé avec succès !', 'success');
+            } else {
+              statusSpan.textContent = '❌ Erreur : ' + (result.error || 'Erreur inconnue');
+              progressBar.style.display = 'none';
+            }
+          } else {
+            statusSpan.textContent = '❌ Erreur lors de l\'upload';
+            progressBar.style.display = 'none';
+          }
+        });
+
+        xhr.addEventListener('error', () => {
+          statusSpan.textContent = '❌ Erreur de connexion';
+          progressBar.style.display = 'none';
+        });
+
+        xhr.open('POST', SERVER_URL + '/planning-pdf-upload');
+        xhr.send(formData);
+      } catch (error) {
+        statusSpan.textContent = '❌ Erreur : ' + error.message;
+        progressBar.style.display = 'none';
+      }
+    }
+
+    function updatePlanningPdfStatus() {
+      fetch(SERVER_URL + '/planning-pdf-status', { cache: 'no-store' })
+        .then(r => r.json())
+        .then(data => {
+          const statusSpan = document.getElementById('planningPdfStatus');
+          const viewBtn = document.getElementById('planningViewBtn');
+          if (data.hasPdf) {
+            statusSpan.textContent = `📄 Planning en place (${data.filename})`;
+            viewBtn.style.display = 'inline-flex';
+          } else {
+            statusSpan.textContent = '📭 Aucun planning importé';
+            viewBtn.style.display = 'none';
+          }
+        })
+        .catch(e => console.log('Erreur status PDF:', e));
     }
 
     window.onServerReady(init);

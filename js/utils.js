@@ -577,6 +577,10 @@ function injectProductionSecondaryBar() {
     const prodActive = currentPage === 'production-saisie-productivite-usine.html' ? ' active' : '';
     secondaryItems += `<a href="${base}pages/production-saisie-productivite-usine.html" class="sidebar-item${prodActive}">✏️ Saisie Productivité Usine</a>`;
   }
+  if (Auth.hasAccess('production_saisie_productivite')) {
+    const planningActive = currentPage === 'planning-usine-cbco.html' ? ' active' : '';
+    secondaryItems += `<a href="${base}pages/planning-usine-cbco.html" class="sidebar-item${planningActive}">📋 Planning Usine CBCO</a>`;
+  }
 
   if (secondaryItems) {
     const barHTML = `
