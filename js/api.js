@@ -89,6 +89,15 @@ const PAGE_PRELOAD_KEYS = {
   'compta-paiements-charpente.html': ['goudalle_sylve_balance', 'goudalle_sylve_paiements_attente'],
   'compta-paiements-cbco.html': ['goudalle_sylve_balance', 'goudalle_sylve_paiements_attente'],
   'production-indicateurs-generaux.html': ['goudalle_cbco_productivite'],
+  'index.html': [
+    'goudalle_kpis',
+    'goudalle_thresholds',
+    'goudalle_cbco_data',
+    'goudalle_cbco_commercial',
+    'goudalle_sylve_balance',
+    'goudalle_cbco_securite',
+    'goudalle_cbco_productivite',
+  ],
   // Les pages achats manipulent de gros volumes historiques.
   // On évite leur préchargement global au démarrage et on laisse chaque page
   // charger uniquement ce dont elle a besoin au moment opportun.
