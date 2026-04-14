@@ -1,6 +1,6 @@
 /**
  * Planning PDF Viewer - Gestion de l'affichage du PDF de planning usine
- * Fonctionnalités: zoom, pan, plein écran, adaptation à la page
+ * Fonctionnalités: zoom haute qualité, pan, plein écran, adaptation à la page
  */
 
 // Configuration PDF.js
@@ -14,19 +14,23 @@ let panStartX = 0;
 let panStartY = 0;
 let panOffsetX = 0;
 let panOffsetY = 0;
-let baseScale = 1;
 
 // Wrapper pour le canvas pour gérer le pan
 let canvasWrapper = null;
+let initialScale = 1;
 
 // Éléments DOM
 const canvas = document.getElementById('pdfCanvas');
-const ctx = canvas.getContext('2d');
+const ctx = canvas.getContext('2d', { alpha: false });
 const container = document.getElementById('pdfContainer');
 const loadingSpinner = document.getElementById('loadingSpinner');
 const noPdfMessage = document.getElementById('noPdfMessage');
 const pdfControls = document.getElementById('pdfControls');
 const zoomValue = document.getElementById('zoomValue');
+
+// Rapport pixel réel pour une meilleure qualité
+const PIXEL_RATIO = window.devicePixelRatio || 1;
+const QUALITY_SCALE = 1.5; // Scale additionnel pour la qualité (1.5x plus de pixels)
 
 /**
  * Initialiser le viewer de PDF
@@ -37,7 +41,7 @@ async function initPlanningViewer() {
     
     // Créer le wrapper pour le canvas
     canvasWrapper = document.createElement('div');
-    canvasWrapper.style.cssText = 'display: inline-block; position: relative; cursor: grab;';
+    canvasWrapper.style.cssText = 'display: inline-block; position: relative; cursor: grab; transform-origin: center;';
     canvas.parentNode.insertBefore(canvasWrapper, canvas);
     canvasWrapper.appendChild(canvas);
 
@@ -99,19 +103,26 @@ function showNoPDF() {
 }
 
 /**
- * Rendre une page du PDF
+ * Rendre une page du PDF avec haute qualité
  */
 async function renderPage(pageNum) {
   if (!pdfDoc) return;
 
   try {
     const page = await pdfDoc.getPage(pageNum);
-    const viewport = page.getViewport({ scale: baseScale * zoomLevel });
+    
+    // Calculer l'échelle avec qualité élevée
+    const scale = initialScale * zoomLevel * PIXEL_RATIO * QUALITY_SCALE;
+    const viewport = page.getViewport({ scale });
 
+    // Configurer le canvas avec les vraies dimensions (haute résolution)
     canvas.width = viewport.width;
     canvas.height = viewport.height;
+    canvas.style.width = (viewport.width / PIXEL_RATIO / QUALITY_SCALE) + 'px';
+    canvas.style.height = (viewport.height / PIXEL_RATIO / QUALITY_SCALE) + 'px';
     canvas.style.display = 'block';
 
+    // Rendre le PDF
     const renderContext = {
       canvasContext: ctx,
       viewport: viewport,
@@ -121,8 +132,6 @@ async function renderPage(pageNum) {
     await page.render(renderContext).promise;
     currentPage = pageNum;
     updateZoomDisplay();
-
-    // Réinitialiser les styles de transformation
     resetCanvasTransform();
   } catch (error) {
     console.error('Erreur rendu page:', error);
@@ -152,7 +161,7 @@ function updateZoomDisplay() {
  */
 async function zoomIn() {
   const oldZoom = zoomLevel;
-  zoomLevel = Math.min(zoomLevel + 0.1, 3);
+  zoomLevel = Math.min(zoomLevel + 0.2, 5);
   
   if (oldZoom !== zoomLevel) {
     await renderPage(currentPage);
@@ -164,7 +173,7 @@ async function zoomIn() {
  */
 async function zoomOut() {
   const oldZoom = zoomLevel;
-  zoomLevel = Math.max(zoomLevel - 0.1, 0.5);
+  zoomLevel = Math.max(zoomLevel - 0.2, 0.5);
   
   if (oldZoom !== zoomLevel) {
     await renderPage(currentPage);
@@ -179,13 +188,13 @@ async function fitPage() {
 
   const page = await pdfDoc.getPage(currentPage);
   const containerWidth = container.clientWidth - 40; // Margin
-  const containerHeight = container.clientHeight - 60; // Pour les contrôles
+  const containerHeight = container.clientHeight - 80; // Pour les contrôles
   const viewport = page.getViewport({ scale: 1 });
 
-  const scaleX = containerWidth / viewport.width;
-  const scaleY = containerHeight / viewport.height;
+  const scaleX = containerWidth / (viewport.width / PIXEL_RATIO / QUALITY_SCALE);
+  const scaleY = containerHeight / (viewport.height / PIXEL_RATIO / QUALITY_SCALE);
   
-  baseScale = Math.min(scaleX, scaleY, 1);
+  initialScale = Math.min(scaleX, scaleY, 1);
   zoomLevel = 1;
   panOffsetX = 0;
   panOffsetY = 0;
@@ -227,17 +236,19 @@ function toggleFullscreen() {
 /**
  * Gérer l'événement fullscreenchange
  */
-document.addEventListener('fullscreenchange', () => {
+document.addEventListener('fullscreenchange', async () => {
   const btn = document.getElementById('fullscreenBtn');
   if (document.fullscreenElement) {
     btn.textContent = '⛶ Quitter plein écran';
   } else {
     btn.textContent = '⛶ Plein écran';
+    // Ré-adapter après sortie plein écran
+    setTimeout(() => fitPage(), 100);
   }
 });
 
 /**
- * Configurer les event listeners pour le pan à la souris
+ * Configurer les event listeners pour le pan et zoom
  */
 function setupEventListeners() {
   canvas.addEventListener('mousedown', startPan);
@@ -245,8 +256,15 @@ function setupEventListeners() {
   canvas.addEventListener('mouseup', endPan);
   canvas.addEventListener('mouseleave', endPan);
 
-  // Wheel zoom
+  // Wheel zoom avec Ctrl
   canvas.addEventListener('wheel', handleWheel, { passive: false });
+
+  // Redimensionnement de fenêtre
+  window.addEventListener('resize', () => {
+    if (pdfDoc && zoomLevel === 1) {
+      setTimeout(() => fitPage(), 100);
+    }
+  });
 }
 
 /**
@@ -289,14 +307,14 @@ function endPan() {
 }
 
 /**
- * Appliquer le décalage de pan au canvas wrapper
+ * Appliquer le décalage de pan
  */
 function applyPanOffset() {
   if (!canvasWrapper) return;
 
   // Limiter le pan pour ne pas aller trop loin
-  const maxOffsetX = Math.max(0, (canvasWrapper.offsetWidth * zoomLevel - container.clientWidth) / 2);
-  const maxOffsetY = Math.max(0, (canvasWrapper.offsetHeight * zoomLevel - container.clientHeight) / 2);
+  const maxOffsetX = Math.max(0, (canvasWrapper.offsetWidth - container.clientWidth) / 2);
+  const maxOffsetY = Math.max(0, (canvasWrapper.offsetHeight - container.clientHeight) / 2);
 
   panOffsetX = Math.max(-maxOffsetX, Math.min(maxOffsetX, panOffsetX));
   panOffsetY = Math.max(-maxOffsetY, Math.min(maxOffsetY, panOffsetY));
@@ -305,40 +323,19 @@ function applyPanOffset() {
 }
 
 /**
- * Gérer le zoom à la molette
+ * Gérer le zoom à la molette (Ctrl+Molette)
  */
 async function handleWheel(e) {
+  // Zoom seulement avec Ctrl
+  if (!e.ctrlKey) return;
+  
   e.preventDefault();
 
-  const delta = e.deltaY > 0 ? -0.1 : 0.1;
+  const delta = e.deltaY > 0 ? -0.2 : 0.2;
   const oldZoom = zoomLevel;
-  zoomLevel = Math.max(0.5, Math.min(zoomLevel + delta, 3));
+  zoomLevel = Math.max(0.5, Math.min(zoomLevel + delta, 5));
 
   if (oldZoom !== zoomLevel) {
     await renderPage(currentPage);
   }
 }
-
-/**
- * Gérer le redimensionnement de la fenêtre
- */
-window.addEventListener('resize', async () => {
-  if (pdfDoc) {
-    // Ré-adapter la page si elle était en mode "fit"
-    if (zoomLevel === 1 && panOffsetX === 0 && panOffsetY === 0) {
-      await fitPage();
-    }
-  }
-});
-
-/**
- * Gérer la sortie du plein écran
- */
-document.addEventListener('fullscreenchange', async () => {
-  if (!document.fullscreenElement) {
-    // Ré-adapter quand on quitte le plein écran
-    if (pdfDoc && zoomLevel === 1) {
-      setTimeout(() => fitPage(), 100);
-    }
-  }
-});

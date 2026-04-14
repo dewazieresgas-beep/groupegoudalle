@@ -374,10 +374,7 @@
       loadConfig();
       refreshHistory();
       initPlanningPdfUpload();
-      startStatusCheck();
-      
-      // Arrêter le check si on quitte la page
-      window.addEventListener('beforeunload', stopStatusCheck);
+      loadPlanningPdfStatus();
     }
 
     function initPlanningPdfUpload() {
@@ -553,20 +550,9 @@
         });
     }
 
-    // Rafraîchir le statut toutes les 3 secondes
-    let statusCheckInterval = null;
-    
-    function startStatusCheck() {
-      if (statusCheckInterval) clearInterval(statusCheckInterval);
+    // Charger le statut une seule fois au démarrage
+    function loadPlanningPdfStatus() {
       updatePlanningPdfStatus();
-      statusCheckInterval = setInterval(updatePlanningPdfStatus, 3000);
-    }
-
-    function stopStatusCheck() {
-      if (statusCheckInterval) {
-        clearInterval(statusCheckInterval);
-        statusCheckInterval = null;
-      }
     }
 
     window.onServerReady(init);
