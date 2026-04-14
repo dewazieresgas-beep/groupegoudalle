@@ -374,11 +374,64 @@
       loadConfig();
       refreshHistory();
       initPlanningPdfUpload();
+      startStatusCheck();
+      
+      // Arrêter le check si on quitte la page
+      window.addEventListener('beforeunload', stopStatusCheck);
     }
 
     function initPlanningPdfUpload() {
       const input = document.getElementById('planningPdfInput');
+      if (!input) {
+        console.warn('planningPdfInput non trouvé');
+        return;
+      }
+      
+      // Initialiser le label et autre
+      const label = document.querySelector('label[for="planningPdfInput"]');
+      if (!label) {
+        console.warn('Label pour planningPdfInput non trouvé');
+        return;
+      }
+      
+      // Évenement changement fichier
       input.addEventListener('change', handlePlanningPdfUpload);
+      
+      // Click sur le label
+      label.addEventListener('click', (e) => {
+        // Laisser le navigateur gérer le clic naturellement
+      });
+      
+      // Support drag and drop
+      const cardBody = label.closest('.card-body');
+      if (cardBody) {
+        cardBody.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          cardBody.style.backgroundColor = '#f0f8ff';
+        });
+        
+        cardBody.addEventListener('dragleave', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          cardBody.style.backgroundColor = '';
+        });
+        
+        cardBody.addEventListener('drop', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          cardBody.style.backgroundColor = '';
+          
+          const files = e.dataTransfer.files;
+          if (files.length > 0) {
+            input.files = files;
+            const event = new Event('change', { bubbles: true });
+            input.dispatchEvent(event);
+          }
+        });
+      }
+      
+      // Charger le statut initial
       updatePlanningPdfStatus();
     }
 
@@ -387,7 +440,15 @@
       if (!file) return;
 
       if (file.type !== 'application/pdf') {
-        alert('❌ Veuillez sélectionner un fichier PDF');
+        showMessage('❌ Veuillez sélectionner un fichier PDF (pas ' + file.type + ')', 'error');
+        event.target.value = '';
+        return;
+      }
+
+      const maxSize = 100 * 1024 * 1024; // 100MB
+      if (file.size > maxSize) {
+        showMessage(`❌ Fichier trop volumineux (${(file.size / 1024 / 1024).toFixed(1)}MB > 100MB)`, 'error');
+        event.target.value = '';
         return;
       }
 
@@ -396,7 +457,8 @@
       const statusSpan = document.getElementById('planningPdfStatus');
       
       progressBar.style.display = 'block';
-      statusSpan.textContent = '⏳ Upload en cours...';
+      progressFill.style.width = '0%';
+      statusSpan.textContent = `⏳ Upload en cours (${file.name})...`;
 
       try {
         const formData = new FormData();
@@ -408,38 +470,66 @@
           if (e.lengthComputable) {
             const percentComplete = (e.loaded / e.total) * 100;
             progressFill.style.width = percentComplete + '%';
+            statusSpan.textContent = `⏳ Upload ${Math.round(percentComplete)}%`;
           }
         });
 
         xhr.addEventListener('load', async () => {
-          if (xhr.status === 200) {
-            const result = JSON.parse(xhr.responseText);
-            if (result.success) {
-              statusSpan.textContent = '✅ PDF importé avec succès !';
-              document.getElementById('planningViewBtn').style.display = 'inline-flex';
-              progressBar.style.display = 'none';
-              setTimeout(() => { progressFill.style.width = '0%'; }, 300);
-              showMessage('✅ Planning PDF importé avec succès !', 'success');
+          progressBar.style.display = 'none';
+          progressFill.style.width = '0%';
+          event.target.value = '';
+          
+          try {
+            if (xhr.status === 200) {
+              const result = JSON.parse(xhr.responseText);
+              if (result.success) {
+                statusSpan.textContent = '⏳ Finalisation...';
+                showMessage('✅ Planning PDF importé avec succès !', 'success');
+                // Rafraîchir le statut après un délai
+                await new Promise(resolve => setTimeout(resolve, 500));
+                updatePlanningPdfStatus();
+              } else {
+                statusSpan.textContent = '❌ Erreur : ' + (result.error || 'Erreur inconnue');
+                showMessage('❌ Erreur lors de l\'upload : ' + (result.error || 'Erreur inconnue'), 'error');
+              }
             } else {
-              statusSpan.textContent = '❌ Erreur : ' + (result.error || 'Erreur inconnue');
-              progressBar.style.display = 'none';
+              statusSpan.textContent = `❌ Erreur serveur ${xhr.status}`;
+              showMessage(`❌ Erreur serveur (${xhr.status})`, 'error');
+              console.error('Upload status:', xhr.status, xhr.responseText);
             }
-          } else {
-            statusSpan.textContent = '❌ Erreur lors de l\'upload';
-            progressBar.style.display = 'none';
+          } catch (parseError) {
+            console.error('Erreur parsing réponse:', parseError);
+            statusSpan.textContent = '❌ Erreur lors du traitement';
+            showMessage('❌ Erreur lors du traitement : ' + parseError.message, 'error');
           }
         });
 
         xhr.addEventListener('error', () => {
-          statusSpan.textContent = '❌ Erreur de connexion';
           progressBar.style.display = 'none';
+          progressFill.style.width = '0%';
+          event.target.value = '';
+          statusSpan.textContent = '❌ Erreur de connexion';
+          showMessage('❌ Erreur de connexion au serveur', 'error');
+          console.error('Upload network error');
         });
 
+        xhr.addEventListener('abort', () => {
+          progressBar.style.display = 'none';
+          progressFill.style.width = '0%';
+          event.target.value = '';
+          statusSpan.textContent = '⚠️ Upload annulé';
+          showMessage('⚠️ Upload annulé', 'error');
+        });
+
+        console.log('Upload PDF:', file.name, 'Taille:', (file.size / 1024).toFixed(1), 'KB');
         xhr.open('POST', SERVER_URL + '/planning-pdf-upload');
         xhr.send(formData);
       } catch (error) {
-        statusSpan.textContent = '❌ Erreur : ' + error.message;
         progressBar.style.display = 'none';
+        event.target.value = '';
+        statusSpan.textContent = '❌ Erreur : ' + error.message;
+        showMessage('❌ Erreur : ' + error.message, 'error');
+        console.error('Upload setup error:', error);
       }
     }
 
@@ -457,7 +547,26 @@
             viewBtn.style.display = 'none';
           }
         })
-        .catch(e => console.log('Erreur status PDF:', e));
+        .catch(e => {
+          console.error('Erreur vérification statut PDF:', e);
+          document.getElementById('planningPdfStatus').textContent = '⚠️ Erreur vérification statut';
+        });
+    }
+
+    // Rafraîchir le statut toutes les 3 secondes
+    let statusCheckInterval = null;
+    
+    function startStatusCheck() {
+      if (statusCheckInterval) clearInterval(statusCheckInterval);
+      updatePlanningPdfStatus();
+      statusCheckInterval = setInterval(updatePlanningPdfStatus, 3000);
+    }
+
+    function stopStatusCheck() {
+      if (statusCheckInterval) {
+        clearInterval(statusCheckInterval);
+        statusCheckInterval = null;
+      }
     }
 
     window.onServerReady(init);

@@ -33,6 +33,8 @@ const zoomValue = document.getElementById('zoomValue');
  */
 async function initPlanningViewer() {
   try {
+    console.log('[Planning PDF Viewer] Initialisation...');
+    
     // Créer le wrapper pour le canvas
     canvasWrapper = document.createElement('div');
     canvasWrapper.style.cssText = 'display: inline-block; position: relative; cursor: grab;';
@@ -40,19 +42,32 @@ async function initPlanningViewer() {
     canvasWrapper.appendChild(canvas);
 
     // Charger le PDF depuis le serveur
+    console.log('[Planning PDF Viewer] Récupération du PDF depuis:', SERVER_URL + '/planning-pdf-get');
     const response = await fetch(SERVER_URL + '/planning-pdf-get', { cache: 'no-store' });
     const data = await response.json();
 
+    console.log('[Planning PDF Viewer] Réponse:', data);
+
     if (!data.success || !data.pdfUrl) {
+      console.warn('[Planning PDF Viewer] Aucun PDF à afficher');
       showNoPDF();
       return;
     }
 
     loadingSpinner.style.display = 'block';
     pdfControls.style.display = 'none';
+    console.log('[Planning PDF Viewer] Chargement du PDF depuis:', data.pdfUrl);
 
     // Charger le document PDF
-    pdfDoc = await pdfjsLib.getDocument(data.pdfUrl).promise;
+    try {
+      pdfDoc = await pdfjsLib.getDocument(data.pdfUrl).promise;
+      console.log('[Planning PDF Viewer] PDF chargé, pages:', pdfDoc.numPages);
+    } catch (pdfError) {
+      console.error('[Planning PDF Viewer] Erreur chargement PDF.js:', pdfError);
+      showMessage('Erreur lors du chargement du PDF: ' + pdfError.message);
+      showNoPDF();
+      return;
+    }
     
     // Afficher la première page
     await renderPage(1);
@@ -65,8 +80,10 @@ async function initPlanningViewer() {
 
     // Ajouter les event listeners
     setupEventListeners();
+    
+    console.log('[Planning PDF Viewer] ✓ Initialisé avec succès');
   } catch (error) {
-    console.error('Erreur chargement PDF:', error);
+    console.error('[Planning PDF Viewer] Erreur initialisation:', error);
     showNoPDF();
   }
 }

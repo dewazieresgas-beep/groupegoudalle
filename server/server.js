@@ -587,22 +587,37 @@ app.use(express.static(path.join(__dirname, '..')));
 const uploadsDir = path.join(__dirname, 'planning-pdfs');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
+  console.log('[Server] Dossier planning-pdfs créé:', uploadsDir);
+} else {
+  console.log('[Server] Dossier planning-pdfs trouvé:', uploadsDir);
+  // Vérifier les PDFs présents
+  try {
+    const files = fs.readdirSync(uploadsDir);
+    console.log('[Server] PDFs dans le dossier:', files.length, 'fichier(s)');
+    files.forEach(f => console.log('  -', f));
+  } catch (e) {
+    console.error('[Server] Erreur lecture planning-pdfs:', e.message);
+  }
 }
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
+    console.log('[Multer] Destination:', uploadsDir);
     cb(null, uploadsDir);
   },
   filename: function (req, file, cb) {
     // Garder le nom original avec timestamp
     const timestamp = Date.now();
-    cb(null, `planning-${timestamp}.pdf`);
+    const filename = `planning-${timestamp}.pdf`;
+    console.log('[Multer] Filename:', filename);
+    cb(null, filename);
   }
 });
 
 const upload = multer({
   storage: storage,
   fileFilter: function (req, file, cb) {
+    console.log('[Multer] File received:', file.originalname, 'Type:', file.mimetype);
     if (file.mimetype === 'application/pdf') {
       cb(null, true);
     } else {
@@ -610,6 +625,21 @@ const upload = multer({
     }
   },
   limits: { fileSize: 100 * 1024 * 1024 } // 100MB
+});
+
+// Middleware de gestion des erreurs multer
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    console.error('[Multer Error]', err.code, err.message);
+    if (err.code === 'FILE_TOO_LARGE') {
+      return res.status(400).json({ success: false, error: 'Fichier trop volumineux (max 100MB)' });
+    }
+    return res.status(400).json({ success: false, error: 'Erreur upload: ' + err.message });
+  } else if (err) {
+    console.error('[Upload Error]', err.message);
+    return res.status(400).json({ success: false, error: err.message });
+  }
+  next();
 });
 
 // ─── ROUTES : UTILISATEURS ──────────────────────────────────────────────────────
@@ -3021,31 +3051,51 @@ app.get('/api/rh-security-summary', (req, res) => {
  * Ancien PDF est supprimé, seul le dernier remain en place
  */
 app.post('/api/planning-pdf-upload', upload.single('file'), (req, res) => {
+  console.log('[Planning PDF] Upload reçu:', req.file?.originalname);
+  
   if (!req.file) {
+    console.error('[Planning PDF] Aucun fichier reçu');
     return res.status(400).json({ success: false, error: 'Aucun fichier envoyé' });
   }
 
-  // Supprimer les anciens PDFs
   try {
-    const files = fs.readdirSync(uploadsDir);
-    for (const file of files) {
-      if (file.startsWith('planning-') && file.endsWith('.pdf')) {
-        fs.unlinkSync(path.join(uploadsDir, file));
-      }
+    // Vérifier que le fichier existe
+    if (!fs.existsSync(req.file.path)) {
+      console.error('[Planning PDF] Fichier non trouvé après upload:', req.file.path);
+      return res.status(500).json({ success: false, error: 'Fichier non trouvé après upload' });
     }
-  } catch (err) {
-    console.error('Erreur suppression anciens PDFs:', err);
+
+    console.log('[Planning PDF] Fichier uploadé:', req.file.filename, 'Taille:', req.file.size, 'bytes');
+
+    // Supprimer les anciens PDFs
+    try {
+      const files = fs.readdirSync(uploadsDir);
+      for (const file of files) {
+        if (file.startsWith('planning-') && file.endsWith('.pdf') && file !== req.file.filename) {
+          const oldPath = path.join(uploadsDir, file);
+          fs.unlinkSync(oldPath);
+          console.log('[Planning PDF] Ancien PDF supprimé:', file);
+        }
+      }
+    } catch (err) {
+      console.error('[Planning PDF] Erreur suppression anciens PDFs:', err.message);
+    }
+
+    // Sauvegarder les infos du nouveau PDF
+    const pdfInfo = {
+      filename: req.file.filename,
+      originalname: req.file.originalname,
+      uploadedAt: new Date().toISOString(),
+      filesize: req.file.size
+    };
+    dbSet('planning_pdf_current', pdfInfo);
+    
+    console.log('[Planning PDF] Infos sauvegardées:', pdfInfo);
+    res.json({ success: true, filename: req.file.filename });
+  } catch (error) {
+    console.error('[Planning PDF] Erreur upload:', error.message);
+    res.status(500).json({ success: false, error: error.message });
   }
-
-  // Sauvegarder les infos du nouveau PDF
-  dbSet('planning_pdf_current', {
-    filename: req.file.filename,
-    originalname: req.file.originalname,
-    uploadedAt: new Date().toISOString(),
-    filesize: req.file.size
-  });
-
-  res.json({ success: true, filename: req.file.filename });
 });
 
 /**
@@ -3055,6 +3105,8 @@ app.post('/api/planning-pdf-upload', upload.single('file'), (req, res) => {
 app.get('/api/planning-pdf-get', (req, res) => {
   const pdfInfo = dbGet('planning_pdf_current', null);
   
+  console.log('[Planning PDF] GET status:', pdfInfo ? pdfInfo.filename : 'aucun');
+  
   if (!pdfInfo) {
     return res.json({ success: false, pdfUrl: null });
   }
@@ -3063,12 +3115,14 @@ app.get('/api/planning-pdf-get', (req, res) => {
   
   // Vérifier que le fichier existe
   if (!fs.existsSync(pdfPath)) {
+    console.warn('[Planning PDF] Fichier introuvable:', pdfPath);
     dbSet('planning_pdf_current', null);
     return res.json({ success: false, pdfUrl: null });
   }
 
   // Retourner l'URL d'accès
   const pdfUrl = `/server/planning-pdfs/${pdfInfo.filename}`;
+  console.log('[Planning PDF] URL générée:', pdfUrl);
   res.json({ success: true, pdfUrl, filename: pdfInfo.originalname });
 });
 
@@ -3080,21 +3134,35 @@ app.get('/api/planning-pdf-status', (req, res) => {
   const pdfInfo = dbGet('planning_pdf_current', null);
   
   if (!pdfInfo) {
+    console.log('[Planning PDF] Status check: aucun PDF');
     return res.json({ hasPdf: false, filename: null });
   }
 
   const pdfPath = path.join(uploadsDir, pdfInfo.filename);
   
   if (!fs.existsSync(pdfPath)) {
+    console.warn('[Planning PDF] Fichier listé mais introuvable:', pdfPath);
     dbSet('planning_pdf_current', null);
     return res.json({ hasPdf: false, filename: null });
   }
 
+  console.log('[Planning PDF] Status check: PDF présent -', pdfInfo.originalname);
   res.json({ hasPdf: true, filename: pdfInfo.originalname });
 });
 
-// Servir les fichiers PDF du planning
-app.use('/server/planning-pdfs', express.static(uploadsDir));
+// Servir les fichiers PDF du planning avec logging
+app.use('/server/planning-pdfs', (req, res, next) => {
+  console.log('[Planning PDF] Accès demandé:', req.path);
+  next();
+}, express.static(uploadsDir, {
+  setHeaders: (res, path) => {
+    if (path.endsWith('.pdf')) {
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      console.log('[Planning PDF] Fichier servi:', path);
+    }
+  }
+}));
 
 // /api/health expose le token de sécurité uniquement aux clients du réseau local.
 // Ce token doit être inclus dans toutes les requêtes d'écriture.
