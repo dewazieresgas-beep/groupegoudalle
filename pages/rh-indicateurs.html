@@ -599,12 +599,14 @@
         const baseDate = latestDate || periodStartValue || null;
         const rawDaysSince = baseDate ? Math.floor((todayUtc.getTime() - baseDate.getTime()) / (24 * 60 * 60 * 1000)) : null;
         const daysSince = rawDaysSince == null ? null : Math.max(0, rawDaysSince);
-        const ongoing = sorted.filter((item) => {
+        const ongoingItems = sorted.filter((item) => {
           if (!item.stopStartDate || !item.stopEndDate) return false;
           const start = new Date(`${item.stopStartDate}T00:00:00Z`);
           const end = new Date(`${item.stopEndDate}T00:00:00Z`);
           return start <= todayUtc && end >= todayUtc;
-        }).length;
+        });
+        const ongoing = ongoingItems.length;
+        const ongoingPersons = ongoingItems.map((item) => item.employeeName || 'Salarié non renseigné');
         const longestStreakDays = computeLongestGap(sorted, periodStartValue, periodEndDate || todayUtc);
         const averageStopDays = sorted.length
           ? Number((sorted.reduce((sum, item) => sum + Number(item.stopDays || 0), 0) / Math.max(sorted.filter((item) => Number(item.stopDays || 0) > 0).length || 1, 1)).toFixed(1))
@@ -624,7 +626,8 @@
           dernierAccidentCause: latest?.cause || null,
           dernierAccidentDescription: latest?.description || null,
           dernierAccidentStopDays: latest?.stopDays || null,
-          accidentsEnCours: ongoing
+          accidentsEnCours: ongoing,
+          ongoingPersons
         };
       };
 
@@ -636,6 +639,29 @@
           company.id
         ))
       };
+    }
+
+    function computeAllTimeRecord(incidents) {
+      const periodStart = parseIsoDate('2019-10-01');
+      const today = new Date();
+      const todayUtc = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+      const filtered = incidents.filter((item) => item.accidentDate && item.accidentDate >= '2019-10-01');
+      if (!filtered.length) {
+        return periodStart ? Math.max(0, Math.floor((todayUtc.getTime() - periodStart.getTime()) / (24 * 60 * 60 * 1000))) : null;
+      }
+      const dates = filtered
+        .map((item) => parseIsoDate(item.accidentDate))
+        .filter((d) => d instanceof Date)
+        .sort((a, b) => a - b);
+      let longest = 0;
+      let prev = periodStart;
+      for (const date of dates) {
+        const gap = Math.max(0, Math.floor((date.getTime() - prev.getTime()) / (24 * 60 * 60 * 1000)));
+        if (gap > longest) longest = gap;
+        prev = date;
+      }
+      const currentStreak = Math.max(0, Math.floor((todayUtc.getTime() - prev.getTime()) / (24 * 60 * 60 * 1000)));
+      return Math.max(longest, currentStreak);
     }
 
     function renderExerciseSelect(options, selected) {
@@ -655,11 +681,22 @@
       `;
     }
 
-    function renderCompanyCard(company, isClosedExercise) {
+    function renderCompanyCard(company, isClosedExercise, allTimeRecord) {
       const days = isClosedExercise ? company.plusLonguePeriodeSansAccident : company.joursSansAccident;
       const alertClass = days !== null && days < 30 ? ' alert' : '';
       const cardClass = days === null || days >= 90 ? 'card-ok' : (days < 30 ? 'card-alert' : '');
       const assets = COMPANY_ASSETS[company.id] || {};
+
+      let ongoingSub;
+      if (isClosedExercise) {
+        ongoingSub = null;
+      } else if (company.accidentsEnCours === 0) {
+        ongoingSub = `<div class="sub" style="color:#3a7a45; font-style:italic;">Tout le monde au taquet — aucun blessé au rapport ! 💪</div>`;
+      } else {
+        const noms = (company.ongoingPersons || []).map((n) => `<span style="display:block; font-size:12px; font-weight:600; color:#7a3020;">${escapeHtml(n)}</span>`).join('');
+        ongoingSub = noms || `<div class="sub">${company.accidentsEnCours} en arrêt</div>`;
+      }
+
       const fourthBlock = isClosedExercise
         ? `
             <div class="rh-mini">
@@ -669,10 +706,10 @@
             </div>
           `
         : `
-            <div class="rh-mini">
+            <div class="rh-mini" style="${company.accidentsEnCours === 0 ? 'background:linear-gradient(180deg,#f0faf2 0%,#e4f5e8 100%); border-color:#b8dfc0;' : 'background:linear-gradient(180deg,#fff5f0 0%,#ffe8e0 100%); border-color:#f0c4a8;'}">
               <div class="label">Arrêts en cours</div>
-              <div class="value">${company.accidentsEnCours}</div>
-              <div class="sub">aujourd'hui</div>
+              <div class="value" style="${company.accidentsEnCours === 0 ? 'color:#2e6e3a;' : 'color:#a03010;'}">${company.accidentsEnCours}</div>
+              ${ongoingSub}
             </div>
           `;
       const meterHeadline = isClosedExercise ? 'Plus longue période sans accident' : 'Jours sans accident';
@@ -708,10 +745,19 @@
 
           <div class="rh-safety-meter${alertClass}">
             <div class="rh-safety-meter-inner">
-              <div>
+              <div style="flex:1;">
                 <div class="headline">${meterHeadline}</div>
                 <div class="days">${days == null ? '—' : days}</div>
                 <div class="rh-stat-sub" style="margin-top:8px;">${meterSub}</div>
+                ${!isClosedExercise && allTimeRecord != null ? `
+                  <div style="margin-top:10px; padding-top:10px; border-top:1px solid rgba(0,0,0,0.08);">
+                    <span style="font-size:11px; text-transform:uppercase; letter-spacing:0.07em; font-weight:700; color:#56705c;">Record depuis oct. 2019</span>
+                    <span style="display:block; font-size:22px; font-weight:800; color:${days != null && days >= allTimeRecord ? '#d4960a' : 'var(--rh-ink)'};">
+                      ${days != null && days >= allTimeRecord ? '★ ' : ''}${allTimeRecord} jours
+                    </span>
+                    ${days != null && days >= allTimeRecord ? `<span style="font-size:11px; color:#a07010; font-weight:600;">Nouveau record en cours !</span>` : ''}
+                  </div>
+                ` : ''}
               </div>
             </div>
           </div>
@@ -809,7 +855,16 @@
             ${renderStatCard("Accidents enregistrés", group.totalAccidents, `exercice ${exerciseLabel}`)}
             ${renderStatCard("Accidents avec arrêt", group.accidentsAvecArret, "arrêts renseignés")}
             ${renderStatCard("Jours d'arrêt cumulés", group.joursArret, "toutes entreprises")}
-            ${renderStatCard("Arrêts en cours", group.accidentsEnCours, "sur cet exercice")}
+            <div class="rh-stat" style="${group.accidentsEnCours === 0 ? 'background:linear-gradient(180deg,#f0faf2 0%,#e4f5e8 100%); border-color:#b8dfc0;' : 'background:linear-gradient(180deg,#fff5f0 0%,#ffe8e0 100%); border-color:#f0c4a8;'}">
+              <div class="rh-stat-label">Arrêts en cours</div>
+              <div class="rh-stat-value" style="${group.accidentsEnCours === 0 ? 'color:#2e6e3a;' : 'color:#a03010;'}">${group.accidentsEnCours}</div>
+              <div class="rh-stat-sub">
+                ${group.accidentsEnCours === 0
+                  ? `<span style="color:#3a7a45; font-style:italic;">Tout le monde au taquet — aucun blessé au rapport ! 💪</span>`
+                  : (group.ongoingPersons || []).map((n) => `<span style="display:block; font-weight:600; color:#7a3020;">${escapeHtml(n)}</span>`).join('')
+                }
+              </div>
+            </div>
           `;
       const bannerTitle = isClosedExercise
         ? (group.plusLonguePeriodeSansAccident == null
@@ -825,6 +880,7 @@
       const statusChip = isClosedExercise
         ? '<span class="rh-chip status closed">Exercice clôturé</span>'
         : '<span class="rh-chip status">Exercice en cours</span>';
+      const groupAllTimeRecord = isClosedExercise ? null : computeAllTimeRecord(rhState.incidents);
       renderExerciseSelect(exerciseOptions, rhState.selectedExercise);
 
       root.innerHTML = `
@@ -843,9 +899,18 @@
             </div>
 
             <div class="rh-banner">
-              <div>
+              <div style="flex:1;">
                 <strong>${bannerTitle}</strong>
                 <div style="color:#8a6a37; margin-top:4px; line-height:1.5;">${bannerSub}</div>
+                ${groupAllTimeRecord != null ? `
+                  <div style="margin-top:12px; padding-top:12px; border-top:1px solid rgba(200,160,80,0.3); display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;">
+                    <span style="font-size:11px; text-transform:uppercase; letter-spacing:0.08em; font-weight:700; color:#8a6a37;">Record groupe depuis oct. 2019</span>
+                    <span style="font-size:22px; font-weight:800; color:${group.joursSansAccident != null && group.joursSansAccident >= groupAllTimeRecord ? '#d4960a' : '#6b4e1a'};">
+                      ${group.joursSansAccident != null && group.joursSansAccident >= groupAllTimeRecord ? '★ ' : ''}${groupAllTimeRecord} jours
+                    </span>
+                    ${group.joursSansAccident != null && group.joursSansAccident >= groupAllTimeRecord ? `<span style="font-size:12px; color:#a07010; font-weight:600;">Nouveau record en cours !</span>` : ''}
+                  </div>
+                ` : ''}
               </div>
               <div class="rh-chip">Exercice ${exerciseLabel}</div>
             </div>
@@ -862,7 +927,11 @@
           </div>
           <div class="rh-panel-body">
             <div class="rh-company-grid">
-              ${companies.map((company) => renderCompanyCard(company, isClosedExercise)).join('')}
+              ${companies.map((company) => {
+                const companyAllIncidents = rhState.incidents.filter((inc) => inc.companyId === company.id);
+                const allTimeRecord = isClosedExercise ? null : computeAllTimeRecord(companyAllIncidents);
+                return renderCompanyCard(company, isClosedExercise, allTimeRecord);
+              }).join('')}
             </div>
           </div>
         </section>

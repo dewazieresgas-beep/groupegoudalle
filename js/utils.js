@@ -1336,6 +1336,18 @@ function replaceCBCOSecuriteData(entry) {
   return normalized;
 }
 
+function getRHSecurityCBCOSummary() {
+  const raw = localStorage.getItem('goudalle_rh_security_summary');
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    const companies = parsed?.companies || [];
+    return companies.find((c) => c.id === 'cbco') || null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Récupère toutes les affaires commerciales CBCO
  * @returns {Array}

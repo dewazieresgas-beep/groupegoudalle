@@ -2656,12 +2656,15 @@ function applyRHSecurityIncidents(incidents) {
   return { imported: incidents.length, companies: RH_SECURITY_COMPANIES.length };
 }
 
+const RH_SECURITY_START_DATE = '2019-10-01';
+
 function computeRHSecuritySummary(incidents = []) {
   const today = new Date();
   const todayUtc = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
 
   const summarize = (list, label, id = 'group') => {
-    const sorted = [...list].sort((a, b) => String(b.accidentDate || '').localeCompare(String(a.accidentDate || '')));
+    const filtered = list.filter((item) => item.accidentDate && item.accidentDate >= RH_SECURITY_START_DATE);
+    const sorted = [...filtered].sort((a, b) => String(b.accidentDate || '').localeCompare(String(a.accidentDate || '')));
     const latest = sorted[0] || null;
     const latestDate = latest?.accidentDate ? new Date(`${latest.accidentDate}T00:00:00Z`) : null;
     const rawDaysSince = latestDate ? Math.floor((todayUtc.getTime() - latestDate.getTime()) / (24 * 60 * 60 * 1000)) : null;
@@ -2672,6 +2675,28 @@ function computeRHSecuritySummary(incidents = []) {
       const end = new Date(`${item.stopEndDate}T00:00:00Z`);
       return start <= todayUtc && end >= todayUtc;
     }).length;
+    const currentYear = todayUtc.getUTCFullYear();
+    const accidentsCurrentYear = sorted.filter((item) => {
+      if (!item.accidentDate) return false;
+      return Number(String(item.accidentDate).slice(0, 4)) === currentYear;
+    }).length;
+    const accidentDatesAsc = sorted
+      .map((item) => item.accidentDate)
+      .filter(Boolean)
+      .sort();
+    let recordJoursSansAccident = 0;
+    let recordFrom = null;
+    let recordTo = null;
+    for (let i = 1; i < accidentDatesAsc.length; i++) {
+      const t1 = new Date(`${accidentDatesAsc[i - 1]}T00:00:00Z`).getTime();
+      const t2 = new Date(`${accidentDatesAsc[i]}T00:00:00Z`).getTime();
+      const gap = Math.floor((t2 - t1) / (24 * 60 * 60 * 1000));
+      if (gap > recordJoursSansAccident) {
+        recordJoursSansAccident = gap;
+        recordFrom = accidentDatesAsc[i - 1];
+        recordTo = accidentDatesAsc[i];
+      }
+    }
     const parCause = {};
     const parGravite = {};
     const parType = {};
@@ -2684,6 +2709,10 @@ function computeRHSecuritySummary(incidents = []) {
       id,
       label,
       totalAccidents: sorted.length,
+      accidentsCurrentYear,
+      recordJoursSansAccident,
+      recordFrom,
+      recordTo,
       accidentsAvecArret: sorted.filter((item) => item.gravite === 'Avec arrêt' || Number(item.stopDays || 0) > 0).length,
       joursArret: sorted.reduce((sum, item) => sum + Number(item.stopDays || 0), 0),
       joursSansAccident: daysSince,
