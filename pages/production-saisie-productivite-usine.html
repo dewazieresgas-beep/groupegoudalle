@@ -239,8 +239,10 @@
     function renderWeekCard(entry, machine) {
       let mainKPI = '';
       let fields = [];
+      let accentColor = '#2a9d8f';
       
       if (machine === 'speedcut') {
+        accentColor = '#2e7d32';
         mainKPI = `${fmtN(entry.speedcutProductivite)} m³/h`;
         fields = [
           { label: 'm³', value: fmtN(entry.speedcutM3) },
@@ -250,6 +252,7 @@
           { label: 'Remarques', value: entry.speedcutRemarques || '', full: true }
         ];
       } else if (machine === 'ultra') {
+        accentColor = '#0277bd';
         mainKPI = `${fmtN(entry.ultraProductivite)} m³/h`;
         fields = [
           { label: 'm³', value: fmtN(entry.ultraM3) },
@@ -259,6 +262,7 @@
           { label: 'Remarques', value: entry.ultraRemarques || '', full: true }
         ];
       } else if (machine === 'extra') {
+        accentColor = '#7b1fa2';
         mainKPI = `${fmtN(entry.extraProductivite)} m²/h`;
         fields = [
           { label: 'm²', value: fmtN(entry.extraM2) },
@@ -268,6 +272,7 @@
           { label: 'Remarques', value: entry.extraRemarques || '', full: true }
         ];
       } else if (machine === 'collage') {
+        accentColor = '#e65100';
         mainKPI = `${fmtH(entry.collageTempsPressee)}/pressée`;
         fields = [
           { label: 'Pressées', value: fmtN(entry.collagePresses, 0) },
@@ -277,6 +282,7 @@
           { label: 'Commentaire', value: entry.collageCommentaire || '', full: true }
         ];
       } else if (machine === 'assemblage') {
+        accentColor = '#c2185b';
         const variation = entry.assemblageVariation;
         const varColor = variation !== null ? (variation > 0 ? '#e16566' : '#27ae60') : 'inherit';
         mainKPI = `<span style="color:${varColor}; font-weight:600;">${variation !== null ? fmtN(variation,1)+' %' : '—'}</span>`;
@@ -288,9 +294,10 @@
           { label: 'Commentaire', value: entry.assemblageCommentaire || '', full: true }
         ];
       } else if (machine === 'qualite') {
+        accentColor = '#1976d2';
         const ncColor = (entry.qualiteNonConformites||0) > 0 ? '#e16566' : '#666';
         const clColor = (entry.qualiteReclamationsClients||0) > 0 ? '#e16566' : '#666';
-        mainKPI = `Tests: ${fmtN(entry.qualiteTests, 0)}`;
+        mainKPI = `${fmtN(entry.qualiteTests, 0)} tests`;
         fields = [
           { label: 'NC', value: `<span style="color:${ncColor}; font-weight:600;">${fmtN(entry.qualiteNonConformites, 0)}</span>` },
           { label: 'Réclamations', value: `<span style="color:${clColor}; font-weight:600;">${fmtN(entry.qualiteReclamationsClients, 0)}</span>` },
@@ -301,21 +308,23 @@
 
       const detailsHTML = fields.map(f => 
         f.full 
-          ? `<div style="grid-column:1/-1; padding-top:4px; border-top:1px solid #f0f0f0; margin-top:4px;"><small style="color:#666;">${esc(f.value)}</small></div>`
-          : `<div style="font-size:0.85em;"><span style="color:#999; font-weight:600;">${f.label}:</span> ${f.value}</div>`
+          ? `<div style="grid-column:1/-1; padding-top:8px; border-top:1px solid #e0e0e0; margin-top:8px;"><div style="color:#666; font-size:0.9em; line-height:1.4;">${esc(f.value)}</div></div>`
+          : `<div style="border-left:3px solid ${accentColor}; padding-left:12px;"><div style="font-size:0.8em; color:#999; font-weight:600; text-transform:uppercase; margin-bottom:2px;">${f.label}</div><div style="font-size:1.15em; font-weight:600; color:#2a2a2a;">${f.value}</div></div>`
       ).join('');
 
       return `
-        <div style="border:1px solid #e0e8e0; border-radius:10px; background:#fff; overflow:hidden; margin-bottom:8px; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
-          <div style="padding:10px 12px; background:#fafbfa; border-bottom:1px solid #e0e8e0; display:flex; align-items:center; gap:12px; cursor:pointer; justify-content:space-between;" onclick="this.parentElement.querySelector('[data-detail]').style.display = this.parentElement.querySelector('[data-detail]').style.display === 'none' ? 'block' : 'none';">
-            <div style="flex:1; display:flex; align-items:center; gap:12px; min-width:0;">
-              <span style="font-weight:700; color:#2a2a2a; white-space:nowrap;">${esc(entry.semaineLabel)}</span>
-              <span style="font-weight:600; color:var(--accent-dark); white-space:nowrap;">📊 ${mainKPI}</span>
+        <div style="border:1px solid #e0e0e0; border-radius:12px; background:#fff; overflow:hidden; margin-bottom:12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); transition: box-shadow 0.2s ease;">
+          <div style="padding:16px; background: linear-gradient(135deg, ${accentColor}15 0%, ${accentColor}08 100%); border-bottom:2px solid ${accentColor}30; display:flex; align-items:center; gap:16px; cursor:pointer; justify-content:space-between;" onclick="const detail = this.parentElement.querySelector('[data-detail]'); detail.style.display = detail.style.display === 'none' ? 'block' : 'none';" class="_card-toggle">
+            <div style="flex:1; display:flex; align-items:center; gap:14px; min-width:0;">
+              <div>
+                <div style="font-size:1.05em; font-weight:700; color:#2a2a2a;">${esc(entry.semaineLabel)}</div>
+                <div style="font-size:1.35em; font-weight:700; color:${accentColor}; line-height:1;">${mainKPI}</div>
+              </div>
             </div>
-            <span style="color:#bbb; font-size:0.85em; flex-shrink:0;">▼</span>
+            <span style="color:#aaa; font-size:1.2em; flex-shrink:0; transition: transform 0.2s;">▼</span>
           </div>
-          <div data-detail style="display:none; padding:10px 12px; font-size:0.9em; background:#fefefe;">
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px 16px;">
+          <div data-detail style="display:none; padding:16px; background:#fafafa;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; row-gap:12px;">
               ${detailsHTML}
             </div>
           </div>

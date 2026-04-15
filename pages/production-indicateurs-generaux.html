@@ -143,8 +143,20 @@
     }
 
     function buildCharts() {
-      const all = getCBCOProductiviteData();
-      console.log(`[IG] buildCharts() - Données disponibles: ${all ? all.length : 0} entrées`);
+      const allRaw = getCBCOProductiviteData();
+      console.log(`[IG] buildCharts() - Données disponibles: ${allRaw ? allRaw.length : 0} entrées`);
+      
+      // Filtre les entrées qui ont au moins une donnée de production (même technique que saisie)
+      const all = allRaw.filter(e => {
+        const sc = toFiniteNumber(e.speedcutM3) > 0;
+        const ultra = toFiniteNumber(e.ultraM3) > 0;
+        const extra = toFiniteNumber(e.extraM2) > 0;
+        const collage = toFiniteNumber(e.collagePresses) > 0;
+        const assemblage = toFiniteNumber(e.assemblageSurface) > 0;
+        return sc || ultra || extra || collage || assemblage;
+      });
+      
+      console.log(`[IG] buildCharts() - Après filtrage: ${all.length} entrées avec données`);
       
       const yearSelect = document.getElementById('igYearSelect');
       const years = [...new Set(all.map((e) => Number(e.year)).filter(Number.isFinite))]
@@ -157,37 +169,18 @@
       yearSelect.value = String(year);
       console.log(`[IG] buildCharts() - Année sélectionnée: ${year}, années disponibles: ${years.join(', ')}`);
       
-      const weeks = Array.from({ length: 52 }, (_, i) => String(i + 1));
-      const poutresWeekly = seriesByWeek(all, year, (e) => toFiniteNumber(e.speedcutM3) + toFiniteNumber(e.ultraM3));
-      const panneaux = seriesByWeek(all, year, (e) => toFiniteNumber(e.extraM2));
-      const collage = seriesByWeek(all, year, (e) => toFiniteNumber(e.collagePresses));
-      const assemblage = seriesByWeek(all, year, (e) => toFiniteNumber(e.assemblageSurface));
+      // Recréer les éntrées filtrées par année pour les labels
+      const entriesForYear = all.filter(e => Number(e.year) === year).sort((a, b) => a.week - b.week);
+      const weeks = entriesForYear.map(e => `S${e.week}`);
       
-      // Trouve le première et dernière semaine avec données
-      let firstWeekWithData = -1;
-      let lastWeekWithData = -1;
-      for (let i = 0; i < 52; i++) {
-        if (poutresWeekly[i] > 0 || panneaux[i] > 0 || collage[i] > 0 || assemblage[i] > 0) {
-          if (firstWeekWithData === -1) firstWeekWithData = i;
-          lastWeekWithData = i;
-        }
-      }
+      // Préparer les données en parallèle avec les semaines filtrées
+      const poutresWeekly = entriesForYear.map(e => toFiniteNumber(e.speedcutM3) + toFiniteNumber(e.ultraM3));
+      const panneaux = entriesForYear.map(e => toFiniteNumber(e.extraM2));
+      const collage = entriesForYear.map(e => toFiniteNumber(e.collagePresses));
+      const assemblage = entriesForYear.map(e => toFiniteNumber(e.assemblageSurface));
       
-      // Si aucune donnée, l'affiche quand même vide
-      if (firstWeekWithData === -1) {
-        firstWeekWithData = 0;
-        lastWeekWithData = 51;
-      }
-      
-      // Filtre les semaines : garde seulement du premier au dernier avec données
-      const weeksFiltered = weeks.slice(firstWeekWithData, lastWeekWithData + 1);
-      const poutresFiltered = poutresWeekly.slice(firstWeekWithData, lastWeekWithData + 1);
-      const panneauxFiltered = panneaux.slice(firstWeekWithData, lastWeekWithData + 1);
-      const collageFiltered = collage.slice(firstWeekWithData, lastWeekWithData + 1);
-      const assemblageFiltered = assemblage.slice(firstWeekWithData, lastWeekWithData + 1);
-      
+      console.log(`[IG] buildCharts() - Affichage ${entriesForYear.length} semaines avec données`);
       console.log(`[IG] buildCharts() - Poutres total: ${sum(poutresWeekly)}, Panneaux: ${sum(panneaux)}, Collage: ${sum(collage)}, Assemblage: ${sum(assemblage)}`);
-      console.log(`[IG] buildCharts() - Affichage semaines ${firstWeekWithData + 1} à ${lastWeekWithData + 1}`);
       
       const totalPoutres = sum(poutresWeekly);
       const totals = {
@@ -207,10 +200,10 @@
       poutresTrendChart = new Chart(document.getElementById('poutresTrendChart').getContext('2d'), {
         type: 'line',
         data: {
-          labels: weeksFiltered,
+          labels: weeks,
           datasets: [{
             label: 'Total Poutres (m3)',
-            data: poutresFiltered,
+            data: poutresWeekly,
             borderColor: '#9aa1ab',
             borderWidth: 2,
             pointRadius: 0,
@@ -251,11 +244,11 @@
       panneauxTrendChart = new Chart(document.getElementById('panneauxTrendChart').getContext('2d'), {
         type: 'line',
         data: {
-          labels: weeksFiltered,
+          labels: weeks,
           datasets: [
-            { label: 'Panneaux (m2)', data: panneauxFiltered, borderColor: '#f0b400', borderWidth: 2, pointRadius: 0, tension: 0.2 },
-            { label: 'Collage (m2)', data: collageFiltered, borderColor: '#73b24a', borderWidth: 2, pointRadius: 0, tension: 0.2 },
-            { label: 'Assemblage (m2)', data: assemblageFiltered, borderColor: '#8f4a13', borderWidth: 2, pointRadius: 0, tension: 0.2 }
+            { label: 'Panneaux (m2)', data: panneaux, borderColor: '#f0b400', borderWidth: 2, pointRadius: 0, tension: 0.2 },
+            { label: 'Collage (m2)', data: collage, borderColor: '#73b24a', borderWidth: 2, pointRadius: 0, tension: 0.2 },
+            { label: 'Assemblage (m2)', data: assemblage, borderColor: '#8f4a13', borderWidth: 2, pointRadius: 0, tension: 0.2 }
           ]
         },
         options: {
