@@ -785,11 +785,6 @@ function parseCBCOProdExcel(cfg) {
       const presses         = colCfg.PRESSES !== undefined ? toNum(row[colCfg.PRESSES]) : null;
       const caissons        = colCfg.CAISSONS !== undefined ? toNum(row[colCfg.CAISSONS]) : null;
       const surface         = colCfg.SURFACE !== undefined ? toNum(row[colCfg.SURFACE]) : null;
-      
-      // DEBUG: log pour collage
-      if (sheetName === 'Collage' && r < 7) {
-        console.log(`[Parser Collage] row ${r}: col[5]=${row[5]}, col[8]=${row[8]}, col[10]=${row[10]}, surfaceCollee=${surface}, presses=${presses}`);
-      }
 
       if (semaineCumulee === null && semaineAnnuelle === null) continue;
       const req = colCfg.required || ['heuresOnaya', 'cubage'];
@@ -852,7 +847,7 @@ function parseCBCOProdExcel(cfg) {
   const sc         = parseMachine('sc',         { B:1, C:2, D:3, E:4, F:5, G:6, H:7, J:9,  TRS:11, TEMPS:13 });
   const ultra      = parseMachine('ultra',       { B:1, C:2, D:3, E:4, F:5, G:6, H:7, J:9,  TRS:10, TEMPS:8  });
   const extra      = parseMachine('extra',       { B:1, C:2, D:3, E:4, F:5, G:6, H:7, J:9,  TRS:11, TEMPS:8, PRODHM:10, VOLUME:12 });
-  const collage    = parseMachine('collage',     { B:1, C:2, D:3, E:4, F:5, G:6, H:7, J:9,  TEMPS:3, PRESSES:5, CAISSONS:8, SURFACE:10, productiviteDur:true, cibleDur:true });
+  const collage    = parseMachine('collage',     { B:1, C:2, D:3, E:3, F:4, G:5, H:7, J:9,  TEMPS:5, PRESSES:4, CAISSONS:8, SURFACE:10, productiviteDur:true, cibleDur:true });
   const assemblage = parseMachine('assemblage',  { B:1, C:2, D:3, E:4, F:5, G:6, H:7, TEMPS:8, VOLUME:8, required:['heuresOnaya','heuresPerdues','cubage'] });
   const qualite    = parseQualite();
 
@@ -866,17 +861,7 @@ function parseCBCOProdExcel(cfg) {
   sc.forEach(e => { const r = ensureWeek(e.week, e.year); r.speedcutM3=e.cubage; r.speedcutHeuresOnaya=e.heuresOnaya; r.speedcutHeuresPerdues=e.heuresPerdues; r.speedcutHeuresUtiles=e.heuresUtiles; r.speedcutProductivite=e.productivite; r.speedcutCibleProductivite=e.cibleProductivite; r.speedcutTRS=e.trs; r.speedcutTempsUtilisation=e.tempsUtilisationMachine; r.speedcutRemarques=e.remarques; });
   ultra.forEach(e => { const r = ensureWeek(e.week, e.year); r.ultraM3=e.cubage; r.ultraHeuresOnaya=e.heuresOnaya; r.ultraHeuresPerdues=e.heuresPerdues; r.ultraHeuresUtiles=e.heuresUtiles; r.ultraProductivite=e.productivite; r.ultraCibleProductivite=e.cibleProductivite; r.ultraTRS=e.trs; r.ultraTempsUtilisation=e.tempsUtilisationMachine; r.ultraRemarques=e.remarques; });
   extra.forEach(e => { const r = ensureWeek(e.week, e.year); r.extraM2=e.cubage; r.extraHeuresOnaya=e.heuresOnaya; r.extraHeuresPerdues=e.heuresPerdues; r.extraHeuresUtiles=e.heuresUtiles; r.extraProductivite=e.productivite; r.extraCibleProductivite=e.cibleProductivite; r.extraTRS=e.trs; r.extraTempsUtilisation=e.tempsUtilisationMachine; r.extraRemarques=e.remarques; r.extraProductiviteHeuresMachines=e.productiviteHeuresMachines; r.extraVolume=e.volume; });
-  collage.forEach((e, idx) => { 
-    const r = ensureWeek(e.week, e.year); 
-    r.collageHeures=e.heuresOnaya; 
-    r.collagePresses=e.nombrePressees; 
-    r.collageTempsPressee=e.productivite; 
-    r.collageCommentaire=e.remarques; 
-    r.collageNombreCaissons=e.nombreCaissons; 
-    r.collageCibleTempsPressee=e.cibleProductivite; 
-    r.collageSurface=e.surfaceCollee;
-    if (idx === 0) console.log(`[Parser] Collage S${e.week} ${e.year}: surfaceCollee=${e.surfaceCollee}, nombrePressees=${e.nombrePressees}, productivite=${e.productivite}`);
-  });
+  collage.forEach(e => { const r = ensureWeek(e.week, e.year); r.collageHeures=e.heuresOnaya; r.collagePresses=e.nombrePressees; r.collageTempsPressee=e.productivite; r.collageCommentaire=e.remarques; r.collageNombreCaissons=e.nombreCaissons; r.collageCibleTempsPressee=e.cibleProductivite; r.collageSurface=e.surfaceCollee; });
   assemblage.forEach(e => { const r = ensureWeek(e.week, e.year); r.assemblageTempsRealise=e.heuresOnaya; r.assemblageTempsTheorique=e.heuresPerdues; r.assemblageNombreCaissons=e.nombreCaissons; r.assemblageVariation=(e.heuresOnaya!==null&&e.heuresPerdues!==null&&e.heuresPerdues>0)?((e.heuresOnaya-e.heuresPerdues)/e.heuresPerdues)*100:e.productivite; r.assemblageCommentaire=e.remarques; r.assemblageSurface=e.volume; });
   qualite.forEach(e => { const r = ensureWeek(e.week, e.year); r.qualiteTests=e.tests; r.qualiteNonConformites=e.nonConformites; r.qualiteDetail=e.detail; r.qualiteReclamationsClients=e.reclamationsClients; r.qualiteAnnee=e.annee; });
 
