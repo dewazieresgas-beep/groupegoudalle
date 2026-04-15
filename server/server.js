@@ -785,6 +785,11 @@ function parseCBCOProdExcel(cfg) {
       const presses         = colCfg.PRESSES !== undefined ? toNum(row[colCfg.PRESSES]) : null;
       const caissons        = colCfg.CAISSONS !== undefined ? toNum(row[colCfg.CAISSONS]) : null;
       const surface         = colCfg.SURFACE !== undefined ? toNum(row[colCfg.SURFACE]) : null;
+      
+      // DEBUG: log pour collage
+      if (sheetName === 'Collage' && r < 7) {
+        console.log(`[Parser Collage] row ${r}: col[5]=${row[5]}, col[8]=${row[8]}, col[10]=${row[10]}, surfaceCollee=${surface}, presses=${presses}`);
+      }
 
       if (semaineCumulee === null && semaineAnnuelle === null) continue;
       const req = colCfg.required || ['heuresOnaya', 'cubage'];
