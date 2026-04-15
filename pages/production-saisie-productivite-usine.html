@@ -237,67 +237,87 @@
     }
 
     function renderWeekCard(entry, machine) {
-      let stats = '';
-      let details = '';
+      let mainKPI = '';
+      let fields = [];
       
       if (machine === 'speedcut') {
-        stats = `<span style="display:inline-block; margin-right:8px;">📊 ${fmtN(entry.speedcutProductivite)} m³/h</span>`;
-        details = `<table style="width:100%; font-size:0.88em; border-collapse:collapse;">
-          <tr><td>m³:</td><td>${fmtN(entry.speedcutM3)}</td><td style="padding-left:16px;">H. Onaya:</td><td>${fmtH(entry.speedcutHeuresOnaya)}</td></tr>
-          <tr><td>Cible:</td><td>${fmtN(entry.speedcutCibleProductivite)}</td><td style="padding-left:16px;">TRS:</td><td>${fmtPct(entry.speedcutTRS)}</td></tr>
-          <tr><td colspan="4"><small>${esc(entry.speedcutRemarques||'')}</small></td></tr>
-        </table>`;
+        mainKPI = `${fmtN(entry.speedcutProductivite)} m³/h`;
+        fields = [
+          { label: 'm³', value: fmtN(entry.speedcutM3) },
+          { label: 'H. Onaya', value: fmtH(entry.speedcutHeuresOnaya) },
+          { label: 'Cible', value: fmtN(entry.speedcutCibleProductivite) },
+          { label: 'TRS', value: fmtPct(entry.speedcutTRS) },
+          { label: 'Remarques', value: entry.speedcutRemarques || '', full: true }
+        ];
       } else if (machine === 'ultra') {
-        stats = `<span style="display:inline-block; margin-right:8px;">📊 ${fmtN(entry.ultraProductivite)} m³/h</span>`;
-        details = `<table style="width:100%; font-size:0.88em; border-collapse:collapse;">
-          <tr><td>m³:</td><td>${fmtN(entry.ultraM3)}</td><td style="padding-left:16px;">H. Onaya:</td><td>${fmtH(entry.ultraHeuresOnaya)}</td></tr>
-          <tr><td>Cible:</td><td>${fmtN(entry.ultraCibleProductivite)}</td><td style="padding-left:16px;">TRS:</td><td>${fmtPct(entry.ultraTRS)}</td></tr>
-          <tr><td colspan="4"><small>${esc(entry.ultraRemarques||'')}</small></td></tr>
-        </table>`;
+        mainKPI = `${fmtN(entry.ultraProductivite)} m³/h`;
+        fields = [
+          { label: 'm³', value: fmtN(entry.ultraM3) },
+          { label: 'H. Onaya', value: fmtH(entry.ultraHeuresOnaya) },
+          { label: 'Cible', value: fmtN(entry.ultraCibleProductivite) },
+          { label: 'TRS', value: fmtPct(entry.ultraTRS) },
+          { label: 'Remarques', value: entry.ultraRemarques || '', full: true }
+        ];
       } else if (machine === 'extra') {
-        stats = `<span style="display:inline-block; margin-right:8px;">📊 ${fmtN(entry.extraProductivite)} m²/h</span>`;
-        details = `<table style="width:100%; font-size:0.88em; border-collapse:collapse;">
-          <tr><td>m²:</td><td>${fmtN(entry.extraM2)}</td><td style="padding-left:16px;">H. Onaya:</td><td>${fmtH(entry.extraHeuresOnaya)}</td></tr>
-          <tr><td>Cible:</td><td>${fmtN(entry.extraCibleProductivite)}</td><td style="padding-left:16px;">TRS:</td><td>${fmtPct(entry.extraTRS)}</td></tr>
-          <tr><td colspan="4"><small>${esc(entry.extraRemarques||'')}</small></td></tr>
-        </table>`;
+        mainKPI = `${fmtN(entry.extraProductivite)} m²/h`;
+        fields = [
+          { label: 'm²', value: fmtN(entry.extraM2) },
+          { label: 'H. Onaya', value: fmtH(entry.extraHeuresOnaya) },
+          { label: 'Cible', value: fmtN(entry.extraCibleProductivite) },
+          { label: 'TRS', value: fmtPct(entry.extraTRS) },
+          { label: 'Remarques', value: entry.extraRemarques || '', full: true }
+        ];
       } else if (machine === 'collage') {
-        stats = `<span style="display:inline-block; margin-right:8px;">⏱️ ${fmtH(entry.collageTempsPressee)}/pressée</span>`;
-        details = `<table style="width:100%; font-size:0.88em; border-collapse:collapse;">
-          <tr><td>Pressées:</td><td>${fmtN(entry.collagePresses,0)}</td><td style="padding-left:16px;">Heures:</td><td>${fmtH(entry.collageHeures)}</td></tr>
-          <tr><td>Caissons:</td><td>${fmtN(entry.collageNombreCaissons,0)}</td><td style="padding-left:16px;">Cible:</td><td>${fmtH(entry.collageCibleTempsPressee)}</td></tr>
-          <tr><td colspan="4"><small>${esc(entry.collageCommentaire||'')}</small></td></tr>
-        </table>`;
+        mainKPI = `${fmtH(entry.collageTempsPressee)}/pressée`;
+        fields = [
+          { label: 'Pressées', value: fmtN(entry.collagePresses, 0) },
+          { label: 'Heures', value: fmtH(entry.collageHeures) },
+          { label: 'Caissons', value: fmtN(entry.collageNombreCaissons, 0) },
+          { label: 'Cible', value: fmtH(entry.collageCibleTempsPressee) },
+          { label: 'Commentaire', value: entry.collageCommentaire || '', full: true }
+        ];
       } else if (machine === 'assemblage') {
         const variation = entry.assemblageVariation;
         const varColor = variation !== null ? (variation > 0 ? '#e16566' : '#27ae60') : 'inherit';
-        stats = `<span style="display:inline-block; margin-right:8px; color:${varColor}; font-weight:600;">${variation !== null ? fmtN(variation,1)+' %' : '—'}</span>`;
-        details = `<table style="width:100%; font-size:0.88em; border-collapse:collapse;">
-          <tr><td>T. Réalisé:</td><td>${fmtH(entry.assemblageTempsRealise)}</td><td style="padding-left:16px;">T. Théorique:</td><td>${fmtH(entry.assemblageTempsTheorique)}</td></tr>
-          <tr><td>Caissons:</td><td>${fmtN(entry.assemblageNombreCaissons,0)}</td><td style="padding-left:16px;">Surface:</td><td>${fmtN(entry.assemblageSurface)} m²</td></tr>
-          <tr><td colspan="4"><small>${esc(entry.assemblageCommentaire||'')}</small></td></tr>
-        </table>`;
+        mainKPI = `<span style="color:${varColor}; font-weight:600;">${variation !== null ? fmtN(variation,1)+' %' : '—'}</span>`;
+        fields = [
+          { label: 'T. Réalisé', value: fmtH(entry.assemblageTempsRealise) },
+          { label: 'T. Théorique', value: fmtH(entry.assemblageTempsTheorique) },
+          { label: 'Caissons', value: fmtN(entry.assemblageNombreCaissons, 0) },
+          { label: 'Surface', value: fmtN(entry.assemblageSurface) + ' m²' },
+          { label: 'Commentaire', value: entry.assemblageCommentaire || '', full: true }
+        ];
       } else if (machine === 'qualite') {
-        const ncColor = (entry.qualiteNonConformites||0) > 0 ? '#e16566' : 'inherit';
-        const clColor = (entry.qualiteReclamationsClients||0) > 0 ? '#e16566' : 'inherit';
-        stats = `<span style="margin-right:8px;">Tests: ${fmtN(entry.qualiteTests,0)}</span>
-                 <span style="margin-right:8px; color:${ncColor}; font-weight:600;">NC: ${fmtN(entry.qualiteNonConformites,0)}</span>
-                 <span style="color:${clColor}; font-weight:600;">Récla.: ${fmtN(entry.qualiteReclamationsClients,0)}</span>`;
-        details = `<table style="width:100%; font-size:0.88em; border-collapse:collapse;">
-          <tr><td>Année:</td><td colspan="3">${entry.qualiteAnnee||'—'}</td></tr>
-          <tr><td colspan="4"><small>${esc(entry.qualiteDetail||'')}</small></td></tr>
-        </table>`;
+        const ncColor = (entry.qualiteNonConformites||0) > 0 ? '#e16566' : '#666';
+        const clColor = (entry.qualiteReclamationsClients||0) > 0 ? '#e16566' : '#666';
+        mainKPI = `Tests: ${fmtN(entry.qualiteTests, 0)}`;
+        fields = [
+          { label: 'NC', value: `<span style="color:${ncColor}; font-weight:600;">${fmtN(entry.qualiteNonConformites, 0)}</span>` },
+          { label: 'Réclamations', value: `<span style="color:${clColor}; font-weight:600;">${fmtN(entry.qualiteReclamationsClients, 0)}</span>` },
+          { label: 'Année', value: entry.qualiteAnnee || '—' },
+          { label: 'Détail', value: entry.qualiteDetail || '', full: true }
+        ];
       }
-      
+
+      const detailsHTML = fields.map(f => 
+        f.full 
+          ? `<div style="grid-column:1/-1; padding-top:4px; border-top:1px solid #f0f0f0; margin-top:4px;"><small style="color:#666;">${esc(f.value)}</small></div>`
+          : `<div style="font-size:0.85em;"><span style="color:#999; font-weight:600;">${f.label}:</span> ${f.value}</div>`
+      ).join('');
+
       return `
-        <div style="border:1px solid #e0e8e0; border-radius:12px; background:#fff; overflow:hidden; margin-bottom:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
-          <div style="padding:12px 14px; background:#fafbfa; border-bottom:1px solid #e0e8e0; display:flex; align-items:center; gap:12px; cursor:pointer;" onclick="this.parentElement.querySelector('[data-detail]').style.display = this.parentElement.querySelector('[data-detail]').style.display === 'none' ? 'block' : 'none';">
-            <span style="font-weight:700; min-width:120px;">${esc(entry.semaineLabel)}</span>
-            <span style="flex:1;">${stats}</span>
-            <span style="color:#999; font-size:0.9em;">▼</span>
+        <div style="border:1px solid #e0e8e0; border-radius:10px; background:#fff; overflow:hidden; margin-bottom:8px; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
+          <div style="padding:10px 12px; background:#fafbfa; border-bottom:1px solid #e0e8e0; display:flex; align-items:center; gap:12px; cursor:pointer; justify-content:space-between;" onclick="this.parentElement.querySelector('[data-detail]').style.display = this.parentElement.querySelector('[data-detail]').style.display === 'none' ? 'block' : 'none';">
+            <div style="flex:1; display:flex; align-items:center; gap:12px; min-width:0;">
+              <span style="font-weight:700; color:#2a2a2a; white-space:nowrap;">${esc(entry.semaineLabel)}</span>
+              <span style="font-weight:600; color:var(--accent-dark); white-space:nowrap;">📊 ${mainKPI}</span>
+            </div>
+            <span style="color:#bbb; font-size:0.85em; flex-shrink:0;">▼</span>
           </div>
-          <div data-detail style="padding:12px 14px; display:none; border-top:1px solid #f0f0f0;">
-            ${details}
+          <div data-detail style="display:none; padding:10px 12px; font-size:0.9em; background:#fefefe;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px 16px;">
+              ${detailsHTML}
+            </div>
           </div>
         </div>
       `;

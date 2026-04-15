@@ -772,9 +772,29 @@
       content.style.display = '';
     }
 
-    function init() {
+    async function init() {
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectProductionSecondaryBar();
+      
+      // Force un rechargement des données depuis l'Excel configuré
+      try {
+        const cfgRes = await fetch(SERVER_URL + '/cbco-productivite-excel-config', { cache: 'no-store' });
+        const cfg = await cfgRes.json();
+        if (cfg && cfg.active) {
+          // Un Excel est configuré, force l'import pour avoir les dernières données
+          await fetch(SERVER_URL + '/cbco-productivite-import-excel', { method: 'POST', cache: 'no-store' });
+        }
+      } catch (e) {
+        console.warn('Erreur lors du refresh Excel:', e.message);
+      }
+      
+      // Recharge les données depuis le serveur vers le localStorage
+      try {
+        await loadServerKeys(['goudalle_cbco_productivite', 'goudalle_rh_security_summary'], { force: true });
+      } catch (e) {
+        console.warn('Erreur lors du rechargement des données:', e.message);
+      }
+      
       renderSecuriteHeader();
       renderQualiteHeader();
       renderMachineSection('sc');
