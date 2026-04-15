@@ -191,6 +191,8 @@
       if (!confirm('Désynchroniser le fichier Excel ?\n\nToutes les données importées depuis l\'Excel seront supprimées.')) return;
       try {
         await fetch(SERVER_URL + '/cbco-productivite-excel-config', { method: 'DELETE' });
+        // Vider le localStorage local pour forcer un rechargement complètement propre
+        localStorage.removeItem('goudalle_cbco_productivite');
         showMessage('🔌 Désynchronisé. Les données Excel ont été supprimées.', 'success');
         unlockConfig();
         await loadServerKeys(['goudalle_cbco_productivite'], { force: true });
@@ -213,6 +215,93 @@
       if (v === null || v === undefined) return '—';
       return (parseFloat(v) * 100).toFixed(1) + ' %';
     }
+    function esc(s) {
+      return (String(s||'')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function hasSignificantValue(val) {
+      if (val === null || val === undefined || val === '' || Number.isNaN(val)) return false;
+      const n = Number(val);
+      return Number.isFinite(n) && n !== 0;
+    }
+
+    function hasDataForMachine(entry, machine) {
+      // Vérifie uniquement les colonnes de production principale (cubage/quantité)
+      if (machine === 'speedcut') return hasSignificantValue(entry.speedcutM3);
+      if (machine === 'ultra') return hasSignificantValue(entry.ultraM3);
+      if (machine === 'extra') return hasSignificantValue(entry.extraM2);
+      if (machine === 'collage') return hasSignificantValue(entry.collagePresses);
+      if (machine === 'assemblage') return hasSignificantValue(entry.assemblageTempsRealise);
+      if (machine === 'qualite') return hasSignificantValue(entry.qualiteTests);
+      return false;
+    }
+
+    function renderWeekCard(entry, machine) {
+      let stats = '';
+      let details = '';
+      
+      if (machine === 'speedcut') {
+        stats = `<span style="display:inline-block; margin-right:8px;">📊 ${fmtN(entry.speedcutProductivite)} m³/h</span>`;
+        details = `<table style="width:100%; font-size:0.88em; border-collapse:collapse;">
+          <tr><td>m³:</td><td>${fmtN(entry.speedcutM3)}</td><td style="padding-left:16px;">H. Onaya:</td><td>${fmtH(entry.speedcutHeuresOnaya)}</td></tr>
+          <tr><td>Cible:</td><td>${fmtN(entry.speedcutCibleProductivite)}</td><td style="padding-left:16px;">TRS:</td><td>${fmtPct(entry.speedcutTRS)}</td></tr>
+          <tr><td colspan="4"><small>${esc(entry.speedcutRemarques||'')}</small></td></tr>
+        </table>`;
+      } else if (machine === 'ultra') {
+        stats = `<span style="display:inline-block; margin-right:8px;">📊 ${fmtN(entry.ultraProductivite)} m³/h</span>`;
+        details = `<table style="width:100%; font-size:0.88em; border-collapse:collapse;">
+          <tr><td>m³:</td><td>${fmtN(entry.ultraM3)}</td><td style="padding-left:16px;">H. Onaya:</td><td>${fmtH(entry.ultraHeuresOnaya)}</td></tr>
+          <tr><td>Cible:</td><td>${fmtN(entry.ultraCibleProductivite)}</td><td style="padding-left:16px;">TRS:</td><td>${fmtPct(entry.ultraTRS)}</td></tr>
+          <tr><td colspan="4"><small>${esc(entry.ultraRemarques||'')}</small></td></tr>
+        </table>`;
+      } else if (machine === 'extra') {
+        stats = `<span style="display:inline-block; margin-right:8px;">📊 ${fmtN(entry.extraProductivite)} m²/h</span>`;
+        details = `<table style="width:100%; font-size:0.88em; border-collapse:collapse;">
+          <tr><td>m²:</td><td>${fmtN(entry.extraM2)}</td><td style="padding-left:16px;">H. Onaya:</td><td>${fmtH(entry.extraHeuresOnaya)}</td></tr>
+          <tr><td>Cible:</td><td>${fmtN(entry.extraCibleProductivite)}</td><td style="padding-left:16px;">TRS:</td><td>${fmtPct(entry.extraTRS)}</td></tr>
+          <tr><td colspan="4"><small>${esc(entry.extraRemarques||'')}</small></td></tr>
+        </table>`;
+      } else if (machine === 'collage') {
+        stats = `<span style="display:inline-block; margin-right:8px;">⏱️ ${fmtH(entry.collageTempsPressee)}/pressée</span>`;
+        details = `<table style="width:100%; font-size:0.88em; border-collapse:collapse;">
+          <tr><td>Pressées:</td><td>${fmtN(entry.collagePresses,0)}</td><td style="padding-left:16px;">Heures:</td><td>${fmtH(entry.collageHeures)}</td></tr>
+          <tr><td>Caissons:</td><td>${fmtN(entry.collageNombreCaissons,0)}</td><td style="padding-left:16px;">Cible:</td><td>${fmtH(entry.collageCibleTempsPressee)}</td></tr>
+          <tr><td colspan="4"><small>${esc(entry.collageCommentaire||'')}</small></td></tr>
+        </table>`;
+      } else if (machine === 'assemblage') {
+        const variation = entry.assemblageVariation;
+        const varColor = variation !== null ? (variation > 0 ? '#e16566' : '#27ae60') : 'inherit';
+        stats = `<span style="display:inline-block; margin-right:8px; color:${varColor}; font-weight:600;">${variation !== null ? fmtN(variation,1)+' %' : '—'}</span>`;
+        details = `<table style="width:100%; font-size:0.88em; border-collapse:collapse;">
+          <tr><td>T. Réalisé:</td><td>${fmtH(entry.assemblageTempsRealise)}</td><td style="padding-left:16px;">T. Théorique:</td><td>${fmtH(entry.assemblageTempsTheorique)}</td></tr>
+          <tr><td>Caissons:</td><td>${fmtN(entry.assemblageNombreCaissons,0)}</td><td style="padding-left:16px;">Surface:</td><td>${fmtN(entry.assemblageSurface)} m²</td></tr>
+          <tr><td colspan="4"><small>${esc(entry.assemblageCommentaire||'')}</small></td></tr>
+        </table>`;
+      } else if (machine === 'qualite') {
+        const ncColor = (entry.qualiteNonConformites||0) > 0 ? '#e16566' : 'inherit';
+        const clColor = (entry.qualiteReclamationsClients||0) > 0 ? '#e16566' : 'inherit';
+        stats = `<span style="margin-right:8px;">Tests: ${fmtN(entry.qualiteTests,0)}</span>
+                 <span style="margin-right:8px; color:${ncColor}; font-weight:600;">NC: ${fmtN(entry.qualiteNonConformites,0)}</span>
+                 <span style="color:${clColor}; font-weight:600;">Récla.: ${fmtN(entry.qualiteReclamationsClients,0)}</span>`;
+        details = `<table style="width:100%; font-size:0.88em; border-collapse:collapse;">
+          <tr><td>Année:</td><td colspan="3">${entry.qualiteAnnee||'—'}</td></tr>
+          <tr><td colspan="4"><small>${esc(entry.qualiteDetail||'')}</small></td></tr>
+        </table>`;
+      }
+      
+      return `
+        <div style="border:1px solid #e0e8e0; border-radius:12px; background:#fff; overflow:hidden; margin-bottom:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+          <div style="padding:12px 14px; background:#fafbfa; border-bottom:1px solid #e0e8e0; display:flex; align-items:center; gap:12px; cursor:pointer;" onclick="this.parentElement.querySelector('[data-detail]').style.display = this.parentElement.querySelector('[data-detail]').style.display === 'none' ? 'block' : 'none';">
+            <span style="font-weight:700; min-width:120px;">${esc(entry.semaineLabel)}</span>
+            <span style="flex:1;">${stats}</span>
+            <span style="color:#999; font-size:0.9em;">▼</span>
+          </div>
+          <div data-detail style="padding:12px 14px; display:none; border-top:1px solid #f0f0f0;">
+            ${details}
+          </div>
+        </div>
+      `;
+    }
 
     function refreshHistory() {
       const view  = document.getElementById('machineViewSelect').value;
@@ -220,123 +309,14 @@
       const count = document.getElementById('countImports');
       const body  = document.getElementById('historyBody');
 
-      count.textContent = data.length + ' semaine' + (data.length > 1 ? 's' : '');
-      count.className   = data.length > 0 ? 'badge badge-success' : 'badge badge-secondary';
-
-      if (data.length === 0) {
-        body.innerHTML = '<p style="color:var(--text-muted);">Aucune donnée importée.</p>';
-        return;
-      }
-
-      let html = '';
-
-      if (view === 'speedcut') {
-        html = `<table style="font-size:0.88em;"><thead><tr>
-          <th>Semaine</th><th>m³</th><th>H. Onaya</th><th>H. Perdues</th><th>H. Utiles</th>
-          <th>Productivité</th><th>Cible</th><th>TRS</th><th>T. Util. Machine</th><th>Remarques</th>
-        </tr></thead><tbody>`;
-        data.forEach(e => {
-          html += `<tr>
-            <td><strong>${escapeHtml(e.semaineLabel||'')}</strong></td>
-            <td>${fmtN(e.speedcutM3)}</td><td>${fmtH(e.speedcutHeuresOnaya)}</td>
-            <td>${fmtH(e.speedcutHeuresPerdues)}</td><td>${fmtH(e.speedcutHeuresUtiles)}</td>
-            <td>${fmtN(e.speedcutProductivite)}</td><td>${fmtN(e.speedcutCibleProductivite)}</td>
-            <td>${fmtPct(e.speedcutTRS)}</td><td>${fmtH(e.speedcutTempsUtilisation)}</td>
-            <td><small>${escapeHtml(e.speedcutRemarques||'')}</small></td>
-          </tr>`;
-        });
-        html += '</tbody></table>';
-
-      } else if (view === 'ultra') {
-        html = `<table style="font-size:0.88em;"><thead><tr>
-          <th>Semaine</th><th>m³</th><th>H. Onaya</th><th>H. Perdues</th><th>H. Utiles</th>
-          <th>Productivité</th><th>Cible</th><th>TRS</th><th>T. Util. Machine</th><th>Remarques</th>
-        </tr></thead><tbody>`;
-        data.forEach(e => {
-          html += `<tr>
-            <td><strong>${escapeHtml(e.semaineLabel||'')}</strong></td>
-            <td>${fmtN(e.ultraM3)}</td><td>${fmtH(e.ultraHeuresOnaya)}</td>
-            <td>${fmtH(e.ultraHeuresPerdues)}</td><td>${fmtH(e.ultraHeuresUtiles)}</td>
-            <td>${fmtN(e.ultraProductivite)}</td><td>${fmtN(e.ultraCibleProductivite)}</td>
-            <td>${fmtPct(e.ultraTRS)}</td><td>${fmtH(e.ultraTempsUtilisation)}</td>
-            <td><small>${escapeHtml(e.ultraRemarques||'')}</small></td>
-          </tr>`;
-        });
-        html += '</tbody></table>';
-
-      } else if (view === 'extra') {
-        html = `<table style="font-size:0.88em;"><thead><tr>
-          <th>Semaine</th><th>m²</th><th>H. Onaya</th><th>H. Perdues</th><th>H. Utiles</th>
-          <th>Productivité</th><th>Cible</th><th>TRS</th><th>T. Usinage</th><th>Prod. H/Machine</th><th>Volume</th><th>Remarques</th>
-        </tr></thead><tbody>`;
-        data.forEach(e => {
-          html += `<tr>
-            <td><strong>${escapeHtml(e.semaineLabel||'')}</strong></td>
-            <td>${fmtN(e.extraM2)}</td><td>${fmtH(e.extraHeuresOnaya)}</td>
-            <td>${fmtH(e.extraHeuresPerdues)}</td><td>${fmtH(e.extraHeuresUtiles)}</td>
-            <td>${fmtN(e.extraProductivite)}</td><td>${fmtN(e.extraCibleProductivite)}</td>
-            <td>${fmtPct(e.extraTRS)}</td><td>${fmtH(e.extraTempsUtilisation)}</td>
-            <td>${fmtN(e.extraProductiviteHeuresMachines)}</td><td>${fmtN(e.extraVolume)}</td>
-            <td><small>${escapeHtml(e.extraRemarques||'')}</small></td>
-          </tr>`;
-        });
-        html += '</tbody></table>';
-
-      } else if (view === 'collage') {
-        html = `<table style="font-size:0.88em;"><thead><tr>
-          <th>Semaine</th><th>Heures</th><th>Nb Pressées</th><th>Temps/Presse</th><th>Cible Temps/Presse</th><th>Nb Caissons</th><th>Commentaire</th>
-        </tr></thead><tbody>`;
-        data.forEach(e => {
-          html += `<tr>
-            <td><strong>${escapeHtml(e.semaineLabel||'')}</strong></td>
-            <td>${fmtH(e.collageHeures)}</td><td>${fmtN(e.collagePresses,0)}</td>
-            <td>${fmtH(e.collageTempsPressee)}</td><td>${fmtH(e.collageCibleTempsPressee)}</td>
-            <td>${fmtN(e.collageNombreCaissons,0)}</td>
-            <td><small>${escapeHtml(e.collageCommentaire||'')}</small></td>
-          </tr>`;
-        });
-        html += '</tbody></table>';
-
-      } else if (view === 'assemblage') {
-        html = `<table style="font-size:0.88em;"><thead><tr>
-          <th>Semaine</th><th>T. Réalisé</th><th>T. Théorique</th><th>Nb Caissons</th><th>Surface</th><th>Variation %</th><th>Commentaire</th>
-        </tr></thead><tbody>`;
-        data.forEach(e => {
-          const variation = e.assemblageVariation;
-          const varColor  = variation !== null && variation !== undefined ? (variation > 0 ? 'var(--danger)' : '#27ae60') : 'inherit';
-          html += `<tr>
-            <td><strong>${escapeHtml(e.semaineLabel||'')}</strong></td>
-            <td>${fmtH(e.assemblageTempsRealise)}</td><td>${fmtH(e.assemblageTempsTheorique)}</td>
-            <td>${fmtN(e.assemblageNombreCaissons,0)}</td><td>${fmtN(e.assemblageSurface)}</td>
-            <td style="color:${varColor}; font-weight:600;">${variation !== null && variation !== undefined ? fmtN(variation,1)+' %' : '—'}</td>
-            <td><small>${escapeHtml(e.assemblageCommentaire||'')}</small></td>
-          </tr>`;
-        });
-        html += '</tbody></table>';
-
-      } else if (view === 'qualite') {
-        html = `<table style="font-size:0.88em;"><thead><tr>
-          <th>Semaine</th><th>Année</th><th>Tests</th><th>Non-conformités</th><th>Réclamations clients</th><th>Détail</th>
-        </tr></thead><tbody>`;
-        data.forEach(e => {
-          if (e.qualiteTests === null && e.qualiteNonConformites === null && e.qualiteReclamationsClients === null) return;
-          html += `<tr>
-            <td><strong>${escapeHtml(e.semaineLabel||'')}</strong></td>
-            <td>${e.qualiteAnnee||'—'}</td>
-            <td>${fmtN(e.qualiteTests,0)}</td>
-            <td style="color:${(e.qualiteNonConformites||0)>0?'var(--danger)':'inherit'}; font-weight:600;">${fmtN(e.qualiteNonConformites,0)}</td>
-            <td style="color:${(e.qualiteReclamationsClients||0)>0?'var(--danger)':'inherit'}; font-weight:600;">${fmtN(e.qualiteReclamationsClients,0)}</td>
-            <td><small>${escapeHtml(e.qualiteDetail||'')}</small></td>
-          </tr>`;
-        });
-        html += '</tbody></table>';
-
-      } else if (view === 'securite') {
+      if (view === 'securite') {
         const sec = getCBCOSecuriteData();
+        count.textContent = sec ? '1' : '0';
+        count.className = sec ? 'badge badge-success' : 'badge badge-secondary';
         if (!sec || !sec.joursSansAccident) {
-          html = '<p style="color:var(--text-muted);">Aucune donnée sécurité importée.</p>';
+          body.innerHTML = '<p style="color:var(--text-muted);">Aucune donnée sécurité importée.</p>';
         } else {
-          html = `<div style="display:flex; gap:20px; flex-wrap:wrap;">
+          body.innerHTML = `<div style="display:flex; gap:20px; flex-wrap:wrap;">
             <div style="background:#f0f8f0; border:1px solid #d3e9d3; border-radius:8px; padding:16px 24px; text-align:center;">
               <div style="font-size:2em; font-weight:700; color:#27ae60;">${sec.joursSansAccident}</div>
               <div style="font-size:0.85em; color:#555;">Jours sans accident</div>
@@ -350,10 +330,21 @@
               <div style="font-size:0.85em; color:#555;">Record jours sans accident</div>
             </div>
           </div>
-          <p style="margin-top:16px; color:#666; font-size:0.88em;">Dernier accident : <strong>${escapeHtml(sec.lastAccidentDate||'—')}</strong>${sec.lastAccidentPerson ? ' — ' + escapeHtml(sec.lastAccidentPerson) : ''}</p>`;
+          <p style="margin-top:16px; color:#666; font-size:0.88em;">Dernier accident : <strong>${esc(sec.lastAccidentDate||'—')}</strong>${sec.lastAccidentPerson ? ' — ' + esc(sec.lastAccidentPerson) : ''}</p>`;
         }
+        return;
       }
 
+      const filtered = data.filter(e => hasDataForMachine(e, view));
+      count.textContent = filtered.length + ' semaine' + (filtered.length > 1 ? 's' : '');
+      count.className   = filtered.length > 0 ? 'badge badge-success' : 'badge badge-secondary';
+
+      if (filtered.length === 0) {
+        body.innerHTML = '<p style="color:var(--text-muted);">Aucune donnée pour cette machine.</p>';
+        return;
+      }
+
+      const html = filtered.map(e => renderWeekCard(e, view)).join('');
       body.innerHTML = html;
     }
 
