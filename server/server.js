@@ -861,7 +861,17 @@ function parseCBCOProdExcel(cfg) {
   sc.forEach(e => { const r = ensureWeek(e.week, e.year); r.speedcutM3=e.cubage; r.speedcutHeuresOnaya=e.heuresOnaya; r.speedcutHeuresPerdues=e.heuresPerdues; r.speedcutHeuresUtiles=e.heuresUtiles; r.speedcutProductivite=e.productivite; r.speedcutCibleProductivite=e.cibleProductivite; r.speedcutTRS=e.trs; r.speedcutTempsUtilisation=e.tempsUtilisationMachine; r.speedcutRemarques=e.remarques; });
   ultra.forEach(e => { const r = ensureWeek(e.week, e.year); r.ultraM3=e.cubage; r.ultraHeuresOnaya=e.heuresOnaya; r.ultraHeuresPerdues=e.heuresPerdues; r.ultraHeuresUtiles=e.heuresUtiles; r.ultraProductivite=e.productivite; r.ultraCibleProductivite=e.cibleProductivite; r.ultraTRS=e.trs; r.ultraTempsUtilisation=e.tempsUtilisationMachine; r.ultraRemarques=e.remarques; });
   extra.forEach(e => { const r = ensureWeek(e.week, e.year); r.extraM2=e.cubage; r.extraHeuresOnaya=e.heuresOnaya; r.extraHeuresPerdues=e.heuresPerdues; r.extraHeuresUtiles=e.heuresUtiles; r.extraProductivite=e.productivite; r.extraCibleProductivite=e.cibleProductivite; r.extraTRS=e.trs; r.extraTempsUtilisation=e.tempsUtilisationMachine; r.extraRemarques=e.remarques; r.extraProductiviteHeuresMachines=e.productiviteHeuresMachines; r.extraVolume=e.volume; });
-  collage.forEach(e => { const r = ensureWeek(e.week, e.year); r.collageHeures=e.heuresOnaya; r.collagePresses=e.nombrePressees; r.collageTempsPressee=e.productivite; r.collageCommentaire=e.remarques; r.collageNombreCaissons=e.nombreCaissons; r.collageCibleTempsPressee=e.cibleProductivite; r.collageSurface=e.surfaceCollee; });
+  collage.forEach((e, idx) => { 
+    const r = ensureWeek(e.week, e.year); 
+    r.collageHeures=e.heuresOnaya; 
+    r.collagePresses=e.nombrePressees; 
+    r.collageTempsPressee=e.productivite; 
+    r.collageCommentaire=e.remarques; 
+    r.collageNombreCaissons=e.nombreCaissons; 
+    r.collageCibleTempsPressee=e.cibleProductivite; 
+    r.collageSurface=e.surfaceCollee;
+    if (idx === 0) console.log(`[Parser] Collage S${e.week} ${e.year}: surfaceCollee=${e.surfaceCollee}, nombrePressees=${e.nombrePressees}, productivite=${e.productivite}`);
+  });
   assemblage.forEach(e => { const r = ensureWeek(e.week, e.year); r.assemblageTempsRealise=e.heuresOnaya; r.assemblageTempsTheorique=e.heuresPerdues; r.assemblageNombreCaissons=e.nombreCaissons; r.assemblageVariation=(e.heuresOnaya!==null&&e.heuresPerdues!==null&&e.heuresPerdues>0)?((e.heuresOnaya-e.heuresPerdues)/e.heuresPerdues)*100:e.productivite; r.assemblageCommentaire=e.remarques; r.assemblageSurface=e.volume; });
   qualite.forEach(e => { const r = ensureWeek(e.week, e.year); r.qualiteTests=e.tests; r.qualiteNonConformites=e.nonConformites; r.qualiteDetail=e.detail; r.qualiteReclamationsClients=e.reclamationsClients; r.qualiteAnnee=e.annee; });
 
