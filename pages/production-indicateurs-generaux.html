@@ -144,19 +144,27 @@
 
     function buildCharts() {
       const all = getCBCOProductiviteData();
+      console.log(`[IG] buildCharts() - Données disponibles: ${all ? all.length : 0} entrées`);
+      
       const yearSelect = document.getElementById('igYearSelect');
       const years = [...new Set(all.map((e) => Number(e.year)).filter(Number.isFinite))]
         .sort((a, b) => b - a);
       if (!years.length) years.push(new Date().getFullYear());
+      
       const previous = Number(yearSelect.value);
       yearSelect.innerHTML = years.map((y) => `<option value="${y}">${y}</option>`).join('');
       const year = years.includes(previous) ? previous : years[0];
       yearSelect.value = String(year);
+      console.log(`[IG] buildCharts() - Année sélectionnée: ${year}, années disponibles: ${years.join(', ')}`);
+      
       const weeks = Array.from({ length: 52 }, (_, i) => String(i + 1));
       const poutresWeekly = seriesByWeek(all, year, (e) => toFiniteNumber(e.speedcutM3) + toFiniteNumber(e.ultraM3));
-      const panneaux = seriesByWeek(all, year, (e) => e.extraM2);
-      const collage = seriesByWeek(all, year, (e) => e.collagePresses);
-      const assemblage = seriesByWeek(all, year, (e) => e.assemblageSurface);
+      const panneaux = seriesByWeek(all, year, (e) => toFiniteNumber(e.extraM2));
+      const collage = seriesByWeek(all, year, (e) => toFiniteNumber(e.collagePresses));
+      const assemblage = seriesByWeek(all, year, (e) => toFiniteNumber(e.assemblageSurface));
+      
+      console.log(`[IG] buildCharts() - Poutres total: ${sum(poutresWeekly)}, Panneaux: ${sum(panneaux)}, Collage: ${sum(collage)}, Assemblage: ${sum(assemblage)}`);
+      
       const totalPoutres = sum(poutresWeekly);
       const totals = {
         collage: sum(collage),
@@ -267,10 +275,34 @@
         window.location.href = './erreur-acces.html';
         return;
       }
+      console.log('[IG] init() - Initialisation des indicateurs généraux');
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectProductionSecondaryBar();
       document.getElementById('igYearSelect').addEventListener('change', buildCharts);
+      
+      // Phase 1: Affiche les graphiques immédiatement (peuvent être vides)
       buildCharts();
+      
+      // Phase 2: Recharge depuis le serveur (sans bloquer)
+      (async () => {
+        try {
+          console.log('[IG] Phase 2 - Chargement depuis le serveur...');
+          await loadServerKeys(['goudalle_cbco_productivite'], { force: true });
+          
+          // Petit délai pour que localStorage soit bien à jour
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          // Vérifier que les données sont chargées
+          const data = getCBCOProductiviteData();
+          console.log(`[IG] Phase 2 - Données serveur chargées: ${data ? data.length : 0} entrées`);
+          if (data && data.length > 0) {
+            console.log('[IG] Phase 2 - Re-construction des graphiques...');
+            buildCharts();
+          }
+        } catch (e) {
+          console.warn('[IG] Erreur rechargement données:', e.message);
+        }
+      })();
     }
 
     window.onServerReady(init);
