@@ -776,7 +776,7 @@
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectProductionSecondaryBar();
       
-      // Affiche le dashboard IMMÉDIATEMENT avec les données disponibles
+      // Affiche le dashboard IMMÉDIATEMENT avec les données disponibles en cache
       renderSecuriteHeader();
       renderQualiteHeader();
       renderMachineSection('sc');
@@ -785,26 +785,22 @@
       renderMachineSection('collage');
       renderMachineSection('assemblage');
       
-      // En arrière-plan (sans bloquer), fait un refresh optionnel depuis l'Excel
-      // Cela mettra à jour les données si elles changent, mais ne ralentit pas le chargement initial
+      // En arrière-plan, rechargement complet des données depuis le serveur
       (async () => {
         try {
-          const cfgRes = await fetch(SERVER_URL + '/cbco-productivite-excel-config', { cache: 'no-store' });
-          const cfg = await cfgRes.json();
+          // Rechargement des données depuis le serveur (remplit le localStorage)
+          await loadServerKeys(['goudalle_cbco_productivite', 'goudalle_rh_security_summary'], { force: true });
           
-          // Only re-import if config is active and was recently synced
-          if (cfg && cfg.active && cfg.lastSync) {
-            const lastSyncTime = new Date(cfg.lastSync).getTime();
-            const now = Date.now();
-            // Ne faire l'import que si la dernière sync est très récente (< 30 sec) ou jamais
-            if (now - lastSyncTime < 30000) {
-              // Données très fraîches, pas besoin de re-scraper l'Excel
-              return;
-            }
-          }
+          // Si les données ont changé, re-afficher les indicateurs
+          renderSecuriteHeader();
+          renderQualiteHeader();
+          renderMachineSection('sc');
+          renderMachineSection('ultra');
+          renderMachineSection('extra');
+          renderMachineSection('collage');
+          renderMachineSection('assemblage');
         } catch (e) {
-          // Erreur silencieuse, les données en cache restent visibles
-          console.warn('[CBCO] Erreur vérification Excel:', e.message);
+          console.warn('[CBCO] Erreur rechargement données:', e.message);
         }
       })();
     }
