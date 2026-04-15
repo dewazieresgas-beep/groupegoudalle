@@ -346,6 +346,31 @@
           </div>
         </div>
       </div>
+
+      <!-- Section Production Annuelle -->
+      <div class="card" style="margin-top:24px; margin-bottom:18px;">
+        <div class="card-body" style="padding:12px 14px;">
+          <h2 style="margin:0 0 14px 0;">Production Annuelle</h2>
+          
+          <div style="margin-bottom:16px;">
+            <label style="font-weight:600; margin-right:10px;">Sélectionner une année:</label>
+            <select id="yearSelector" onchange="renderAnnualStats()" style="padding:6px 10px; border:1px solid var(--border-light); border-radius:4px; font-size:16px;">
+              <option value="">-- Année --</option>
+            </select>
+          </div>
+
+          <div id="annualStatsContainer" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:12px; margin-bottom:16px;">
+            <!-- Les stats annuelles seront générées par JS -->
+          </div>
+
+          <div style="border:1px solid var(--border-light); border-radius:8px; padding:12px; background:#fafafa;">
+            <h3 style="margin:0 0 12px 0; font-size:1.1em;">Cumul de production par semaine - <span id="cumGraphYear">2026</span></h3>
+            <div style="height:300px;">
+              <canvas id="chartAnnualCumul"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
     </main>
   </div>
 
@@ -462,8 +487,8 @@
           suffix: 'ULTRA',
           m3Field: 'ultraM3',
           hoursField: 'ultraHeuresOnaya',
-          rawMainField: 'ultra_cubage',
-          rawHoursField: 'ultra_heures_onaya',
+          rawMainField: 'ultraM3',
+          rawHoursField: 'ultraHeuresOnaya',
           usefulField: 'ultraHeuresUtiles',
           prodField: 'ultraProductivite',
           targetField: 'ultraCibleProductivite',
@@ -478,8 +503,8 @@
           suffix: 'EXTRA',
           m3Field: 'extraM2',
           hoursField: 'extraHeuresOnaya',
-          rawMainField: 'extra_surface',
-          rawHoursField: 'extra_heures_onaya',
+          rawMainField: 'extraM2',
+          rawHoursField: 'extraHeuresOnaya',
           usefulField: 'extraHeuresUtiles',
           prodField: 'extraProductivite',
           targetField: 'extraCibleProductivite',
@@ -494,8 +519,8 @@
           suffix: 'COLLAGE',
           m3Field: 'collagePresses',
           hoursField: 'collageHeures',
-          rawMainField: 'collage_nombre_pressees',
-          rawHoursField: 'collage_heures_onaya',
+          rawMainField: 'collagePresses',
+          rawHoursField: 'collageHeures',
           usefulField: null,
           prodField: 'collageTempsPressee',
           targetField: 'collageCibleTempsPressee',
@@ -511,8 +536,8 @@
           suffix: 'ASSEMBLAGE',
           m3Field: 'assemblageTempsRealise',
           hoursField: 'assemblageTempsTheorique',
-          rawMainField: 'assemblage_temps_realise',
-          rawHoursField: 'assemblage_temps_theorique',
+          rawMainField: 'assemblageTempsRealise',
+          rawHoursField: 'assemblageTempsTheorique',
           usefulField: null,
           prodField: 'assemblageVariation',
           targetField: null,
@@ -527,8 +552,8 @@
         suffix: 'SC',
         m3Field: 'speedcutM3',
         hoursField: 'speedcutHeuresOnaya',
-        rawMainField: 'cubage',
-        rawHoursField: 'heures_onaya',
+        rawMainField: 'speedcutM3',
+        rawHoursField: 'speedcutHeuresOnaya',
         usefulField: 'speedcutHeuresUtiles',
         prodField: 'speedcutProductivite',
         targetField: 'speedcutCibleProductivite',
@@ -620,11 +645,21 @@
       const empty = document.getElementById(`usineEmpty${cfg.suffix}`);
       const content = document.getElementById(`usineContent${cfg.suffix}`);
       const allDesc = getCBCOProductiviteData();
+      console.log(`[CBCO] renderMachineSection(${machine}): ${allDesc.length} entrées chargées`);
+      
+      if (allDesc.length > 0) {
+        const firstEntry = allDesc[0];
+        console.log(`[CBCO] ${machine} - Exemple d'entrée:`, firstEntry);
+        console.log(`[CBCO] ${machine} - Cherche: [${cfg.rawMainField}]=${firstEntry[cfg.rawMainField]}, [${cfg.rawHoursField}]=${firstEntry[cfg.rawHoursField]}`);
+      }
+      
       const nowIso = getCurrentIsoWeekYear();
       const allAsc = [...allDesc]
         .filter(e => (e.year < nowIso.year) || (e.year === nowIso.year && e.week <= nowIso.week))
         .sort((a, b) => a.year !== b.year ? a.year - b.year : a.week - b.week);
       const withData = allAsc.filter(e => hasMachineSourceData(e, cfg));
+
+      console.log(`[CBCO] ${machine}: ${withData.length} semaines avec données`);
 
       if (!withData.length) {
         empty.style.display = '';
@@ -768,15 +803,173 @@
       else if (machine === 'assemblage') chartASSEMBLAGE = newChart;
       else if (machine === 'collage') chartCOLLAGE = newChart;
       else chartSC = newChart;
+      console.log(`[CBCO] ${machine}: Chart créé avec succès`);
       empty.style.display = 'none';
       content.style.display = '';
     }
 
+    function initYearSelector() {
+      const allData = getCBCOProductiviteData();
+      const years = [...new Set(allData.map(e => e.year))].sort((a, b) => b - a);
+      const select = document.getElementById('yearSelector');
+      
+      // Clear existing options (keep only first dummy option)
+      while (select.options.length > 1) {
+        select.remove(1);
+      }
+      
+      years.forEach(y => {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.textContent = y;
+        select.appendChild(opt);
+      });
+      
+      // Auto-select first year only if nothing is selected
+      if (select.value === '' && years.length > 0) {
+        select.value = years[0];
+        renderAnnualStats();
+      } else if (select.value !== '') {
+        // Data refreshed, re-render with current selection
+        renderAnnualStats();
+      }
+    }
+
+    function getAnnualProductionStats(year) {
+      const data = getCBCOProductiviteData();
+      const filtered = data.filter(e => e.year === year);
+      
+      return {
+        sc: {
+          unit: 'm³',
+          total: filtered.reduce((sum, e) => sum + toFiniteNumber(e.speedcutM3), 0),
+          weeks: filtered.map(e => ({ week: e.week, value: toFiniteNumber(e.speedcutM3) || 0, hours: toFiniteNumber(e.speedcutHeuresOnaya) || 0 }))
+        },
+        ultra: {
+          unit: 'm³',
+          total: filtered.reduce((sum, e) => sum + toFiniteNumber(e.ultraM3), 0),
+          weeks: filtered.map(e => ({ week: e.week, value: toFiniteNumber(e.ultraM3) || 0, hours: toFiniteNumber(e.ultraHeuresOnaya) || 0 }))
+        },
+        extra: {
+          unit: 'm²',
+          total: filtered.reduce((sum, e) => sum + toFiniteNumber(e.extraM2), 0),
+          weeks: filtered.map(e => ({ week: e.week, value: toFiniteNumber(e.extraM2) || 0, hours: toFiniteNumber(e.extraHeuresOnaya) || 0 }))
+        },
+        collage: {
+          unit: 'm²',
+          total: filtered.reduce((sum, e) => sum + toFiniteNumber(e.collagePresses), 0),
+          weeks: filtered.map(e => ({ week: e.week, value: toFiniteNumber(e.collagePresses) || 0, hours: toFiniteNumber(e.collageHeures) || 0 }))
+        },
+        assemblage: {
+          unit: 'm²',
+          total: filtered.reduce((sum, e) => sum + toFiniteNumber(e.assemblageTempsRealise), 0),
+          weeks: filtered.map(e => ({ week: e.week, value: toFiniteNumber(e.assemblageTempsRealise) || 0 }))
+        }
+      };
+    }
+
+    function renderAnnualStats() {
+      const yearSelect = document.getElementById('yearSelector');
+      const year = Number(yearSelect.value);
+      if (!year) return;
+      
+      const stats = getAnnualProductionStats(year);
+      const container = document.getElementById('annualStatsContainer');
+      
+      document.getElementById('cumGraphYear').textContent = year;
+      
+      container.innerHTML = `
+        <div style="background:linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border:1px solid #81c784; border-radius:8px; padding:12px;">
+          <div style="font-size:0.9em; color:#2e7d32; margin-bottom:4px;">Speedcut</div>
+          <div style="font-size:2em; font-weight:700; color:#1b5e20;">${formatNumber(stats.sc.total)}</div>
+          <div style="font-size:0.85em; color:#558b2f;">m³ transformés</div>
+        </div>
+        <div style="background:linear-gradient(135deg, #e1f5fe 0%, #b3e5fc 100%); border:1px solid #4fc3f7; border-radius:8px; padding:12px;">
+          <div style="font-size:0.9em; color:#0277bd; margin-bottom:4px;">Ultra</div>
+          <div style="font-size:2em; font-weight:700; color:#01579b;">${formatNumber(stats.ultra.total)}</div>
+          <div style="font-size:0.85em; color:#0288d1;">m³ transformés</div>
+        </div>
+        <div style="background:linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%); border:1px solid #ce93d8; border-radius:8px; padding:12px;">
+          <div style="font-size:0.9em; color:#7b1fa2; margin-bottom:4px;">Extra/Panneaux</div>
+          <div style="font-size:2em; font-weight:700; color:#4a148c;">${formatNumber(stats.extra.total)}</div>
+          <div style="font-size:0.85em; color:#6a1b9a;">m² taillés</div>
+        </div>
+        <div style="background:linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); border:1px solid #ffb74d; border-radius:8px; padding:12px;">
+          <div style="font-size:0.9em; color:#e65100; margin-bottom:4px;">Collage</div>
+          <div style="font-size:2em; font-weight:700; color:#bf360c;">${formatNumber(stats.collage.total)}</div>
+          <div style="font-size:0.85em; color:#d84315;">pièces pressées</div>
+        </div>
+        <div style="background:linear-gradient(135deg, #fce4ec 0%, #f8bbd0 100%); border:1px solid #f48fb1; border-radius:8px; padding:12px;">
+          <div style="font-size:0.9em; color:#c2185b; margin-bottom:4px;">Assemblage</div>
+          <div style="font-size:2em; font-weight:700; color:#880e4f;">${formatNumber(stats.assemblage.total)}</div>
+          <div style="font-size:0.85em; color:#ad1457;">heures réalisées</div>
+        </div>
+      `;
+      
+      renderAnnualCumulChart(stats);
+    }
+
+    let chartAnnualCumul = null;
+
+    function renderAnnualCumulChart(stats) {
+      // Prépare les données de cumul pour chaque machine
+      const maxWeeks = 52;
+      const cumulSC = [];
+      const cumulUltra = [];
+      const cumulExtra = [];
+      const cumulCollage = [];
+      let sumSC = 0, sumUltra = 0, sumExtra = 0, sumCollage = 0;
+      
+      for (let w = 1; w <= maxWeeks; w++) {
+        sumSC += stats.sc.weeks.find(x => x.week === w)?.value || 0;
+        sumUltra += stats.ultra.weeks.find(x => x.week === w)?.value || 0;
+        sumExtra += stats.extra.weeks.find(x => x.week === w)?.value || 0;
+        sumCollage += stats.collage.weeks.find(x => x.week === w)?.value || 0;
+        
+        cumulSC.push(sumSC);
+        cumulUltra.push(sumUltra);
+        cumulExtra.push(sumExtra);
+        cumulCollage.push(sumCollage);
+      }
+      
+      const labels = Array.from({length: maxWeeks}, (_, i) => `S${i+1}`);
+      
+      const ctx = document.getElementById('chartAnnualCumul');
+      if (!ctx) return;
+      
+      if (chartAnnualCumul) chartAnnualCumul.destroy();
+      
+      chartAnnualCumul = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            { label: 'SC (m³)', data: cumulSC, borderColor: '#2e7d32', backgroundColor: 'rgba(46, 125, 50, 0.08)', borderWidth: 2, pointRadius: 0, tension: 0.3 },
+            { label: 'Ultra (m³)', data: cumulUltra, borderColor: '#0277bd', backgroundColor: 'rgba(2, 119, 189, 0.08)', borderWidth: 2, pointRadius: 0, tension: 0.3 },
+            { label: 'Extra (m²)', data: cumulExtra, borderColor: '#7b1fa2', backgroundColor: 'rgba(123, 31, 162, 0.08)', borderWidth: 2, pointRadius: 0, tension: 0.3 },
+            { label: 'Collage (pièces)', data: cumulCollage, borderColor: '#e65100', backgroundColor: 'rgba(230, 81, 0, 0.08)', borderWidth: 2, pointRadius: 0, tension: 0.3 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: true, title: { display: true, text: 'Cumul par semaine' } }
+          },
+          plugins: {
+            legend: { display: true, position: 'top' },
+            tooltip: { mode: 'index', intersect: false }
+          }
+        }
+      });
+    }
+
     async function init() {
+      console.log('[CBCO] init() - Initialisation du dashboard');
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectProductionSecondaryBar();
       
-      // Affiche le dashboard IMMÉDIATEMENT avec les données disponibles en cache
+      // Affiche le dashboard IMMÉDIATEMENT (peut être vide au départ)
       renderSecuriteHeader();
       renderQualiteHeader();
       renderMachineSection('sc');
@@ -784,21 +977,33 @@
       renderMachineSection('extra');
       renderMachineSection('collage');
       renderMachineSection('assemblage');
+      initYearSelector();
       
-      // En arrière-plan, rechargement complet des données depuis le serveur
+      // Rechargement complet des données depuis le serveur (sans bloquer)
       (async () => {
         try {
-          // Rechargement des données depuis le serveur (remplit le localStorage)
+          // Recharge les données depuis le serveur
+          console.log('[CBCO] Phase 2 - Chargement depuis le serveur...');
           await loadServerKeys(['goudalle_cbco_productivite', 'goudalle_rh_security_summary'], { force: true });
           
-          // Si les données ont changé, re-afficher les indicateurs
-          renderSecuriteHeader();
-          renderQualiteHeader();
-          renderMachineSection('sc');
-          renderMachineSection('ultra');
-          renderMachineSection('extra');
-          renderMachineSection('collage');
-          renderMachineSection('assemblage');
+          // IMPORTANT : Petit délai pour que localStorage soit bien à jour
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          // Vérifie qu'on a maintenant des données
+          const data = getCBCOProductiviteData();
+          console.log(`[CBCO] Phase 2 - Données serveur chargées: ${data ? data.length : 0} entrées`);
+          if (data && data.length > 0) {
+            console.log('[CBCO] Phase 2 - Re-rendu des indicateurs...');
+            // Données chargées ! Re-afficher tout les indicateurs et graphiques
+            renderSecuriteHeader();
+            renderQualiteHeader();
+            renderMachineSection('sc');
+            renderMachineSection('ultra');
+            renderMachineSection('extra');
+            renderMachineSection('collage');
+            renderMachineSection('assemblage');
+            initYearSelector();
+          }
         } catch (e) {
           console.warn('[CBCO] Erreur rechargement données:', e.message);
         }
