@@ -3105,7 +3105,12 @@ app.listen(PORT, '0.0.0.0', () => {
   // Vérification des fichiers Excel configurés
   const gmCfg = dbGet('gm_excel_config', null);
   if (gmCfg && gmCfg.active) {
-    const excelPath = path.join(gmCfg.folder, gmCfg.filename);
+    let excelPath = path.join(gmCfg.folder, gmCfg.filename);
+    if (!fs.existsSync(excelPath)) {
+      const candidates = ['.xlsx', '.xlsm', '.xls'];
+      const found = candidates.find(ext => fs.existsSync(excelPath + ext));
+      if (found) excelPath = excelPath + found;
+    }
     if (fs.existsSync(excelPath)) {
       console.log(`✅ [Excel GM] Connecté : ${excelPath}`);
     } else {
@@ -3116,7 +3121,12 @@ app.listen(PORT, '0.0.0.0', () => {
   }
   const cbcoCfg = dbGet('cbco_excel_config', null);
   if (cbcoCfg && cbcoCfg.active) {
-    const excelPath = path.join(cbcoCfg.folder, cbcoCfg.filename);
+    let excelPath = path.join(cbcoCfg.folder, cbcoCfg.filename);
+    if (!fs.existsSync(excelPath)) {
+      const candidates = ['.xlsx', '.xlsm', '.xls'];
+      const found = candidates.find(ext => fs.existsSync(excelPath + ext));
+      if (found) excelPath = excelPath + found;
+    }
     if (fs.existsSync(excelPath)) {
       console.log(`✅ [Excel CBCO] Connecté : ${excelPath}`);
     } else {
@@ -3127,7 +3137,12 @@ app.listen(PORT, '0.0.0.0', () => {
   }
   const cbcoProdCfg = dbGet('cbco_productivite_excel_config', null);
   if (cbcoProdCfg && cbcoProdCfg.active) {
-    const excelPath = path.join(cbcoProdCfg.folder, cbcoProdCfg.filename);
+    let excelPath = path.join(cbcoProdCfg.folder, cbcoProdCfg.filename);
+    if (!fs.existsSync(excelPath)) {
+      const candidates = ['.xlsx', '.xlsm', '.xls'];
+      const found = candidates.find(ext => fs.existsSync(excelPath + ext));
+      if (found) excelPath = excelPath + found;
+    }
     if (fs.existsSync(excelPath)) {
       console.log(`✅ [Excel CBCO Prod] Connecté : ${excelPath}`);
     } else {
