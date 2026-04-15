@@ -151,7 +151,7 @@
         const sc = toFiniteNumber(e.speedcutM3) > 0;
         const ultra = toFiniteNumber(e.ultraM3) > 0;
         const extra = toFiniteNumber(e.extraM2) > 0;
-        const collage = toFiniteNumber(e.collagePresses) > 0;
+        const collage = toFiniteNumber(e.collageSurface) > 0;
         const assemblage = toFiniteNumber(e.assemblageSurface) > 0;
         return sc || ultra || extra || collage || assemblage;
       });
@@ -176,7 +176,7 @@
       // Préparer les données en parallèle avec les semaines filtrées
       const poutresWeekly = entriesForYear.map(e => toFiniteNumber(e.speedcutM3) + toFiniteNumber(e.ultraM3));
       const panneaux = entriesForYear.map(e => toFiniteNumber(e.extraM2));
-      const collage = entriesForYear.map(e => toFiniteNumber(e.collagePresses));
+      const collage = entriesForYear.map(e => toFiniteNumber(e.collageSurface));
       const assemblage = entriesForYear.map(e => toFiniteNumber(e.assemblageSurface));
       
       console.log(`[IG] buildCharts() - Affichage ${entriesForYear.length} semaines avec données`);
