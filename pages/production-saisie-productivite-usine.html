@@ -67,7 +67,7 @@
       <div class="card" style="margin-top:20px;">
         <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
           <h2 style="margin:0;">📁 Historique semaines importées</h2>
-          <div style="display:flex; gap:10px; align-items:center;">
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
             <label for="machineViewSelect" style="font-size:0.85em; font-weight:600;">Vue machine</label>
             <select id="machineViewSelect" onchange="refreshHistory()" style="min-width:140px;">
               <option value="speedcut">Speedcut</option>
@@ -188,15 +188,18 @@
     }
 
     async function handleDesync() {
-      if (!confirm('Désynchroniser le fichier Excel ? Les données déjà importées sont conservées.')) return;
+      if (!confirm('Désynchroniser le fichier Excel ?\n\nToutes les données importées depuis l\'Excel seront supprimées.')) return;
       try {
         await fetch(SERVER_URL + '/cbco-productivite-excel-config', { method: 'DELETE' });
-        showMessage('🔌 Désynchronisé. Vous pouvez connecter un nouveau fichier.', 'success');
+        showMessage('🔌 Désynchronisé. Les données Excel ont été supprimées.', 'success');
         unlockConfig();
+        await loadServerKeys(['goudalle_cbco_productivite'], { force: true });
+        refreshHistory();
       } catch(e) {
         showMessage(`❌ Erreur : ${e.message}`, 'error');
       }
     }
+
 
     function fmtH(h) {
       if (h === null || h === undefined) return '—';

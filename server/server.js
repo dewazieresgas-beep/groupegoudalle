@@ -938,6 +938,9 @@ app.put('/api/cbco-productivite-excel-config', requireToken, requireWriteRateLim
 app.delete('/api/cbco-productivite-excel-config', (req, res) => {
   if (cbcoProdWatcher) { clearInterval(cbcoProdWatcher); cbcoProdWatcher = null; }
   dbSet('cbco_productivite_excel_config', null);
+  // Supprimer toutes les entrées importées depuis l'Excel lors de la désynchronisation
+  const remaining = (dbGet('cbco_productivite', []) || []).filter(e => e.createdBy !== 'excel-auto');
+  dbSet('cbco_productivite', remaining);
   res.json({ success: true });
 });
 
