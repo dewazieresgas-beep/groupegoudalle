@@ -1220,8 +1220,10 @@ function computeCBCOProductiviteMetrics(entry) {
   const extraM2 = normalizeCBCOProductiviteNumber(entry.extraM2);
   const collageHeures = normalizeCBCOProductiviteNumber(entry.collageHeures);
   const collagePresses = normalizeCBCOProductiviteNumber(entry.collagePresses);
+  const collageSurface = normalizeCBCOProductiviteNumber(entry.collageSurface || entry.surfaceCollee);
   const assemblageTempsRealise = normalizeCBCOProductiviteNumber(entry.assemblageTempsRealise);
   const assemblageTempsTheorique = normalizeCBCOProductiviteNumber(entry.assemblageTempsTheorique);
+  const assemblageSurface = normalizeCBCOProductiviteNumber(entry.assemblageSurface || entry.volume);
   const collageHeuresParPresse = collagePresses > 0 ? collageHeures / collagePresses : null;
   const assemblageRatio = assemblageTempsTheorique > 0 ? assemblageTempsRealise / assemblageTempsTheorique : null;
   const assemblageEcartHeures = assemblageTempsRealise - assemblageTempsTheorique;
@@ -1233,8 +1235,10 @@ function computeCBCOProductiviteMetrics(entry) {
     extraM2,
     collageHeures,
     collagePresses,
+    collageSurface,
     assemblageTempsRealise,
     assemblageTempsTheorique,
+    assemblageSurface,
     collageHeuresParPresse,
     assemblageRatio,
     assemblageEcartHeures
