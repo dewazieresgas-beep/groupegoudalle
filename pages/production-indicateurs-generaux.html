@@ -7,25 +7,64 @@
   <link rel="stylesheet" href="../css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    .ig-grid {
+    /* ── Bande de synthèse ── */
+    .ig-summary-strip {
       display: grid;
-      grid-template-columns: minmax(0, 3fr) minmax(240px, 1fr);
-      gap: 16px;
-      margin-bottom: 16px;
+      grid-template-columns: 1.5fr 1fr 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 28px;
     }
-    .ig-chart-wrap { height: 340px; }
-    .ig-chart-wrap-small { height: 300px; }
-    .ig-chart-wrap canvas,
-    .ig-chart-wrap-small canvas { width: 100% !important; height: 100% !important; }
-    .ig-year-select {
-      width: auto;
-      min-width: 140px;
-      max-width: 180px;
+    .ig-summary-tile {
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px 18px 14px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+      border-top: 4px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      transition: transform 0.2s, box-shadow 0.2s;
     }
+    .ig-summary-tile:hover { transform: translateY(-4px); box-shadow: 0 10px 24px rgba(0,0,0,0.10); }
+    .ig-summary-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--secondary); }
+    .ig-summary-value { font-size: 26px; font-weight: 800; color: var(--primary); font-family: 'Courier New', monospace; line-height: 1.1; }
+    .ig-summary-unit  { font-size: 12px; color: #888; font-weight: 600; }
+    .ig-summary-sub   { font-size: 11px; color: #aaa; margin-top: 2px; }
+    .ig-summary-equiv { font-size: 11px; color: #888; margin-top: 6px; font-style: italic; }
+
+    /* ── Section machine ── */
+    .ig-machine-section { margin-bottom: 28px; }
+    .ig-machine-container {
+      display: grid;
+      grid-template-columns: 210px 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+    .ig-kpi-col { display: flex; flex-direction: column; gap: 10px; }
+    .ig-kpi-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 13px 15px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+      border-top: 4px solid var(--border);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .ig-kpi-card:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.09); }
+    .ig-kpi-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--secondary); margin-bottom: 5px; }
+    .ig-kpi-value { font-size: 20px; font-weight: 800; color: var(--primary); font-family: 'Courier New', monospace; line-height: 1; }
+    .ig-kpi-unit  { font-size: 11px; color: #999; font-weight: 600; margin-top: 2px; }
+    .ig-kpi-sub   { font-size: 10px; color: #bbb; margin-top: 2px; }
+    .ig-kpi-equiv { font-size: 10px; color: #7a8a7a; font-style: italic; margin-top: 4px; background:#f2f5f2; border-radius:6px; padding:2px 6px; display:inline-block; }
+
+    /* Badges SC/Ultra */
+    .ig-badge { display:inline-block; font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; margin-top:4px; margin-right:4px; }
+
+    /* Sélecteur exercice */
+    .ig-year-select { min-width: 140px; max-width: 180px; }
+
     @media (max-width: 1100px) {
-      .ig-grid { grid-template-columns: 1fr; }
-      .ig-chart-wrap { height: 300px; }
-      .ig-chart-wrap-small { height: 280px; }
+      .ig-summary-strip       { grid-template-columns: 1fr 1fr; }
+      .ig-machine-container   { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -40,284 +79,500 @@
 
   <div class="app-container">
     <div id="sidebar"></div>
-
     <main class="main-content">
-      <div class="d-flex justify-between items-center mb-3" style="gap: 12px; flex-wrap: wrap;">
-        <h1 class="mb-0">Indicateurs Généraux</h1>
-        <div class="d-flex items-center" style="gap: 8px;">
-          <label for="igYearSelect" class="mb-0" style="margin:0;">Année :</label>
-          <select id="igYearSelect" class="ig-year-select"></select>
+
+      <!-- ═══ EN-TÊTE ═══ -->
+      <div class="gm-header" style="margin-bottom:20px;">
+        <h1>Indicateurs Généraux</h1>
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <label for="igYearSelect" style="font-size:0.9em; font-weight:600; color:var(--secondary); margin:0;">Exercice :</label>
+          <select id="igYearSelect" class="ig-year-select gm-range-select"></select>
+          <span id="igLastWeekBadge" style="display:none; font-size:0.8em; background:#f0f4f0; border:1px solid #d0d8d0; border-radius:20px; padding:4px 12px; color:#555; font-weight:600;"></span>
         </div>
       </div>
 
-      <div class="ig-grid">
-        <div class="card">
-          <div class="card-title"><h2>Poutres (m3)</h2></div>
-          <div class="card-body">
-            <div class="ig-chart-wrap"><canvas id="poutresTrendChart"></canvas></div>
+      <!-- ═══ SYNTHÈSE EXERCICE ═══ -->
+      <div class="ig-summary-strip">
+        <!-- Total Poutres -->
+        <div class="ig-summary-tile" style="border-top-color:#5a7eb3; background:linear-gradient(135deg,#f4f7fb 0%,#fff 100%);">
+          <div class="ig-summary-label" style="color:#3a5e8a;">Total Poutres taillées</div>
+          <div class="ig-summary-value" id="synPOUTRES" style="font-size:30px; color:#2a4a72;">—</div>
+          <div class="ig-summary-unit" style="color:#4a6e96;">m³ de bois cette année</div>
+          <div style="margin-top:6px; display:flex; gap:6px; flex-wrap:wrap;">
+            <span class="ig-badge" style="background:#e8eef6; color:#5a7eb3;">SC : <span id="synSC">—</span> m³</span>
+            <span class="ig-badge" style="background:#eaf0f8; color:#8a9eb8;">Ultra : <span id="synULTRA">—</span> m³</span>
           </div>
+          <div class="ig-summary-equiv" id="synPoutresEquiv"></div>
         </div>
-        <div class="card">
-          <div class="card-title"><h2>Poutres (m3)</h2></div>
-          <div class="card-body">
-            <div class="ig-chart-wrap-small"><canvas id="poutresTotalChart"></canvas></div>
+        <!-- Panneaux -->
+        <div class="ig-summary-tile" style="border-top-color:#d4a800;">
+          <div class="ig-summary-label">Panneaux taillés</div>
+          <div class="ig-summary-value" id="synEXTRA">—</div>
+          <div class="ig-summary-unit">m²</div>
+          <div class="ig-summary-sub" id="synEXTRASub"></div>
+          <div class="ig-summary-equiv" id="synExtraEquiv"></div>
+        </div>
+        <!-- Collage -->
+        <div class="ig-summary-tile" style="border-top-color:#5a9a3a;">
+          <div class="ig-summary-label">Panneaux collés</div>
+          <div class="ig-summary-value" id="synCOLLAGE">—</div>
+          <div class="ig-summary-unit">m²</div>
+          <div class="ig-summary-sub" id="synCOLLAGESub"></div>
+          <div class="ig-summary-equiv" id="synCollageEquiv"></div>
+        </div>
+        <!-- Assemblage -->
+        <div class="ig-summary-tile" style="border-top-color:#8f4a13;">
+          <div class="ig-summary-label">Panneaux assemblés</div>
+          <div class="ig-summary-value" id="synASSEMBLAGE">—</div>
+          <div class="ig-summary-unit">m²</div>
+          <div class="ig-summary-sub" id="synASSEMBLAGESub"></div>
+          <div class="ig-summary-equiv" id="synAssemblageEquiv"></div>
+        </div>
+      </div>
+
+      <!-- ═══ POUTRES TAILLÉES ═══ -->
+      <div class="ig-machine-section">
+        <div class="gm-header" style="padding-bottom:10px; margin-bottom:14px; border-bottom-color:rgba(90,126,179,0.3);">
+          <h2 style="margin:0; font-size:19px;">Poutres taillées (m³) — Speedcut + Ultra</h2>
+        </div>
+        <div class="ig-machine-container">
+          <div class="ig-kpi-col">
+            <div class="ig-kpi-card" style="border-top-color:#5a7eb3;">
+              <div class="ig-kpi-label">Total exercice</div>
+              <div class="ig-kpi-value" id="poutresTotal">—</div>
+              <div class="ig-kpi-unit">m³ de poutres</div>
+              <div class="ig-kpi-equiv" id="poutresTotalEquiv"></div>
+            </div>
+            <div class="ig-kpi-card" style="border-top-color:#9aa1ab;">
+              <div class="ig-kpi-label">dont Speedcut</div>
+              <div class="ig-kpi-value" id="scTotalKpi">—</div>
+              <div class="ig-kpi-unit">m³ &nbsp;<span id="scPctKpi" style="font-size:11px; color:#aaa;"></span></div>
+            </div>
+            <div class="ig-kpi-card" style="border-top-color:#7a9ec8;">
+              <div class="ig-kpi-label">dont Ultra</div>
+              <div class="ig-kpi-value" id="ultraTotalKpi">—</div>
+              <div class="ig-kpi-unit">m³ &nbsp;<span id="ultraPctKpi" style="font-size:11px; color:#aaa;"></span></div>
+            </div>
+            <div class="ig-kpi-card" style="border-top-color:#b0b8c4;">
+              <div class="ig-kpi-label">Record semaine</div>
+              <div class="ig-kpi-value" id="poutresRecord">—</div>
+              <div class="ig-kpi-unit" id="poutresRecordWeek">—</div>
+              <div class="ig-kpi-equiv" id="poutresRecordEquiv"></div>
+            </div>
+            <div class="ig-kpi-card" style="border-top-color:#c8d2dc;">
+              <div class="ig-kpi-label">Dernière semaine</div>
+              <div class="ig-kpi-value" id="poutresLast">—</div>
+              <div class="ig-kpi-unit" id="poutresLastWeek">—</div>
+            </div>
+          </div>
+          <div class="gm-chart-section" style="min-height:300px;">
+            <div class="gm-chart-header" style="margin-bottom:12px; padding-bottom:10px;">
+              <h2>Poutres taillées par semaine (m³)</h2>
+            </div>
+            <div class="gm-chart-container" style="min-height:240px;">
+              <canvas id="chartPoutres"></canvas>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="ig-grid">
-        <div class="card">
-          <div class="card-title"><h2 id="panneauxYearTitle">Panneaux taillés, collés, assemblés (m2)</h2></div>
-          <div class="card-body">
-            <div class="ig-chart-wrap"><canvas id="panneauxTrendChart"></canvas></div>
-          </div>
+      <!-- ═══ PANNEAUX TAILLÉS ═══ -->
+      <div class="ig-machine-section">
+        <div class="gm-header" style="padding-bottom:10px; margin-bottom:14px; border-bottom-color:rgba(212,168,0,0.4);">
+          <h2 style="margin:0; font-size:19px;">Panneaux taillés (m²) — Extra</h2>
         </div>
-        <div class="card">
-          <div class="card-title"><h2>Panneaux taillés, collés, assemblés (m2)</h2></div>
-          <div class="card-body">
-            <div class="ig-chart-wrap-small"><canvas id="panneauxTotalChart"></canvas></div>
+        <div class="ig-machine-container">
+          <div class="ig-kpi-col">
+            <div class="ig-kpi-card" style="border-top-color:#d4a800;">
+              <div class="ig-kpi-label">Total exercice</div>
+              <div class="ig-kpi-value" id="extraTotal">—</div>
+              <div class="ig-kpi-unit">m² de panneaux</div>
+              <div class="ig-kpi-equiv" id="extraTotalEquiv"></div>
+            </div>
+            <div class="ig-kpi-card" style="border-top-color:#e0bc30;">
+              <div class="ig-kpi-label">Moy. par semaine</div>
+              <div class="ig-kpi-value" id="extraAvg">—</div>
+              <div class="ig-kpi-unit">m² / sem.</div>
+            </div>
+            <div class="ig-kpi-card" style="border-top-color:#e8cc58;">
+              <div class="ig-kpi-label">Record semaine</div>
+              <div class="ig-kpi-value" id="extraRecord">—</div>
+              <div class="ig-kpi-unit" id="extraRecordWeek">—</div>
+              <div class="ig-kpi-equiv" id="extraRecordEquiv"></div>
+            </div>
+            <div class="ig-kpi-card" style="border-top-color:#f0d880;">
+              <div class="ig-kpi-label">Dernière semaine</div>
+              <div class="ig-kpi-value" id="extraLast">—</div>
+              <div class="ig-kpi-unit" id="extraLastWeek">—</div>
+            </div>
+          </div>
+          <div class="gm-chart-section" style="min-height:280px;">
+            <div class="gm-chart-header" style="margin-bottom:12px; padding-bottom:10px;">
+              <h2>Panneaux taillés par semaine (m²)</h2>
+            </div>
+            <div class="gm-chart-container" style="min-height:220px;">
+              <canvas id="chartEXTRA"></canvas>
+            </div>
           </div>
         </div>
       </div>
+
+      <!-- ═══ PANNEAUX COLLÉS ═══ -->
+      <div class="ig-machine-section">
+        <div class="gm-header" style="padding-bottom:10px; margin-bottom:14px; border-bottom-color:rgba(90,154,58,0.35);">
+          <h2 style="margin:0; font-size:19px;">Panneaux collés — Collage</h2>
+        </div>
+        <div class="ig-machine-container">
+          <div class="ig-kpi-col">
+            <div class="ig-kpi-card" style="border-top-color:#5a9a3a;">
+              <div class="ig-kpi-label">Surface collée — exercice</div>
+              <div class="ig-kpi-value" id="collageTotal">—</div>
+              <div class="ig-kpi-unit">m²</div>
+              <div class="ig-kpi-equiv" id="collageTotalEquiv"></div>
+            </div>
+            <div class="ig-kpi-card" style="border-top-color:#3a7a5a;">
+              <div class="ig-kpi-label">Nb de pressées — exercice</div>
+              <div class="ig-kpi-value" id="pressesTotal">—</div>
+              <div class="ig-kpi-unit">pressées réalisées</div>
+            </div>
+            <div class="ig-kpi-card" style="border-top-color:#7ab458;">
+              <div class="ig-kpi-label">Moy. surface / semaine</div>
+              <div class="ig-kpi-value" id="collageAvg">—</div>
+              <div class="ig-kpi-unit">m² / sem.</div>
+            </div>
+            <div class="ig-kpi-card" style="border-top-color:#96c474;">
+              <div class="ig-kpi-label">Record semaine</div>
+              <div class="ig-kpi-value" id="collageRecord">—</div>
+              <div class="ig-kpi-unit" id="collageRecordWeek">—</div>
+            </div>
+            <div class="ig-kpi-card" style="border-top-color:#b2d494;">
+              <div class="ig-kpi-label">Dernière semaine</div>
+              <div class="ig-kpi-value" id="collageLast">—</div>
+              <div class="ig-kpi-unit" id="collageLastWeek">—</div>
+            </div>
+          </div>
+          <div class="gm-chart-section" style="min-height:300px;">
+            <div class="gm-chart-header" style="margin-bottom:12px; padding-bottom:10px;">
+              <h2>Surface collée par semaine (m²)</h2>
+            </div>
+            <div class="gm-chart-container" style="min-height:240px;">
+              <canvas id="chartCOLLAGE"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ PANNEAUX ASSEMBLÉS ═══ -->
+      <div class="ig-machine-section">
+        <div class="gm-header" style="padding-bottom:10px; margin-bottom:14px; border-bottom-color:rgba(143,74,19,0.35);">
+          <h2 style="margin:0; font-size:19px;">Panneaux assemblés — Assemblage</h2>
+        </div>
+        <div class="ig-machine-container">
+          <div class="ig-kpi-col">
+            <div class="ig-kpi-card" style="border-top-color:#8f4a13;">
+              <div class="ig-kpi-label">Surface assemblée — exercice</div>
+              <div class="ig-kpi-value" id="assemblageTotal">—</div>
+              <div class="ig-kpi-unit">m²</div>
+              <div class="ig-kpi-equiv" id="assemblageTotalEquiv"></div>
+            </div>
+            <div class="ig-kpi-card" style="border-top-color:#6a3a0f;">
+              <div class="ig-kpi-label">Nb de caissons — exercice</div>
+              <div class="ig-kpi-value" id="caissonsTotal">—</div>
+              <div class="ig-kpi-unit">caissons produits</div>
+            </div>
+            <div class="ig-kpi-card" style="border-top-color:#a96030;">
+              <div class="ig-kpi-label">Moy. surface / semaine</div>
+              <div class="ig-kpi-value" id="assemblageAvg">—</div>
+              <div class="ig-kpi-unit">m² / sem.</div>
+            </div>
+            <div class="ig-kpi-card" style="border-top-color:#be7850;">
+              <div class="ig-kpi-label">Record semaine</div>
+              <div class="ig-kpi-value" id="assemblageRecord">—</div>
+              <div class="ig-kpi-unit" id="assemblageRecordWeek">—</div>
+            </div>
+            <div class="ig-kpi-card" style="border-top-color:#d09070;">
+              <div class="ig-kpi-label">Dernière semaine</div>
+              <div class="ig-kpi-value" id="assemblageLast">—</div>
+              <div class="ig-kpi-unit" id="assemblageLastWeek">—</div>
+            </div>
+          </div>
+          <div class="gm-chart-section" style="min-height:300px;">
+            <div class="gm-chart-header" style="margin-bottom:12px; padding-bottom:10px;">
+              <h2>Surface assemblée par semaine (m²)</h2>
+            </div>
+            <div class="gm-chart-container" style="min-height:240px;">
+              <canvas id="chartASSEMBLAGE"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </main>
   </div>
 
   <script>
-    function hasProductionAccess() {
-      return Auth.hasAccess('production_indicateurs_generaux');
+    let charts = {};
+
+    function cssVar(name, fb) {
+      return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fb;
     }
 
-    function cssVar(name, fallback) {
-      const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-      return value || fallback;
-    }
-
-    function numberFr(value) {
-      return Number(value || 0).toLocaleString('fr-FR');
-    }
-
-    const valueLabelPlugin = {
-      id: 'valueLabelPlugin',
-      afterDatasetsDraw(chart) {
-        if (!chart?.config?.options?.plugins?.valueLabelPlugin?.enabled) return;
-        const { ctx } = chart;
-        ctx.save();
-        ctx.fillStyle = '#444';
-        ctx.font = '600 11px Inter, Arial, sans-serif';
-        ctx.textAlign = 'center';
-        const meta = chart.getDatasetMeta(0);
-        const values = chart.data.datasets[0].data;
-        meta.data.forEach((bar, index) => {
-          const value = values[index];
-          ctx.fillText(numberFr(value), bar.x, bar.y - 8);
-        });
-        ctx.restore();
-      }
-    };
-    let poutresTrendChart;
-    let poutresTotalChart;
-    let panneauxTrendChart;
-    let panneauxTotalChart;
-
-    function toFiniteNumber(value) {
+    // Formate un nombre en FR
+    function fn(value, dec = 0) {
       const n = Number(value);
-      return Number.isFinite(n) ? n : 0;
+      if (!Number.isFinite(n)) return '—';
+      return n.toLocaleString('fr-FR', { minimumFractionDigits: dec, maximumFractionDigits: dec });
     }
 
-    function sum(values) {
-      return values.reduce((acc, v) => acc + toFiniteNumber(v), 0);
+    function toFin(v) { const n = Number(v); return Number.isFinite(n) ? n : 0; }
+    function sum(arr) { return arr.reduce((a, v) => a + toFin(v), 0); }
+    function set(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+
+    // ── Équivalences en vie réelle ──
+    // Poutres : ~12 m³ pour la charpente d'une maison individuelle
+    function equivPoutres(m3) {
+      if (!m3 || m3 < 1) return '';
+      const maisons = Math.round(m3 / 12);
+      if (maisons < 1) return `≈ ${Math.round(m3 * 1000)} litres de bois massif`;
+      return `≈ charpente de ${fn(maisons)} maison${maisons > 1 ? 's' : ''}`;
     }
 
-    function pickLatestYear(entries) {
-      return entries.reduce((max, e) => Math.max(max, Number(e.year) || 0), 0) || new Date().getFullYear();
+    // Surfaces : repères visuels progressifs
+    function equivSurface(m2) {
+      if (!m2 || m2 < 1) return '';
+      if (m2 >= 10000) return `≈ ${(m2 / 10000).toFixed(1)} ha de surface`;
+      if (m2 >= 7140)  return `≈ ${(m2 / 7140).toFixed(1)} terrain${m2 >= 14280 ? 's' : ''} de football`;
+      if (m2 >= 800)   return `≈ ${Math.round(m2 / 260)} courts de tennis`;
+      if (m2 >= 80)    return `≈ plancher de ${Math.round(m2 / 100)} maison${m2 >= 200 ? 's' : ''}`;
+      return `≈ ${Math.round(m2 / 10)} grandes pièces`;
     }
 
-    function seriesByWeek(entries, year, getter) {
-      const out = Array.from({ length: 52 }, () => 0);
-      entries.forEach((entry) => {
-        const week = Number(entry.week);
-        if (Number(entry.year) !== year || !Number.isFinite(week) || week < 1 || week > 52) return;
-        out[week - 1] = toFiniteNumber(getter(entry));
+    function getCurrentIsoWeekYear() {
+      const d = new Date();
+      const utc = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+      const dayNum = utc.getUTCDay() || 7;
+      utc.setUTCDate(utc.getUTCDate() + 4 - dayNum);
+      const year = utc.getUTCFullYear();
+      const yearStart = new Date(Date.UTC(year, 0, 1));
+      const week = Math.ceil((((utc - yearStart) / 86400000) + 1) / 7);
+      return { week, year };
+    }
+
+    function getFiscalYearForWeek(week, year) { return week >= 40 ? year : year - 1; }
+    function fiscalYearLabel(fy) { return `${fy}/${fy + 1}`; }
+
+    // Stats d'une série hebdomadaire (ignore les semaines à 0 pour la moyenne)
+    function stats(vals, entries) {
+      const n = vals.length;
+      if (!n) return { total: 0, avg: 0, max: 0, maxWeek: '—', last: 0, lastWeek: '—' };
+      const positives = vals.filter(v => v > 0);
+      const total   = sum(vals);
+      const avg     = positives.length > 0 ? total / positives.length : 0;
+      const max     = positives.length > 0 ? Math.max(...positives) : 0;
+      const maxIdx  = vals.lastIndexOf(max);
+      const maxWeek = maxIdx >= 0 && max > 0 ? `S${entries[maxIdx].week} ${entries[maxIdx].year}` : '—';
+      const last     = vals[n - 1];
+      const le       = entries[n - 1];
+      return { total, avg, max, maxWeek, last, lastWeek: le ? `S${le.week} ${le.year}` : '—' };
+    }
+
+    // Crée un graphique ligne dans le style usine-cbco
+    function makeChart(id, datasets, labels, unit) {
+      if (charts[id]) charts[id].destroy();
+      const ctx = document.getElementById(id)?.getContext('2d');
+      if (!ctx) return;
+      charts[id] = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 12 } } }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { maxRotation: 80, minRotation: 80, font: { size: 9 }, color: '#7a7a7a' }
+            },
+            y: {
+              beginAtZero: true,
+              grid: { color: '#ece7e1' },
+              title: { display: true, text: unit },
+              ticks: { color: '#6b6b6b', callback: v => fn(v) }
+            }
+          }
+        }
       });
-      return out;
+    }
+
+    // Génère un dataset ligne avec fill
+    function ds(label, data, color, width = 2) {
+      const r = parseInt(color.slice(1,3), 16);
+      const g = parseInt(color.slice(3,5), 16);
+      const b = parseInt(color.slice(5,7), 16);
+      return {
+        label, data,
+        borderColor: color,
+        backgroundColor: `rgba(${r},${g},${b},0.12)`,
+        borderWidth: width,
+        pointRadius: 3, pointHoverRadius: 5,
+        tension: 0, fill: true, spanGaps: false
+      };
     }
 
     function buildCharts() {
       const allRaw = getCBCOProductiviteData();
-      console.log(`[IG] buildCharts() - Données disponibles: ${allRaw ? allRaw.length : 0} entrées`);
-      
-      // Filtre les entrées qui ont au moins une donnée de production (même technique que saisie)
+      const nowIso = getCurrentIsoWeekYear();
+
       const all = allRaw.filter(e => {
-        const sc = toFiniteNumber(e.speedcutM3) > 0;
-        const ultra = toFiniteNumber(e.ultraM3) > 0;
-        const extra = toFiniteNumber(e.extraM2) > 0;
-        const collage = toFiniteNumber(e.collageSurface) > 0;
-        const assemblage = toFiniteNumber(e.assemblageSurface) > 0;
-        return sc || ultra || extra || collage || assemblage;
+        if (!((e.year < nowIso.year) || (e.year === nowIso.year && e.week <= nowIso.week))) return false;
+        return toFin(e.speedcutM3) > 0 || toFin(e.ultraM3) > 0
+          || toFin(e.extraM2) > 0 || toFin(e.collageSurface) > 0
+          || toFin(e.assemblageSurface) > 0;
       });
-      
-      console.log(`[IG] buildCharts() - Après filtrage: ${all.length} entrées avec données`);
-      
+
+      // Exercice fiscal
       const yearSelect = document.getElementById('igYearSelect');
-      const years = [...new Set(all.map((e) => Number(e.year)).filter(Number.isFinite))]
+      const fiscalYears = [...new Set(all.map(e => getFiscalYearForWeek(Number(e.week), Number(e.year))).filter(Number.isFinite))]
         .sort((a, b) => b - a);
-      if (!years.length) years.push(new Date().getFullYear());
-      
+      if (!fiscalYears.length) fiscalYears.push(getFiscalYearForWeek(nowIso.week, nowIso.year));
+
       const previous = Number(yearSelect.value);
-      yearSelect.innerHTML = years.map((y) => `<option value="${y}">${y}</option>`).join('');
-      const year = years.includes(previous) ? previous : years[0];
-      yearSelect.value = String(year);
-      console.log(`[IG] buildCharts() - Année sélectionnée: ${year}, années disponibles: ${years.join(', ')}`);
-      
-      // Recréer les éntrées filtrées par année pour les labels
-      const entriesForYear = all.filter(e => Number(e.year) === year).sort((a, b) => a.week - b.week);
-      const weeks = entriesForYear.map(e => `S${e.week}`);
-      
-      // Préparer les données en parallèle avec les semaines filtrées
-      const poutresWeekly = entriesForYear.map(e => toFiniteNumber(e.speedcutM3) + toFiniteNumber(e.ultraM3));
-      const panneaux = entriesForYear.map(e => toFiniteNumber(e.extraM2));
-      const collage = entriesForYear.map(e => toFiniteNumber(e.collageSurface));
-      const assemblage = entriesForYear.map(e => toFiniteNumber(e.assemblageSurface));
-      
-      console.log(`[IG] buildCharts() - Affichage ${entriesForYear.length} semaines avec données`);
-      console.log(`[IG] buildCharts() - Poutres total: ${sum(poutresWeekly)}, Panneaux: ${sum(panneaux)}, Collage: ${sum(collage)}, Assemblage: ${sum(assemblage)}`);
-      
-      const totalPoutres = sum(poutresWeekly);
-      const totals = {
-        collage: sum(collage),
-        panneaux: sum(panneaux),
-        assemblage: sum(assemblage)
-      };
-      document.getElementById('panneauxYearTitle').textContent = `Panneaux taillés, collés, assemblés (m2) - ${year}`;
+      yearSelect.innerHTML = fiscalYears.map(fy => `<option value="${fy}">${fiscalYearLabel(fy)}</option>`).join('');
+      const fiscal = fiscalYears.includes(previous) ? previous : fiscalYears[0];
+      yearSelect.value = String(fiscal);
 
-      Chart.register(valueLabelPlugin);
+      const entries = all
+        .filter(e => getFiscalYearForWeek(Number(e.week), Number(e.year)) === fiscal)
+        .sort((a, b) => a.year !== b.year ? a.year - b.year : a.week - b.week);
 
-      if (poutresTrendChart) poutresTrendChart.destroy();
-      if (poutresTotalChart) poutresTotalChart.destroy();
-      if (panneauxTrendChart) panneauxTrendChart.destroy();
-      if (panneauxTotalChart) panneauxTotalChart.destroy();
+      const labels     = entries.map(e => `S${e.week}`);
+      const scVals     = entries.map(e => toFin(e.speedcutM3));
+      const ultraVals  = entries.map(e => toFin(e.ultraM3));
+      const totalVals  = entries.map((_, i) => scVals[i] + ultraVals[i]);
+      const extraVals  = entries.map(e => toFin(e.extraM2));
+      const collVals   = entries.map(e => toFin(e.collageSurface));
+      const pressVals  = entries.map(e => toFin(e.collagePresses));
+      const assembVals = entries.map(e => toFin(e.assemblageSurface));
+      const caisVals   = entries.map(e => toFin(e.assemblageNombreCaissons));
 
-      poutresTrendChart = new Chart(document.getElementById('poutresTrendChart').getContext('2d'), {
-        type: 'line',
-        data: {
-          labels: weeks,
-          datasets: [{
-            label: 'Total Poutres (m3)',
-            data: poutresWeekly,
-            borderColor: '#9aa1ab',
-            borderWidth: 2,
-            pointRadius: 0,
-            tension: 0.2
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: true, position: 'bottom' } },
-          scales: {
-            y: { beginAtZero: true, suggestedMax: 200, grid: { color: '#ece7e1' }, ticks: { color: '#6b6b6b' } },
-            x: { grid: { display: false }, ticks: { maxRotation: 85, minRotation: 85, font: { size: 9 }, color: '#7a7a7a' } }
-          }
-        }
-      });
+      const sc    = stats(scVals,     entries);
+      const ultra = stats(ultraVals,  entries);
+      const tot   = stats(totalVals,  entries);
+      const extra = stats(extraVals,  entries);
+      const coll  = stats(collVals,   entries);
+      const assem = stats(assembVals, entries);
 
-      poutresTotalChart = new Chart(document.getElementById('poutresTotalChart').getContext('2d'), {
-        type: 'bar',
-        data: {
-          labels: [`TOTAL ${year}`],
-          datasets: [{ label: 'Total Poutres (m3)', data: [totalPoutres], backgroundColor: '#a6a6a6' }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: true, position: 'bottom' },
-            valueLabelPlugin: { enabled: true }
-          },
-          scales: {
-            y: { beginAtZero: true, suggestedMax: 5000, grid: { color: '#ece7e1' }, ticks: { color: '#6b6b6b' } },
-            x: { grid: { display: false }, ticks: { color: '#7a7a7a', maxRotation: 90, minRotation: 90 } }
-          }
-        }
-      });
+      const totalPresses  = sum(pressVals);
+      const totalCaissons = sum(caisVals);
+      const n = entries.length;
+      const latest = entries[n - 1] || null;
+      const latestWeekLbl = latest ? `S${latest.week} ${latest.year}` : '—';
 
-      panneauxTrendChart = new Chart(document.getElementById('panneauxTrendChart').getContext('2d'), {
-        type: 'line',
-        data: {
-          labels: weeks,
-          datasets: [
-            { label: 'Panneaux (m2)', data: panneaux, borderColor: '#f0b400', borderWidth: 2, pointRadius: 0, tension: 0.2 },
-            { label: 'Collage (m2)', data: collage, borderColor: '#73b24a', borderWidth: 2, pointRadius: 0, tension: 0.2 },
-            { label: 'Assemblage (m2)', data: assemblage, borderColor: '#8f4a13', borderWidth: 2, pointRadius: 0, tension: 0.2 }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: true, position: 'bottom' } },
-          scales: {
-            y: { beginAtZero: true, suggestedMax: 3000, grid: { color: '#ece7e1' }, ticks: { color: '#6b6b6b' } },
-            x: { grid: { display: false }, ticks: { maxRotation: 85, minRotation: 85, font: { size: 9 }, color: '#7a7a7a' } }
-          }
-        }
-      });
+      // Badge exercice
+      const badge = document.getElementById('igLastWeekBadge');
+      if (latest) { badge.textContent = `Dernière semaine : ${latestWeekLbl}`; badge.style.display = ''; }
+      else badge.style.display = 'none';
 
-      panneauxTotalChart = new Chart(document.getElementById('panneauxTotalChart').getContext('2d'), {
-        type: 'bar',
-        data: {
-          labels: ['Collage (m2)', 'Panneaux (m2)', 'Assemblage (m2)'],
-          datasets: [{
-            label: `TOTAL ${year}`,
-            data: [totals.collage, totals.panneaux, totals.assemblage],
-            backgroundColor: [cssVar('--success', '#73b24a'), '#f1d46a', '#8f4a13']
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: true, position: 'bottom' },
-            valueLabelPlugin: { enabled: true }
-          },
-          scales: {
-            y: { beginAtZero: true, suggestedMax: 60000, grid: { color: '#ece7e1' }, ticks: { color: '#6b6b6b' } },
-            x: { grid: { display: false }, ticks: { color: '#7a7a7a', maxRotation: 90, minRotation: 90 } }
-          }
-        }
-      });
+      // ── Synthèse ──
+      set('synPOUTRES', fn(tot.total));
+      set('synSC',      fn(sc.total));
+      set('synULTRA',   fn(ultra.total));
+      set('synEXTRA',   fn(extra.total));    set('synEXTRASub',   `moy. ${fn(extra.avg, 0)} m²/sem.`);
+      set('synCOLLAGE', fn(coll.total));    set('synCOLLAGESub',  `${fn(totalPresses)} pressées`);
+      set('synASSEMBLAGE', fn(assem.total)); set('synASSEMBLAGESub', `${fn(totalCaissons)} caissons`);
+      set('synPoutresEquiv',   equivPoutres(tot.total));
+      set('synExtraEquiv',     equivSurface(extra.total));
+      set('synCollageEquiv',   equivSurface(coll.total));
+      set('synAssemblageEquiv',equivSurface(assem.total));
+
+      // ── KPI Poutres ──
+      const poutresTotal = sc.total + ultra.total;
+      const scPct    = poutresTotal > 0 ? ((sc.total / poutresTotal) * 100).toFixed(0) : '—';
+      const ultraPct = poutresTotal > 0 ? ((ultra.total / poutresTotal) * 100).toFixed(0) : '—';
+      set('poutresTotal',      fn(poutresTotal));
+      set('poutresTotalEquiv', equivPoutres(poutresTotal));
+      set('scTotalKpi',        fn(sc.total, 1));
+      set('scPctKpi',          poutresTotal > 0 ? `(${scPct} %)` : '');
+      set('ultraTotalKpi',     fn(ultra.total, 1));
+      set('ultraPctKpi',       poutresTotal > 0 ? `(${ultraPct} %)` : '');
+      set('poutresRecord',     fn(tot.max, 1));
+      set('poutresRecordWeek', tot.maxWeek);
+      set('poutresRecordEquiv',equivPoutres(tot.max));
+      set('poutresLast',       fn(toFin(latest?.speedcutM3) + toFin(latest?.ultraM3), 1));
+      set('poutresLastWeek',   latestWeekLbl);
+
+      // ── KPI Extra / Panneaux ──
+      set('extraTotal',      fn(extra.total));
+      set('extraTotalEquiv', equivSurface(extra.total));
+      set('extraAvg',        fn(extra.avg, 0));
+      set('extraRecord',     fn(extra.max, 0));
+      set('extraRecordWeek', extra.maxWeek);
+      set('extraRecordEquiv',equivSurface(extra.max));
+      set('extraLast',       fn(extra.last, 0));
+      set('extraLastWeek',   extra.lastWeek);
+
+      // ── KPI Collage ──
+      set('collageTotal',      fn(coll.total));
+      set('collageTotalEquiv', equivSurface(coll.total));
+      set('pressesTotal',      fn(totalPresses, 0));
+      set('collageAvg',        fn(coll.avg, 0));
+      set('collageRecord',     fn(coll.max, 0));
+      set('collageRecordWeek', coll.maxWeek);
+      set('collageLast',       fn(coll.last, 0));
+      set('collageLastWeek',   coll.lastWeek);
+
+      // ── KPI Assemblage ──
+      set('assemblageTotal',      fn(assem.total));
+      set('assemblageTotalEquiv', equivSurface(assem.total));
+      set('caissonsTotal',        fn(totalCaissons, 0));
+      set('assemblageAvg',        fn(assem.avg, 0));
+      set('assemblageRecord',     fn(assem.max, 0));
+      set('assemblageRecordWeek', assem.maxWeek);
+      set('assemblageLast',       fn(assem.last, 0));
+      set('assemblageLastWeek',   assem.lastWeek);
+
+      // ── Graphiques ──
+
+      // Poutres : SC + Ultra + Total (3 courbes)
+      makeChart('chartPoutres', [
+        ds('Speedcut (m³)',     scVals,    '#9aa1ab'),
+        ds('Ultra (m³)',        ultraVals, '#5a7eb3'),
+        { ...ds('Total SC+Ultra (m³)', totalVals, '#2a4a72', 2.5),
+          borderDash: undefined,
+          backgroundColor: 'rgba(42,74,114,0.06)' }
+      ], labels, 'm³');
+
+      // Panneaux taillés
+      makeChart('chartEXTRA',      [ds('Panneaux taillés (m²)', extraVals,  '#d4a800')], labels, 'm²');
+
+      // Surface collée
+      makeChart('chartCOLLAGE',    [ds('Surface collée (m²)',   collVals,   '#5a9a3a')], labels, 'm²');
+
+      // Surface assemblée
+      makeChart('chartASSEMBLAGE', [ds('Surface assemblée (m²)',assembVals, '#8f4a13')], labels, 'm²');
     }
 
     function init() {
-      if (!hasProductionAccess()) {
+      if (!Auth.hasAccess('production_indicateurs_generaux')) {
         window.location.href = './erreur-acces.html';
         return;
       }
-      console.log('[IG] init() - Initialisation des indicateurs généraux');
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectProductionSecondaryBar();
       document.getElementById('igYearSelect').addEventListener('change', buildCharts);
-      
-      // Phase 1: Affiche les graphiques immédiatement (peuvent être vides)
+
       buildCharts();
-      
-      // Phase 2: Recharge depuis le serveur (sans bloquer)
+
       (async () => {
         try {
-          console.log('[IG] Phase 2 - Chargement depuis le serveur...');
           await loadServerKeys(['goudalle_cbco_productivite'], { force: true });
-          
-          // Petit délai pour que localStorage soit bien à jour
           await new Promise(resolve => setTimeout(resolve, 100));
-          
-          // Vérifier que les données sont chargées
-          const data = getCBCOProductiviteData();
-          console.log(`[IG] Phase 2 - Données serveur chargées: ${data ? data.length : 0} entrées`);
-          if (data && data.length > 0) {
-            console.log('[IG] Phase 2 - Re-construction des graphiques...');
-            buildCharts();
-          }
+          if (getCBCOProductiviteData()?.length > 0) buildCharts();
         } catch (e) {
-          console.warn('[IG] Erreur rechargement données:', e.message);
+          console.warn('[IG] Erreur rechargement:', e.message);
         }
       })();
     }

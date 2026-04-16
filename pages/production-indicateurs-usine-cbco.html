@@ -397,6 +397,15 @@
       return Number.isFinite(n) ? n : null;
     }
 
+    // Exercice fiscal : semaine >= 40 → exercice démarre cette année, sinon année-1
+    function getFiscalYearForWeek(week, year) {
+      return week >= 40 ? year : year - 1;
+    }
+
+    function fiscalYearLabel(fy) {
+      return `${fy}/${fy + 1}`;
+    }
+
     function renderSecuriteHeader() {
       const s = getRHSecurityCBCOSummary();
 
@@ -549,19 +558,22 @@
       const yearSelect = document.getElementById(`yearSelect${suffix}`);
       if (!rangeSelect || !yearSelect) return withData.slice(-4);
 
-      const years = [...new Set(withData.map(e => e.year))].sort((a, b) => b - a);
-      const prevYear = yearSelect.value;
-      const prevYearNum = Number(prevYear);
-      yearSelect.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
-      yearSelect.value = Number.isFinite(prevYearNum) && years.includes(prevYearNum) ? prevYear : String(years[0] || '');
-
       if (!rangeSelect.value) rangeSelect.value = '4';
       const isYearMode = rangeSelect.value === 'year';
       yearSelect.style.display = isYearMode ? '' : 'none';
 
       if (isYearMode) {
-        const selectedYear = Number(yearSelect.value);
-        return withData.filter(e => e.year === selectedYear);
+        // Exercice fiscal oct→sept : grouper par exercice
+        const fiscalYears = [...new Set(withData.map(e => getFiscalYearForWeek(e.week, e.year)))]
+          .sort((a, b) => b - a);
+        const prevFiscal = Number(yearSelect.value);
+        yearSelect.innerHTML = fiscalYears.map(fy => `<option value="${fy}">${fiscalYearLabel(fy)}</option>`).join('');
+        const selectedFiscal = fiscalYears.includes(prevFiscal) ? prevFiscal : (fiscalYears[0] || 0);
+        yearSelect.value = String(selectedFiscal);
+        // Filtrer et trier en ordre fiscal (S40..S52 de l'année N puis S1..S39 de N+1)
+        return withData
+          .filter(e => getFiscalYearForWeek(e.week, e.year) === selectedFiscal)
+          .sort((a, b) => a.year !== b.year ? a.year - b.year : a.week - b.week);
       }
 
       const weeks = /^\d+$/.test(rangeSelect.value) ? parseInt(rangeSelect.value, 10) : NaN;
