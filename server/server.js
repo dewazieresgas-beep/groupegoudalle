@@ -847,7 +847,7 @@ function parseCBCOProdExcel(cfg) {
   const sc         = parseMachine('sc',         { B:1, C:2, D:3, E:4, F:5, G:6, H:7, J:9,  TRS:11, TEMPS:13 });
   const ultra      = parseMachine('ultra',       { B:1, C:2, D:3, E:4, F:5, G:6, H:7, J:9,  TRS:10, TEMPS:8  });
   const extra      = parseMachine('extra',       { B:1, C:2, D:3, E:4, F:5, G:6, H:7, J:9,  TRS:11, TEMPS:8, PRODHM:10, VOLUME:12 });
-  const collage    = parseMachine('collage',     { B:1, C:2, D:3, E:3, F:4, G:5, H:7, J:9,  TEMPS:5, PRESSES:4, CAISSONS:8, SURFACE:10, productiviteDur:true, cibleDur:true });
+  const collage    = parseMachine('collage',     { B:1, C:2, D:3, E:4, F:5, G:6, H:7, J:9,  TEMPS:5, PRESSES:4, CAISSONS:8, SURFACE:10, productiviteDur:true, cibleDur:true, required:['heuresOnaya', 'nombrePressees'] });
   const assemblage = parseMachine('assemblage',  { B:1, C:2, D:3, E:4, F:5, G:6, H:7, TEMPS:8, VOLUME:8, required:['heuresOnaya','heuresPerdues','cubage'] });
   const qualite    = parseQualite();
 
