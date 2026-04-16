@@ -770,8 +770,8 @@ function parseCBCOProdExcel(cfg) {
       const cubageVal = toNum(row[colCfg.F]);
       if (cubageVal === null) { if (++emptyStreak >= 50) break; continue; }
       emptyStreak = 0;
-      const semaineAnnuelle = toNum(row[colCfg.B]);
-      const semaineCumulee  = toNum(row[colCfg.C]);
+      const semaineAnnuelle = toNum(row[colCfg.B]); // col B = numéro de semaine (1-52)
+      const anneeDirecte    = toNum(row[colCfg.C]); // col C = année (2025, 2026...) — ex-"semaine cumulée"
       const heuresOnaya     = toDur(row[colCfg.D]);
       const heuresPerdues   = toDur(row[colCfg.E]);
       const cubage          = cubageVal;
@@ -786,25 +786,21 @@ function parseCBCOProdExcel(cfg) {
       const caissons        = colCfg.CAISSONS !== undefined ? toNum(row[colCfg.CAISSONS]) : null;
       const surface         = colCfg.SURFACE !== undefined ? toNum(row[colCfg.SURFACE]) : null;
 
-      if (semaineCumulee === null && semaineAnnuelle === null) continue;
+      if (semaineAnnuelle === null || semaineAnnuelle <= 0) continue;
+      if (anneeDirecte === null || anneeDirecte < 2000) continue;
       const req = colCfg.required || ['heuresOnaya', 'cubage'];
       const vals = { heuresOnaya, heuresPerdues, cubage, productivite };
       if (req.some(f => vals[f] === null)) continue;
 
-      let week = null, year = null;
-      if (semaineCumulee !== null && semaineCumulee > 0) {
-        const c = Math.round(semaineCumulee);
-        year = 2023 + Math.floor((c - 1) / 52);
-        week = ((c - 1) % 52) + 1;
-      } else if (semaineAnnuelle !== null && semaineAnnuelle > 0) {
-        week = Math.round(semaineAnnuelle); year = 2023;
-      }
+      // Utilisation directe : col B = semaine, col C = année
+      const week = Math.round(semaineAnnuelle);
+      const year = Math.round(anneeDirecte);
       if (!week || !year) continue;
 
       const heuresUtiles = (heuresOnaya !== null && heuresPerdues !== null) ? Math.max(0, heuresOnaya - heuresPerdues) : null;
       const prod = (cubage !== null && heuresUtiles !== null && heuresUtiles > 0) ? (cubage / heuresUtiles) : productivite;
       const key = `${year}-${String(week).padStart(2,'0')}`;
-      byWeek[key] = { week, year, semaineAnnuelle, semaineCumulee, heuresOnaya, heuresPerdues, heuresUtiles, cubage, productivite: prod, remarques, cibleProductivite: cible, trs, tempsUtilisationMachine: tempsUtil, productiviteHeuresMachines: prodHM, volume, nombrePressees: presses, nombreCaissons: caissons, surfaceCollee: surface };
+      byWeek[key] = { week, year, semaineAnnuelle, anneeDirecte, heuresOnaya, heuresPerdues, heuresUtiles, cubage, productivite: prod, remarques, cibleProductivite: cible, trs, tempsUtilisationMachine: tempsUtil, productiviteHeuresMachines: prodHM, volume, nombrePressees: presses, nombreCaissons: caissons, surfaceCollee: surface };
     }
     return Object.values(byWeek);
   }
@@ -817,29 +813,23 @@ function parseCBCOProdExcel(cfg) {
     let emptyStreak = 0;
     for (let r = 3; r < rows.length; r++) {
       const row = rows[r] || [];
-      if (!hasVal(row[3]) && !hasVal(row[4]) && !hasVal(row[5]) && !hasVal(row[6]) && !hasVal(row[7])) {
+      if (!hasVal(row[3]) && !hasVal(row[4]) && !hasVal(row[5]) && !hasVal(row[6])) {
         if (++emptyStreak >= 50) break; continue;
       }
       emptyStreak = 0;
-      const semaineAnnuelle = toNum(row[1]);
-      const semaineCumulee  = toNum(row[2]);
-      const tests           = toNum(row[3]);
-      const nonConformites  = toNum(row[4]);
-      const detail          = hasVal(row[5]) ? String(row[5]).trim() : null;
-      const reclamations    = toNum(row[6]);
-      const anneeCol        = toNum(row[7]);
-      if (semaineCumulee === null && semaineAnnuelle === null) continue;
-      let week = null, year = null;
-      if (anneeCol !== null && semaineAnnuelle !== null && semaineAnnuelle > 0) {
-        week = Math.round(semaineAnnuelle); year = Math.round(anneeCol);
-      } else if (semaineCumulee !== null && semaineCumulee > 0) {
-        const c = Math.round(semaineCumulee);
-        year = 2023 + Math.floor((c - 1) / 52);
-        week = ((c - 1) % 52) + 1;
-      }
+      const semaineAnnuelle = toNum(row[1]); // col B = numéro de semaine
+      const anneeDirecte    = toNum(row[2]); // col C = année (2025, 2026...)
+      const tests           = toNum(row[3]); // col D
+      const nonConformites  = toNum(row[4]); // col E
+      const detail          = hasVal(row[5]) ? String(row[5]).trim() : null; // col F
+      const reclamations    = toNum(row[6]); // col G
+      if (semaineAnnuelle === null || semaineAnnuelle <= 0) continue;
+      if (anneeDirecte === null || anneeDirecte < 2000) continue;
+      const week = Math.round(semaineAnnuelle);
+      const year = Math.round(anneeDirecte);
       if (!week || !year) continue;
       const key = `${year}-${String(week).padStart(2,'0')}`;
-      byWeek[key] = { week, year, semaineAnnuelle, semaineCumulee, tests, nonConformites, detail, reclamationsClients: reclamations, annee: anneeCol !== null ? Math.round(anneeCol) : year };
+      byWeek[key] = { week, year, semaineAnnuelle, anneeDirecte, tests, nonConformites, detail, reclamationsClients: reclamations, annee: year };
     }
     return Object.values(byWeek);
   }
@@ -847,7 +837,7 @@ function parseCBCOProdExcel(cfg) {
   const sc         = parseMachine('sc',         { B:1, C:2, D:3, E:4, F:5, G:6, H:7, J:9,  TRS:11, TEMPS:13 });
   const ultra      = parseMachine('ultra',       { B:1, C:2, D:3, E:4, F:5, G:6, H:7, J:9,  TRS:10, TEMPS:8  });
   const extra      = parseMachine('extra',       { B:1, C:2, D:3, E:4, F:5, G:6, H:7, J:9,  TRS:11, TEMPS:8, PRODHM:10, VOLUME:12 });
-  const collage    = parseMachine('collage',     { B:1, C:2, D:3, E:4, F:5, G:6, H:7, J:9,  TEMPS:5, PRESSES:4, CAISSONS:8, SURFACE:10, productiviteDur:true, cibleDur:true, required:['heuresOnaya', 'nombrePressees'] });
+  const collage    = parseMachine('collage',     { B:1, C:2, D:3, E:4, F:5, G:6, H:7, J:9,  PRESSES:5, CAISSONS:8, SURFACE:10, productiviteDur:true, cibleDur:true, required:['heuresOnaya', 'cubage'] });
   const assemblage = parseMachine('assemblage',  { B:1, C:2, D:3, E:4, F:5, G:6, H:7, TEMPS:8, VOLUME:8, required:['heuresOnaya','heuresPerdues','cubage'] });
   const qualite    = parseQualite();
 

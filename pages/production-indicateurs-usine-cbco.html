@@ -259,6 +259,10 @@
                 <div class="gm-kpi-label">Temps/pressée (h)</div>
                 <div class="gm-kpi-value" id="prodCOLLAGE">—</div>
               </div>
+              <div class="gm-kpi-card" style="background:#f0f4ff; border:1px solid #b8c5eb;">
+                <div class="gm-kpi-label" style="color:#455483;">Surface collée (m²)</div>
+                <div class="gm-kpi-value" id="surfaceCOLLAGE" style="color:#31406a;">0</div>
+              </div>
             </div>
             <div class="gm-chart-column">
               <div class="gm-chart-section">
@@ -500,6 +504,7 @@
           prodField: 'collageTempsPressee',
           targetField: 'collageCibleTempsPressee',
           remarkField: 'collageCommentaire',
+          surfaceField: 'collageSurface',
           unit: 'h/pressée',
           goodWhenLower: true,
           moodGreen: '../assets/smiley vert usine cbco.png',
@@ -689,6 +694,10 @@
       document.getElementById(`cubage${cfg.suffix}`).textContent = formatNumber(Number(latest[cfg.m3Field]) || 0);
       document.getElementById(`hours${cfg.suffix}`).textContent = formatNumber(Number(latest[cfg.hoursField]) || 0);
       document.getElementById(`prod${cfg.suffix}`).textContent = formatNumber(latestProd);
+      if (cfg.surfaceField) {
+        const surfaceEl = document.getElementById(`surface${cfg.suffix}`);
+        if (surfaceEl) surfaceEl.textContent = formatNumber(Number(latest[cfg.surfaceField]) || 0);
+      }
       document.getElementById(`comment${cfg.suffix}`).value = sanitizeComment(latest[cfg.remarkField]);
       document.getElementById(`indicator${cfg.suffix}`).className = `gm-indicator-card ${aboveTarget ? 'vert' : 'rouge'}`;
       document.getElementById(`mood${cfg.suffix}`).src = aboveTarget ? cfg.moodGreen : cfg.moodRed;

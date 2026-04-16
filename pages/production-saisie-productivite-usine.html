@@ -277,6 +277,7 @@
         fields = [
           { label: 'Pressées', value: fmtN(entry.collagePresses, 0) },
           { label: 'Heures', value: fmtH(entry.collageHeures) },
+          { label: 'Surface collée', value: fmtN(entry.collageSurface) + ' m²' },
           { label: 'Caissons', value: fmtN(entry.collageNombreCaissons, 0) },
           { label: 'Cible', value: fmtH(entry.collageCibleTempsPressee) },
           { label: 'Commentaire', value: entry.collageCommentaire || '', full: true }
