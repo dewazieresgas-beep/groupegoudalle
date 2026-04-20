@@ -11,29 +11,38 @@
     .ig-summary-strip {
       display: grid;
       grid-template-columns: 1.5fr 1fr 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 28px;
+      gap: 14px;
+      margin-bottom: 30px;
     }
     .ig-summary-tile {
-      background: #fff;
-      border-radius: 12px;
-      padding: 16px 18px 14px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-      border-top: 4px solid var(--border);
+      border-radius: 14px;
+      padding: 18px 20px 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.14);
       display: flex;
       flex-direction: column;
       gap: 2px;
       transition: transform 0.2s, box-shadow 0.2s;
+      color: #fff;
     }
-    .ig-summary-tile:hover { transform: translateY(-4px); box-shadow: 0 10px 24px rgba(0,0,0,0.10); }
-    .ig-summary-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--secondary); }
-    .ig-summary-value { font-size: 26px; font-weight: 800; color: var(--primary); font-family: 'Courier New', monospace; line-height: 1.1; }
-    .ig-summary-unit  { font-size: 12px; color: #888; font-weight: 600; }
-    .ig-summary-sub   { font-size: 11px; color: #aaa; margin-top: 2px; }
-    .ig-summary-equiv { font-size: 11px; color: #888; margin-top: 6px; font-style: italic; }
+    .ig-summary-tile:hover { transform: translateY(-5px); box-shadow: 0 14px 36px rgba(0,0,0,0.20); }
+    .ig-summary-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: rgba(255,255,255,0.78); }
+    .ig-summary-value { font-size: 26px; font-weight: 800; color: #fff; font-family: 'Courier New', monospace; line-height: 1.1; }
+    .ig-summary-unit  { font-size: 12px; color: rgba(255,255,255,0.72); font-weight: 600; }
+    .ig-summary-sub   { font-size: 11px; color: rgba(255,255,255,0.60); margin-top: 2px; }
+    .ig-summary-equiv { font-size: 11px; color: rgba(255,255,255,0.72); margin-top: 6px; font-style: italic; background: rgba(0,0,0,0.18); border-radius: 6px; padding: 3px 8px; display: inline-block; }
+
+    /* ── En-têtes de section ── */
+    .ig-section-header {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      border-radius: 10px;
+      margin-bottom: 14px;
+    }
+    .ig-section-header h2 { margin: 0; font-size: 19px; font-weight: 700; }
 
     /* ── Section machine ── */
-    .ig-machine-section { margin-bottom: 28px; }
+    .ig-machine-section { margin-bottom: 32px; }
     .ig-machine-container {
       display: flex;
       flex-direction: column;
@@ -49,25 +58,52 @@
       min-width: 0;
     }
     .ig-kpi-card {
-      background: #fff;
       border-radius: 12px;
       padding: 13px 15px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.07);
       border-top: 4px solid var(--border);
       transition: transform 0.2s, box-shadow 0.2s;
     }
-    .ig-kpi-card:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.09); }
+    .ig-kpi-card:hover { transform: translateY(-3px); box-shadow: 0 8px 22px rgba(0,0,0,0.12); }
     .ig-kpi-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--secondary); margin-bottom: 5px; }
-    .ig-kpi-value { font-size: 20px; font-weight: 800; color: var(--primary); font-family: 'Courier New', monospace; line-height: 1; }
+    .ig-kpi-value { font-size: 20px; font-weight: 800; font-family: 'Courier New', monospace; line-height: 1; }
     .ig-kpi-unit  { font-size: 11px; color: #999; font-weight: 600; margin-top: 2px; }
     .ig-kpi-sub   { font-size: 10px; color: #bbb; margin-top: 2px; }
-    .ig-kpi-equiv { font-size: 10px; color: #7a8a7a; font-style: italic; margin-top: 4px; background:#f2f5f2; border-radius:6px; padding:2px 6px; display:inline-block; }
+    .ig-kpi-equiv { font-size: 10px; font-style: italic; margin-top: 4px; border-radius: 6px; padding: 2px 7px; display: inline-block; font-weight: 500; }
 
     /* Badges SC/Ultra */
     .ig-badge { display:inline-block; font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; margin-top:4px; margin-right:4px; }
 
     /* Sélecteur exercice */
     .ig-year-select { min-width: 140px; max-width: 180px; }
+
+    /* ── Thème Bleu — Poutres ── */
+    .ig-blue .ig-section-header { background: linear-gradient(135deg, #eef3fb 0%, #dce8f6 100%); border-left: 4px solid #5a7eb3; }
+    .ig-blue .ig-section-header h2 { color: #2d4d78; }
+    .ig-blue .ig-kpi-card { background: linear-gradient(180deg, #eef3fb 0%, #f8faff 100%); }
+    .ig-blue .ig-kpi-value { color: #2d4d78; }
+    .ig-blue .ig-kpi-equiv { background: #d4e6f6; color: #2d4d78; }
+
+    /* ── Thème Or — Panneaux taillés ── */
+    .ig-gold .ig-section-header { background: linear-gradient(135deg, #fdf8e6 0%, #f8edbd 100%); border-left: 4px solid #c49400; }
+    .ig-gold .ig-section-header h2 { color: #7a5800; }
+    .ig-gold .ig-kpi-card { background: linear-gradient(180deg, #fdf8e6 0%, #fffdf5 100%); }
+    .ig-gold .ig-kpi-value { color: #8a6200; }
+    .ig-gold .ig-kpi-equiv { background: #f5e898; color: #7a5000; }
+
+    /* ── Thème Vert — Collage ── */
+    .ig-green .ig-section-header { background: linear-gradient(135deg, #eef8ea 0%, #d6edce 100%); border-left: 4px solid #5a9a3a; }
+    .ig-green .ig-section-header h2 { color: #2d6b1a; }
+    .ig-green .ig-kpi-card { background: linear-gradient(180deg, #eef8ea 0%, #f7fdf5 100%); }
+    .ig-green .ig-kpi-value { color: #2d6b1a; }
+    .ig-green .ig-kpi-equiv { background: #c2e8b0; color: #2d6b1a; }
+
+    /* ── Thème Rouille — Assemblage ── */
+    .ig-rust .ig-section-header { background: linear-gradient(135deg, #faf0e8 0%, #f0d8c0 100%); border-left: 4px solid #8f4a13; }
+    .ig-rust .ig-section-header h2 { color: #5a2d08; }
+    .ig-rust .ig-kpi-card { background: linear-gradient(180deg, #faf0e8 0%, #fffaf5 100%); }
+    .ig-rust .ig-kpi-value { color: #6a3509; }
+    .ig-rust .ig-kpi-equiv { background: #f0d4b0; color: #6a3509; }
 
     @media (max-width: 1100px) {
       .ig-summary-strip { grid-template-columns: 1fr 1fr; }
@@ -104,18 +140,18 @@
       <!-- ═══ SYNTHÈSE EXERCICE ═══ -->
       <div class="ig-summary-strip">
         <!-- Total Poutres -->
-        <div class="ig-summary-tile" style="border-top-color:#5a7eb3; background:linear-gradient(135deg,#f4f7fb 0%,#fff 100%);">
-          <div class="ig-summary-label" style="color:#3a5e8a;">Total Poutres taillées</div>
-          <div class="ig-summary-value" id="synPOUTRES" style="font-size:30px; color:#2a4a72;">—</div>
-          <div class="ig-summary-unit" style="color:#4a6e96;">m³ de bois cette année</div>
+        <div class="ig-summary-tile" style="background:linear-gradient(135deg,#2d4d78 0%,#5a7eb3 100%); box-shadow:0 8px 28px rgba(42,78,140,0.30);">
+          <div class="ig-summary-label">Total Poutres taillées</div>
+          <div class="ig-summary-value" id="synPOUTRES" style="font-size:30px;">—</div>
+          <div class="ig-summary-unit">m³ de bois cette année</div>
           <div style="margin-top:6px; display:flex; gap:6px; flex-wrap:wrap;">
-            <span class="ig-badge" style="background:#e8eef6; color:#5a7eb3;">SC : <span id="synSC">—</span> m³</span>
-            <span class="ig-badge" style="background:#eaf0f8; color:#8a9eb8;">Ultra : <span id="synULTRA">—</span> m³</span>
+            <span class="ig-badge" style="background:rgba(255,255,255,0.20); color:#fff;">SC : <span id="synSC">—</span> m³</span>
+            <span class="ig-badge" style="background:rgba(255,255,255,0.14); color:rgba(255,255,255,0.85);">Ultra : <span id="synULTRA">—</span> m³</span>
           </div>
           <div class="ig-summary-equiv" id="synPoutresEquiv"></div>
         </div>
         <!-- Panneaux -->
-        <div class="ig-summary-tile" style="border-top-color:#d4a800;">
+        <div class="ig-summary-tile" style="background:linear-gradient(135deg,#8a6000 0%,#c49400 100%); box-shadow:0 8px 28px rgba(160,110,0,0.30);">
           <div class="ig-summary-label">Panneaux taillés</div>
           <div class="ig-summary-value" id="synEXTRA">—</div>
           <div class="ig-summary-unit">m²</div>
@@ -123,7 +159,7 @@
           <div class="ig-summary-equiv" id="synExtraEquiv"></div>
         </div>
         <!-- Collage -->
-        <div class="ig-summary-tile" style="border-top-color:#5a9a3a;">
+        <div class="ig-summary-tile" style="background:linear-gradient(135deg,#2d6b1a 0%,#5a9a3a 100%); box-shadow:0 8px 28px rgba(45,107,26,0.30);">
           <div class="ig-summary-label">Panneaux collés</div>
           <div class="ig-summary-value" id="synCOLLAGE">—</div>
           <div class="ig-summary-unit">m²</div>
@@ -131,7 +167,7 @@
           <div class="ig-summary-equiv" id="synCollageEquiv"></div>
         </div>
         <!-- Assemblage -->
-        <div class="ig-summary-tile" style="border-top-color:#8f4a13;">
+        <div class="ig-summary-tile" style="background:linear-gradient(135deg,#5a2d08 0%,#8f4a13 100%); box-shadow:0 8px 28px rgba(90,45,8,0.30);">
           <div class="ig-summary-label">Panneaux assemblés</div>
           <div class="ig-summary-value" id="synASSEMBLAGE">—</div>
           <div class="ig-summary-unit">m²</div>
@@ -141,9 +177,9 @@
       </div>
 
       <!-- ═══ POUTRES TAILLÉES ═══ -->
-      <div class="ig-machine-section">
-        <div class="gm-header" style="padding-bottom:10px; margin-bottom:14px; border-bottom-color:rgba(90,126,179,0.3);">
-          <h2 style="margin:0; font-size:19px;">Poutres taillées (m³) — Speedcut + Ultra</h2>
+      <div class="ig-machine-section ig-blue">
+        <div class="ig-section-header">
+          <h2>Poutres taillées (m³) — Speedcut + Ultra</h2>
         </div>
         <div class="ig-machine-container">
           <div class="ig-kpi-col">
@@ -153,23 +189,23 @@
               <div class="ig-kpi-unit">m³ de poutres</div>
               <div class="ig-kpi-equiv" id="poutresTotalEquiv"></div>
             </div>
-            <div class="ig-kpi-card" style="border-top-color:#9aa1ab;">
+            <div class="ig-kpi-card" style="border-top-color:#7a9ec8;">
               <div class="ig-kpi-label">dont Speedcut</div>
               <div class="ig-kpi-value" id="scTotalKpi">—</div>
-              <div class="ig-kpi-unit">m³ &nbsp;<span id="scPctKpi" style="font-size:11px; color:#aaa;"></span></div>
+              <div class="ig-kpi-unit">m³ &nbsp;<span id="scPctKpi" style="font-size:11px; color:#7a9ec8;"></span></div>
             </div>
-            <div class="ig-kpi-card" style="border-top-color:#7a9ec8;">
+            <div class="ig-kpi-card" style="border-top-color:#4a7ab3;">
               <div class="ig-kpi-label">dont Ultra</div>
               <div class="ig-kpi-value" id="ultraTotalKpi">—</div>
-              <div class="ig-kpi-unit">m³ &nbsp;<span id="ultraPctKpi" style="font-size:11px; color:#aaa;"></span></div>
+              <div class="ig-kpi-unit">m³ &nbsp;<span id="ultraPctKpi" style="font-size:11px; color:#4a7ab3;"></span></div>
             </div>
-            <div class="ig-kpi-card" style="border-top-color:#b0b8c4;">
+            <div class="ig-kpi-card" style="border-top-color:#3a6a9a;">
               <div class="ig-kpi-label">Record semaine</div>
               <div class="ig-kpi-value" id="poutresRecord">—</div>
               <div class="ig-kpi-unit" id="poutresRecordWeek">—</div>
               <div class="ig-kpi-equiv" id="poutresRecordEquiv"></div>
             </div>
-            <div class="ig-kpi-card" style="border-top-color:#c8d2dc;">
+            <div class="ig-kpi-card" style="border-top-color:#2d5080;">
               <div class="ig-kpi-label">Dernière semaine</div>
               <div class="ig-kpi-value" id="poutresLast">—</div>
               <div class="ig-kpi-unit" id="poutresLastWeek">—</div>
@@ -187,30 +223,30 @@
       </div>
 
       <!-- ═══ PANNEAUX TAILLÉS ═══ -->
-      <div class="ig-machine-section">
-        <div class="gm-header" style="padding-bottom:10px; margin-bottom:14px; border-bottom-color:rgba(212,168,0,0.4);">
-          <h2 style="margin:0; font-size:19px;">Panneaux taillés (m²) — Extra</h2>
+      <div class="ig-machine-section ig-gold">
+        <div class="ig-section-header">
+          <h2>Panneaux taillés (m²) — Extra</h2>
         </div>
         <div class="ig-machine-container">
           <div class="ig-kpi-col">
-            <div class="ig-kpi-card" style="border-top-color:#d4a800;">
+            <div class="ig-kpi-card" style="border-top-color:#c49400;">
               <div class="ig-kpi-label">Total exercice</div>
               <div class="ig-kpi-value" id="extraTotal">—</div>
               <div class="ig-kpi-unit">m² de panneaux</div>
               <div class="ig-kpi-equiv" id="extraTotalEquiv"></div>
             </div>
-            <div class="ig-kpi-card" style="border-top-color:#e0bc30;">
+            <div class="ig-kpi-card" style="border-top-color:#d4a800;">
               <div class="ig-kpi-label">Moy. par semaine</div>
               <div class="ig-kpi-value" id="extraAvg">—</div>
               <div class="ig-kpi-unit">m² / sem.</div>
             </div>
-            <div class="ig-kpi-card" style="border-top-color:#e8cc58;">
+            <div class="ig-kpi-card" style="border-top-color:#b88800;">
               <div class="ig-kpi-label">Record semaine</div>
               <div class="ig-kpi-value" id="extraRecord">—</div>
               <div class="ig-kpi-unit" id="extraRecordWeek">—</div>
               <div class="ig-kpi-equiv" id="extraRecordEquiv"></div>
             </div>
-            <div class="ig-kpi-card" style="border-top-color:#f0d880;">
+            <div class="ig-kpi-card" style="border-top-color:#a07000;">
               <div class="ig-kpi-label">Dernière semaine</div>
               <div class="ig-kpi-value" id="extraLast">—</div>
               <div class="ig-kpi-unit" id="extraLastWeek">—</div>
@@ -228,9 +264,9 @@
       </div>
 
       <!-- ═══ PANNEAUX COLLÉS ═══ -->
-      <div class="ig-machine-section">
-        <div class="gm-header" style="padding-bottom:10px; margin-bottom:14px; border-bottom-color:rgba(90,154,58,0.35);">
-          <h2 style="margin:0; font-size:19px;">Panneaux collés — Collage</h2>
+      <div class="ig-machine-section ig-green">
+        <div class="ig-section-header">
+          <h2>Panneaux collés — Collage</h2>
         </div>
         <div class="ig-machine-container">
           <div class="ig-kpi-col">
@@ -240,22 +276,22 @@
               <div class="ig-kpi-unit">m²</div>
               <div class="ig-kpi-equiv" id="collageTotalEquiv"></div>
             </div>
-            <div class="ig-kpi-card" style="border-top-color:#3a7a5a;">
+            <div class="ig-kpi-card" style="border-top-color:#4a8a2a;">
               <div class="ig-kpi-label">Nb de pressées — exercice</div>
               <div class="ig-kpi-value" id="pressesTotal">—</div>
               <div class="ig-kpi-unit">pressées réalisées</div>
             </div>
-            <div class="ig-kpi-card" style="border-top-color:#7ab458;">
+            <div class="ig-kpi-card" style="border-top-color:#3a7a1a;">
               <div class="ig-kpi-label">Moy. surface / semaine</div>
               <div class="ig-kpi-value" id="collageAvg">—</div>
               <div class="ig-kpi-unit">m² / sem.</div>
             </div>
-            <div class="ig-kpi-card" style="border-top-color:#96c474;">
+            <div class="ig-kpi-card" style="border-top-color:#2d6b10;">
               <div class="ig-kpi-label">Record semaine</div>
               <div class="ig-kpi-value" id="collageRecord">—</div>
               <div class="ig-kpi-unit" id="collageRecordWeek">—</div>
             </div>
-            <div class="ig-kpi-card" style="border-top-color:#b2d494;">
+            <div class="ig-kpi-card" style="border-top-color:#1e5808;">
               <div class="ig-kpi-label">Dernière semaine</div>
               <div class="ig-kpi-value" id="collageLast">—</div>
               <div class="ig-kpi-unit" id="collageLastWeek">—</div>
@@ -273,9 +309,9 @@
       </div>
 
       <!-- ═══ PANNEAUX ASSEMBLÉS ═══ -->
-      <div class="ig-machine-section">
-        <div class="gm-header" style="padding-bottom:10px; margin-bottom:14px; border-bottom-color:rgba(143,74,19,0.35);">
-          <h2 style="margin:0; font-size:19px;">Panneaux assemblés — Assemblage</h2>
+      <div class="ig-machine-section ig-rust">
+        <div class="ig-section-header">
+          <h2>Panneaux assemblés — Assemblage</h2>
         </div>
         <div class="ig-machine-container">
           <div class="ig-kpi-col">
@@ -338,23 +374,118 @@
     function sum(arr) { return arr.reduce((a, v) => a + toFin(v), 0); }
     function set(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
 
-    // ── Équivalences en vie réelle ──
-    // Poutres : ~12 m³ pour la charpente d'une maison individuelle
+    // ── Équivalences — références locales et nationales ──
+    //
+    // m³ — repères :
+    //   Baignoire standard              =       0,2 m³  (200 L)
+    //   Conteneur maritime 20 pieds     =        33 m³  (port de Boulogne, 27 km)
+    //   Semi-remorque (A16 / RN1)       =        90 m³  (13,6 m de long)
+    //   Bassin des otaries — Nausicaá   =       850 m³  (Boulogne, 27 km)
+    //   Château d'eau du Montreuillois  =     1 000 m³  (villages du canton)
+    //   Grand bassin de Nausicaá        =    10 000 m³  (+ grand aquarium d'Europe)
+    //   Bassin anti-inondation Boulogne =    13 000 m³  (bassin place de France)
+    //   Tour Eiffel (charpente métal)   =    25 300 m³
+    //
     function equivPoutres(m3) {
-      if (!m3 || m3 < 1) return '';
-      const maisons = Math.round(m3 / 12);
-      if (maisons < 1) return `≈ ${Math.round(m3 * 1000)} litres de bois massif`;
-      return `≈ charpente de ${fn(maisons)} maison${maisons > 1 ? 's' : ''}`;
+      if (!m3 || m3 < 0.2) return '';
+      const q = (v, ref) => (v / ref).toFixed(v / ref < 2 ? 1 : 0);
+      const pl = (n, s, p) => parseFloat(n) >= 2 ? p : s;
+
+      if (m3 < 5) {
+        const n = Math.round(m3 / 0.2);
+        return `≈ ${n} baignoire${n>1?'s':''} pleine${n>1?'s':''} (200 L = 0,2 m³)`;
+      }
+      if (m3 < 65) {
+        const n = q(m3, 33);
+        return `≈ ${n} conteneur${pl(n,'','s')} maritime 20 pieds (33 m³) — comme ceux du port de Boulogne`;
+      }
+      if (m3 < 500) {
+        const n = q(m3, 90);
+        return `≈ ${n} semi-remorque${pl(n,'','s')} pleine${pl(n,'','s')} (90 m³) — comme celles de l'A16`;
+      }
+      if (m3 < 950) {
+        const n = q(m3, 850);
+        return `≈ ${n} bassin des otaries de Nausicaá à Boulogne (850 m³)`;
+      }
+      if (m3 < 6000) {
+        const n = q(m3, 1000);
+        return `≈ ${n} château${pl(n,'','x')} d'eau de village (1 000 m³) — comme dans le Montreuillois`;
+      }
+      if (m3 < 11500) {
+        const n = q(m3, 10000);
+        return `≈ ${n} grand bassin de Nausicaá (10 000 m³ — le plus grand aquarium d'Europe)`;
+      }
+      if (m3 < 20000) {
+        const n = q(m3, 13000);
+        return `≈ ${n} bassin anti-inondation de Boulogne (13 000 m³ — protège la ville des crues)`;
+      }
+      if (m3 < 42000) {
+        const n = q(m3, 25300);
+        return `≈ ${n} fois le volume de charpente de la Tour Eiffel (25 300 m³)`;
+      }
+      const n = Math.round(m3 / 10000);
+      return `≈ ${fn(n)} grands bassins de Nausicaá (10 000 m³ chacun — le plus grand aquarium d'Europe)`;
     }
 
-    // Surfaces : repères visuels progressifs
+    // m² — repères :
+    //   Place de parking                =        12 m²  (2,5 × 5 m)
+    //   Demi-court de tennis            =       130 m²  (moitié d'un court simple)
+    //   Court de tennis                 =       261 m²  (23,77 × 10,97 m — standard ITF)
+    //   Arsenal citadelle Montreuil     =       500 m²  (bâtiment XVIIe siècle, 15 km)
+    //   Galerie du temps — Louvre-Lens  =     3 000 m²  (120 × 25 m — 90 km)
+    //   Terrain de football             =     7 140 m²  (105 × 68 m — FIFA)
+    //   Centre historique d'Étaples     =    15 000 m²  (ville côtière, 20 km)
+    //   Musée Louvre-Lens (bâtiment)    =    28 000 m²  (360 m de long — 90 km)
+    //   Stade Bollaert-Delelis RC Lens  =    50 000 m²  (41 000 places — 85 km)
+    //   Château de Versailles (bâti)    =    67 000 m²  (surface bâtie totale)
+    //
     function equivSurface(m2) {
-      if (!m2 || m2 < 1) return '';
-      if (m2 >= 10000) return `≈ ${(m2 / 10000).toFixed(1)} ha de surface`;
-      if (m2 >= 7140)  return `≈ ${(m2 / 7140).toFixed(1)} terrain${m2 >= 14280 ? 's' : ''} de football`;
-      if (m2 >= 800)   return `≈ ${Math.round(m2 / 260)} courts de tennis`;
-      if (m2 >= 80)    return `≈ plancher de ${Math.round(m2 / 100)} maison${m2 >= 200 ? 's' : ''}`;
-      return `≈ ${Math.round(m2 / 10)} grandes pièces`;
+      if (!m2 || m2 < 2) return '';
+      const q = (v, ref) => (v / ref).toFixed(v / ref < 2 ? 1 : 0);
+      const pl = (n, s, p) => parseFloat(n) >= 2 ? p : s;
+
+      if (m2 < 25) {
+        const n = q(m2, 12);
+        return `≈ ${n} place${pl(n,'','s')} de parking (12 m² chacune — 2,5 × 5 m)`;
+      }
+      if (m2 < 210) {
+        const n = q(m2, 130);
+        return `≈ ${n} demi-court${pl(n,'','s')} de tennis (130 m²)`;
+      }
+      if (m2 < 390) {
+        const n = q(m2, 261);
+        return `≈ ${n} court${pl(n,'','s')} de tennis réglementaire (261 m² — 23,77 × 10,97 m)`;
+      }
+      if (m2 < 1800) {
+        const n = q(m2, 500);
+        return `≈ ${n} fois l'arsenal de la citadelle de Montreuil-sur-Mer (500 m²)`;
+      }
+      if (m2 < 5500) {
+        const n = q(m2, 3000);
+        return `≈ ${n} fois la Galerie du temps du Louvre-Lens (3 000 m² — 120 m de long)`;
+      }
+      if (m2 < 12000) {
+        const n = q(m2, 7140);
+        return `≈ ${n} terrain${pl(n,'','s')} de football réglementaire FIFA (7 140 m²)`;
+      }
+      if (m2 < 22000) {
+        const n = q(m2, 15000);
+        return `≈ ${n} fois le centre historique d'Étaples (15 000 m² — ville côtière à 20 km)`;
+      }
+      if (m2 < 40000) {
+        const n = q(m2, 28000);
+        return `≈ ${n} fois le musée Louvre-Lens (28 000 m² — 360 m de long)`;
+      }
+      if (m2 < 60000) {
+        const n = q(m2, 50000);
+        return `≈ ${n} stade${pl(n,'','s')} Bollaert-Delelis du RC Lens (50 000 m² — 41 000 places)`;
+      }
+      if (m2 < 85000) {
+        const n = q(m2, 67000);
+        return `≈ ${n} fois le château de Versailles (67 000 m² de bâti)`;
+      }
+      const n = q(m2, 50000);
+      return `≈ ${n} stades Bollaert-Delelis côte à côte (50 000 m² chacun) — surface colossale`;
     }
 
     function getCurrentIsoWeekYear() {
