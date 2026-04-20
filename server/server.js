@@ -1651,8 +1651,7 @@ function parseGMExcel(cfg) {
   const data = [];
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
-    const m3Raw = row[2]; // Colonne C = référence, ligne ignorée si vide
-    if (m3Raw === null || m3Raw === undefined || m3Raw === '') continue;
+    // Validité basée sur année + semaine uniquement (m3 est optionnel)
     const yearRaw = row[0]; const weekRaw = row[1];
     if (!yearRaw || !weekRaw) continue;
     const weekMatch = String(weekRaw).match(/(\d+)/);
@@ -1662,7 +1661,7 @@ function parseGMExcel(cfg) {
     if (isNaN(year) || isNaN(week)) continue;
     data.push({
       year, week,
-      m3:              toNum(m3Raw),
+      m3:              toNum(row[2]),
       hours:           toNum(row[3]),   // D : Heures MO
       objectifRatio:   toNum(row[4]),   // E : Objectif h/m³
       tempsBeton:      toNum(row[5]),   // F : Heures béton
@@ -1884,57 +1883,7 @@ function excelErrorMessage(e) {
 //        les KPIs GM. Toutes les lectures/écritures vont directement dans Excel.
 // ──────────────────────────────────────────────────────────────────────────────
 
-// Gestionnaire du watcher (conservé pour compatibilité ascendante mais inutilisé)
-let gmWatcher = null;
-
-function startGMWatcher(cfg) {
-  if (gmWatcher) { clearInterval(gmWatcher); gmWatcher = null; }
-
-  // Ajouter automatiquement l'extension .xlsx si elle n'est pas présente
-  let filename = cfg.filename;
-  if (!filename.toLowerCase().endsWith('.xlsx') && !filename.toLowerCase().endsWith('.xls')) {
-    filename += '.xlsx';
-  }
-  
-  const excelPath = path.join(cfg.folder, filename);
-  if (!fs.existsSync(excelPath)) {
-    console.log(`[GM-Watch] Fichier introuvable, surveillance impossible : ${excelPath}`);
-    return;
-  }
-  let lastMtime = fs.statSync(excelPath).mtimeMs;
-  // Polling toutes les 30s (plus fiable que fs.watchFile sur lecteur réseau + Excel)
-  gmWatcher = setInterval(() => {
-    try {
-      if (!fs.existsSync(excelPath)) return;
-      const mtime = fs.statSync(excelPath).mtimeMs;
-      if (mtime !== lastMtime) {
-        lastMtime = mtime;
-        console.log(`[GM-Watch] Modification détectée dans ${cfg.filename}, import automatique...`);
-        try {
-          const data = parseGMExcel(cfg);
-          const result = applyExcelDataToKpis(data);
-          const cfg2 = dbGet('gm_excel_config', {});
-          dbSet('gm_excel_config', { ...cfg2, lastSync: new Date().toISOString(), lastSyncResult: result });
-          console.log(`[GM-Watch] Import OK — ${result.added} ajouté(s), ${result.updated} mis à jour`);
-        } catch (e) {
-          console.error(`[GM-Watch] Erreur lecture : ${e.message}`);
-        }
-      }
-    } catch (e) {
-      console.error(`[GM-Watch] Erreur stat : ${e.message}`);
-    }
-  }, 30000);
-  console.log(`[GM-Watch] Surveillance active (polling 30s) : ${excelPath}`);
-}
-
-// Au démarrage : reprendre la surveillance si une config existait déjà
-(function resumeWatcherOnStartup() {
-  const cfg = dbGet('gm_excel_config', null);
-  if (cfg && cfg.active) {
-    console.log(`[GM-Watch] Reprise de la surveillance au démarrage...`);
-    startGMWatcher(cfg);
-  }
-})();
+let gmWatcher = null; // conservé pour le DELETE /api/gm-excel-config qui le référence
 
 // ─── ROUTES : CONFIG EXCEL GM ────────────────────────────────────────────────────
 
