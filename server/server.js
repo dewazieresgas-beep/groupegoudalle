@@ -47,7 +47,7 @@ setInterval(() => {
 }, 300000);
 
 // Fichier de stockage JSON
-const DB_PATH = path.join(__dirname, 'goudalle.json');
+const DB_PATH = path.join(__dirname, 'data', 'goudalle.json');
 
 // ─── INITIALISATION DU STOCKAGE ──────────────────────────────────────────────────
 
@@ -580,7 +580,7 @@ function requireWriteRateLimit(req, res, next) {
 }
 
 // Sert les fichiers statiques du site (HTML, CSS, JS, images)
-app.use(express.static(path.join(__dirname, '..')));
+app.use(express.static(path.join(__dirname, '../client')));
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -3032,7 +3032,7 @@ app.get('/api/health', (req, res) => {
 // ─── ROUTE FALLBACK ─────────────────────────────────────────────────────────────
 
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'index.html'));
+  res.sendFile(path.join(__dirname, '../client', 'index.html'));
 });
 
 // ─── DÉMARRAGE ───────────────────────────────────────────────────────────────────

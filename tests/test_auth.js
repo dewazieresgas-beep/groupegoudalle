@@ -37,9 +37,9 @@ global.document = {
 global.AbortController = undefined; // simule env sans AbortController
 
 // Charger api.js en premier (Auth.init l'appelle via localStorage patché)
-require('../js/api.js');
+require('../client/js/api.js');
 // Charger auth.js
-require('../js/auth.js');
+require('../client/js/auth.js');
 
 // ─── Framework de test minimaliste ───────────────────────────────────────────────
 let passed = 0;

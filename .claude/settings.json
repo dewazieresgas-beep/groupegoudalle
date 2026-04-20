@@ -5,7 +5,24 @@
       "Bash(node -e ' *)",
       "Bash(git rebase *)",
       "Bash(git stash *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(mkdir -p c:/Users/gdewazieres/Desktop/groupegoudalle/client)",
+      "Bash(mkdir -p c:/Users/gdewazieres/Desktop/groupegoudalle/scripts)",
+      "Bash(mv index.html client/)",
+      "Bash(mv connexion.html client/)",
+      "Bash(mv inscription.html client/)",
+      "Bash(mv pages *)",
+      "Bash(mv js *)",
+      "Bash(mv goudalle.json data/)",
+      "Bash(mv goudalle.backup.1.json data/)",
+      "Bash(mv goudalle.backup.2.json data/)",
+      "Bash(mv goudalle.backup.3.json data/)",
+      "Bash(mv goudalle.restored.json data/)",
+      "Bash(node tests/run_tests.js)",
+      "Bash(grep -v \"\\\\.json$\\\\|\\\\.backup\\\\|\\\\.restored\")"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\gdewazieres\\Desktop\\groupegoudalle"
     ]
   }
 }

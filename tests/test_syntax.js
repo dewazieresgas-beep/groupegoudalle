@@ -4,9 +4,9 @@ const path = require('path');
 
 const files = [
   'server/server.js',
-  'js/api.js',
-  'js/auth.js',
-  'js/utils.js'
+  'client/js/api.js',
+  'client/js/auth.js',
+  'client/js/utils.js'
 ];
 
 let completed = 0;
@@ -14,7 +14,7 @@ let errors = [];
 
 files.forEach(file => {
   const proc = spawn('node', ['--check', file], {
-    cwd: __dirname,
+    cwd: path.join(__dirname, '..'),
     stdio: ['pipe', 'pipe', 'pipe']
   });
 

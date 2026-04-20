@@ -2,7 +2,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const filePath = path.join(__dirname, 'pages', 'cbco-usine.html');
+const filePath = path.join(__dirname, '../client/pages', 'production-indicateurs-usine-cbco.html');
 const html = fs.readFileSync(filePath, 'utf-8');
 
 // Extract JavaScript blocks

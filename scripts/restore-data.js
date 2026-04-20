@@ -1,6 +1,6 @@
 const fs = require('fs');
-const current = JSON.parse(fs.readFileSync('server/goudalle.json'));
-const restored = JSON.parse(fs.readFileSync('server/goudalle.restored.json'));
+const current = JSON.parse(fs.readFileSync('server/data/goudalle.json'));
+const restored = JSON.parse(fs.readFileSync('server/data/goudalle.restored.json'));
 
 // Restaurer les données manquantes
 const keysToRestore = ['sylve_balance', 'sylve_ca', 'sylve_paiements', 'cbco_commercial'];
@@ -18,8 +18,8 @@ keysToRestore.forEach(key => {
 });
 
 // Sauvegarder
-fs.writeFileSync('server/goudalle.json', JSON.stringify(current, null, 2));
-console.log('\n✅ Data restored to goudalle.json');
+fs.writeFileSync('server/data/goudalle.json', JSON.stringify(current, null, 2));
+console.log('\n✅ Data restored to server/data/goudalle.json');
 
 // Vérifier
 console.log('\nVerification:');

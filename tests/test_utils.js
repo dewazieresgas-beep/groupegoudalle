@@ -31,7 +31,7 @@ global.Auth = {
 };
 
 // Charger utils.js
-require('../js/utils.js');
+require('../client/js/utils.js');
 
 // ─── Framework de test minimaliste ───────────────────────────────────────────────
 let passed = 0;
