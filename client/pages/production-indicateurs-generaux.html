@@ -77,6 +77,14 @@
     .ig-kpi-unit  { font-size: 11px; color: #999; font-weight: 600; margin-top: 2px; }
     .ig-kpi-sub   { font-size: 10px; color: #bbb; margin-top: 2px; }
     .ig-kpi-equiv { font-size: 10px; font-style: italic; margin-top: 4px; border-radius: 6px; padding: 2px 7px; display: inline-block; font-weight: 500; }
+    .ig-chart-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .ig-chart-panel .gm-chart-header h2 {
+      font-size: 17px;
+    }
 
     /* Badges SC/Ultra */
     .ig-badge { display:inline-block; font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; margin-top:4px; margin-right:4px; }
@@ -118,6 +126,7 @@
 
     @media (max-width: 1100px) {
       .ig-summary-strip { grid-template-columns: 1fr 1fr; }
+      .ig-chart-grid { grid-template-columns: 1fr; }
     }
     @media (max-width: 700px) {
       .ig-kpi-col { flex-wrap: wrap; }
@@ -222,12 +231,22 @@
               <div class="ig-kpi-unit" id="poutresLastWeek">—</div>
             </div>
           </div>
-          <div class="gm-chart-section" style="min-height:300px;">
-            <div class="gm-chart-header" style="margin-bottom:12px; padding-bottom:10px;">
-              <h2>Poutres taillées par semaine (m³)</h2>
+          <div class="ig-chart-grid">
+            <div class="gm-chart-section ig-chart-panel" style="min-height:300px;">
+              <div class="gm-chart-header" style="margin-bottom:12px; padding-bottom:10px;">
+                <h2>Poutres taillées par semaine (m³)</h2>
+              </div>
+              <div class="gm-chart-container" style="min-height:240px;">
+                <canvas id="chartPoutres"></canvas>
+              </div>
             </div>
-            <div class="gm-chart-container" style="min-height:240px;">
-              <canvas id="chartPoutres"></canvas>
+            <div class="gm-chart-section ig-chart-panel" style="min-height:300px;">
+              <div class="gm-chart-header" style="margin-bottom:12px; padding-bottom:10px;">
+                <h2>Cumul mensuel par exercice (m³)</h2>
+              </div>
+              <div class="gm-chart-container" style="min-height:240px;">
+                <canvas id="chartPoutresMonthly"></canvas>
+              </div>
             </div>
           </div>
         </div>
@@ -263,12 +282,22 @@
               <div class="ig-kpi-unit" id="extraLastWeek">—</div>
             </div>
           </div>
-          <div class="gm-chart-section" style="min-height:280px;">
-            <div class="gm-chart-header" style="margin-bottom:12px; padding-bottom:10px;">
-              <h2>Panneaux taillés par semaine (m²)</h2>
+          <div class="ig-chart-grid">
+            <div class="gm-chart-section ig-chart-panel" style="min-height:280px;">
+              <div class="gm-chart-header" style="margin-bottom:12px; padding-bottom:10px;">
+                <h2>Panneaux taillés par semaine (m²)</h2>
+              </div>
+              <div class="gm-chart-container" style="min-height:220px;">
+                <canvas id="chartEXTRA"></canvas>
+              </div>
             </div>
-            <div class="gm-chart-container" style="min-height:220px;">
-              <canvas id="chartEXTRA"></canvas>
+            <div class="gm-chart-section ig-chart-panel" style="min-height:280px;">
+              <div class="gm-chart-header" style="margin-bottom:12px; padding-bottom:10px;">
+                <h2>Cumul mensuel par exercice (m²)</h2>
+              </div>
+              <div class="gm-chart-container" style="min-height:220px;">
+                <canvas id="chartEXTRAMonthly"></canvas>
+              </div>
             </div>
           </div>
         </div>
@@ -308,12 +337,22 @@
               <div class="ig-kpi-unit" id="collageLastWeek">—</div>
             </div>
           </div>
-          <div class="gm-chart-section" style="min-height:300px;">
-            <div class="gm-chart-header" style="margin-bottom:12px; padding-bottom:10px;">
-              <h2>Surface collée par semaine (m²)</h2>
+          <div class="ig-chart-grid">
+            <div class="gm-chart-section ig-chart-panel" style="min-height:300px;">
+              <div class="gm-chart-header" style="margin-bottom:12px; padding-bottom:10px;">
+                <h2>Surface collée par semaine (m²)</h2>
+              </div>
+              <div class="gm-chart-container" style="min-height:240px;">
+                <canvas id="chartCOLLAGE"></canvas>
+              </div>
             </div>
-            <div class="gm-chart-container" style="min-height:240px;">
-              <canvas id="chartCOLLAGE"></canvas>
+            <div class="gm-chart-section ig-chart-panel" style="min-height:300px;">
+              <div class="gm-chart-header" style="margin-bottom:12px; padding-bottom:10px;">
+                <h2>Cumul mensuel par exercice (m²)</h2>
+              </div>
+              <div class="gm-chart-container" style="min-height:240px;">
+                <canvas id="chartCOLLAGEMonthly"></canvas>
+              </div>
             </div>
           </div>
         </div>
@@ -353,12 +392,22 @@
               <div class="ig-kpi-unit" id="assemblageLastWeek">—</div>
             </div>
           </div>
-          <div class="gm-chart-section" style="min-height:300px;">
-            <div class="gm-chart-header" style="margin-bottom:12px; padding-bottom:10px;">
-              <h2>Surface assemblée par semaine (m²)</h2>
+          <div class="ig-chart-grid">
+            <div class="gm-chart-section ig-chart-panel" style="min-height:300px;">
+              <div class="gm-chart-header" style="margin-bottom:12px; padding-bottom:10px;">
+                <h2>Surface assemblée par semaine (m²)</h2>
+              </div>
+              <div class="gm-chart-container" style="min-height:240px;">
+                <canvas id="chartASSEMBLAGE"></canvas>
+              </div>
             </div>
-            <div class="gm-chart-container" style="min-height:240px;">
-              <canvas id="chartASSEMBLAGE"></canvas>
+            <div class="gm-chart-section ig-chart-panel" style="min-height:300px;">
+              <div class="gm-chart-header" style="margin-bottom:12px; padding-bottom:10px;">
+                <h2>Cumul mensuel par exercice (m²)</h2>
+              </div>
+              <div class="gm-chart-container" style="min-height:240px;">
+                <canvas id="chartASSEMBLAGEMonthly"></canvas>
+              </div>
             </div>
           </div>
         </div>
@@ -535,6 +584,20 @@
 
     function getFiscalYearForWeek(week, year) { return week >= 40 ? year : year - 1; }
     function fiscalYearLabel(fy) { return `${fy}/${fy + 1}`; }
+    const FISCAL_MONTH_LABELS = ['Oct', 'Nov', 'Dec', 'Jan', 'Fev', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aout', 'Sep'];
+
+    function getIsoWeekMonday(year, week) {
+      const simple = new Date(Date.UTC(year, 0, 1 + (week - 1) * 7));
+      const day = simple.getUTCDay() || 7;
+      if (day <= 4) simple.setUTCDate(simple.getUTCDate() - day + 1);
+      else simple.setUTCDate(simple.getUTCDate() + 8 - day);
+      return simple;
+    }
+
+    function getFiscalMonthIndex(week, year) {
+      const month = getIsoWeekMonday(Number(year), Number(week)).getUTCMonth();
+      return (month + 3) % 12;
+    }
 
     // Stats d'une série hebdomadaire (ignore les semaines à 0 pour la moyenne)
     function stats(vals, entries) {
@@ -597,6 +660,91 @@
       };
     }
 
+    function makeComparisonChart(id, datasets, labels, unit) {
+      if (charts[id]) charts[id].destroy();
+      const ctx = document.getElementById(id)?.getContext('2d');
+      if (!ctx) return;
+      charts[id] = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
+            tooltip: {
+              callbacks: {
+                label: (ctx2) => `${ctx2.dataset.label}: ${fn(ctx2.parsed.y)} ${unit}`
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { color: '#7a7a7a', font: { size: 10 } }
+            },
+            y: {
+              beginAtZero: true,
+              grid: { color: '#ece7e1' },
+              title: { display: true, text: `Cumul ${unit}` },
+              ticks: { color: '#6b6b6b', callback: v => fn(v) }
+            }
+          }
+        }
+      });
+    }
+
+    function buildMonthlyCumulative(entries, fiscalYears, getter) {
+      const sumsByYear = new Map();
+      const countsByYear = new Map();
+
+      fiscalYears.forEach(fy => {
+        sumsByYear.set(fy, Array(12).fill(0));
+        countsByYear.set(fy, Array(12).fill(0));
+      });
+
+      entries.forEach(entry => {
+        const fy = getFiscalYearForWeek(Number(entry.week), Number(entry.year));
+        if (!sumsByYear.has(fy)) return;
+        const monthIndex = getFiscalMonthIndex(entry.week, entry.year);
+        const value = getter(entry);
+        sumsByYear.get(fy)[monthIndex] += toFin(value);
+        countsByYear.get(fy)[monthIndex] += 1;
+      });
+
+      return fiscalYears.map((fy, index) => {
+        const monthlySums = sumsByYear.get(fy);
+        const monthlyCounts = countsByYear.get(fy);
+        const lastMonthWithData = monthlyCounts.reduce((acc, count, monthIndex) => count > 0 ? monthIndex : acc, -1);
+        let running = 0;
+        const data = monthlySums.map((value, monthIndex) => {
+          if (lastMonthWithData === -1 || monthIndex > lastMonthWithData) return null;
+          running += value;
+          return running;
+        });
+        return { fy, data, index };
+      });
+    }
+
+    function monthlyDataset(label, data, color, highlighted = false) {
+      return {
+        label,
+        data,
+        borderColor: color,
+        backgroundColor: 'transparent',
+        borderWidth: highlighted ? 3 : 2,
+        borderDash: highlighted ? [] : [7, 5],
+        pointRadius: highlighted ? 3 : 2,
+        pointHoverRadius: highlighted ? 5 : 4,
+        pointBackgroundColor: color,
+        pointBorderColor: color,
+        tension: 0.2,
+        fill: false,
+        spanGaps: false
+      };
+    }
+
     function buildCharts() {
       const allRaw = getCBCOProductiviteData();
       const nowIso = getCurrentIsoWeekYear();
@@ -622,6 +770,7 @@
       const entries = all
         .filter(e => getFiscalYearForWeek(Number(e.week), Number(e.year)) === fiscal)
         .sort((a, b) => a.year !== b.year ? a.year - b.year : a.week - b.week);
+      const comparisonYears = fiscalYears.slice(fiscalYears.indexOf(fiscal), fiscalYears.indexOf(fiscal) + 4);
 
       const labels     = entries.map(e => `S${e.week}`);
       const scVals     = entries.map(e => toFin(e.speedcutM3));
@@ -728,6 +877,59 @@
 
       // Surface assemblée
       makeChart('chartASSEMBLAGE', [ds('Surface assemblée (m²)',assembVals, '#8f4a13')], labels, 'm²');
+
+      const monthlyColors = ['#1f4e79', '#6d8bb3', '#9fb4ce', '#cad6e6'];
+      const monthlyGold = ['#b88600', '#d2a73a', '#e3c777', '#f0dfab'];
+      const monthlyGreen = ['#2d6b1a', '#5f9650', '#92be86', '#c4debc'];
+      const monthlyRust = ['#8f4a13', '#b26f3f', '#cb9a77', '#e6c7b1'];
+
+      const poutresMonthly = buildMonthlyCumulative(all, comparisonYears, entry => toFin(entry.speedcutM3) + toFin(entry.ultraM3));
+      makeComparisonChart('chartPoutresMonthly',
+        poutresMonthly.map(({ fy, data, index }) => monthlyDataset(
+          fiscalYearLabel(fy),
+          data,
+          monthlyColors[Math.min(index, monthlyColors.length - 1)],
+          index === 0
+        )),
+        FISCAL_MONTH_LABELS,
+        'm³'
+      );
+
+      const extraMonthly = buildMonthlyCumulative(all, comparisonYears, entry => toFin(entry.extraM2));
+      makeComparisonChart('chartEXTRAMonthly',
+        extraMonthly.map(({ fy, data, index }) => monthlyDataset(
+          fiscalYearLabel(fy),
+          data,
+          monthlyGold[Math.min(index, monthlyGold.length - 1)],
+          index === 0
+        )),
+        FISCAL_MONTH_LABELS,
+        'm²'
+      );
+
+      const collageMonthly = buildMonthlyCumulative(all, comparisonYears, entry => toFin(entry.collageSurface));
+      makeComparisonChart('chartCOLLAGEMonthly',
+        collageMonthly.map(({ fy, data, index }) => monthlyDataset(
+          fiscalYearLabel(fy),
+          data,
+          monthlyGreen[Math.min(index, monthlyGreen.length - 1)],
+          index === 0
+        )),
+        FISCAL_MONTH_LABELS,
+        'm²'
+      );
+
+      const assemblageMonthly = buildMonthlyCumulative(all, comparisonYears, entry => toFin(entry.assemblageSurface));
+      makeComparisonChart('chartASSEMBLAGEMonthly',
+        assemblageMonthly.map(({ fy, data, index }) => monthlyDataset(
+          fiscalYearLabel(fy),
+          data,
+          monthlyRust[Math.min(index, monthlyRust.length - 1)],
+          index === 0
+        )),
+        FISCAL_MONTH_LABELS,
+        'm²'
+      );
     }
 
     function init() {
