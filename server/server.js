@@ -1651,7 +1651,9 @@ function parseGMExcel(cfg) {
   const data = [];
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
-    // Validité basée sur année + semaine uniquement (m3 est optionnel)
+    // Ignorer les lignes sans m³ (semaines pré-remplies sans données de production)
+    const m3Raw = row[2];
+    if (m3Raw === null || m3Raw === undefined || m3Raw === '') continue;
     const yearRaw = row[0]; const weekRaw = row[1];
     if (!yearRaw || !weekRaw) continue;
     const weekMatch = String(weekRaw).match(/(\d+)/);
@@ -1661,7 +1663,7 @@ function parseGMExcel(cfg) {
     if (isNaN(year) || isNaN(week)) continue;
     data.push({
       year, week,
-      m3:              toNum(row[2]),
+      m3:              toNum(m3Raw),
       hours:           toNum(row[3]),   // D : Heures MO
       objectifRatio:   toNum(row[4]),   // E : Objectif h/m³
       tempsBeton:      toNum(row[5]),   // F : Heures béton
@@ -1992,12 +1994,6 @@ app.delete('/api/gm-kpi/:year/:week', requireToken, requireWriteRateLimit, (req,
   }
 
   try {
-    // Vérifier que la ligne existe
-    const existing = parseGMExcel(cfg);
-    if (!existing.find(k => k.year === year && k.week === week)) {
-      return res.status(404).json({ success: false, error: 'KPI introuvable dans l\'Excel.' });
-    }
-
     deleteKpiFromExcel(year, week, cfg);
     res.json({ success: true, deleted: { year, week } });
   } catch (e) {
