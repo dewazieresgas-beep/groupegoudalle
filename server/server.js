@@ -658,17 +658,6 @@ app.put('/api/audit', requireToken, requireWriteRateLimit, (req, res) => {
   res.json({ success: true });
 });
 
-// ─── ROUTES : KPIs GOUDALLE MAÇONNERIE ─────────────────────────────────────────
-
-app.get('/api/kpis', (req, res) => {
-  res.json(dbGet('kpis', []));
-});
-
-app.put('/api/kpis', requireToken, requireWriteRateLimit, (req, res) => {
-  dbSet('kpis', req.body);
-  res.json({ success: true });
-});
-
 // ─── ROUTES : SEUILS KPI ────────────────────────────────────────────────────────
 
 app.get('/api/thresholds', (req, res) => {
@@ -1723,44 +1712,6 @@ function parseGMExcel(cfg) {
     });
   }
   return data;
-}
-
-// Fusionne les données Excel dans le store KPIs
-// Les lignes supprimées de l'Excel sont aussi supprimées du site
-function applyExcelDataToKpis(data) {
-  const existing = dbGet('kpis', []);
-  const now = new Date().toISOString();
-  let added = 0, updated = 0, removed = 0;
-
-  // Construire un Set des clés présentes dans l'Excel (année+semaine)
-  const excelKeys = new Set(data.map(r => `${r.year}_${r.week}`));
-
-  // Supprimer du store les entrées Excel qui n'existent plus dans le fichier
-  // (on ne touche pas aux entrées créées manuellement, i.e. createdBy !== 'excel-auto')
-  const kept = existing.filter(k => {
-    const key = `${k.year}_${k.week}`;
-    if (k.createdBy === 'excel-auto' && !excelKeys.has(key)) {
-      removed++;
-      return false;
-    }
-    return true;
-  });
-
-  // Ajouter ou mettre à jour les entrées Excel
-  for (const row of data) {
-    const idx = kept.findIndex(k => k.year === row.year && k.week === row.week);
-    if (idx >= 0) {
-      kept[idx] = { ...kept[idx], ...row, updatedAt: now, updatedBy: 'excel-auto' };
-      updated++;
-    } else {
-      const maxId = kept.reduce((max, k) => Math.max(max, k.id || 0), 0);
-      kept.push({ id: maxId + 1, ...row, status: 'published', createdAt: now, createdBy: 'excel-auto', updatedAt: now, updatedBy: 'excel-auto' });
-      added++;
-    }
-  }
-
-  dbSet('kpis', kept);
-  return { added, updated, removed };
 }
 
 // ─── ÉCRITURE DANS L'EXCEL ───────────────────────────────────────────────────────

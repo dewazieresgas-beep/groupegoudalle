@@ -19,6 +19,7 @@ const Auth = {
   // Permissions : la direction a toujours accès à tout (bypass dans hasAccess).
   // Les autres utilisateurs utilisent customPermissions (géré depuis la page utilisateurs).
   PERMISSIONS: {},
+  DEPRECATED_PERMISSIONS: ['production_export_maconnerie'],
 
   // ============ INITIALIZATION ============
   /**
@@ -33,6 +34,7 @@ const Auth = {
     }
     // Migration douce : si la base existe déjà, ajouter les comptes démo manquants
     this.ensureDefaultUsers();
+    this.cleanupDeprecatedPermissions();
 
     // Initialiser le code d'admin par défaut si absent
     if (!localStorage.getItem(this.STORAGE_KEY_ADMIN_CODE)) {
@@ -63,6 +65,30 @@ const Auth = {
     Object.keys(defaultUsers).forEach((username) => {
       if (!users[username]) {
         users[username] = defaultUsers[username];
+        updated = true;
+      }
+    });
+
+    if (updated) {
+      localStorage.setItem(this.STORAGE_KEY_USERS, JSON.stringify(users));
+    }
+  },
+
+  sanitizePermissions(permissions) {
+    if (!Array.isArray(permissions)) return permissions;
+    return permissions.filter((permission) => !this.DEPRECATED_PERMISSIONS.includes(permission));
+  },
+
+  cleanupDeprecatedPermissions() {
+    const users = this.getAllUsers();
+    let updated = false;
+
+    Object.keys(users).forEach((username) => {
+      const user = users[username];
+      if (!Array.isArray(user.customPermissions)) return;
+      const sanitized = this.sanitizePermissions(user.customPermissions);
+      if (sanitized.length !== user.customPermissions.length) {
+        users[username].customPermissions = sanitized;
         updated = true;
       }
     });
@@ -332,7 +358,7 @@ const Auth = {
     if (!users[username]) {
       return { success: false, message: '❌ Utilisateur non trouvé' };
     }
-    users[username].customPermissions = permissions;
+    users[username].customPermissions = this.sanitizePermissions(permissions);
     localStorage.setItem(this.STORAGE_KEY_USERS, JSON.stringify(users));
     return { success: true, message: '✅ Permissions mises à jour' };
   },
@@ -402,7 +428,7 @@ const Auth = {
     };
 
     if (customPermissions && Array.isArray(customPermissions)) {
-      newUser.customPermissions = customPermissions;
+      newUser.customPermissions = this.sanitizePermissions(customPermissions);
     }
 
     // Ajouter à la base de données

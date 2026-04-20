@@ -673,36 +673,6 @@
       });
     }
 
-    /**
-     * Sauvegarde le commentaire de la semaine actuelle
-     * Met à jour l'indicateur le plus récent avec le commentaire saisi
-     */
-    function saveWeekComment() {
-      const kpis = getKPIs();
-      const published = kpis.filter(k => k.status === 'published').sort(compareByYearWeekDesc);
-
-      if (published.length === 0) {
-        alert('❌ Aucun indicateur publié pour cette semaine');
-        return;
-      }
-
-      const last = published[0];
-      const commentText = document.getElementById('weekComment').value;
-
-      // Mettre à jour l'indicateur avec le nouveau commentaire
-      last.comment = commentText;
-      last.updatedAt = new Date().toISOString();
-
-      // Sauvegarder les modifications
-      localStorage.setItem('goudalle_kpis', JSON.stringify(kpis));
-
-      // Enregistrer l'action dans l'audit
-      Auth.audit('KPI_COMMENT', `Commentaire mis à jour pour la semaine ${last.week}/${last.year}`);
-
-      // Feedback utilisateur
-      alert('✅ Commentaire sauvegardé avec succès !');
-    }
-
     window.onServerReady(initGM);
   </script>
 

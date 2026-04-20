@@ -280,88 +280,6 @@ function compareByYearWeekDesc(a, b) {
   return b.week - a.week;  // Puis semaine la plus récente
 }
 
-/**
- * Récupère le dernier indicateur publié (le plus récent)
- * @returns {Object|null} - Indicateur le plus récent ou null si aucun
- */
-function getLastPublishedWeek() {
-  const kpis = getKPIs();
-  const published = kpis.filter(k => k.status === 'published').sort(compareByYearWeekDesc);
-  return published[0] || null;
-}
-
-// ============ INDICATEURS STORAGE ============
-/**
- * Récupère tous les indicateurs stockés dans localStorage
- * @returns {Array} - Liste des indicateurs ou tableau vide
- */
-function getKPIs() {
-  const kpis = localStorage.getItem('goudalle_kpis');
-  return kpis ? JSON.parse(kpis) : [];
-}
-
-/**
- * Enregistre ou met à jour un indicateur pour une semaine donnée
- * @param {number} year - Année
- * @param {number} week - Numéro de semaine
- * @param {number} m3 - m³ coulés
- * @param {number} hours - Heures travaillées
- * @param {string} comment - Commentaire sur la semaine
- * @param {string} status - Statut : 'draft' (brouillon) ou 'published' (publié)
- * @returns {Object} - Indicateur créé/mis à jour
- */
-function saveKPI(year, week, m3, hours, comment, status = 'draft', timeDistribution = null) {
-  const kpis = getKPIs();
-  
-  // Vérifier si un indicateur existe déjà pour cette semaine (mise à jour)
-  const existing = kpis.find(k => k.year === year && k.week === week);
-  
-  // Créer ou mettre à jour l'indicateur
-  const kpi = {
-    id: existing?.id || Date.now(),  // Conserver l'ID si mise à jour
-    year,
-    week,
-    m3: parseFloat(m3),
-    hours: parseFloat(hours),
-    comment,
-    status,
-    tempsBeton: timeDistribution?.beton ?? existing?.tempsBeton ?? null,
-    tempsAciers: timeDistribution?.aciers ?? existing?.tempsAciers ?? null,
-    tempsChargement: timeDistribution?.chargement ?? existing?.tempsChargement ?? null,
-    tempsCentrale: timeDistribution?.centrale ?? existing?.tempsCentrale ?? null,
-    createdAt: existing?.createdAt || new Date().toISOString(),  // Conserver date création
-    createdBy: existing?.createdBy || Auth.getSession().username,
-    updatedAt: new Date().toISOString(),  // Mettre à jour la date de modification
-    updatedBy: Auth.getSession().username
-  };
-
-  // Supprimer l'ancien indicateur de cette semaine s'il existe, puis ajouter le nouveau
-  const filtered = kpis.filter(k => !(k.year === year && k.week === week));
-  filtered.push(kpi);
-  
-  localStorage.setItem('goudalle_kpis', JSON.stringify(filtered));
-  
-  return kpi;
-}
-
-/**
- * Supprime un indicateur pour une semaine donnée
- * @param {number} year - Année de l'indicateur
- * @param {number} week - Semaine de l'indicateur
- * @returns {Object} - { success: boolean, message: string }
- */
-function deleteKPI(year, week) {
-  const kpis = getKPIs();
-  const index = kpis.findIndex(k => k.year === year && k.week === week);
-
-  if (index === -1) return { success: false, message: '❌ Indicateur non trouvé' };
-
-  kpis.splice(index, 1);
-  localStorage.setItem('goudalle_kpis', JSON.stringify(kpis));
-
-  return { success: true, message: '🗑️ Indicateur supprimé' };
-}
-
 // ============ UI HELPERS ============
 /**
  * Détermine le chemin de base selon l'emplacement de la page
@@ -399,7 +317,7 @@ function getSidebar() {
   }
 
   // ===== PRODUCTION =====
-  if (Auth.hasAccess('production_indicateurs_generaux') || Auth.hasAccess('production_indicateurs_maconnerie') || Auth.hasAccess('production_export_maconnerie') || Auth.hasAccess('production_indicateurs_usine') || Auth.hasAccess('production_saisie_maconnerie') || Auth.hasAccess('production_saisie_productivite')) {
+  if (Auth.hasAccess('production_indicateurs_generaux') || Auth.hasAccess('production_indicateurs_maconnerie') || Auth.hasAccess('production_indicateurs_usine') || Auth.hasAccess('production_saisie_maconnerie') || Auth.hasAccess('production_saisie_productivite')) {
     const productionActive = isProductionPage() ? ' active' : '';
     let productionHref = `${base}pages/production-indicateurs-generaux.html`;
     if (!Auth.hasAccess('production_indicateurs_generaux')) {
@@ -407,7 +325,6 @@ function getSidebar() {
       else if (Auth.hasAccess('production_indicateurs_usine')) productionHref = `${base}pages/production-indicateurs-usine-cbco.html`;
       else if (Auth.hasAccess('production_saisie_maconnerie')) productionHref = `${base}pages/production-saisie-maconnerie.html`;
       else if (Auth.hasAccess('production_saisie_productivite')) productionHref = `${base}pages/production-saisie-productivite-usine.html`;
-      else if (Auth.hasAccess('production_export_maconnerie')) productionHref = `${base}pages/production-export-maconnerie.html`;
     }
     items += `<a href="${productionHref}" class="sidebar-item${productionActive}">🏭 Production</a>`;
   }
@@ -560,10 +477,6 @@ function injectProductionSecondaryBar() {
   if (Auth.hasAccess('production_indicateurs_maconnerie')) {
     const gmActive = currentPage === 'production-indicateurs-maconnerie.html' ? ' active' : '';
     secondaryItems += `<a href="${base}pages/production-indicateurs-maconnerie.html" class="sidebar-item${gmActive}">📊 Indicateurs Maçonnerie</a>`;
-  }
-  if (Auth.hasAccess('production_export_maconnerie')) {
-    const exportActive = currentPage === 'production-export-maconnerie.html' ? ' active' : '';
-    secondaryItems += `<a href="${base}pages/production-export-maconnerie.html" class="sidebar-item${exportActive}">📤 Exports Maçonnerie</a>`;
   }
   if (Auth.hasAccess('production_indicateurs_usine')) {
     const usineActive = currentPage === 'production-indicateurs-usine-cbco.html' ? ' active' : '';

@@ -40,7 +40,6 @@ const KEY_TO_ENDPOINT = {
   'goudalle_users':                  '/users',
   'goudalle_admin_code':             '/admin-code',
   'goudalle_session':                null, // Session gardée en localStorage (propre à chaque navigateur)
-  'goudalle_kpis':                   '/kpis',
   'goudalle_thresholds':             '/thresholds',
   'goudalle_cbco_data':              '/cbco',
   'goudalle_cbco_productivite':      '/cbco-productivite',
@@ -76,9 +75,8 @@ const PAGE_PRELOAD_KEYS = {
   'profil.html': ['goudalle_users'],
   'utilisateurs.html': ['goudalle_users'],
   'utilisateurs-code-admin.html': ['goudalle_users'],
-  'production-indicateurs-maconnerie.html': ['goudalle_kpis', 'goudalle_thresholds'],
-  'production-saisie-maconnerie.html': ['goudalle_kpis', 'goudalle_thresholds'],
-  'production-export-maconnerie.html': ['goudalle_kpis', 'goudalle_thresholds'],
+  'production-indicateurs-maconnerie.html': ['goudalle_thresholds'],
+  'production-saisie-maconnerie.html': ['goudalle_thresholds'],
   'commerce-indicateurs.html': ['goudalle_cbco_data', 'goudalle_cbco_commercial'],
   'commerce-saisie-ca.html': ['goudalle_cbco_data'],
   'production-indicateurs-usine-cbco.html': ['goudalle_cbco_productivite', 'goudalle_rh_security_summary'],
@@ -91,7 +89,6 @@ const PAGE_PRELOAD_KEYS = {
   'compta-paiements-cbco.html': ['goudalle_sylve_balance', 'goudalle_sylve_paiements_attente'],
   'production-indicateurs-generaux.html': ['goudalle_cbco_productivite'],
   'index.html': [
-    'goudalle_kpis',
     'goudalle_thresholds',
     'goudalle_cbco_data',
     'goudalle_cbco_commercial',
