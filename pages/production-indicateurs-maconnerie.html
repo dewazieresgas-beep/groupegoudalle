@@ -325,7 +325,7 @@
      * - Génère le graphique de tendance
      * - Affiche l'historique des 4 dernières semaines
      */
-    function initGM() {
+    async function initGM() {
       const downloadMode = isDownloadMode();
 
       // Injecter la navigation uniquement hors téléchargement
@@ -336,9 +336,17 @@
         document.body.classList.add('download-mode');
       }
 
-      // Récupérer tous les indicateurs publiés, triés du plus récent au plus ancien
-      const kpis = getKPIs();
-      const published = kpis.filter(k => k.status === 'published').sort(compareByYearWeekDesc);
+      // Récupérer tous les indicateurs depuis le serveur (API Excel)
+      let published = [];
+      try {
+        const res = await fetch(SERVER_URL + '/gm-kpis-by-period?');
+        const data = await res.json();
+        if (data.success && Array.isArray(data.kpis)) {
+          published = data.kpis.sort(compareByYearWeekDesc);
+        }
+      } catch (e) {
+        console.error('Erreur chargement KPIs:', e);
+      }
 
       // ===== INITIALISATION DU SÉLECTEUR DE PÉRIODE =====
       const trendSelect = document.getElementById('trendRange');
@@ -612,6 +620,11 @@
         logging: false,
         useCORS: true,
         onclone: (doc) => {
+          // Désactiver toutes les animations dans le document cloné (évite opacity:0 du fadeIn)
+          const style = doc.createElement('style');
+          style.textContent = '*, *::before, *::after { animation: none !important; transition: none !important; opacity: 1 !important; }';
+          doc.head.appendChild(style);
+
           doc.querySelectorAll('textarea.gm-comment-input').forEach((ta) => {
             const div = doc.createElement('div');
             div.textContent = ta.value || '';

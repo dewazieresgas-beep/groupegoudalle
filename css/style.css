@@ -1922,6 +1922,15 @@ canvas {
   display: block !important;
 }
 
+/* Désactiver les animations pour que html2canvas capture à opacity:1 */
+.download-mode *,
+.download-mode *::before,
+.download-mode *::after {
+  animation: none !important;
+  transition: none !important;
+  opacity: 1 !important;
+}
+
 /* Textes et lignes en noir pour meilleure visibilité dans l'image */
 .download-mode table,
 .download-mode th,
@@ -1942,6 +1951,22 @@ canvas {
 .download-mode .kpi-value,
 .download-mode .kpi-label {
   color: #000 !important;
+}
+
+/* Corriger le gradient text (webkit-text-fill-color: transparent non supporté par html2canvas) */
+.download-mode h1 {
+  background: none !important;
+  -webkit-text-fill-color: #1a1a1a !important;
+  color: #1a1a1a !important;
+}
+
+/* Forcer les couleurs des éléments GM visibles */
+.download-mode .gm-kpi-value,
+.download-mode .gm-kpi-label,
+.download-mode .gm-history-summary-value,
+.download-mode .gm-history-summary-title {
+  color: #1a1a1a !important;
+  -webkit-text-fill-color: #1a1a1a !important;
 }
 
 /* ============ SYLVE SUPPORT ============ */
