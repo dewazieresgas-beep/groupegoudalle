@@ -12,6 +12,29 @@
   <script src="../js/auth.js"></script>
   <script src="../js/utils.js"></script>
   <script>
+    function setMetricValue(id, value, unit) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = '';
+      if (value === '—' || value == null || value === '') {
+        el.textContent = '—';
+        return;
+      }
+
+      const wrapper = document.createElement('span');
+      wrapper.className = 'metric-inline-value';
+      wrapper.append(document.createTextNode(String(value)));
+
+      if (unit) {
+        const unitSpan = document.createElement('span');
+        unitSpan.className = 'metric-inline-unit';
+        unitSpan.textContent = unit;
+        wrapper.append(unitSpan);
+      }
+
+      el.append(wrapper);
+    }
+
     window.APP_LOGO = 'cbco';
     Auth.requirePermission('production_indicateurs_usine');
   </script>
@@ -481,7 +504,9 @@
           prodField: 'ultraProductivite',
           targetField: 'ultraCibleProductivite',
           remarkField: 'ultraRemarques',
-          unit: 'm3/h',
+          mainUnit: 'm³',
+          hoursUnit: 'h',
+          unit: 'm³/h',
           moodGreen: '../assets/smiley vert usine cbco.png',
           moodRed: '../assets/smiley rouge usine cbco.png'
         };
@@ -497,6 +522,8 @@
           prodField: 'extraProductivite',
           targetField: 'extraCibleProductivite',
           remarkField: 'extraRemarques',
+          mainUnit: 'm²',
+          hoursUnit: 'h',
           unit: 'm²/h',
           moodGreen: '../assets/smiley vert usine cbco.png',
           moodRed: '../assets/smiley rouge usine cbco.png'
@@ -514,6 +541,9 @@
           targetField: 'collageCibleTempsPressee',
           remarkField: 'collageCommentaire',
           surfaceField: 'collageSurface',
+          mainUnit: 'pressées',
+          hoursUnit: 'h',
+          surfaceUnit: 'm²',
           unit: 'h/pressée',
           goodWhenLower: true,
           moodGreen: '../assets/smiley vert usine cbco.png',
@@ -531,6 +561,8 @@
           prodField: 'assemblageVariation',
           targetField: null,
           remarkField: 'assemblageCommentaire',
+          mainUnit: 'h',
+          hoursUnit: 'h',
           unit: '%',
           goodWhenLower: true,
           moodGreen: '../assets/smiley vert usine cbco.png',
@@ -547,7 +579,9 @@
         prodField: 'speedcutProductivite',
         targetField: 'speedcutCibleProductivite',
         remarkField: 'speedcutRemarques',
-        unit: 'm3/h',
+        mainUnit: 'm³',
+        hoursUnit: 'h',
+        unit: 'm³/h',
         moodGreen: '../assets/smiley vert usine cbco.png',
         moodRed: '../assets/smiley rouge usine cbco.png'
       };
@@ -703,12 +737,12 @@
           : false);
 
       document.getElementById(`weekNumber${cfg.suffix}`).textContent = latest.semaineLabel || `S${latest.week} ${latest.year}`;
-      document.getElementById(`cubage${cfg.suffix}`).textContent = formatNumber(Number(latest[cfg.m3Field]) || 0);
-      document.getElementById(`hours${cfg.suffix}`).textContent = formatNumber(Number(latest[cfg.hoursField]) || 0);
-      document.getElementById(`prod${cfg.suffix}`).textContent = formatNumber(latestProd);
+      setMetricValue(`cubage${cfg.suffix}`, formatNumber(Number(latest[cfg.m3Field]) || 0), cfg.mainUnit || '');
+      setMetricValue(`hours${cfg.suffix}`, formatNumber(Number(latest[cfg.hoursField]) || 0), cfg.hoursUnit || '');
+      setMetricValue(`prod${cfg.suffix}`, formatNumber(latestProd), cfg.unit || '');
       if (cfg.surfaceField) {
         const surfaceEl = document.getElementById(`surface${cfg.suffix}`);
-        if (surfaceEl) surfaceEl.textContent = formatNumber(Number(latest[cfg.surfaceField]) || 0);
+        if (surfaceEl) setMetricValue(`surface${cfg.suffix}`, formatNumber(Number(latest[cfg.surfaceField]) || 0), cfg.surfaceUnit || '');
       }
       document.getElementById(`comment${cfg.suffix}`).value = sanitizeComment(latest[cfg.remarkField]);
       document.getElementById(`indicator${cfg.suffix}`).className = `gm-indicator-card ${aboveTarget ? 'vert' : 'rouge'}`;

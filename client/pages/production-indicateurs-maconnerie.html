@@ -162,6 +162,29 @@
   </div>
 
   <script>
+    function setMetricValue(id, value, unit) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = '';
+      if (value === '—' || value == null || value === '') {
+        el.textContent = '—';
+        return;
+      }
+
+      const wrapper = document.createElement('span');
+      wrapper.className = 'metric-inline-value';
+      wrapper.append(document.createTextNode(String(value)));
+
+      if (unit) {
+        const unitSpan = document.createElement('span');
+        unitSpan.className = 'metric-inline-unit';
+        unitSpan.textContent = unit;
+        wrapper.append(unitSpan);
+      }
+
+      el.append(wrapper);
+    }
+
     /**
      * Indique si la page est ouverte en mode impression
      * @returns {boolean}
@@ -400,10 +423,10 @@
 
         // Mettre à jour les éléments principaux
         document.getElementById('weekNumber').textContent = `${String(last.week).padStart(2, '0')} (${last.year}) - du ${dateRange.monday} au ${dateRange.friday}`;
-        document.getElementById('mainM3').textContent = last.m3.toFixed(2);
-        document.getElementById('mainHours').textContent = Math.round(last.hours);
-        document.getElementById('mainRatio').textContent = ratio !== null ? ratio.toFixed(2) : '—';
-        document.getElementById('mainAcier').textContent = last.qtAcierFaconne != null ? last.qtAcierFaconne : '—';
+        setMetricValue('mainM3', last.m3.toFixed(2), 'm³');
+        setMetricValue('mainHours', Math.round(last.hours), 'h');
+        setMetricValue('mainRatio', ratio !== null ? ratio.toFixed(2) : '—', 'h/m³');
+        setMetricValue('mainAcier', last.qtAcierFaconne != null ? last.qtAcierFaconne : '—', 'T');
         
         // Mettre à jour le smiley avec couleur (image + fond dégradé)
         const indicatorEl = document.getElementById('mainIndicator');
@@ -420,9 +443,9 @@
       } else {
         // Si pas d'indicateur, afficher des valeurs par défaut
         document.getElementById('weekNumber').textContent = '—';
-        document.getElementById('mainM3').textContent = '0.00';
-        document.getElementById('mainHours').textContent = '0';
-        document.getElementById('mainRatio').textContent = '—';
+        setMetricValue('mainM3', '0.00', 'm³');
+        setMetricValue('mainHours', '0', 'h');
+        setMetricValue('mainRatio', '—', 'h/m³');
         
         const indicatorEl = document.getElementById('mainIndicator');
         const base = getBasePath();

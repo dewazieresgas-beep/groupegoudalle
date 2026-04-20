@@ -935,6 +935,22 @@ a:hover {
   font-family: 'Courier New', monospace;
 }
 
+.metric-inline-value {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35em;
+  white-space: nowrap;
+}
+
+.metric-inline-unit {
+  font-size: 1em;
+  line-height: inherit;
+  font-weight: inherit;
+  color: inherit;
+  opacity: 1;
+  font-family: inherit;
+}
+
 /* COLONNE 2 : GRAPHIQUE */
 .gm-chart-column {
   display: flex;
