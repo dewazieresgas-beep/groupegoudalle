@@ -42,7 +42,14 @@
     .ig-section-header h2 { margin: 0; font-size: 19px; font-weight: 700; }
 
     /* ── Section machine ── */
-    .ig-machine-section { margin-bottom: 32px; }
+    .ig-machine-section {
+      margin-bottom: 32px;
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid #e7ebf0;
+      background: linear-gradient(180deg, rgba(255,255,255,0.96) 0%, #ffffff 100%);
+      box-shadow: 0 10px 28px rgba(0,0,0,0.08);
+    }
     .ig-machine-container {
       display: flex;
       flex-direction: column;
@@ -78,6 +85,7 @@
     .ig-year-select { min-width: 140px; max-width: 180px; }
 
     /* ── Thème Bleu — Poutres ── */
+    .ig-blue { border-color: #c9d9ee; background: linear-gradient(180deg, #f5f9ff 0%, #ffffff 24%); box-shadow: 0 12px 30px rgba(90,126,179,0.10); }
     .ig-blue .ig-section-header { background: linear-gradient(135deg, #eef3fb 0%, #dce8f6 100%); border-left: 4px solid #5a7eb3; }
     .ig-blue .ig-section-header h2 { color: #2d4d78; }
     .ig-blue .ig-kpi-card { background: linear-gradient(180deg, #eef3fb 0%, #f8faff 100%); }
@@ -85,6 +93,7 @@
     .ig-blue .ig-kpi-equiv { background: #d4e6f6; color: #2d4d78; }
 
     /* ── Thème Or — Panneaux taillés ── */
+    .ig-gold { border-color: #eadb9f; background: linear-gradient(180deg, #fffdf4 0%, #ffffff 24%); box-shadow: 0 12px 30px rgba(196,148,0,0.10); }
     .ig-gold .ig-section-header { background: linear-gradient(135deg, #fdf8e6 0%, #f8edbd 100%); border-left: 4px solid #c49400; }
     .ig-gold .ig-section-header h2 { color: #7a5800; }
     .ig-gold .ig-kpi-card { background: linear-gradient(180deg, #fdf8e6 0%, #fffdf5 100%); }
@@ -92,6 +101,7 @@
     .ig-gold .ig-kpi-equiv { background: #f5e898; color: #7a5000; }
 
     /* ── Thème Vert — Collage ── */
+    .ig-green { border-color: #cfe6bf; background: linear-gradient(180deg, #f7fcf4 0%, #ffffff 24%); box-shadow: 0 12px 30px rgba(90,154,58,0.10); }
     .ig-green .ig-section-header { background: linear-gradient(135deg, #eef8ea 0%, #d6edce 100%); border-left: 4px solid #5a9a3a; }
     .ig-green .ig-section-header h2 { color: #2d6b1a; }
     .ig-green .ig-kpi-card { background: linear-gradient(180deg, #eef8ea 0%, #f7fdf5 100%); }
@@ -99,6 +109,7 @@
     .ig-green .ig-kpi-equiv { background: #c2e8b0; color: #2d6b1a; }
 
     /* ── Thème Rouille — Assemblage ── */
+    .ig-rust { border-color: #e7cbb8; background: linear-gradient(180deg, #fff8f3 0%, #ffffff 24%); box-shadow: 0 12px 30px rgba(143,74,19,0.10); }
     .ig-rust .ig-section-header { background: linear-gradient(135deg, #faf0e8 0%, #f0d8c0 100%); border-left: 4px solid #8f4a13; }
     .ig-rust .ig-section-header h2 { color: #5a2d08; }
     .ig-rust .ig-kpi-card { background: linear-gradient(180deg, #faf0e8 0%, #fffaf5 100%); }
