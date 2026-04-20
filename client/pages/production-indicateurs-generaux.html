@@ -586,16 +586,17 @@
     function fiscalYearLabel(fy) { return `${fy}/${fy + 1}`; }
     const FISCAL_MONTH_LABELS = ['Oct', 'Nov', 'Dec', 'Jan', 'Fev', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aout', 'Sep'];
 
-    function getIsoWeekMonday(year, week) {
+    function getIsoWeekReferenceDate(year, week) {
       const simple = new Date(Date.UTC(year, 0, 1 + (week - 1) * 7));
       const day = simple.getUTCDay() || 7;
       if (day <= 4) simple.setUTCDate(simple.getUTCDate() - day + 1);
       else simple.setUTCDate(simple.getUTCDate() + 8 - day);
+      simple.setUTCDate(simple.getUTCDate() + 3);
       return simple;
     }
 
     function getFiscalMonthIndex(week, year) {
-      const month = getIsoWeekMonday(Number(year), Number(week)).getUTCMonth();
+      const month = getIsoWeekReferenceDate(Number(year), Number(week)).getUTCMonth();
       return (month + 3) % 12;
     }
 
@@ -698,6 +699,9 @@
     function buildMonthlyCumulative(entries, fiscalYears, getter) {
       const sumsByYear = new Map();
       const countsByYear = new Map();
+      const currentIso = getCurrentIsoWeekYear();
+      const currentFiscalYear = getFiscalYearForWeek(currentIso.week, currentIso.year);
+      const currentFiscalMonthIndex = ((new Date()).getMonth() + 3) % 12;
 
       fiscalYears.forEach(fy => {
         sumsByYear.set(fy, Array(12).fill(0));
@@ -708,7 +712,10 @@
         const fy = getFiscalYearForWeek(Number(entry.week), Number(entry.year));
         if (!sumsByYear.has(fy)) return;
         const monthIndex = getFiscalMonthIndex(entry.week, entry.year);
-        const value = getter(entry);
+        const rawValue = getter(entry);
+        const hasValue = rawValue !== null && rawValue !== undefined && Number(rawValue) > 0;
+        if (!hasValue) return;
+        const value = Number(rawValue);
         sumsByYear.get(fy)[monthIndex] += toFin(value);
         countsByYear.get(fy)[monthIndex] += 1;
       });
@@ -717,9 +724,12 @@
         const monthlySums = sumsByYear.get(fy);
         const monthlyCounts = countsByYear.get(fy);
         const lastMonthWithData = monthlyCounts.reduce((acc, count, monthIndex) => count > 0 ? monthIndex : acc, -1);
+        const displayLimit = fy === currentFiscalYear
+          ? Math.min(lastMonthWithData, currentFiscalMonthIndex)
+          : lastMonthWithData;
         let running = 0;
         const data = monthlySums.map((value, monthIndex) => {
-          if (lastMonthWithData === -1 || monthIndex > lastMonthWithData) return null;
+          if (displayLimit === -1 || monthIndex > displayLimit) return null;
           running += value;
           return running;
         });
