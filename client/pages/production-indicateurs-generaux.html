@@ -755,6 +755,13 @@
       };
     }
 
+    const EXERCISE_COMPARISON_COLORS = [
+      '#1D4E89', // bleu soutenu
+      '#D97706', // orange
+      '#0F766E', // teal
+      '#B91C1C'  // rouge profond
+    ];
+
     function buildCharts() {
       const allRaw = getCBCOProductiviteData();
       const nowIso = getCurrentIsoWeekYear();
@@ -872,8 +879,10 @@
 
       // Poutres : SC + Ultra + Total (3 courbes)
       makeChart('chartPoutres', [
-        ds('Speedcut (m³)',     scVals,    '#9aa1ab'),
-        ds('Ultra (m³)',        ultraVals, '#5a7eb3'),
+        { ...ds('Speedcut (m³)', scVals, '#D97706'),
+          backgroundColor: 'rgba(217,119,6,0.06)' },
+        { ...ds('Ultra (m³)', ultraVals, '#0F766E'),
+          backgroundColor: 'rgba(15,118,110,0.06)' },
         { ...ds('Total SC+Ultra (m³)', totalVals, '#2a4a72', 2.5),
           borderDash: undefined,
           backgroundColor: 'rgba(42,74,114,0.06)' }
@@ -888,17 +897,12 @@
       // Surface assemblée
       makeChart('chartASSEMBLAGE', [ds('Surface assemblée (m²)',assembVals, '#8f4a13')], labels, 'm²');
 
-      const monthlyColors = ['#1f4e79', '#6d8bb3', '#9fb4ce', '#cad6e6'];
-      const monthlyGold = ['#b88600', '#d2a73a', '#e3c777', '#f0dfab'];
-      const monthlyGreen = ['#2d6b1a', '#5f9650', '#92be86', '#c4debc'];
-      const monthlyRust = ['#8f4a13', '#b26f3f', '#cb9a77', '#e6c7b1'];
-
       const poutresMonthly = buildMonthlyCumulative(all, comparisonYears, entry => toFin(entry.speedcutM3) + toFin(entry.ultraM3));
       makeComparisonChart('chartPoutresMonthly',
         poutresMonthly.map(({ fy, data, index }) => monthlyDataset(
           fiscalYearLabel(fy),
           data,
-          monthlyColors[Math.min(index, monthlyColors.length - 1)],
+          EXERCISE_COMPARISON_COLORS[Math.min(index, EXERCISE_COMPARISON_COLORS.length - 1)],
           index === 0
         )),
         FISCAL_MONTH_LABELS,
@@ -910,7 +914,7 @@
         extraMonthly.map(({ fy, data, index }) => monthlyDataset(
           fiscalYearLabel(fy),
           data,
-          monthlyGold[Math.min(index, monthlyGold.length - 1)],
+          EXERCISE_COMPARISON_COLORS[Math.min(index, EXERCISE_COMPARISON_COLORS.length - 1)],
           index === 0
         )),
         FISCAL_MONTH_LABELS,
@@ -922,7 +926,7 @@
         collageMonthly.map(({ fy, data, index }) => monthlyDataset(
           fiscalYearLabel(fy),
           data,
-          monthlyGreen[Math.min(index, monthlyGreen.length - 1)],
+          EXERCISE_COMPARISON_COLORS[Math.min(index, EXERCISE_COMPARISON_COLORS.length - 1)],
           index === 0
         )),
         FISCAL_MONTH_LABELS,
@@ -934,7 +938,7 @@
         assemblageMonthly.map(({ fy, data, index }) => monthlyDataset(
           fiscalYearLabel(fy),
           data,
-          monthlyRust[Math.min(index, monthlyRust.length - 1)],
+          EXERCISE_COMPARISON_COLORS[Math.min(index, EXERCISE_COMPARISON_COLORS.length - 1)],
           index === 0
         )),
         FISCAL_MONTH_LABELS,
