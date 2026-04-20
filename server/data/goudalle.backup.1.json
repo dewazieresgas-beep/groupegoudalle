@@ -13712,5 +13712,3339 @@
       "updatedAt": "2026-04-20T09:27:41.854Z",
       "updatedBy": "excel-auto"
     }
+  ],
+  "cbco_productivite_excel_config": {
+    "folder": "Z:\\05-Production (CUB)\\4-Production\\00-KPI",
+    "filename": "KPI",
+    "active": true,
+    "lastSync": "2026-04-20T09:27:41.864Z",
+    "lastSyncResult": {
+      "added": 163,
+      "updated": 0
+    }
+  },
+  "sylve_balance": {
+    "cbco": [
+      {
+        "id": "mmol5zv14y1vu",
+        "importDate": "2026-03-13T07:39:21.421Z",
+        "mois": 2,
+        "annee": 2026,
+        "periode": "",
+        "clients": [
+          {
+            "compte": "",
+            "client": "KLH",
+            "solde": 33041.67,
+            "nonEchu": 33041.67,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 0,
+            "section": "Clients"
+          },
+          {
+            "compte": "",
+            "client": "BLOT ELECTRICITE",
+            "solde": 8400,
+            "nonEchu": 8400,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 0,
+            "section": "Clients ├á 20%"
+          },
+          {
+            "compte": "",
+            "client": "C2B",
+            "solde": 42520.8,
+            "nonEchu": 42520.8,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 0,
+            "section": "Clients ├á 20%"
+          },
+          {
+            "compte": "",
+            "client": "DAUSSY CHARPENTE",
+            "solde": 7816.8,
+            "nonEchu": 7816.8,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 0,
+            "section": "Clients ├á 20%"
+          },
+          {
+            "compte": "",
+            "client": "DUVAL Couvertures",
+            "solde": 18137.96,
+            "nonEchu": 18137.96,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 0,
+            "section": "Clients ├á 20%"
+          },
+          {
+            "compte": "",
+            "client": "EFITEK",
+            "solde": 6921.22,
+            "nonEchu": 6921.22,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 0,
+            "section": "Clients ├á 20%"
+          },
+          {
+            "compte": "",
+            "client": "SAS Goudalle Charpente",
+            "solde": 1257996.37,
+            "nonEchu": 134039.18,
+            "j1_30": 152468.73,
+            "j31_45": 0,
+            "j46_60": 200323.69,
+            "j61_plus": 771164.77,
+            "section": "Clients ├á 20%"
+          },
+          {
+            "compte": "",
+            "client": "JV RENOV",
+            "solde": 1224.9100000000035,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 1224.9100000000035,
+            "section": "Clients ├á 20%"
+          },
+          {
+            "compte": "",
+            "client": "LA MAGREVILLE",
+            "solde": 839.27,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 839.27,
+            "section": "Clients ├á 20%"
+          },
+          {
+            "compte": "",
+            "client": "MARCANTERRA",
+            "solde": 2850,
+            "nonEchu": 2850,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 0,
+            "section": "Clients ├á 20%"
+          },
+          {
+            "compte": "",
+            "client": "METROPOLE MENUISERIE",
+            "solde": 2788.32,
+            "nonEchu": 2788.32,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 0,
+            "section": "Clients ├á 20%"
+          },
+          {
+            "compte": "",
+            "client": "ROSSINI ENERGY",
+            "solde": 9911.02,
+            "nonEchu": 9911.02,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 0,
+            "section": "Clients ├á 20%"
+          },
+          {
+            "compte": "",
+            "client": "SOCIETE DE CONSTRUCTIONS ECOLOGIQUES",
+            "solde": 12163.61,
+            "nonEchu": 12163.61,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 0,
+            "section": "Clients ├á 20%"
+          },
+          {
+            "compte": "",
+            "client": "EURL SEF",
+            "solde": 2948.87,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 2948.87,
+            "section": "Clients ├á 20%"
+          },
+          {
+            "compte": "",
+            "client": "SEHEN PHOTOVOLTAIQUE",
+            "solde": 65788,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 65788,
+            "section": "Clients ├á 20%"
+          },
+          {
+            "compte": "",
+            "client": "SNGM",
+            "solde": 3281.82,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 3281.82,
+            "j61_plus": 0,
+            "section": "Clients ├á 20%"
+          }
+        ]
+      }
+    ],
+    "gc": [
+      {
+        "id": "mmol6fp1eski8",
+        "importDate": "2026-03-13T07:39:41.941Z",
+        "mois": 2,
+        "annee": 2026,
+        "periode": "",
+        "clients": [
+          {
+            "compte": "",
+            "client": "CHU AMIENS - CRECHE",
+            "solde": 51718.59999999998,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 51718.59999999998,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "AVENTIM OIKOS",
+            "solde": 4064.4000000000233,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 4064.4000000000233,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "AVESNES SUR HEPES",
+            "solde": 6180,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 6180,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "BERCK ECOLE DE VOILE",
+            "solde": 1323.7900000000009,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 1323.7900000000009,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "BLANCHEMAILLE",
+            "solde": 40501.869999999995,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 40501.869999999995,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "Mr BODIN Daniel - EARL Grand Crocq",
+            "solde": 12077.16,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 12077.16,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "EARL BOLLART PRODUCTION",
+            "solde": 64879.44,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 64879.44,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "LYCEE CH.BRASSEUR BOURBOURG",
+            "solde": 477060.18,
+            "nonEchu": 477060.18,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 0,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "BREUIL LE VERT",
+            "solde": 80500.85999999999,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 80500.85999999999,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "BUIRE LE SEC",
+            "solde": 255076.91999999998,
+            "nonEchu": 74334.84,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 180742.08,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "CALLENS SERGE",
+            "solde": 12964.66,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 12964.66,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "CANAPLE LOUIS",
+            "solde": 63207.13,
+            "nonEchu": 63207.13,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 0,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "CBCO CUB",
+            "solde": 4575,
+            "nonEchu": 567,
+            "j1_30": 4008,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 0,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "CHU LILLE",
+            "solde": 9499.11,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 9499.11,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "MOULIN CLAIRMARAIS",
+            "solde": 46004.77,
+            "nonEchu": 0,
+            "j1_30": 46004.77,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 0,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "COBAT CONSTRUCTEURS",
+            "solde": 126000,
+            "nonEchu": 0,
+            "j1_30": 126000,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 0,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "MAIRIE DE CREIL",
+            "solde": 100817.12999999989,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 100817.12999999989,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "EARL CREPIN",
+            "solde": 907.2,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 907.2,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "COMMUNE DE DANNES",
+            "solde": 21172.280000000028,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 21172.280000000028,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "DEBERDT EMMANUEL - BIO PLANTS",
+            "solde": 862.2,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 862.2,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "DELANNOY DEWAILLY",
+            "solde": 720,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 720,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "EARL DELATTRE BENOIT",
+            "solde": 20000,
+            "nonEchu": 0,
+            "j1_30": 20000,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 0,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "DELATTRE CYRIL",
+            "solde": 788.99,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 788.99,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "GAEC DELPLACE",
+            "solde": 39025.29999999998,
+            "nonEchu": 15833.38,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 23191.919999999984,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "DESMAZIERES",
+            "solde": 25384.23999999999,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 25384.23999999999,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "Mr DE SAINTE MARESVILLE  Vincent",
+            "solde": 13203.78,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 13203.78,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "COMMUNE DE DOUDEAUVILLE",
+            "solde": 7819.820000000007,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 7819.820000000007,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "DUBOELLE - EARL DU MOULIN",
+            "solde": 12054.63,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 12054.63,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "ECOSPACE 2",
+            "solde": 12904.680000000022,
+            "nonEchu": 0,
+            "j1_30": 12904.680000000022,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 0,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "ELOY ARNAUD - EARL LA PRAIRIE",
+            "solde": 129.02,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 129.02,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "ENNETIERES EN WEPPES",
+            "solde": 11071.110000000015,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 11071.110000000015,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "VILLE EPERNAY",
+            "solde": 184636.06999999998,
+            "nonEchu": 178722.04,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 5914.02999999997,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "ETEX",
+            "solde": 3603,
+            "nonEchu": 0,
+            "j1_30": 3603,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 0,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "EUROTUNNEL",
+            "solde": 88535.72,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 88535.72,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "FECHAIN - CONSTRUCTION MEDIATHEQUE/GARDERIE",
+            "solde": 10734.29,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 10734.29,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "FLORET FRERES",
+            "solde": 6391.68,
+            "nonEchu": 0,
+            "j1_30": 6391.68,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 0,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "FONTAINE JEAN LUC",
+            "solde": 2361.58,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 2361.58,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "FP TERRASSEMENT",
+            "solde": 2862.9,
+            "nonEchu": 2862.9,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 0,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "Garage d'Hucqueliers",
+            "solde": 780,
+            "nonEchu": 0,
+            "j1_30": 780,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 0,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "VILLE DE GENNEVILLIERS",
+            "solde": 16775.059999999998,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 16775.059999999998,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "GREBERT Philippe",
+            "solde": 23449.869999999995,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 23449.869999999995,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "GREEN CONSTRUCTION",
+            "solde": 56840.89,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 56840.89,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "HANQUEZ PASCAL",
+            "solde": 2280,
+            "nonEchu": 0,
+            "j1_30": 2280,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 0,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "HESDIN GS",
+            "solde": 100934.38,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 100934.38,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "HEUX VALENTIN",
+            "solde": 258,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 258,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "IMT NORD EUROPE",
+            "solde": 5742,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 5742,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "KEO ENERGIES 4 - DEVIENNE",
+            "solde": 6109.44,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 6109.44,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "KEO ENERGIES 6 - VINDEVOGEL",
+            "solde": 11403.419999999998,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 11403.419999999998,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "KEO ENERGIES - FIERS",
+            "solde": 98738.26000000001,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 98738.26000000001,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "LA CHAPELLE D'ARMENTIERES - BARTIER",
+            "solde": 177909.17,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 177909.17,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "LAMBERSART - Extension Ecole La Fontaine",
+            "solde": 444.1900000000005,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 444.1900000000005,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "GAEC LARGILLIERE",
+            "solde": 12632.080000000002,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 12632.080000000002,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "LA SENTINELLE",
+            "solde": 70477.10999999987,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 70477.10999999987,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "LECERF GAEC Beaucamp",
+            "solde": 9258.79,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 9258.79,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "LECOMTE EMMANUEL",
+            "solde": 1620,
+            "nonEchu": 1620,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 0,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "LES PETITES BOTTES - MICRO CRECHE",
+            "solde": 217.56,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 217.56,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "COMMUNE DE LONGFOSSE",
+            "solde": 208381.31,
+            "nonEchu": 0,
+            "j1_30": 206927.46,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 1453.8499999999985,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "LOON PLAGE",
+            "solde": 6545.130000000005,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 6545.130000000005,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "Mairie de Preures",
+            "solde": 420,
+            "nonEchu": 0,
+            "j1_30": 420,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 0,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "MATASA",
+            "solde": 10853.98999999999,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 10853.98999999999,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "MECS SANGATTE",
+            "solde": 1680.0099999999998,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 1680.0099999999998,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "MESNIL AUBRY",
+            "solde": 5904.880000000005,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 5904.880000000005,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "MORIAUX CLEMENT",
+            "solde": 1601.71,
+            "nonEchu": 0,
+            "j1_30": 1271.71,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 330,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "PAPILLONS BLANCS",
+            "solde": 12269.779999999999,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 12269.779999999999,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "MAIRIE DE PECQUENCOURT",
+            "solde": 4193.720000000001,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 4193.720000000001,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "COMMUNE PETIT CAUX",
+            "solde": 13398.98999999999,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 13398.98999999999,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "PRECY SUR OISE",
+            "solde": 2299.3700000000026,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 2299.3700000000026,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "SCI RANDANNE",
+            "solde": 5382.6600000000035,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 5382.6600000000035,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "SAINT SAULVE",
+            "solde": 95061.7,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 95061.7,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "MAIRIE DE SANGATTE",
+            "solde": 12074.429999999993,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 12074.429999999993,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "SCI LAGRANGE",
+            "solde": 14701.8,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 14701.8,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "SEHEN PHOTOVOLTAIQUE",
+            "solde": 2052,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 2052,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "SEM VILLE RENOUVELEE",
+            "solde": 59627.4,
+            "nonEchu": 59627.4,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 0,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "POLE SCOLAIRE SEVIGNE LOMME",
+            "solde": 9877.609999999986,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 9877.609999999986,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "Soci├®t├® STM",
+            "solde": 91788.62,
+            "nonEchu": 0,
+            "j1_30": 91788.62,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 0,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "TAGNON",
+            "solde": 17228.899999999994,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 17228.899999999994,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "TERENEO - ILOT11",
+            "solde": 26715.069999999832,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 26715.069999999832,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "TERENEO MONS",
+            "solde": 33781.51000000024,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 33781.51000000024,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "TERLUTTE",
+            "solde": 35408.45,
+            "nonEchu": 35408.45,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 0,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "VILLIERS LE BEL",
+            "solde": 89132.23,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 89132.23,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "MAIRIE DE WIMEREUX",
+            "solde": 11585.48999999999,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 11585.48999999999,
+            "section": "Clients 20%"
+          },
+          {
+            "compte": "",
+            "client": "AMAZON",
+            "solde": 12351.849999999977,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 12351.849999999977,
+            "section": "Clients AUTOLIQUIDATION"
+          },
+          {
+            "compte": "",
+            "client": "BC NORD",
+            "solde": 43291.44,
+            "nonEchu": 0,
+            "j1_30": 43291.44,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 0,
+            "section": "Clients AUTOLIQUIDATION"
+          },
+          {
+            "compte": "",
+            "client": "COMMUNE FRUGES - COLLEGE",
+            "solde": 3307.270000000004,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 3307.270000000004,
+            "section": "Clients AUTOLIQUIDATION"
+          },
+          {
+            "compte": "",
+            "client": "FAYAT GODINOT",
+            "solde": 15000,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 15000,
+            "section": "Clients AUTOLIQUIDATION"
+          },
+          {
+            "compte": "",
+            "client": "Mr GOUDALLE Jos├®",
+            "solde": 3500,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 3500,
+            "section": "Clients AUTOLIQUIDATION"
+          },
+          {
+            "compte": "",
+            "client": "HDF CONSTRUCTION",
+            "solde": 10707,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 10707,
+            "section": "Clients AUTOLIQUIDATION"
+          },
+          {
+            "compte": "",
+            "client": "NORD FRANCE CONSTRUCTIONS",
+            "solde": 48835.87000000001,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 48835.87000000001,
+            "section": "Clients AUTOLIQUIDATION"
+          },
+          {
+            "compte": "",
+            "client": "RAMERY CUD TRI",
+            "solde": 1080.510000000002,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 1080.510000000002,
+            "section": "Clients AUTOLIQUIDATION"
+          },
+          {
+            "compte": "",
+            "client": "RAMERY EQIOM",
+            "solde": 19488.259999999987,
+            "nonEchu": 0,
+            "j1_30": 5221.74,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 14266.51999999999,
+            "section": "Clients AUTOLIQUIDATION"
+          },
+          {
+            "compte": "",
+            "client": "SICAE MENHIR",
+            "solde": 4125,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 4125,
+            "section": "Clients AUTOLIQUIDATION"
+          },
+          {
+            "compte": "",
+            "client": "COMMUNE DE SAINT SOUPLET",
+            "solde": 86093.11,
+            "nonEchu": 0,
+            "j1_30": 86093.11,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 0,
+            "section": "Clients AUTOLIQUIDATION"
+          },
+          {
+            "compte": "",
+            "client": "ADAPEI 80",
+            "solde": 3548.5800000000017,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 3548.5800000000017,
+            "section": "Clients 10 %"
+          },
+          {
+            "compte": "",
+            "client": "SCI GRAMASVANDEGOR",
+            "solde": 18476.640000000003,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 18476.640000000003,
+            "section": "Clients 10 %"
+          },
+          {
+            "compte": "",
+            "client": "GREEN CONSTRUCTION",
+            "solde": 4413.97,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 4413.97,
+            "section": "Clients 10 %"
+          }
+        ]
+      }
+    ],
+    "gm": [
+      {
+        "id": "mmol6sfskuncq",
+        "importDate": "2026-03-13T07:39:58.456Z",
+        "mois": 2,
+        "annee": 2026,
+        "periode": "",
+        "clients": [
+          {
+            "compte": "",
+            "client": "AVESNES SUR HELPE",
+            "solde": 5034.689999999988,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 5034.689999999988,
+            "section": "Clients soumis ├á TVA 20%"
+          },
+          {
+            "compte": "",
+            "client": "BETAZ - CHEVRERIE DE LA SLACK",
+            "solde": 22739.4,
+            "nonEchu": 22739.4,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 0,
+            "section": "Clients soumis ├á TVA 20%"
+          },
+          {
+            "compte": "",
+            "client": "BEUTIN Alain - EARL DU CEDRE BLEU",
+            "solde": 36022.56,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 36022.56,
+            "section": "Clients soumis ├á TVA 20%"
+          },
+          {
+            "compte": "",
+            "client": "CANAPLES Louis",
+            "solde": 12273.29,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 12273.29,
+            "section": "Clients soumis ├á TVA 20%"
+          },
+          {
+            "compte": "",
+            "client": "CATOIR - SCEA des Pr├¿s Fleuris",
+            "solde": 4030.600000000006,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 4030.600000000006,
+            "section": "Clients soumis ├á TVA 20%"
+          },
+          {
+            "compte": "",
+            "client": "CBCO",
+            "solde": 3025.92,
+            "nonEchu": 1093.92,
+            "j1_30": 117,
+            "j31_45": 0,
+            "j46_60": 148.5,
+            "j61_plus": 1666.5,
+            "section": "Clients soumis ├á TVA 20%"
+          },
+          {
+            "compte": "",
+            "client": "COMMUNE DANNES",
+            "solde": 16503.809999999998,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 16503.809999999998,
+            "section": "Clients soumis ├á TVA 20%"
+          },
+          {
+            "compte": "",
+            "client": "EARL DELATTRE",
+            "solde": 7000,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 7000,
+            "section": "Clients soumis ├á TVA 20%"
+          },
+          {
+            "compte": "",
+            "client": "Sct├® DESCAMPS BETHUNE",
+            "solde": 2736,
+            "nonEchu": 2736,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 0,
+            "section": "Clients soumis ├á TVA 20%"
+          },
+          {
+            "compte": "",
+            "client": "DILLY - SCEA LAIT LOU",
+            "solde": 52188.78999999999,
+            "nonEchu": 0,
+            "j1_30": 52188.78999999999,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 0,
+            "section": "Clients soumis ├á TVA 20%"
+          },
+          {
+            "compte": "",
+            "client": "DULOT . GAEC DE LA BOUVERDERIE",
+            "solde": 522.3400000000001,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 522.3400000000001,
+            "section": "Clients soumis ├á TVA 20%"
+          },
+          {
+            "compte": "",
+            "client": "GCC HAUT DE FRANCE",
+            "solde": 9000,
+            "nonEchu": 9000,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 0,
+            "section": "Clients soumis ├á TVA 20%"
+          },
+          {
+            "compte": "",
+            "client": "GOUDALLE CHARPENTE",
+            "solde": 149605.98,
+            "nonEchu": 4615.5,
+            "j1_30": 2703,
+            "j31_45": 1214.9,
+            "j46_60": 27942,
+            "j61_plus": 113130.58,
+            "section": "Clients soumis ├á TVA 20%"
+          },
+          {
+            "compte": "",
+            "client": "LONGFOSSE : salle associative sportives culturelles",
+            "solde": 45876.580000000016,
+            "nonEchu": 38112.91,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 7763.670000000013,
+            "section": "Clients soumis ├á TVA 20%"
+          },
+          {
+            "compte": "",
+            "client": "MATAICH",
+            "solde": 7159.040000000008,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 7159.040000000008,
+            "section": "Clients soumis ├á TVA 20%"
+          },
+          {
+            "compte": "",
+            "client": "SCCV ORIGIN S PARK - B├ót G",
+            "solde": 7500,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 7500,
+            "section": "Clients soumis ├á TVA 20%"
+          },
+          {
+            "compte": "",
+            "client": "ROGER DELATTRE",
+            "solde": 942,
+            "nonEchu": 0,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 942,
+            "section": "Clients soumis ├á TVA 20%"
+          },
+          {
+            "compte": "",
+            "client": "ROUSSEL - SCEA DU BOIS DES DAMES",
+            "solde": 34512.46,
+            "nonEchu": 34512.46,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 0,
+            "section": "Clients soumis ├á TVA 20%"
+          },
+          {
+            "compte": "",
+            "client": "GOUDALLE CHARPENTE",
+            "solde": 35216.7,
+            "nonEchu": 33598.46,
+            "j1_30": 0,
+            "j31_45": 0,
+            "j46_60": 0,
+            "j61_plus": 1618.24,
+            "section": "Client TVA Autoliquid├®"
+          }
+        ]
+      }
+    ]
+  },
+  "sylve_paiements": {
+    "gc::mmol6fp1eski8::BUIRE LE SEC": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 180742.08
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 180742.08,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "Mandat├®",
+      "updatedAt": "2026-03-13T07:42:05.261Z"
+    },
+    "gc::mmol6fp1eski8::LA CHAPELLE D'ARMENTIERES - BARTIER": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 177909.17
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 177909.17,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "Mandat├®",
+      "updatedAt": "2026-03-13T07:42:09.746Z"
+    },
+    "gc::mmol6fp1eski8::COBAT CONSTRUCTEURS": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 126000
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 126000,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "Situation de fin janvier",
+      "updatedAt": "2026-03-13T07:42:16.001Z"
+    },
+    "gc::mmol6fp1eski8::HESDIN GS": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 100934.38
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 100934.38,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:42:16.787Z"
+    },
+    "gc::mmol6fp1eski8::MAIRIE DE CREIL": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 100817.13
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 100817.13,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "Mandat├®",
+      "updatedAt": "2026-03-13T07:42:27.836Z"
+    },
+    "gc::mmol6fp1eski8::KEO ENERGIES - FIERS": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 98738.26
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 98738.26,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "relance faite lors du RDV du 10/02, mail le 24/02",
+      "updatedAt": "2026-03-13T07:42:38.315Z"
+    },
+    "gc::mmol6fp1eski8::SAINT SAULVE": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 95061.7
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 95061.7,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "Pb chorus et DC4",
+      "updatedAt": "2026-03-13T07:42:49.706Z"
+    },
+    "gc::mmol6fp1eski8::Soci├®t├® STM": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 91788.62
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 91788.62,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:42:50.433Z"
+    },
+    "gc::mmol6fp1eski8::VILLIERS LE BEL": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 89132.23
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 89132.23,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "Mandatement OK",
+      "updatedAt": "2026-03-13T07:43:16.905Z"
+    },
+    "gc::mmol6fp1eski8::EUROTUNNEL": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 88535.72
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 88535.72,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:43:22.278Z"
+    },
+    "gc::mmol6fp1eski8::COMMUNE DE SAINT SOUPLET": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 86093.11
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 86093.11,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "Situation de fin janvier",
+      "updatedAt": "2026-03-13T07:43:48.257Z"
+    },
+    "gc::mmol6fp1eski8::BREUIL LE VERT": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 80500.86
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 80500.86,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "├á relancer",
+      "updatedAt": "2026-03-13T07:43:50.547Z"
+    },
+    "gc::mmol6fp1eski8::LA SENTINELLE": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 70477.11
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 70477.11,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:43:29.328Z"
+    },
+    "gc::mmol6fp1eski8::EARL BOLLART PRODUCTION": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 64879.44
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 64879.44,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "├á relancer",
+      "updatedAt": "2026-03-13T07:44:00.747Z"
+    },
+    "gc::mmol6fp1eski8::MOULIN CLAIRMARAIS": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 46004.77
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 46004.77,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "Situation de fin janvier",
+      "updatedAt": "2026-03-13T07:44:19.923Z"
+    },
+    "gc::mmol6fp1eski8::BC NORD": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 43291.44
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 43291.44,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "Situation de fin janvier",
+      "updatedAt": "2026-03-13T07:44:30.741Z"
+    },
+    "gc::mmol6fp1eski8::TERENEO MONS": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 33781.51
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 33781.51,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:44:07.338Z"
+    },
+    "gc::mmol6fp1eski8::TERENEO - ILOT11": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 26715.07
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 26715.07,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:44:09.671Z"
+    },
+    "gc::mmol6fp1eski8::GAEC DELPLACE": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 23191.92
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 23191.92,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:44:31.631Z"
+    },
+    "gc::mmol6fp1eski8::EARL DELATTRE BENOIT": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 20000
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 20000,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "Relance faite ce jour",
+      "updatedAt": "2026-03-13T07:44:45.988Z"
+    },
+    "gc::mmol6fp1eski8::TAGNON": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 17228.9
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 17228.9,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:44:46.653Z"
+    },
+    "gc::mmol6fp1eski8::SCI LAGRANGE": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 14701.8
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 14701.8,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:44:50.786Z"
+    },
+    "gc::mmol6fp1eski8::GAEC LARGILLIERE": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 12632.08
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 12632.08,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:44:55.818Z"
+    },
+    "gc::mmol6fp1eski8::Mr BODIN Daniel - EARL Grand Crocq": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 12077.16
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 12077.16,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "├á relancer",
+      "updatedAt": "2026-03-13T07:45:15.074Z"
+    },
+    "gc::mmol6fp1eski8::DUBOELLE - EARL DU MOULIN": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 12054.63
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 12054.63,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:45:16.196Z"
+    },
+    "gc::mmol6fp1eski8::KEO ENERGIES 6 - VINDEVOGEL": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 11403.42
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 11403.42,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "relance faite lors du RDV du 10/02, mail le 24/02",
+      "updatedAt": "2026-03-13T07:45:28.092Z"
+    },
+    "gc::mmol6fp1eski8::HDF CONSTRUCTION": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 10707
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 10707,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:45:30.754Z"
+    },
+    "gc::mmol6fp1eski8::LECERF GAEC Beaucamp": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 9258.79
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 9258.79,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:45:36.536Z"
+    },
+    "gc::mmol6fp1eski8::FLORET FRERES": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 6391.68
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 6391.68,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:45:43.931Z"
+    },
+    "gc::mmol6fp1eski8::KEO ENERGIES 4 - DEVIENNE": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 6109.44
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 6109.44,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "relance faite lors du RDV du 10/02, mail le 24/02",
+      "updatedAt": "2026-03-13T07:45:56.118Z"
+    },
+    "gc::mmol6fp1eski8::CBCO CUB": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 4008
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 4008,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:45:57.154Z"
+    },
+    "gc::mmol6fp1eski8::ETEX": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 3603
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 3603,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:46:03.641Z"
+    },
+    "gc::mmol6fp1eski8::Mr GOUDALLE Jos├®": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 3500
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 3500,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:46:06.521Z"
+    },
+    "gc::mmol6fp1eski8::FONTAINE JEAN LUC": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 2361.58
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 2361.58,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:46:09.416Z"
+    },
+    "gc::mmol6fp1eski8::HANQUEZ PASCAL": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 2280
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 2280,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:46:13.999Z"
+    },
+    "gc::mmol6fp1eski8::SEHEN PHOTOVOLTAIQUE": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 2052
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 2052,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:46:16.474Z"
+    },
+    "gc::mmol6fp1eski8::MORIAUX CLEMENT": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 1601.71
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 1601.71,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:46:20.195Z"
+    },
+    "gc::mmol6fp1eski8::EARL CREPIN": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 907.2
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 907.2,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:46:24.191Z"
+    },
+    "gc::mmol6fp1eski8::DEBERDT EMMANUEL - BIO PLANTS": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 862.2
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 862.2,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "├á relancer",
+      "updatedAt": "2026-03-13T07:46:57.231Z"
+    },
+    "gc::mmol6fp1eski8::Garage d'Hucqueliers": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 780
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 780,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:46:57.942Z"
+    },
+    "gc::mmol6fp1eski8::Mairie de Preures": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 420
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 420,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:47:00.679Z"
+    },
+    "gc::mmol6fp1eski8::HEUX VALENTIN": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 258
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 258,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:47:03.327Z"
+    },
+    "gc::mmol6fp1eski8::LES PETITES BOTTES - MICRO CRECHE": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 217.56
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 217.56,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "├á relancer",
+      "updatedAt": "2026-03-13T07:47:11.930Z"
+    },
+    "gc::mmol6fp1eski8::ELOY ARNAUD - EARL LA PRAIRIE": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 129.02
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 129.02,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:47:12.897Z"
+    },
+    "gc::mmol6fp1eski8::GREBERT Philippe": {
+      "selectedTypes": [
+        "avec_reserves"
+      ],
+      "amounts": {
+        "avec_reserves": 23449.87
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": true,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 23449.87,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:47:32.209Z"
+    },
+    "gc::mmol6fp1eski8::CALLENS SERGE": {
+      "selectedTypes": [
+        "avec_reserves"
+      ],
+      "amounts": {
+        "avec_reserves": 12964.67
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": true,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 12964.67,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "Pb Chantier Marc, r├®serves ├á lever",
+      "updatedAt": "2026-03-13T07:47:48.991Z"
+    },
+    "gc::mmol6fp1eski8::GREEN CONSTRUCTION": {
+      "selectedTypes": [
+        "litiges"
+      ],
+      "amounts": {
+        "litiges": 4413.97
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": true,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 4413.97,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "Arnaud RDV le 25/02",
+      "updatedAt": "2026-03-13T07:48:19.747Z"
+    },
+    "gc::mmol6fp1eski8::DESMAZIERES": {
+      "selectedTypes": [
+        "litiges"
+      ],
+      "amounts": {
+        "litiges": 25384.24
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": true,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 25384.24,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:48:04.138Z"
+    },
+    "gc::mmol6fp1eski8::CHU AMIENS - CRECHE": {
+      "selectedTypes": [
+        "rg_attente",
+        "regle"
+      ],
+      "amounts": {
+        "rg_attente": 29878.42,
+        "regle": 21840
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": true,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 29878.42,
+      "litiges": 0,
+      "solde": 21840,
+      "acompte": 0,
+      "commentaire": "Somme en attente BPI : 21840,18 Ôé¼, solde RG",
+      "updatedAt": "2026-03-13T07:48:53.676Z"
+    },
+    "gc::mmol6fp1eski8::NORD FRANCE CONSTRUCTIONS": {
+      "selectedTypes": [
+        "rg_attente"
+      ],
+      "amounts": {
+        "rg_attente": 48835.87
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 48835.87,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:48:55.798Z"
+    },
+    "gc::mmol6fp1eski8::COMMUNE DE DANNES": {
+      "selectedTypes": [
+        "rg_attente"
+      ],
+      "amounts": {
+        "rg_attente": 21172.28
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 21172.28,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "RG lib├®rable",
+      "updatedAt": "2026-03-13T07:49:08.144Z"
+    },
+    "gc::mmol6fp1eski8::RAMERY EQIOM": {
+      "selectedTypes": [
+        "rg_attente"
+      ],
+      "amounts": {
+        "rg_attente": 19488.26
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 19488.26,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:49:10.265Z"
+    },
+    "gc::mmol6fp1eski8::VILLE DE GENNEVILLIERS": {
+      "selectedTypes": [
+        "rg_attente"
+      ],
+      "amounts": {
+        "rg_attente": 16775.06
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 16775.06,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "RG lib├®rable",
+      "updatedAt": "2026-03-13T07:49:17.743Z"
+    },
+    "gc::mmol6fp1eski8::FAYAT GODINOT": {
+      "selectedTypes": [
+        "rg_attente"
+      ],
+      "amounts": {
+        "rg_attente": 15000
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 15000,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:49:19.423Z"
+    },
+    "gc::mmol6fp1eski8::COMMUNE PETIT CAUX": {
+      "selectedTypes": [
+        "rg_attente"
+      ],
+      "amounts": {
+        "rg_attente": 13398.99
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 13398.99,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:49:30.785Z"
+    },
+    "gc::mmol6fp1eski8::AMAZON": {
+      "selectedTypes": [
+        "rg_attente"
+      ],
+      "amounts": {
+        "rg_attente": 12351.85
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 12351.85,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "RG lib├®rable",
+      "updatedAt": "2026-03-13T07:49:40.522Z"
+    },
+    "gc::mmol6fp1eski8::PAPILLONS BLANCS": {
+      "selectedTypes": [
+        "rg_attente"
+      ],
+      "amounts": {
+        "rg_attente": 12269.78
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 12269.78,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:49:41.811Z"
+    },
+    "gc::mmol6fp1eski8::MAIRIE DE SANGATTE": {
+      "selectedTypes": [
+        "rg_attente"
+      ],
+      "amounts": {
+        "rg_attente": 12074.43
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 12074.43,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:49:46.700Z"
+    },
+    "gc::mmol6fp1eski8::MAIRIE DE WIMEREUX": {
+      "selectedTypes": [
+        "rg_attente"
+      ],
+      "amounts": {
+        "rg_attente": 11585.49
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 11585.49,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:49:49.888Z"
+    },
+    "gc::mmol6fp1eski8::ENNETIERES EN WEPPES": {
+      "selectedTypes": [
+        "rg_attente"
+      ],
+      "amounts": {
+        "rg_attente": 11071.11
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 11071.11,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "RG lib├®rable",
+      "updatedAt": "2026-03-13T07:50:02.340Z"
+    },
+    "gc::mmol6fp1eski8::MATASA": {
+      "selectedTypes": [
+        "rg_attente"
+      ],
+      "amounts": {
+        "rg_attente": 10853.99
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 10853.99,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:50:07.723Z"
+    },
+    "gc::mmol6fp1eski8::FECHAIN - CONSTRUCTION MEDIATHEQUE/GARDERIE": {
+      "selectedTypes": [
+        "rg_attente"
+      ],
+      "amounts": {
+        "rg_attente": 10734.29
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 10734.29,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "RG lib├®rable",
+      "updatedAt": "2026-03-13T07:50:17.961Z"
+    },
+    "gc::mmol6fp1eski8::POLE SCOLAIRE SEVIGNE LOMME": {
+      "selectedTypes": [
+        "rg_attente"
+      ],
+      "amounts": {
+        "rg_attente": 9877.61
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 9877.61,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:50:19.348Z"
+    },
+    "gc::mmol6fp1eski8::CHU LILLE": {
+      "selectedTypes": [
+        "rg_attente"
+      ],
+      "amounts": {
+        "rg_attente": 9499.11
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 9499.11,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "RG lib├®rable",
+      "updatedAt": "2026-03-13T07:50:40.712Z"
+    },
+    "gc::mmol6fp1eski8::COMMUNE DE DOUDEAUVILLE": {
+      "selectedTypes": [
+        "rg_attente"
+      ],
+      "amounts": {
+        "rg_attente": 7819.82
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 7819.82,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "RG lib├®rable",
+      "updatedAt": "2026-03-13T07:50:43.461Z"
+    },
+    "gc::mmol6fp1eski8::AVESNES SUR HEPES": {
+      "selectedTypes": [
+        "rg_attente"
+      ],
+      "amounts": {
+        "rg_attente": 6180
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 6180,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "RG lib├®rable",
+      "updatedAt": "2026-03-13T07:50:48.141Z"
+    },
+    "gc::mmol6fp1eski8::VILLE EPERNAY": {
+      "selectedTypes": [
+        "rg_attente"
+      ],
+      "amounts": {
+        "rg_attente": 5914.03
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 5914.03,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:50:53.406Z"
+    },
+    "gc::mmol6fp1eski8::LOON PLAGE": {
+      "selectedTypes": [
+        "rg_attente"
+      ],
+      "amounts": {
+        "rg_attente": 6545.13
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 6545.13,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "RG lib├®rable",
+      "updatedAt": "2026-03-13T07:51:06.136Z"
+    },
+    "gc::mmol6fp1eski8::MESNIL AUBRY": {
+      "selectedTypes": [
+        "rg_attente"
+      ],
+      "amounts": {
+        "rg_attente": 5904.88
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 5904.88,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:51:07.431Z"
+    },
+    "gc::mmol6fp1eski8::IMT NORD EUROPE": {
+      "selectedTypes": [
+        "rg_attente"
+      ],
+      "amounts": {
+        "rg_attente": 5742
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 5742,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:51:14.684Z"
+    },
+    "gc::mmol6fp1eski8::SCI RANDANNE": {
+      "selectedTypes": [
+        "rg_attente"
+      ],
+      "amounts": {
+        "rg_attente": 5382.66
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 5382.66,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:51:18.471Z"
+    },
+    "gc::mmol6fp1eski8::MAIRIE DE PECQUENCOURT": {
+      "selectedTypes": [
+        "rg_attente"
+      ],
+      "amounts": {
+        "rg_attente": 4193.72
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 4193.72,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:51:20.833Z"
+    },
+    "gc::mmol6fp1eski8::SICAE MENHIR": {
+      "selectedTypes": [
+        "rg_attente"
+      ],
+      "amounts": {
+        "rg_attente": 4125
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 4125,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:51:23.368Z"
+    },
+    "gc::mmol6fp1eski8::AVENTIM OIKOS": {
+      "selectedTypes": [
+        "rg_attente"
+      ],
+      "amounts": {
+        "rg_attente": 4064.4
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 4064.4,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "RG lib├®rable",
+      "updatedAt": "2026-03-13T07:51:34.439Z"
+    },
+    "gc::mmol6fp1eski8::ADAPEI 80": {
+      "selectedTypes": [
+        "rg_attente"
+      ],
+      "amounts": {
+        "rg_attente": 3548.58
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 3548.58,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "RG lib├®rable",
+      "updatedAt": "2026-03-13T07:51:40.717Z"
+    },
+    "gc::mmol6fp1eski8::COMMUNE FRUGES - COLLEGE": {
+      "selectedTypes": [
+        "rg_attente"
+      ],
+      "amounts": {
+        "rg_attente": 3307.27
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 3307.27,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:51:41.721Z"
+    },
+    "gc::mmol6fp1eski8::PRECY SUR OISE": {
+      "selectedTypes": [
+        "rg_attente"
+      ],
+      "amounts": {
+        "rg_attente": 2299.37
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 2299.37,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:51:44.204Z"
+    },
+    "gc::mmol6fp1eski8::MECS SANGATTE": {
+      "selectedTypes": [
+        "rg_attente"
+      ],
+      "amounts": {
+        "rg_attente": 1680.01
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 1680.01,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:51:51.187Z"
+    },
+    "gc::mmol6fp1eski8::BERCK ECOLE DE VOILE": {
+      "selectedTypes": [
+        "rg_attente"
+      ],
+      "amounts": {
+        "rg_attente": 1323.79
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 1323.79,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "RG lib├®rable",
+      "updatedAt": "2026-03-13T07:52:24.454Z"
+    },
+    "gc::mmol6fp1eski8::RAMERY CUD TRI": {
+      "selectedTypes": [
+        "rg_attente"
+      ],
+      "amounts": {
+        "rg_attente": 1080.51
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 1080.51,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:52:08.639Z"
+    },
+    "gc::mmol6fp1eski8::DELATTRE CYRIL": {
+      "selectedTypes": [
+        "rg_attente"
+      ],
+      "amounts": {
+        "rg_attente": 788.99
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 788.99,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:52:11.946Z"
+    },
+    "gc::mmol6fp1eski8::DELANNOY DEWAILLY": {
+      "selectedTypes": [
+        "rg_attente"
+      ],
+      "amounts": {
+        "rg_attente": 720
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 720,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:52:17.121Z"
+    },
+    "gc::mmol6fp1eski8::LAMBERSART - Extension Ecole La Fontaine": {
+      "selectedTypes": [
+        "rg_attente"
+      ],
+      "amounts": {
+        "rg_attente": 444.19
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 444.19,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-03-13T07:53:11.939Z"
+    }
+  },
+  "cbco_commercial": [
+    {
+      "id": "mmno7fq2tpi3e",
+      "nomAffaire": "R├®novation Mairie de Preures",
+      "montant": 150000,
+      "dateEnvoi": "2026-01-01",
+      "resultat": "gagne",
+      "dateReponse": "2026-01-22",
+      "createdAt": "2026-03-12T16:16:41.306Z"
+    },
+    {
+      "id": "mmno85ufmw4ql",
+      "nomAffaire": "dnzethb",
+      "montant": 4528752,
+      "dateEnvoi": "2026-05-01",
+      "resultat": "perdu",
+      "dateReponse": "2026-02-01",
+      "createdAt": "2026-03-12T16:17:15.159Z"
+    },
+    {
+      "id": "mmno92whpz5hv",
+      "nomAffaire": "ihoyhy├¿_├ºt",
+      "montant": 712587,
+      "dateEnvoi": "2026-01-06",
+      "resultat": "gagne",
+      "dateReponse": "2026-02-01",
+      "createdAt": "2026-03-12T16:17:58.001Z"
+    }
   ]
 }
