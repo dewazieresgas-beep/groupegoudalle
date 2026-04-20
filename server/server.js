@@ -877,12 +877,60 @@ function applyCBCOProdData(entries) {
   return { added, updated };
 }
 
+// ─── UTILITAIRE POUR RÉSOUDRE LES CHEMINS EXCEL ──────────────────────────────
+function resolveExistingExcelPath(folder, filename) {
+  const trimmedFolder = String(folder || '').trim().replace(/^["']|["']$/g, '');
+  const trimmedFilename = String(filename || '').trim().replace(/^["']|["']$/g, '');
+  const directPath = path.join(trimmedFolder, trimmedFilename);
+  if (fs.existsSync(directPath)) {
+    return { fullPath: directPath, resolvedFilename: trimmedFilename };
+  }
+
+  if (!fs.existsSync(trimmedFolder)) {
+    throw new Error(`Dossier introuvable : "${trimmedFolder}"`);
+  }
+
+  const expectedBase = normalizeExcelName(trimmedFilename);
+  const excelEntries = fs.readdirSync(trimmedFolder)
+    .filter((entry) => /\.(xlsx|xlsm|xls)$/i.test(entry) && !/^~\$/.test(entry));
+
+  let candidates = excelEntries
+    .filter((entry) => normalizeExcelName(entry) === expectedBase);
+
+  if (!candidates.length && expectedBase) {
+    candidates = excelEntries.filter((entry) => {
+      const normalizedEntry = normalizeExcelName(entry);
+      return normalizedEntry.includes(expectedBase) || expectedBase.includes(normalizedEntry);
+    });
+  }
+
+  if (candidates.length === 1) {
+    return {
+      fullPath: path.join(trimmedFolder, candidates[0]),
+      resolvedFilename: candidates[0]
+    };
+  }
+
+  if (candidates.length > 1) {
+    throw new Error(`Plusieurs fichiers correspondent à "${trimmedFilename}" dans "${trimmedFolder}" : ${candidates.join(', ')}`);
+  }
+
+  const availableFiles = excelEntries.length ? ` Fichiers Excel trouvés : ${excelEntries.join(', ')}` : ' Aucun fichier Excel trouvé dans le dossier.';
+  throw new Error(`Fichier introuvable : "${directPath}".${availableFiles}`);
+}
+
 let cbcoProdWatcher = null;
 
 function startCBCOProdWatcher(cfg) {
   if (cbcoProdWatcher) { clearInterval(cbcoProdWatcher); cbcoProdWatcher = null; }
-  const excelPath = path.join(cfg.folder, cfg.filename);
-  if (!fs.existsSync(excelPath)) { console.log(`[CBCO-Prod-Watch] Fichier introuvable : ${excelPath}`); return; }
+  let excelPath;
+  try {
+    const resolved = resolveExistingExcelPath(cfg.folder, cfg.filename);
+    excelPath = resolved.fullPath;
+  } catch (e) {
+    console.log(`[CBCO-Prod-Watch] Fichier introuvable : ${e.message}`);
+    return;
+  }
   let lastMtime = fs.statSync(excelPath).mtimeMs;
   cbcoProdWatcher = setInterval(() => {
     try {
@@ -2231,9 +2279,12 @@ let cbcoWatcher = null;
 
 function startCBCOWatcher(cfg) {
   if (cbcoWatcher) { clearInterval(cbcoWatcher); cbcoWatcher = null; }
-  const excelPath = path.join(cfg.folder, cfg.filename);
-  if (!fs.existsSync(excelPath)) {
-    console.log(`[CBCO-Watch] Fichier introuvable, surveillance impossible : ${excelPath}`);
+  let excelPath;
+  try {
+    const resolved = resolveExistingExcelPath(cfg.folder, cfg.filename);
+    excelPath = resolved.fullPath;
+  } catch (e) {
+    console.log(`[CBCO-Watch] Fichier introuvable, surveillance impossible : ${e.message}`);
     return;
   }
 
@@ -2459,47 +2510,6 @@ function normalizeExcelName(value) {
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-zA-Z0-9]+/g, '')
     .toLowerCase();
-}
-
-function resolveExistingExcelPath(folder, filename) {
-  const trimmedFolder = String(folder || '').trim().replace(/^["']|["']$/g, '');
-  const trimmedFilename = String(filename || '').trim().replace(/^["']|["']$/g, '');
-  const directPath = path.join(trimmedFolder, trimmedFilename);
-  if (fs.existsSync(directPath)) {
-    return { fullPath: directPath, resolvedFilename: trimmedFilename };
-  }
-
-  if (!fs.existsSync(trimmedFolder)) {
-    throw new Error(`Dossier introuvable : "${trimmedFolder}"`);
-  }
-
-  const expectedBase = normalizeExcelName(trimmedFilename);
-  const excelEntries = fs.readdirSync(trimmedFolder)
-    .filter((entry) => /\.(xlsx|xlsm|xls)$/i.test(entry));
-
-  let candidates = excelEntries
-    .filter((entry) => normalizeExcelName(entry) === expectedBase);
-
-  if (!candidates.length && expectedBase) {
-    candidates = excelEntries.filter((entry) => {
-      const normalizedEntry = normalizeExcelName(entry);
-      return normalizedEntry.includes(expectedBase) || expectedBase.includes(normalizedEntry);
-    });
-  }
-
-  if (candidates.length === 1) {
-    return {
-      fullPath: path.join(trimmedFolder, candidates[0]),
-      resolvedFilename: candidates[0]
-    };
-  }
-
-  if (candidates.length > 1) {
-    throw new Error(`Plusieurs fichiers correspondent à "${trimmedFilename}" dans "${trimmedFolder}" : ${candidates.join(', ')}`);
-  }
-
-  const availableFiles = excelEntries.length ? ` Fichiers Excel trouvés : ${excelEntries.join(', ')}` : ' Aucun fichier Excel trouvé dans le dossier.';
-  throw new Error(`Fichier introuvable : "${directPath}".${availableFiles}`);
 }
 
 function parseRHSaisieWorkbook(company, folderPath) {
