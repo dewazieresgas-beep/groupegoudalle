@@ -106,164 +106,6 @@
       grid-template-columns: 1fr;
       gap: 0;
     }
-    .ig-fullscreen-btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 170px;
-      white-space: nowrap;
-    }
-
-    #igMainContent.ig-fullscreen-active {
-      width: 100vw;
-      max-width: none;
-      height: 100vh;
-      margin: 0;
-      padding: 10px 12px 12px;
-      overflow: hidden;
-      display: grid;
-      grid-template-columns: 1fr;
-      grid-template-rows: auto auto 1fr;
-      gap: 8px;
-      background:
-        radial-gradient(1100px 440px at 8% -20%, rgba(139, 168, 138, 0.10), transparent),
-        radial-gradient(900px 360px at 96% -10%, rgba(90, 74, 58, 0.08), transparent),
-        var(--lighter);
-    }
-    #igMainContent.ig-fullscreen-active > .gm-header,
-    #igMainContent.ig-fullscreen-active > .ig-summary-strip,
-    #igMainContent.ig-fullscreen-active > .ig-sections-grid {
-      min-height: 0;
-    }
-    #igMainContent.ig-fullscreen-active > .gm-header {
-      margin-bottom: 0 !important;
-    }
-    #igMainContent.ig-fullscreen-active .ig-page-header {
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 10px;
-      align-items: center;
-    }
-    #igMainContent.ig-fullscreen-active .ig-page-title h1 {
-      font-size: 22px;
-      margin-bottom: 6px;
-      letter-spacing: 0.3px;
-    }
-    #igMainContent.ig-fullscreen-active .ig-toolbar {
-      gap: 8px;
-      flex-wrap: nowrap;
-    }
-    #igMainContent.ig-fullscreen-active .ig-year-select,
-    #igMainContent.ig-fullscreen-active .ig-fullscreen-btn,
-    #igMainContent.ig-fullscreen-active #igLastWeekBadge {
-      min-height: 34px;
-    }
-    #igMainContent.ig-fullscreen-active .ig-fullscreen-btn {
-      min-width: 156px;
-      padding: 8px 12px;
-    }
-    #igMainContent.ig-fullscreen-active #igLastWeekBadge {
-      display: inline-flex;
-      align-items: center;
-      padding: 0 12px !important;
-    }
-    #igMainContent.ig-fullscreen-active > .ig-summary-strip {
-      margin-bottom: 0;
-      gap: 8px;
-    }
-    #igMainContent.ig-fullscreen-active .ig-sections-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      grid-auto-rows: minmax(0, 1fr);
-      gap: 8px 10px;
-      align-content: stretch;
-      overflow: hidden;
-    }
-    #igMainContent.ig-fullscreen-active .ig-machine-section {
-      margin-bottom: 0;
-      padding: 8px;
-      min-height: 0;
-      display: flex;
-      flex-direction: column;
-      box-shadow: 0 8px 22px rgba(0,0,0,0.07);
-    }
-    #igMainContent.ig-fullscreen-active .ig-machine-container {
-      gap: 10px;
-      min-height: 0;
-      flex: 1;
-    }
-    #igMainContent.ig-fullscreen-active .ig-section-header {
-      padding: 8px 10px;
-      margin-bottom: 8px;
-    }
-    #igMainContent.ig-fullscreen-active .ig-section-header h2 {
-      font-size: 16px;
-    }
-    #igMainContent.ig-fullscreen-active .ig-kpi-col {
-      display: grid;
-      grid-auto-flow: column;
-      grid-auto-columns: minmax(0, 1fr);
-      gap: 6px;
-    }
-    #igMainContent.ig-fullscreen-active .ig-kpi-card {
-      padding: 7px 8px;
-      box-shadow: 0 3px 10px rgba(0,0,0,0.06);
-    }
-    #igMainContent.ig-fullscreen-active .ig-kpi-label {
-      font-size: 9px;
-      margin-bottom: 2px;
-    }
-    #igMainContent.ig-fullscreen-active .ig-kpi-value {
-      font-size: 15px;
-    }
-    #igMainContent.ig-fullscreen-active .ig-kpi-unit {
-      font-size: 9px;
-      margin-top: 0;
-    }
-    #igMainContent.ig-fullscreen-active .ig-kpi-equiv,
-    #igMainContent.ig-fullscreen-active .ig-summary-equiv,
-    #igMainContent.ig-fullscreen-active .ig-summary-sub {
-      display: none;
-    }
-    #igMainContent.ig-fullscreen-active .ig-summary-tile {
-      padding: 8px 10px;
-      border-radius: 12px;
-      box-shadow: 0 6px 16px rgba(0,0,0,0.12);
-    }
-    #igMainContent.ig-fullscreen-active .ig-summary-label {
-      font-size: 9px;
-    }
-    #igMainContent.ig-fullscreen-active .ig-summary-value {
-      font-size: 18px !important;
-    }
-    #igMainContent.ig-fullscreen-active .ig-summary-unit {
-      font-size: 9px;
-    }
-    #igMainContent.ig-fullscreen-active .ig-badge {
-      font-size: 9px;
-      padding: 2px 6px;
-      margin-top: 1px;
-    }
-    #igMainContent.ig-fullscreen-active .ig-chart-grid {
-      gap: 6px;
-    }
-    #igMainContent.ig-fullscreen-active .gm-chart-section {
-      padding: 8px 10px;
-      min-height: 0 !important;
-    }
-    #igMainContent.ig-fullscreen-active .gm-chart-header {
-      margin-bottom: 6px !important;
-      padding-bottom: 4px !important;
-    }
-    #igMainContent.ig-fullscreen-active .gm-chart-header h2,
-    #igMainContent.ig-fullscreen-active .ig-chart-panel .gm-chart-header h2 {
-      font-size: 12px;
-    }
-    #igMainContent.ig-fullscreen-active .gm-chart-container {
-      min-height: 126px !important;
-      height: 126px;
-    }
-    #igMainContent.ig-fullscreen-active canvas {
-      image-rendering: auto;
-    }
 
     /* Badges SC/Ultra */
     .ig-badge { display:inline-block; font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; margin-top:4px; margin-right:4px; }
@@ -308,20 +150,6 @@
       .ig-chart-grid { grid-template-columns: 1fr; }
       .ig-page-header { grid-template-columns: 1fr; }
       .ig-toolbar { justify-content: flex-start; }
-      #igMainContent.ig-fullscreen-active {
-        overflow: auto;
-        height: 100vh;
-      }
-      #igMainContent.ig-fullscreen-active .ig-page-header {
-        grid-template-columns: 1fr;
-      }
-      #igMainContent.ig-fullscreen-active .ig-toolbar {
-        flex-wrap: wrap;
-        justify-content: flex-start;
-      }
-      #igMainContent.ig-fullscreen-active .ig-sections-grid {
-        grid-template-columns: 1fr;
-      }
     }
     @media (max-width: 700px) {
       .ig-kpi-col { flex-wrap: wrap; }
@@ -340,7 +168,7 @@
 
   <div class="app-container">
     <div id="sidebar"></div>
-    <main class="main-content" id="igMainContent">
+    <main class="main-content">
 
       <!-- ═══ EN-TÊTE ═══ -->
       <div class="gm-header" style="margin-bottom:20px;">
@@ -352,7 +180,6 @@
             <label for="igYearSelect" style="font-size:0.9em; font-weight:600; color:var(--secondary); margin:0;">Exercice :</label>
           <select id="igYearSelect" class="ig-year-select gm-range-select"></select>
           <span id="igLastWeekBadge" style="display:none; font-size:0.8em; background:#f0f4f0; border:1px solid #d0d8d0; border-radius:20px; padding:4px 12px; color:#555; font-weight:600;"></span>
-          <button id="igFullscreenBtn" type="button" class="btn btn-secondary btn-small ig-fullscreen-btn">Plein écran</button>
           </div>
         </div>
       </div>
@@ -964,37 +791,6 @@
       '#B91C1C'  // rouge profond
     ];
 
-    function resizeChartsSoon() {
-      window.setTimeout(() => {
-        Object.values(charts).forEach(chart => chart?.resize());
-      }, 120);
-    }
-
-    function syncFullscreenButton() {
-      const main = document.getElementById('igMainContent');
-      const btn = document.getElementById('igFullscreenBtn');
-      if (!main || !btn) return;
-      const active = document.fullscreenElement === main;
-      main.classList.toggle('ig-fullscreen-active', active);
-      btn.textContent = active ? 'Quitter le plein écran' : 'Plein écran';
-      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
-      resizeChartsSoon();
-    }
-
-    async function toggleIndicatorsFullscreen() {
-      const main = document.getElementById('igMainContent');
-      if (!main || !main.requestFullscreen) return;
-      try {
-        if (document.fullscreenElement === main) {
-          await document.exitFullscreen();
-        } else {
-          await main.requestFullscreen();
-        }
-      } catch (e) {
-        console.warn('[IG] Impossible d’ouvrir le plein écran :', e.message);
-      }
-    }
-
     function buildCharts() {
       const allRaw = getCBCOProductiviteData();
       const nowIso = getCurrentIsoWeekYear();
@@ -1187,11 +983,8 @@
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectProductionSecondaryBar();
       document.getElementById('igYearSelect').addEventListener('change', buildCharts);
-      document.getElementById('igFullscreenBtn').addEventListener('click', toggleIndicatorsFullscreen);
-      document.addEventListener('fullscreenchange', syncFullscreenButton);
 
       buildCharts();
-      syncFullscreenButton();
 
       (async () => {
         try {

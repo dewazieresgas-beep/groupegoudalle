@@ -5212,18 +5212,18 @@
   "rh_security_excel_config": {
     "folder": "W:\\RH paie\\ADMINISTRATIF PAIE\\Aministratif\\accident\\TABLEAU ACCIDENTS DU TRAVAIL toutes societes",
     "active": true,
-    "lastSync": "2026-04-20T09:22:36.663Z",
+    "lastSync": "2026-04-21T10:11:48.381Z",
     "lastSyncResult": {
-      "imported": 186,
+      "imported": 0,
       "companies": 4
     }
   },
   "gm_excel_config": {
-    "folder": "C:\\Users\\gdewazieres\\Desktop\\Indicateurs\\2. Production",
+    "folder": "X:\\03-Affaires\\INDICATEUR",
     "filename": "INDICATEURS Goudalle Maçonnerie",
     "sheet": "Données indicateurs",
     "active": true,
-    "lastSync": "2026-04-20T09:26:07.729Z"
+    "lastSync": "2026-04-20T13:46:23.264Z"
   },
   "cbco_productivite": [
     {
