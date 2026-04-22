@@ -22,7 +22,10 @@
       "Bash(grep -v \"\\\\.json$\\\\|\\\\.backup\\\\|\\\\.restored\")",
       "Read(//c/Users/gdewazieres/Desktop/**)",
       "Read(//c/Users/gdewazieres/Desktop//**)",
-      "Bash(node -e \"const p = require\\('./server/package.json'\\); console.log\\(JSON.stringify\\(p.dependencies, null, 2\\)\\)\")"
+      "Bash(node -e \"const p = require\\('./server/package.json'\\); console.log\\(JSON.stringify\\(p.dependencies, null, 2\\)\\)\")",
+      "Bash(curl -s http://localhost:3000/api/ca-excel)",
+      "Bash(grep -n \"app.use\\\\|catch.*all\\\\|\\\\\\\\*\\\\|static\\\\|sendFile\" c:/Users/gdewazieres/Desktop/groupegoudalle/server/server.js)",
+      "Bash(grep -n \"ca-excel\\\\|catch-all\\\\|app.get.*\\\\\\\\*\" c:/Users/gdewazieres/Desktop/groupegoudalle/server/server.js)"
     ],
     "additionalDirectories": [
       "c:\\Users\\gdewazieres\\Desktop\\groupegoudalle"

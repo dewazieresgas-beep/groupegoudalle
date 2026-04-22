@@ -680,6 +680,79 @@ app.put('/api/cbco', requireToken, requireWriteRateLimit, (req, res) => {
   res.json({ success: true });
 });
 
+// ─── ROUTE : CA EXCEL — Lecture directe Fichier Orga ─────────────────────────
+
+const CA_EXCEL_PATH = 'Z:\\03-BE\\Projet en cours\\Mathieu\\Fichier Orga.xls';
+const EPOCH_1904_MS = Date.UTC(1904, 0, 1); // -2082844800000 ms
+
+function serial1904ToYearMonth(serial) {
+  if (!serial || typeof serial !== 'number') return null;
+  const d = new Date(EPOCH_1904_MS + serial * 86400000);
+  return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1 };
+}
+
+function parseFichierOrgaSheet(ws) {
+  const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true });
+  const headerIdx = data.findIndex(row => row && row[0] === 'Client');
+  if (headerIdx < 0) return [];
+  const results = [];
+  for (let i = headerIdx + 1; i < data.length; i++) {
+    const row = data[i];
+    if (!row) continue;
+    const dateSerial = row[13]; // col N = date inscription
+    const montant = row[12];    // col M = Montant estimé
+    if (!dateSerial || typeof dateSerial !== 'number') continue;
+    if (!montant || typeof montant !== 'number' || montant === 0) continue;
+    const ym = serial1904ToYearMonth(dateSerial);
+    if (!ym || ym.year < 2000 || ym.year > 2100) continue;
+    results.push({ ...ym, montant });
+  }
+  return results;
+}
+
+app.get('/api/ca-excel', (req, res) => {
+  try {
+    if (!fs.existsSync(CA_EXCEL_PATH)) {
+      return res.status(404).json({ error: `Fichier introuvable : ${CA_EXCEL_PATH}` });
+    }
+    const wb = XLSX.readFile(CA_EXCEL_PATH, { raw: true });
+    const wsEnCours = wb.Sheets['En Cours'];
+    const wsTermines = wb.Sheets['Terminés'];
+    if (!wsEnCours || !wsTermines) {
+      return res.status(500).json({ error: 'Onglets "En Cours" ou "Terminés" introuvables' });
+    }
+    const enCoursData = parseFichierOrgaSheet(wsEnCours);
+    const terminesData = parseFichierOrgaSheet(wsTermines);
+    const byYM = {};
+    enCoursData.forEach(({ year, month, montant }) => {
+      const key = `${year}-${String(month).padStart(2, '0')}`;
+      if (!byYM[key]) byYM[key] = { year, month, montantChantiersCours: 0, montantChantiersTermines: 0 };
+      byYM[key].montantChantiersCours += montant;
+    });
+    terminesData.forEach(({ year, month, montant }) => {
+      const key = `${year}-${String(month).padStart(2, '0')}`;
+      if (!byYM[key]) byYM[key] = { year, month, montantChantiersCours: 0, montantChantiersTermines: 0 };
+      byYM[key].montantChantiersTermines += montant;
+    });
+    const sorted = Object.values(byYM).sort((a, b) =>
+      a.year !== b.year ? a.year - b.year : a.month - b.month
+    );
+    // Exercice fiscal Oct–Sep : mois >= 10 → exercice = year, sinon year - 1
+    const cumulByFY = {};
+    sorted.forEach(entry => {
+      const fy = entry.month >= 10 ? entry.year : entry.year - 1;
+      entry.fiscalYear = fy;
+      entry.montantTotal = entry.montantChantiersCours + entry.montantChantiersTermines;
+      cumulByFY[fy] = (cumulByFY[fy] || 0) + entry.montantTotal;
+      entry.cumulAnnuel = cumulByFY[fy];
+    });
+    res.json(sorted);
+  } catch (err) {
+    console.error('[ca-excel]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── ROUTES : CBCO PRODUCTIVITÉ USINE ────────────────────────────────────────────
 
 app.get('/api/cbco-productivite', (req, res) => {

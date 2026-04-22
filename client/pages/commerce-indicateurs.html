@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
@@ -22,67 +22,46 @@
 
   <div class="app-container">
     <div id="sidebar"></div>
-    
+
     <main class="main-content">
-      <!-- SECTION EN-TÊTE -->
+      <!-- EN-TÊTE -->
       <div class="cbco-header">
         <h1>Indicateurs Commercial</h1>
         <p class="subtitle">Suivi des indicateurs commerciaux et du chiffre d'affaires</p>
-        <div style="margin-top: 15px;">
+        <div style="margin-top:15px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
           <button onclick="downloadCBCOReport()" class="btn btn-secondary">📥 Télécharger le rapport</button>
+          <button onclick="refreshData()" class="btn btn-secondary" id="refreshBtn">🔄 Actualiser</button>
+          <span id="lastRefreshLabel" style="font-size:12px; color:var(--text-muted);"></span>
         </div>
       </div>
 
-      <!-- NOUVELLE GRILLE 2x2 POUR ALIGNEMENT PARFAIT DES 4 CADRES -->
+      <!-- GRILLE 2×2 -->
       <div class="cbco-main-grid-v2">
-        <!-- Cadre 1 : Chiffre d'affaires -->
+
+        <!-- Cadre 1 : Chiffre d'affaires dernière saisie -->
         <section class="cbco-card-v2">
-          <header class="cbco-card-title-v2">📊 Chiffre d'affaires — Dernière saisie</header>
-          <div class="cbco-card-content-v2">
-            <!-- Ligne 1 : période -->
-            <div style="text-align:center; margin-bottom: 16px;">
-              <span style="font-size:1.1em; font-weight:700; color: var(--primary);" id="currentMonthYear">—</span>
-            </div>
-            <!-- Grille 2×2 -->
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
-              <div class="cbco-stat-box">
-                <div class="cbco-stat-label">Chantiers en cours</div>
-                <div class="cbco-stat-value" id="currentMontantCours">0 K€</div>
-              </div>
-              <div class="cbco-stat-box">
-                <div class="cbco-stat-label">Chantiers terminés</div>
-                <div class="cbco-stat-value" id="currentMontantTermines">0 K€</div>
-              </div>
-            </div>
-            <!-- Total mensuel pleine largeur -->
-            <div class="cbco-stat-box" style="margin-bottom:12px;">
-              <div class="cbco-stat-label">Total mensuel</div>
-              <div class="cbco-stat-value" id="currentMontantTotal">0 K€</div>
-            </div>
-            <!-- Cumul annuel mis en valeur -->
-            <div class="cbco-stat-box highlight">
-              <div class="cbco-stat-label">📈 Cumul exercice</div>
-              <div class="cbco-stat-value" id="currentCumulAnnuel">0 K€</div>
-            </div>
+          <header class="cbco-card-title-v2">📊 Chiffre d'affaires — Dernier mois saisi</header>
+          <div class="cbco-card-content-v2" id="caCardContent">
+            <div style="text-align:center; color:var(--text-muted); padding:20px;">Chargement…</div>
           </div>
         </section>
 
-        <!-- Cadre 2 : Indicateur Commercial -->
+        <!-- Cadre 2 : Taux de réussite commercial (à venir) -->
         <section class="cbco-card-v2">
-          <header class="cbco-card-title-v2">💼 Taux de réussite commercial – Mois dernier</header>
+          <header class="cbco-card-title-v2">💼 Taux de réussite commercial</header>
           <div class="cbco-card-content-v2" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px;">
-            <div style="position: relative; width: 200px; height: 200px;">
-              <canvas id="commercialTauxChartCBCO"></canvas>
+            <div style="color:var(--text-muted); font-size:14px; text-align:center; padding:30px 20px;">
+              <div style="font-size:32px; margin-bottom:12px;">🔜</div>
+              <div>Indicateur en cours de développement</div>
             </div>
-            <div id="commercialTauxDetailsCBCO" style="width:100%; text-align:center;"></div>
           </div>
         </section>
 
-        <!-- Cadre 3 : Graphique annuel -->
+        <!-- Cadre 3 : Évolution cumulée par année -->
         <section class="cbco-card-v2">
           <header class="cbco-card-title-v2">Évolution du chiffre d'affaires cumulé par année</header>
           <div class="cbco-card-content-v2">
-            <div style="margin-bottom: 15px; position:relative; display:inline-block;">
+            <div style="margin-bottom:15px; position:relative; display:inline-block;">
               <button id="chartYearFilterBtn" class="btn btn-secondary btn-small" type="button" onclick="toggleChartYearDropdown()">Années</button>
               <div id="chartYearDropdown" style="display:none; position:absolute; top:42px; left:0; min-width:260px; background:#fff; border:1px solid var(--border-light); border-radius:8px; box-shadow:var(--shadow-lg); padding:10px; z-index:30;">
                 <div style="display:flex; gap:8px; margin-bottom:8px;">
@@ -98,7 +77,7 @@
           </div>
         </section>
 
-        <!-- Cadre 4 : Graphique année en cours -->
+        <!-- Cadre 4 : Détail mensuel -->
         <section class="cbco-card-v2">
           <header class="cbco-card-title-v2" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
             <span>Détail mensuel</span>
@@ -113,75 +92,133 @@
             </div>
           </div>
         </section>
-      </div>
 
+      </div>
     </main>
   </div>
 
   <script>
-    // Variables globales
+    // ─── DONNÉES GLOBALES ──────────────────────────────────────────────────────
+    let caData = [];
     let cbcoChart;
     let currentYearChart;
     let selectedChartYears = null;
+
     const MONTH_NAMES = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
                           'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-    // Mois de l'exercice fiscal : octobre → septembre
-    const FISCAL_MONTH_NAMES = ['Octobre', 'Novembre', 'Décembre', 'Janvier', 'Février', 'Mars',
-                                 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre'];
 
-    /**
-     * Formate un mois et une année
-     * @param {number} month - Mois (1-12)
-     * @param {number} year - Année
-     * @returns {string} - "Janvier 2026"
-     */
-    function formatMonthYear(month, year) {
-      return `${MONTH_NAMES[month]} ${year}`;
+    // Ordre fiscal Oct → Sep (indices dans MONTH_NAMES : 10,11,12,1,2,3,4,5,6,7,8,9)
+    const FISCAL_MONTHS = [10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+    const FISCAL_LABELS = ['Oct', 'Nov', 'Déc', 'Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep'];
+
+    // Position d'un mois calendaire dans l'exercice fiscal (Oct=0, …, Sep=11)
+    function fiscalIndex(month) { return (month + 2) % 12; }
+
+    // Exercice fiscal : mois >= 10 → exercice = year, sinon year - 1
+    function fiscalYear(year, month) { return month >= 10 ? year : year - 1; }
+    function fiscalLabel(fy) { return `${fy}/${String(fy + 1).slice(-2)}`; }
+
+    function getCurrentFiscalYear() {
+      const now = new Date();
+      return fiscalYear(now.getFullYear(), now.getMonth() + 1);
     }
 
-    /**
-     * Formate un nombre en devise K€
-     * @param {number} value - Valeur en K€ à formater
-     * @returns {string} - "1 234 K€"
-     */
-    function formatCBCOCurrency(value) {
-      return new Intl.NumberFormat('fr-FR', { 
-        minimumFractionDigits: 0, 
-        maximumFractionDigits: 0 
-      }).format(value) + ' K€';
+    // ─── UTILITAIRES ─────────────────────────────────────────────────────────
+
+    function formatK(value) {
+      if (value == null || isNaN(value)) return '0 K€';
+      return new Intl.NumberFormat('fr-FR').format(Math.round(value / 1000)) + ' K€';
     }
 
-    function toShortYear(year) {
-      return String(year).slice(-2);
+    // ─── CHARGEMENT DES DONNÉES ──────────────────────────────────────────────
+
+    async function loadCAData() {
+      try {
+        const resp = await fetch('/api/ca-excel');
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          throw new Error(err.error || `HTTP ${resp.status}`);
+        }
+        caData = await resp.json();
+        document.getElementById('lastRefreshLabel').textContent =
+          'Mis à jour : ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        return true;
+      } catch (e) {
+        console.error('[ca-excel]', e);
+        caData = [];
+        document.getElementById('lastRefreshLabel').textContent = '⚠️ Erreur : ' + e.message;
+        return false;
+      }
     }
 
-    function getShortFiscalYearLabel(startYear) {
-      return `${toShortYear(startYear)}/${toShortYear(startYear + 1)}`;
+    async function refreshData() {
+      const btn = document.getElementById('refreshBtn');
+      btn.disabled = true;
+      btn.textContent = '⏳ Actualisation…';
+      await loadCAData();
+      renderAll();
+      btn.disabled = false;
+      btn.textContent = '🔄 Actualiser';
     }
 
-    function getFiscalMonthLabelsWithYear(startYear) {
-      return FISCAL_MONTH_NAMES;
+    // ─── DERNIER MOIS SAISI ──────────────────────────────────────────────────
+
+    function getLatestEntry() {
+      if (!caData.length) return null;
+      const withData = caData.filter(e => e.montantTotal > 0);
+      if (!withData.length) return null;
+      return withData[withData.length - 1];
     }
 
-    function getSelectableChartYears() {
-      const byYear = getCBCOByYearForDisplay();
-      return Object.keys(byYear)
-        .map(y => parseInt(y, 10))
-        .filter(Number.isFinite)
-        .filter(y => (byYear[y] || []).some(e => Number(e.montantTotal) > 0))
-        .sort((a, b) => b - a);
-    }
-
-    function updateChartYearFilterButtonLabel() {
-      const btn = document.getElementById('chartYearFilterBtn');
-      if (!btn) return;
-      const selected = [...(selectedChartYears || [])].sort((a, b) => b - a);
-      if (!selected.length) {
-        btn.textContent = 'Années (aucune)';
+    function renderCACard() {
+      const div = document.getElementById('caCardContent');
+      const entry = getLatestEntry();
+      if (!entry) {
+        div.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:20px;">Aucune donnée disponible</div>';
         return;
       }
-      const labels = selected.map(y => getShortFiscalYearLabel(y));
-      btn.textContent = labels.length <= 2 ? `Années : ${labels.join(', ')}` : `Années : ${labels.length} sélectionnées`;
+      const fy = entry.fiscalYear;
+      div.innerHTML = `
+        <div style="text-align:center; margin-bottom:16px;">
+          <span style="font-size:1.1em; font-weight:700; color:var(--primary);">${MONTH_NAMES[entry.month]} ${entry.year}</span>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+          <div class="cbco-stat-box">
+            <div class="cbco-stat-label">Chantiers en cours</div>
+            <div class="cbco-stat-value">${formatK(entry.montantChantiersCours)}</div>
+          </div>
+          <div class="cbco-stat-box">
+            <div class="cbco-stat-label">Chantiers terminés</div>
+            <div class="cbco-stat-value">${formatK(entry.montantChantiersTermines)}</div>
+          </div>
+        </div>
+        <div class="cbco-stat-box" style="margin-bottom:12px;">
+          <div class="cbco-stat-label">Total mensuel</div>
+          <div class="cbco-stat-value">${formatK(entry.montantTotal)}</div>
+        </div>
+        <div class="cbco-stat-box highlight">
+          <div class="cbco-stat-label">📈 Cumul exercice ${fiscalLabel(fy)}</div>
+          <div class="cbco-stat-value">${formatK(entry.cumulAnnuel)}</div>
+        </div>`;
+    }
+
+    // ─── EXERCICES DISPONIBLES ───────────────────────────────────────────────
+
+    function getSelectableFiscalYears() {
+      const fys = [...new Set(caData.filter(e => e.montantTotal > 0).map(e => e.fiscalYear))];
+      return fys.filter(Number.isFinite).sort((a, b) => b - a);
+    }
+
+    // ─── FILTRE ANNÉES (graphique cumulé) ────────────────────────────────────
+
+    function updateYearFilterLabel() {
+      const btn = document.getElementById('chartYearFilterBtn');
+      if (!btn) return;
+      const sel = [...(selectedChartYears || [])].sort((a, b) => b - a);
+      if (!sel.length) { btn.textContent = 'Exercices (aucun)'; return; }
+      btn.textContent = sel.length <= 2
+        ? `Exercices : ${sel.map(fiscalLabel).join(', ')}`
+        : `Exercices : ${sel.length} sélectionnés`;
     }
 
     function toggleChartYearDropdown() {
@@ -191,537 +228,214 @@
     }
 
     function setAllChartYears(checked) {
-      const years = getSelectableChartYears();
-      selectedChartYears = new Set(checked ? years : []);
+      const fys = getSelectableFiscalYears();
+      selectedChartYears = new Set(checked ? fys : []);
       initChartYearFilter();
-      renderCBCOChart();
+      renderCumulChart();
     }
 
     function initChartYearFilter() {
-      const years = getSelectableChartYears();
+      const fys = getSelectableFiscalYears();
       if (selectedChartYears === null) {
-        selectedChartYears = new Set(years.slice(0, 3));
+        selectedChartYears = new Set(fys.slice(0, 3));
       } else {
-        selectedChartYears = new Set([...selectedChartYears].filter(y => years.includes(y)));
+        selectedChartYears = new Set([...selectedChartYears].filter(y => fys.includes(y)));
       }
-      
       const container = document.getElementById('chartYearFilterContainer');
       container.innerHTML = '';
-      
-      years.forEach((year) => {
+      fys.forEach(fy => {
         const label = document.createElement('label');
-        label.style.display = 'flex';
-        label.style.alignItems = 'center';
-        label.style.gap = '6px';
-        label.style.cursor = 'pointer';
-        label.style.padding = '5px 10px';
-        label.style.backgroundColor = '#f5f5f5';
-        label.style.borderRadius = '4px';
-        label.style.userSelect = 'none';
-        
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.value = year;
-        checkbox.className = 'chart-year-checkbox';
-        checkbox.checked = selectedChartYears.has(year);
-        checkbox.onchange = () => {
-          if (checkbox.checked) selectedChartYears.add(year);
-          else selectedChartYears.delete(year);
-          updateChartYearFilterButtonLabel();
-          renderCBCOChart();
+        label.style.cssText = 'display:flex;align-items:center;gap:6px;cursor:pointer;padding:5px 10px;background:#f5f5f5;border-radius:4px;user-select:none;';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox'; cb.value = fy; cb.className = 'chart-year-checkbox';
+        cb.checked = selectedChartYears.has(fy);
+        cb.onchange = () => {
+          if (cb.checked) selectedChartYears.add(fy); else selectedChartYears.delete(fy);
+          updateYearFilterLabel();
+          renderCumulChart();
         };
-        
         const span = document.createElement('span');
-        span.textContent = getShortFiscalYearLabel(parseInt(year, 10));
-        
-        label.appendChild(checkbox);
-        label.appendChild(span);
+        span.textContent = fiscalLabel(fy);
+        label.appendChild(cb); label.appendChild(span);
         container.appendChild(label);
       });
-      updateChartYearFilterButtonLabel();
+      updateYearFilterLabel();
     }
 
-    function getLatestCompleteMonthEntry() {
-      const data = getCBCOData().sort(compareByYearMonthDesc);
-      if (!data.length) return null;
-      const today = new Date();
-      const prevMonth = today.getMonth() === 0 ? 12 : today.getMonth();
-      const prevYear = today.getMonth() === 0 ? today.getFullYear() - 1 : today.getFullYear();
-      return data.find(e => e.year === prevYear && e.month === prevMonth) || null;
-    }
+    // ─── GRAPHIQUE CUMULÉ PAR EXERCICE ───────────────────────────────────────
 
-    function getCBCODataUpToLatestComplete() {
-      const latest = getLatestCompleteMonthEntry();
-      if (!latest) return [];
-      return getCBCOData().filter(e =>
-        e.year < latest.year || (e.year === latest.year && e.month <= latest.month)
-      );
-    }
-
-    function getCBCOByYearForDisplay() {
-      const data = getCBCODataUpToLatestComplete();
-      const byFiscalYear = {};
-      data.forEach(entry => {
-        const fy = getFiscalYear(entry.year, entry.month);
-        if (!byFiscalYear[fy]) byFiscalYear[fy] = [];
-        byFiscalYear[fy].push(entry);
+    function getDataByFiscalYear() {
+      const byFY = {};
+      caData.forEach(entry => {
+        const fy = entry.fiscalYear;
+        if (!byFY[fy]) byFY[fy] = [];
+        byFY[fy].push(entry);
       });
-      Object.keys(byFiscalYear).forEach(fy => {
-        byFiscalYear[fy].sort((a, b) => getFiscalMonth(a.month) - getFiscalMonth(b.month));
-      });
-      return byFiscalYear;
+      return byFY;
     }
 
-    /**
-     * Affiche les données en dernier enregistrement
-     */
-    function displayCurrentData() {
-      const current = getLatestCompleteMonthEntry();
-      if (!current) {
-        document.getElementById('currentMonthYear').textContent = '—';
-        document.getElementById('currentMontantCours').textContent = '0 K€';
-        document.getElementById('currentMontantTermines').textContent = '0 K€';
-        document.getElementById('currentMontantTotal').textContent = '0 K€';
-        document.getElementById('currentCumulAnnuel').textContent = '0 K€';
-        return;
-      }
-
-      document.getElementById('currentMonthYear').textContent = formatMonthYear(current.month, current.year);
-      document.getElementById('currentMontantCours').textContent = formatCBCOCurrency(current.montantChantiersCours);
-      document.getElementById('currentMontantTermines').textContent = formatCBCOCurrency(current.montantChantiersTermines);
-      document.getElementById('currentMontantTotal').textContent = formatCBCOCurrency(current.montantTotal);
-      
-      // Afficher le cumul annuel (devrait toujours exister grâce à calculateCBCOCumuls)
-      const cumulValue = current.cumulAnnuel !== undefined && current.cumulAnnuel !== null ? current.cumulAnnuel : 0;
-      document.getElementById('currentCumulAnnuel').textContent = formatCBCOCurrency(cumulValue);
-    }
-
-    /**
-     * Génère le graphique en courbes des cumuls annuels
-     */
-    function renderCBCOChart() {
-      const byYear = getCBCOByYearForDisplay();
-      const allYears = Object.keys(byYear).sort((a, b) => a - b);
-      
-      // Filtrer selon les années sélectionnées
-      const selectedYears = [...(selectedChartYears || [])].map(String);
-      
-      const years = allYears.filter(y => selectedYears.includes(y));
-      
-      if (years.length === 0) {
-        const ctx = document.getElementById('cbcoChart').getContext('2d');
-        if (cbcoChart) cbcoChart.destroy();
-        return;
-      }
-
-      // Préparer les datasets pour chaque année
-      const datasets = [];
-      const colors = [
-        { border: '#3498db' },
-        { border: '#2ecc71' },
-        { border: '#e74c3c' },
-        { border: '#f39c12' },
-        { border: '#9b59b6' },
-        { border: '#1abc9c' },
-        { border: '#e67e22' },
-        { border: '#34495e' },
-        { border: '#c0392b' },
-        { border: '#16a085' },
-        { border: '#d35400' },
-        { border: '#2980b9' },
-        { border: '#27ae60' },
-        { border: '#8e44ad' },
-        { border: '#d35400' },
-        { border: '#f1c40f' },
-        { border: '#95a5a6' },
-        { border: '#7f8c8d' },
-        { border: '#c0392b' },
-        { border: '#ecf0f1' },
-      ];
-
-      years.forEach((year, idx) => {
-        const entries = byYear[year].sort((a, b) => getFiscalMonth(a.month) - getFiscalMonth(b.month));
-
-        // Aligner chaque cumul sur son mois fiscal (1=oct..12=sept)
-        const cumulByMonth = {};
-        entries.forEach(e => {
-          cumulByMonth[getFiscalMonth(e.month)] = e.cumulAnnuel;
-        });
-
-        const cumulValues = Array.from({ length: 12 }, (_, i) => {
-          const fiscalMonth = i + 1;
-          return Object.prototype.hasOwnProperty.call(cumulByMonth, fiscalMonth)
-            ? cumulByMonth[fiscalMonth]
-            : null;
-        });
-
-        const color = colors[idx % colors.length];
-        datasets.push({
-          label: getShortFiscalYearLabel(parseInt(year, 10)),
-          data: cumulValues,
-          borderColor: color.border,
-          backgroundColor: color.border,
-          tension: 0,
-          fill: false,
-          pointRadius: 3,
-          pointHoverRadius: 5,
-          spanGaps: false
-        });
-      });
-
-      // Créer le graphique
+    function renderCumulChart() {
+      const byFY = getDataByFiscalYear();
+      const selFYs = [...(selectedChartYears || [])].map(Number).sort((a, b) => a - b);
       const ctx = document.getElementById('cbcoChart').getContext('2d');
       if (cbcoChart) cbcoChart.destroy();
+      if (!selFYs.length) return;
 
-      // Afficher mois + année courte sur l'axe (ex: Oct 25, Jan 26)
-      const labels = getFiscalMonthLabelsWithYear(getCurrentFiscalYear());
+      const colors = ['#1D4E89', '#D97706', '#0F766E', '#B91C1C', '#9b59b6', '#1abc9c', '#e67e22', '#34495e'];
+      const datasets = selFYs.map((fy, idx) => {
+        const entries = byFY[fy] || [];
+        // Placer chaque valeur cumulAnnuel à la bonne position fiscale (0=Oct … 11=Sep)
+        const cumulByFiscalIdx = {};
+        entries.forEach(e => { cumulByFiscalIdx[fiscalIndex(e.month)] = e.cumulAnnuel; });
+        const data = Array.from({ length: 12 }, (_, i) =>
+          Object.prototype.hasOwnProperty.call(cumulByFiscalIdx, i) ? cumulByFiscalIdx[i] : null
+        );
+        const color = colors[idx % colors.length];
+        return {
+          label: fiscalLabel(fy),
+          data, borderColor: color, backgroundColor: color,
+          borderWidth: idx === selFYs.length - 1 ? 3 : 2,
+          tension: 0, fill: false, pointRadius: 3, pointHoverRadius: 5, spanGaps: false
+        };
+      });
 
       cbcoChart = new Chart(ctx, {
         type: 'line',
-        data: {
-          labels,
-          datasets
-        },
+        data: { labels: FISCAL_LABELS, datasets },
         options: {
           responsive: true,
           interaction: { mode: 'index', intersect: false },
           plugins: {
-            legend: {
-              display: true,
-              position: 'top'
-            },
-            tooltip: {
-              callbacks: {
-                label: (ctx) => {
-                  const v = ctx.parsed?.y;
-                  return `Cumul exercice : ${formatCBCOCurrency(v)}`;
-                }
-              }
-            }
+            legend: { display: true, position: 'top' },
+            tooltip: { callbacks: { label: c => `Cumul ${c.dataset.label} : ${formatK(c.parsed?.y)}` } }
           },
           scales: {
-            x: {
-              ticks: {
-                autoSkip: false,
-                maxRotation: 55,
-                minRotation: 55
-              }
-            },
-            y: {
-              beginAtZero: true,
-              ticks: {
-                callback: (value) => formatCBCOCurrency(value)
-              }
-            }
+            x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } },
+            y: { beginAtZero: true, ticks: { callback: v => formatK(v) } }
           }
         }
       });
     }
 
-    /**
-     * NOTE: Les modifications et suppressions de données se font uniquement
-     * dans la page commerce-saisie-ca.html. Cette page (commerce-indicateurs.html) affiche uniquement
-     * les données en lecture seule avec possibilité de filtrer par années.
-     */
+    // ─── GRAPHIQUE DÉTAIL MENSUEL ─────────────────────────────────────────────
 
-    /**
-     * Génère le graphique des montants mensuels pour l'année en cours
-     */
-    function renderCurrentYearChart() {
-      const selectedYear = parseInt(document.getElementById('detailYearSelect')?.value, 10);
-      const currentFiscalYear = Number.isFinite(selectedYear) ? selectedYear : getCurrentFiscalYear();
-      const data = getCBCODataUpToLatestComplete()
-        .filter(e => getFiscalYear(e.year, e.month) === currentFiscalYear)
-        .sort((a, b) => getFiscalMonth(a.month) - getFiscalMonth(b.month));
-      
-      // Créer des tableaux pour les 12 mois fiscaux avec null pour les mois sans données
-      const montantCours = Array(12).fill(null);
-      const montantTermines = Array(12).fill(null);
-      const montantTotal = Array(12).fill(null);
-      
-      data.forEach(e => {
-        const idx = getFiscalMonth(e.month) - 1;
-        montantCours[idx] = e.montantChantiersCours;
-        montantTermines[idx] = e.montantChantiersTermines;
-        montantTotal[idx] = e.montantTotal;
+    function initDetailYearSelect() {
+      const fys = getSelectableFiscalYears();
+      const sel = document.getElementById('detailYearSelect');
+      sel.innerHTML = fys.map(fy => `<option value="${fy}">${fiscalLabel(fy)}</option>`).join('');
+      const curFY = getCurrentFiscalYear();
+      sel.value = fys.includes(curFY) ? String(curFY) : (fys[0] != null ? String(fys[0]) : '');
+      sel.onchange = renderDetailChart;
+    }
+
+    function renderDetailChart() {
+      const fy = parseInt(document.getElementById('detailYearSelect')?.value, 10);
+      const entries = caData.filter(e => e.fiscalYear === fy);
+
+      // Positionner chaque mois à sa position fiscale
+      const cours   = Array(12).fill(null);
+      const termines = Array(12).fill(null);
+      entries.forEach(e => {
+        const idx = fiscalIndex(e.month);
+        cours[idx]    = e.montantChantiersCours  || null;
+        termines[idx] = e.montantChantiersTermines || null;
       });
-      
+
       const ctx = document.getElementById('currentYearChart').getContext('2d');
       if (currentYearChart) currentYearChart.destroy();
-      
-      const labels = getFiscalMonthLabelsWithYear(currentFiscalYear);
-      
+
       currentYearChart = new Chart(ctx, {
         type: 'line',
         data: {
-          labels,
+          labels: FISCAL_LABELS,
           datasets: [
-            {
-              label: 'Chantier en cours (K€)',
-              data: montantCours,
-              borderColor: '#3498db',
-              backgroundColor: '#3498db',
-              tension: 0,
-              fill: false,
-              pointRadius: 3,
-              pointHoverRadius: 5,
-              spanGaps: false
-            },
-            {
-              label: 'Chantier terminé (K€)',
-              data: montantTermines,
-              borderColor: '#2ecc71',
-              backgroundColor: '#2ecc71',
-              tension: 0,
-              fill: false,
-              pointRadius: 3,
-              pointHoverRadius: 5,
-              spanGaps: false
-            }
+            { label: 'En cours (K€)',  data: cours,    borderColor: '#3498db', backgroundColor: 'rgba(52,152,219,0.08)', tension: 0, fill: true, pointRadius: 3, pointHoverRadius: 5, spanGaps: false },
+            { label: 'Terminés (K€)', data: termines, borderColor: '#2ecc71', backgroundColor: 'rgba(46,204,113,0.08)', tension: 0, fill: true, pointRadius: 3, pointHoverRadius: 5, spanGaps: false }
           ]
         },
         options: {
           responsive: true,
           interaction: { mode: 'index', intersect: false },
           plugins: {
-            legend: {
-              display: true,
-              position: 'top'
-            },
-            tooltip: {
-              callbacks: {
-                label: (ctx) => {
-                  const v = ctx.parsed?.y;
-                  return `${ctx.dataset.label}: ${formatCBCOCurrency(v)}`;
-                }
-              }
-            },
-            title: {
-              display: true,
-              text: `Exercice ${getShortFiscalYearLabel(currentFiscalYear)}`
-            }
+            legend: { display: true, position: 'top' },
+            title: { display: true, text: `Exercice ${fiscalLabel(fy)}` },
+            tooltip: { callbacks: { label: c => `${c.dataset.label}: ${formatK(c.parsed?.y)}` } }
           },
           scales: {
-            x: {
-              ticks: {
-                autoSkip: false,
-                maxRotation: 55,
-                minRotation: 55
-              }
-            },
-            y: {
-              beginAtZero: true,
-              ticks: {
-                callback: (value) => formatCBCOCurrency(value)
-              }
-            }
+            x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } },
+            y: { beginAtZero: true, ticks: { callback: v => formatK(v) } }
           }
         }
       });
     }
 
-    function initDetailYearSelect() {
-      const byYear = getCBCOByYearForDisplay();
-      const years = Object.keys(byYear).map(y => parseInt(y, 10)).filter(Number.isFinite).sort((a, b) => b - a);
-      const select = document.getElementById('detailYearSelect');
-      if (!select) return;
-      select.innerHTML = years.map(y => `<option value="${y}">${getShortFiscalYearLabel(y)}</option>`).join('');
-      const current = getCurrentFiscalYear();
-      if (years.includes(current)) select.value = String(current);
-      else if (years.length) select.value = String(years[0]);
-      select.onchange = renderCurrentYearChart;
-    }
+    // ─── RAPPORT PDF ──────────────────────────────────────────────────────────
 
-    /**
-     * Télécharge le rapport en image
-     */
     async function downloadCBCOReport() {
       try {
-        // Créer un conteneur temporaire pour les 3 sections
         const container = document.createElement('div');
-        container.style.position = 'absolute';
-        container.style.left = '-9999px';
-        container.style.top = '0';
-        container.style.width = '1200px';
-        container.style.backgroundColor = '#ffffff';
-        container.style.padding = '30px';
-        container.style.fontFamily = 'Arial, sans-serif';
+        container.style.cssText = 'position:absolute;left:-9999px;top:0;width:1200px;background:#fff;padding:30px;font-family:Arial,sans-serif;';
         document.body.appendChild(container);
 
-        // Convertir les canvas Chart.js en images
-        const cbcoChartImage = cbcoChart ? cbcoChart.toBase64Image() : null;
-        const currentYearChartImage = currentYearChart ? currentYearChart.toBase64Image() : null;
-
-        // Section 1: Graphique des cumuls annuels
-        if (cbcoChartImage) {
-          const section1 = document.createElement('div');
-          section1.style.backgroundColor = '#fff';
-          section1.style.border = '1px solid #ddd';
-          section1.style.borderRadius = '8px';
-          section1.style.padding = '20px';
-          section1.style.marginBottom = '20px';
-          
-          const title1 = document.createElement('h2');
-          title1.textContent = 'Évolution du cumul par exercice fiscal';
-          title1.style.margin = '0 0 15px 0';
-          title1.style.fontSize = '20px';
-          title1.style.color = '#333';
-          section1.appendChild(title1);
-          
+        if (cbcoChart) {
+          const s1 = document.createElement('div');
+          s1.style.cssText = 'background:#fff;border:1px solid #ddd;border-radius:8px;padding:20px;margin-bottom:20px;';
+          s1.innerHTML = '<h2 style="margin:0 0 15px;font-size:20px;color:#333;">Évolution du cumul par année</h2>';
           const img1 = document.createElement('img');
-          img1.src = cbcoChartImage;
-          img1.style.width = '100%';
-          img1.style.height = 'auto';
-          section1.appendChild(img1);
-          
-          container.appendChild(section1);
+          img1.src = cbcoChart.toBase64Image(); img1.style.width = '100%';
+          s1.appendChild(img1); container.appendChild(s1);
+        }
+        if (currentYearChart) {
+          const s2 = document.createElement('div');
+          s2.style.cssText = 'background:#fff;border:1px solid #ddd;border-radius:8px;padding:20px;';
+          s2.innerHTML = '<h2 style="margin:0 0 15px;font-size:20px;color:#333;">Détail mensuel</h2>';
+          const img2 = document.createElement('img');
+          img2.src = currentYearChart.toBase64Image(); img2.style.width = '100%';
+          s2.appendChild(img2); container.appendChild(s2);
         }
 
-        // Section 2: Dernière saisie
-        const currentSection = document.querySelector('.cbco-current-section');
-        if (currentSection) {
-          const section2 = document.createElement('div');
-          section2.style.backgroundColor = '#fff';
-          section2.style.border = '1px solid #ddd';
-          section2.style.borderRadius = '8px';
-          section2.style.padding = '20px';
-          section2.style.marginBottom = '20px';
-          
-          const title2 = document.createElement('h2');
-          title2.textContent = 'Dernière saisie';
-          title2.style.margin = '0 0 15px 0';
-          title2.style.fontSize = '20px';
-          title2.style.color = '#333';
-          section2.appendChild(title2);
-          
-          const gridClone = currentSection.querySelector('.cbco-current-grid').cloneNode(true);
-          section2.appendChild(gridClone);
-          
-          container.appendChild(section2);
-        }
-
-        // Section 3: Détail mensuel année en cours
-        if (currentYearChartImage) {
-          const section3 = document.createElement('div');
-          section3.style.backgroundColor = '#fff';
-          section3.style.border = '1px solid #ddd';
-          section3.style.borderRadius = '8px';
-          section3.style.padding = '20px';
-          
-          const title3 = document.createElement('h2');
-          title3.textContent = 'Détail mensuel de l\'année en cours';
-          title3.style.margin = '0 0 15px 0';
-          title3.style.fontSize = '20px';
-          title3.style.color = '#333';
-          section3.appendChild(title3);
-          
-          const img3 = document.createElement('img');
-          img3.src = currentYearChartImage;
-          img3.style.width = '100%';
-          img3.style.height = 'auto';
-          section3.appendChild(img3);
-          
-          container.appendChild(section3);
-        }
-
-        // Attendre que les images soient chargées
-        await new Promise(resolve => setTimeout(resolve, 300));
-
-        // Capturer l'image
-        const canvas = await html2canvas(container, {
-          backgroundColor: '#ffffff',
-          scale: 2,
-          logging: false,
-          useCORS: true
-        });
-
-        // Nettoyer le conteneur temporaire
+        await new Promise(r => setTimeout(r, 300));
+        const canvas = await html2canvas(container, { backgroundColor: '#fff', scale: 2, logging: false, useCORS: true });
         document.body.removeChild(container);
 
-        // Télécharger l'image
         const link = document.createElement('a');
-        const date = new Date().toISOString().split('T')[0];
-        link.download = `rapport_cbco_${date}.png`;
+        link.download = `rapport_ca_${new Date().toISOString().split('T')[0]}.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
-
-      } catch (error) {
-        console.error('Erreur lors de la génération du rapport:', error);
-        alert('Erreur lors de la génération du rapport. Veuillez réessayer.');
+      } catch (e) {
+        console.error(e);
+        alert('Erreur lors de la génération du rapport.');
       }
     }
 
-    /**
-     * Initialise la page CBCO
-     */
-    function initCBCO() {
-      document.getElementById('sidebar').innerHTML = getSidebar();
-      injectCommercialSecondaryBar();
-      
+    // ─── RENDU GLOBAL ─────────────────────────────────────────────────────────
+
+    function renderAll() {
+      renderCACard();
       initChartYearFilter();
       initDetailYearSelect();
-      displayCurrentData();
-      renderCBCOChart();
-      renderCurrentYearChart();
-      renderCommercialDonutCBCO();
-      document.addEventListener('click', (event) => {
+      renderCumulChart();
+      renderDetailChart();
+    }
+
+    // ─── INITIALISATION ───────────────────────────────────────────────────────
+
+    async function init() {
+      document.getElementById('sidebar').innerHTML = getSidebar();
+      injectCommercialSecondaryBar();
+
+      await loadCAData();
+      renderAll();
+
+      document.addEventListener('click', e => {
         const dd = document.getElementById('chartYearDropdown');
         const btn = document.getElementById('chartYearFilterBtn');
         if (!dd || !btn) return;
-        const inDropdown = dd.contains(event.target);
-        const onButton = btn.contains(event.target);
-        if (!inDropdown && !onButton) dd.style.display = 'none';
+        if (!dd.contains(e.target) && !btn.contains(e.target)) dd.style.display = 'none';
       });
     }
 
-    /**
-     * Affiche le graphique donut taux de réussite commercial – mois dernier
-     */
-    let commercialDonutCBCO;
-    function renderCommercialDonutCBCO() {
-      const MOIS = ['', 'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
-                     'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
-      const today = new Date();
-      const prevMonth = today.getMonth() === 0 ? 12 : today.getMonth();
-      const prevYear  = today.getMonth() === 0 ? today.getFullYear() - 1 : today.getFullYear();
-
-      const stats = getCBCOCommercialTauxReussite(prevMonth, prevYear);
-      const periodLabel = `${MOIS[prevMonth]} ${prevYear}`;
-      const detailsDiv = document.getElementById('commercialTauxDetailsCBCO');
-      const ctx = document.getElementById('commercialTauxChartCBCO').getContext('2d');
-
-      if (stats.total === 0) {
-        detailsDiv.innerHTML = `<div style="color:var(--text-muted);font-size:14px;"><strong>Période : ${periodLabel}</strong><br><br>Aucune affaire saisie sur cette période.</div>`;
-        if (commercialDonutCBCO) commercialDonutCBCO.destroy();
-        commercialDonutCBCO = new Chart(ctx, { type:'doughnut', data:{ labels:['Aucune donnée'], datasets:[{data:[1],backgroundColor:['#e0e0e0'],borderWidth:0}] }, options:{ responsive:true, maintainAspectRatio:true, cutout:'70%', plugins:{legend:{display:false},tooltip:{enabled:false}} } });
-        return;
-      }
-
-      const taux = stats.taux !== null ? stats.taux.toFixed(0) : '—';
-      const tauxColor = stats.taux === null ? '#999' : (stats.taux >= 50 ? '#27ae60' : '#e74c3c');
-
-      detailsDiv.innerHTML = `
-        <div style="font-size:15px; line-height:2; text-align:center;">
-          <div style="font-weight:700; margin-bottom:8px; color:#555;">Période : ${periodLabel}</div>
-          <div style="display:inline-grid; grid-template-columns:1fr 1fr; gap:8px 24px; text-align:left; margin-bottom:12px;">
-            <span style="color:var(--text-success);">✅ Gagnées</span><strong style="color:var(--text-success);">${stats.gagnees}</strong>
-            <span style="color:var(--text-danger);">❌ Perdues</span><strong style="color:var(--text-danger);">${stats.perdues}</strong>
-            <span style="color:var(--text-warning);">⏳ En cours</span><strong>${stats.enCours}</strong>
-            <span>📊 Total</span><strong>${stats.total}</strong>
-          </div>
-          <div style="font-size:22px; font-weight:800; color:${tauxColor};">Taux de réussite : ${taux}${stats.taux !== null ? ' %' : ''}</div>
-        </div>`;
-
-      const cloturees = stats.gagnees + stats.perdues;
-      if (commercialDonutCBCO) commercialDonutCBCO.destroy();
-      if (cloturees === 0) {
-        commercialDonutCBCO = new Chart(ctx, { type:'doughnut', data:{ labels:['En cours'], datasets:[{data:[stats.enCours],backgroundColor:['#f39c12'],borderWidth:0}] }, options:{ responsive:true, maintainAspectRatio:true, cutout:'70%', plugins:{legend:{display:false},tooltip:{enabled:false}} } });
-      } else {
-        commercialDonutCBCO = new Chart(ctx, { type:'doughnut', data:{ labels:['Gagnées','Perdues'], datasets:[{data:[stats.gagnees,stats.perdues],backgroundColor:['#27ae60','#e74c3c'],borderWidth:2,borderColor:'#fff'}] }, options:{ responsive:true, maintainAspectRatio:true, cutout:'70%', plugins:{ legend:{display:true,position:'bottom'}, tooltip:{callbacks:{label:(c)=>`${c.label} : ${c.parsed}`}} } } });
-      }
-    }
-
-    window.onServerReady(initCBCO);
+    window.onServerReady(init);
   </script>
 
   <footer class="site-footer"></footer>
