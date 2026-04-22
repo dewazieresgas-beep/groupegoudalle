@@ -41,7 +41,7 @@
       "type": "AT Travail",
       "gravite": "Avec arrêt",
       "cause": "Coupure / Piqûre",
-      "description": "chantier ROUSSEL :",
+      "description": "chantier ROUSSEL : pose de tôles laquées en bardage coupure au majeur main gauche  7 fils",
       "stopStartDate": "2026-03-27",
       "stopEndDate": "2026-04-19",
       "stopDays": 24,
@@ -5212,9 +5212,9 @@
   "rh_security_excel_config": {
     "folder": "W:\\RH paie\\ADMINISTRATIF PAIE\\Aministratif\\accident\\TABLEAU ACCIDENTS DU TRAVAIL toutes societes",
     "active": true,
-    "lastSync": "2026-04-21T10:11:48.381Z",
+    "lastSync": "2026-04-22T07:17:16.269Z",
     "lastSyncResult": {
-      "imported": 0,
+      "imported": 186,
       "companies": 4
     }
   },
@@ -17046,5 +17046,10 @@
       "dateReponse": "2026-02-01",
       "createdAt": "2026-03-12T16:17:58.001Z"
     }
-  ]
+  ],
+  "rh_security_modifications": {
+    "rhsec_charpente_124": {
+      "modifiedAt": "2026-04-22T07:17:02.100Z"
+    }
+  }
 }
