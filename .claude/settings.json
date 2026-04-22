@@ -19,7 +19,10 @@
       "Bash(mv goudalle.backup.3.json data/)",
       "Bash(mv goudalle.restored.json data/)",
       "Bash(node tests/run_tests.js)",
-      "Bash(grep -v \"\\\\.json$\\\\|\\\\.backup\\\\|\\\\.restored\")"
+      "Bash(grep -v \"\\\\.json$\\\\|\\\\.backup\\\\|\\\\.restored\")",
+      "Read(//c/Users/gdewazieres/Desktop/**)",
+      "Read(//c/Users/gdewazieres/Desktop//**)",
+      "Bash(node -e \"const p = require\\('./server/package.json'\\); console.log\\(JSON.stringify\\(p.dependencies, null, 2\\)\\)\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\gdewazieres\\Desktop\\groupegoudalle"
