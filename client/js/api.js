@@ -82,6 +82,7 @@ const PAGE_PRELOAD_KEYS = {
   'production-indicateurs-maconnerie.html': ['goudalle_thresholds'],
   'production-saisie-maconnerie.html': ['goudalle_thresholds'],
   'commerce-indicateurs.html': [],
+  'commerce-liaison.html': [],
   'production-indicateurs-usine-cbco.html': ['goudalle_cbco_productivite', 'goudalle_rh_security_summary'],
   'production-saisie-productivite-usine.html': ['goudalle_cbco_productivite'],
   'compta-indicateurs.html': ['goudalle_sylve_balance', 'goudalle_sylve_ca'],

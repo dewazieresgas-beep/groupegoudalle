@@ -20,6 +20,9 @@ const multer = require('multer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const COMMERCE_EXCEL_FOLDER = process.env.COMMERCE_EXCEL_FOLDER || 'Z:\\03-BE\\Projet en cours\\Mathieu';
+const COMMERCE_EXCEL_SHEET = 'Indicateur commercial';
+const COMMERCE_MIN_YEAR = 2021;
 
 // ─── TOKEN DE SÉCURITÉ SERVEUR ────────────────────────────────────────────────
 // Généré aléatoirement à chaque démarrage du serveur.
@@ -2191,6 +2194,248 @@ function normalizeExcelName(value) {
     .toLowerCase();
 }
 
+function getFiscalYearFromMonth(year, month) {
+  return month >= 10 ? year : year - 1;
+}
+
+function formatFiscalYearLabel(fiscalYear) {
+  return `${fiscalYear}/${fiscalYear + 1}`;
+}
+
+function extractCommerceWeekYear(filename) {
+  const basename = path.basename(String(filename || '')).replace(/\.(xlsx|xlsm|xls)$/i, '');
+  const match = basename.match(/(?:^|[^a-z0-9])s\s*0?(\d{1,2})\s+(20\d{2})(?:[^a-z0-9]|$)/i)
+    || basename.match(/^s\s*0?(\d{1,2})\s+(20\d{2})$/i);
+  if (!match) return null;
+
+  const week = parseInt(match[1], 10);
+  const year = parseInt(match[2], 10);
+  if (!Number.isFinite(week) || week < 1 || week > 53 || !Number.isFinite(year)) {
+    return null;
+  }
+
+  return {
+    week,
+    year,
+    label: `S${String(week).padStart(2, '0')} ${year}`
+  };
+}
+
+function detectLatestCommerceExcel(folderPath = COMMERCE_EXCEL_FOLDER) {
+  const folder = String(folderPath || '').trim();
+  if (!folder) {
+    throw new Error('Dossier Commerce non configuré.');
+  }
+  if (!fs.existsSync(folder)) {
+    throw new Error(`Dossier introuvable : "${folder}"`);
+  }
+
+  const excelFiles = fs.readdirSync(folder)
+    .filter((entry) => /\.(xlsx|xlsm|xls)$/i.test(entry) && !/^~\$/.test(entry));
+
+  const matches = excelFiles
+    .map((filename) => {
+      const parsed = extractCommerceWeekYear(filename);
+      if (!parsed) return null;
+      const fullPath = path.join(folder, filename);
+      const stat = fs.statSync(fullPath);
+      return { ...parsed, filename, fullPath, stat };
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+      if (b.year !== a.year) return b.year - a.year;
+      if (b.week !== a.week) return b.week - a.week;
+      return b.stat.mtimeMs - a.stat.mtimeMs;
+    });
+
+  if (!matches.length) {
+    const available = excelFiles.length
+      ? ` Fichiers Excel présents : ${excelFiles.join(', ')}`
+      : ' Aucun fichier Excel présent dans le dossier.';
+    throw new Error(`Aucun fichier Commerce au format "Sxx 20xx" trouvé dans "${folder}".${available}`);
+  }
+
+  return {
+    folder,
+    ...matches[0]
+  };
+}
+
+function getCommerceMonthNumber(token) {
+  const txt = normalizeText(token).replace(/\./g, '');
+  if (!txt) return null;
+  if (txt.startsWith('jan')) return 1;
+  if (txt.startsWith('fev') || txt.startsWith('fvr')) return 2;
+  if (txt.startsWith('mar')) return 3;
+  if (txt.startsWith('avr') || txt.startsWith('apr')) return 4;
+  if (txt.startsWith('mai')) return 5;
+  if (txt.startsWith('juil') || txt.startsWith('jul')) return 7;
+  if (txt.startsWith('juin') || txt === 'jun') return 6;
+  if (txt.startsWith('aou') || txt === 'ao') return 8;
+  if (txt.startsWith('sep')) return 9;
+  if (txt.startsWith('oct')) return 10;
+  if (txt.startsWith('nov')) return 11;
+  if (txt.startsWith('dec')) return 12;
+  return null;
+}
+
+function parseCommerceMonthCell(value) {
+  if (value == null || value === '') return null;
+
+  const asMonthInfo = (year, month, label) => {
+    if (!Number.isFinite(year) || !Number.isFinite(month)) return null;
+    if (year < COMMERCE_MIN_YEAR || month < 1 || month > 12) return null;
+    return {
+      year,
+      month,
+      label: label || String(value).trim()
+    };
+  };
+
+  const fromDate = (date, label) => {
+    const d = date instanceof Date ? date : new Date(date);
+    if (Number.isNaN(d.getTime())) return null;
+    return asMonthInfo(d.getFullYear(), d.getMonth() + 1, label);
+  };
+
+  if (value instanceof Date) {
+    return fromDate(value, value.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' }));
+  }
+
+  if (typeof value === 'number' && value > 20000) {
+    const parsed = XLSX.SSF.parse_date_code(value);
+    if (parsed && parsed.y && parsed.m) {
+      return asMonthInfo(parsed.y, parsed.m, `${String(parsed.m).padStart(2, '0')}/${String(parsed.y).slice(-2)}`);
+    }
+  }
+
+  const raw = String(value).trim();
+  if (!raw) return null;
+
+  const isoMatch = raw.match(/^(\d{4})[-/](\d{1,2})(?:[-/]\d{1,2})?$/);
+  if (isoMatch) {
+    return asMonthInfo(parseInt(isoMatch[1], 10), parseInt(isoMatch[2], 10), raw);
+  }
+
+  const parts = normalizeText(raw).replace(/\./g, '').split(/[-/ ]+/).filter(Boolean);
+  if (parts.length >= 2) {
+    const yearToken = parts[parts.length - 1];
+    const monthToken = parts.slice(0, -1).join('');
+    const month = getCommerceMonthNumber(monthToken);
+    let year = parseInt(yearToken, 10);
+    if (month && Number.isFinite(year)) {
+      if (year < 100) year += 2000;
+      return asMonthInfo(year, month, raw);
+    }
+  }
+
+  return null;
+}
+
+function buildCommerceRow(row) {
+  const monthInfo = parseCommerceMonthCell(row?.[0]);
+  if (!monthInfo) return null;
+
+  const enCours = toNumberFr(row?.[1]);
+  const termines = toNumberFr(row?.[2]);
+  const total = toNumberFr(row?.[3]);
+  const cumulativeAnnual = toNumberFr(row?.[4]);
+  const enCoursKeur = enCours ?? 0;
+  const terminesKeur = termines ?? 0;
+  const totalKeur = total ?? (enCoursKeur + terminesKeur);
+  const fiscalYear = getFiscalYearFromMonth(monthInfo.year, monthInfo.month);
+  const fiscalMonthIndex = monthInfo.month >= 10 ? monthInfo.month - 10 : monthInfo.month + 2;
+
+  return {
+    monthLabel: monthInfo.label,
+    month: monthInfo.month,
+    year: monthInfo.year,
+    isoMonth: `${monthInfo.year}-${String(monthInfo.month).padStart(2, '0')}`,
+    fiscalYear,
+    fiscalYearLabel: formatFiscalYearLabel(fiscalYear),
+    fiscalMonthIndex,
+    enCoursKeur,
+    terminesKeur,
+    totalKeur,
+    cumulativeAnnualKeur: cumulativeAnnual ?? null,
+    hasActivity: [enCoursKeur, terminesKeur, totalKeur].some((value) => Math.abs(Number(value) || 0) > 0.0001)
+  };
+}
+
+function readCommerceIndicatorsSnapshot(folderPath = COMMERCE_EXCEL_FOLDER) {
+  const sourceFile = detectLatestCommerceExcel(folderPath);
+  const workbook = XLSX.readFile(sourceFile.fullPath, { cellDates: true });
+  const targetSheetKey = normalizeText(COMMERCE_EXCEL_SHEET).replace(/\s+/g, '');
+  const sheetName = workbook.SheetNames.find((name) => normalizeText(name).replace(/\s+/g, '') === targetSheetKey);
+
+  if (!sheetName) {
+    throw new Error(
+      `Feuille "${COMMERCE_EXCEL_SHEET}" introuvable dans "${sourceFile.filename}". ` +
+      `Feuilles disponibles : ${workbook.SheetNames.join(', ')}`
+    );
+  }
+
+  const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
+    header: 1,
+    defval: null,
+    raw: false
+  });
+  const parsedRows = rows
+    .map((row) => buildCommerceRow(row))
+    .filter(Boolean)
+    .sort((a, b) => (a.year !== b.year ? a.year - b.year : a.month - b.month));
+
+  if (!parsedRows.length) {
+    throw new Error(`Aucune donnée exploitable trouvée dans la feuille "${sheetName}".`);
+  }
+
+  const latestMeaningfulRow = [...parsedRows].reverse().find((row) => row.hasActivity) || parsedRows[parsedRows.length - 1];
+  const activeRows = parsedRows.filter((row) => (
+    row.year < latestMeaningfulRow.year ||
+    (row.year === latestMeaningfulRow.year && row.month <= latestMeaningfulRow.month)
+  ));
+  const availableFiscalYears = [...new Set(activeRows.map((row) => row.fiscalYear))].sort((a, b) => b - a);
+  const currentFiscalYear = getFiscalYearFromMonth(new Date().getFullYear(), new Date().getMonth() + 1);
+  const anchorFiscalYear = availableFiscalYears.includes(currentFiscalYear)
+    ? currentFiscalYear
+    : (availableFiscalYears[0] ?? currentFiscalYear);
+  const anchorIndex = Math.max(0, availableFiscalYears.indexOf(anchorFiscalYear));
+  const defaultFiscalYears = availableFiscalYears.slice(anchorIndex, anchorIndex + 4);
+  const rowsCurrentFiscalYear = activeRows.filter((row) => row.fiscalYear === currentFiscalYear);
+
+  return {
+    success: true,
+    source: {
+      folder: sourceFile.folder,
+      fileName: sourceFile.filename,
+      fullPath: sourceFile.fullPath,
+      week: sourceFile.week,
+      year: sourceFile.year,
+      weekLabel: sourceFile.label,
+      lastModified: sourceFile.stat.mtime.toISOString(),
+      sizeBytes: sourceFile.stat.size,
+      sheetName,
+      sheetNames: workbook.SheetNames,
+      detectedAt: new Date().toISOString()
+    },
+    summary: {
+      rowCount: activeRows.length,
+      totalRowCount: parsedRows.length,
+      latestMonth: latestMeaningfulRow.isoMonth,
+      latestMonthLabel: latestMeaningfulRow.monthLabel,
+      availableFiscalYears,
+      defaultFiscalYears,
+      currentFiscalYear,
+      currentFiscalYearLabel: formatFiscalYearLabel(currentFiscalYear),
+      currentFiscalYearTotalKeur: rowsCurrentFiscalYear.reduce((sum, row) => sum + row.totalKeur, 0),
+      currentFiscalYearEnCoursKeur: rowsCurrentFiscalYear.reduce((sum, row) => sum + row.enCoursKeur, 0),
+      currentFiscalYearTerminesKeur: rowsCurrentFiscalYear.reduce((sum, row) => sum + row.terminesKeur, 0)
+    },
+    rows: activeRows,
+    previewRows: activeRows.slice(-12).reverse()
+  };
+}
+
 function parseRHSaisieWorkbook(company, folderPath) {
   const resolved = resolveExistingExcelPath(folderPath, company.filename);
   const excelPath = resolved.fullPath;
@@ -2687,6 +2932,39 @@ app.get('/api/rh-security-summary', (req, res) => {
   res.json({ success: true, ...computeRHSecuritySummary(incidents) });
 });
 
+// ─── COMMERCE : LECTURE DYNAMIQUE DU DERNIER EXCEL ───────────────────────────
+
+app.get('/api/commerce-indicators', (req, res) => {
+  try {
+    const snapshot = readCommerceIndicatorsSnapshot();
+    res.json(snapshot);
+  } catch (e) {
+    res.status(500).json({
+      success: false,
+      error: e.message,
+      sourceFolder: COMMERCE_EXCEL_FOLDER
+    });
+  }
+});
+
+app.get('/api/commerce-link-status', (req, res) => {
+  try {
+    const snapshot = readCommerceIndicatorsSnapshot();
+    res.json({
+      success: true,
+      source: snapshot.source,
+      summary: snapshot.summary,
+      previewRows: snapshot.previewRows
+    });
+  } catch (e) {
+    res.status(500).json({
+      success: false,
+      error: e.message,
+      sourceFolder: COMMERCE_EXCEL_FOLDER
+    });
+  }
+});
+
 
 // Servir les fichiers PDF du planning avec logging
 app.use('/server/uploads', (req, res, next) => {
@@ -2769,6 +3047,12 @@ app.listen(PORT, '0.0.0.0', () => {
     }
   } else {
     console.log(`⚠️  [Excel RH Sécurité] Aucun dossier configuré`);
+  }
+  try {
+    const commerceSource = detectLatestCommerceExcel();
+    console.log(`✅ [Excel Commerce] Dernier fichier détecté : ${commerceSource.filename}`);
+  } catch (e) {
+    console.log(`⚠️  [Excel Commerce] ${e.message}`);
   }
   console.log('');
 });

@@ -131,7 +131,7 @@ function isProductionPage() {
  */
 function isCommercialPage() {
   const page = getCurrentPage();
-  return page === 'commerce-indicateurs.html';
+  return page === 'commerce-indicateurs.html' || page === 'commerce-liaison.html';
 }
 
 function isAchatPage() {
@@ -572,6 +572,44 @@ function injectComptaSecondaryBar() {
   }
 }
 
+function injectCommerceSecondaryBar() {
+  const session = Auth.getSession();
+  if (!session) return;
+  if (document.getElementById('commerceSidebar')) return;
+
+  const base = getBasePath();
+  const currentPage = getCurrentPage();
+  const indicateursActive = currentPage === 'commerce-indicateurs.html' ? ' active' : '';
+  const liaisonActive = currentPage === 'commerce-liaison.html' ? ' active' : '';
+
+  const secondaryItems = `
+    <a href="${base}pages/commerce-indicateurs.html" class="sidebar-item${indicateursActive}">📈 Indicateur commercial</a>
+    <a href="${base}pages/commerce-liaison.html" class="sidebar-item${liaisonActive}">🔗 Liaison Excel</a>
+  `;
+
+  const barHTML = `
+    <aside class="sidebar-secondary" id="commerceSidebar">
+      <div class="sidebar-secondary-content">
+        <div class="sidebar-secondary-title">💼 Commerce</div>
+        <button class="sidebar-secondary-close" onclick="toggleCommerceSidebar();">✕</button>
+        <nav class="sidebar-secondary-nav">
+          ${secondaryItems}
+        </nav>
+      </div>
+    </aside>
+  `;
+
+  const sidebar = document.querySelector('.sidebar');
+  if (sidebar) {
+    sidebar.insertAdjacentHTML('afterend', barHTML);
+  }
+
+  const commerceSidebar = document.getElementById('commerceSidebar');
+  if (commerceSidebar) {
+    commerceSidebar.classList.add('open');
+  }
+}
+
 /**
  * Génère et injecte la barre de navigation secondaire Achats
  * À appeler sur les pages Achat (achat-indicateurs.html, achat-saisie.html, achat-controle.html)
@@ -730,6 +768,17 @@ function toggleComptaSidebar(event) {
   localStorage.setItem('compta_sidebar_state', isOpen ? 'open' : 'closed');
 }
 
+function toggleCommerceSidebar(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  const commerceSidebar = document.getElementById('commerceSidebar');
+  if (!commerceSidebar) return;
+  const isOpen = commerceSidebar.classList.toggle('open');
+  localStorage.setItem('commerce_sidebar_state', isOpen ? 'open' : 'closed');
+}
+
 /**
  * Génère et injecte la barre de navigation secondaire Utilisateurs
  * À appeler sur la page utilisateurs.html
@@ -824,6 +873,15 @@ function restoreSubMenuStates() {
     const comptaSidebar = document.getElementById('comptaSidebar');
     if (comptaSidebar) {
       comptaSidebar.classList.add('open');
+    }
+  }
+
+  // Restaurer l'état du sidebar secondaire Commerce
+  const commerceState = localStorage.getItem('commerce_sidebar_state');
+  if (commerceState === 'open') {
+    const commerceSidebar = document.getElementById('commerceSidebar');
+    if (commerceSidebar) {
+      commerceSidebar.classList.add('open');
     }
   }
 

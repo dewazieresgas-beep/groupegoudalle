@@ -25,7 +25,9 @@
       "Bash(node -e \"const p = require\\('./server/package.json'\\); console.log\\(JSON.stringify\\(p.dependencies, null, 2\\)\\)\")",
       "Bash(curl -s http://localhost:3000/api/ca-excel)",
       "Bash(grep -n \"app.use\\\\|catch.*all\\\\|\\\\\\\\*\\\\|static\\\\|sendFile\" c:/Users/gdewazieres/Desktop/groupegoudalle/server/server.js)",
-      "Bash(grep -n \"ca-excel\\\\|catch-all\\\\|app.get.*\\\\\\\\*\" c:/Users/gdewazieres/Desktop/groupegoudalle/server/server.js)"
+      "Bash(grep -n \"ca-excel\\\\|catch-all\\\\|app.get.*\\\\\\\\*\" c:/Users/gdewazieres/Desktop/groupegoudalle/server/server.js)",
+      "Read(//c/Users/gdewazieres/.claude/skills/wiki-brain/**)",
+      "Read(//c/Users/gdewazieres/Downloads/**)"
     ],
     "additionalDirectories": [
       "c:\\Users\\gdewazieres\\Desktop\\groupegoudalle"

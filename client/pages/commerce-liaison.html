@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Commerce - Liaison Excel - Intranet Goudalle</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .commerce-link-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+      align-items: flex-start;
+    }
+
+    .commerce-link-header p {
+      margin: 8px 0 0;
+      color: var(--text-light);
+      max-width: 760px;
+    }
+
+    .commerce-link-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .commerce-link-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 20px;
+      border-top: 4px solid var(--accent);
+    }
+
+    .commerce-link-card h3 {
+      margin: 0 0 10px;
+      color: var(--primary);
+      font-size: 15px;
+    }
+
+    .commerce-link-card p {
+      margin: 0;
+      color: var(--text-light);
+      line-height: 1.5;
+      word-break: break-word;
+    }
+
+    .commerce-link-list {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--text-light);
+      line-height: 1.7;
+    }
+
+    .commerce-link-table td.num,
+    .commerce-link-table th.num {
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .commerce-link-empty {
+      text-align: center;
+      color: var(--text-light);
+      padding: 28px 16px;
+    }
+  </style>
+</head>
+<body>
+  <script src="../js/api.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+
+  <script>
+    Auth.requirePermission('commerce_indicateurs');
+  </script>
+
+  <div class="app-container">
+    <div id="sidebar"></div>
+
+    <main class="main-content">
+      <div class="commerce-link-header">
+        <div>
+          <h1 class="mb-0">Commerce - Liaison Excel</h1>
+          <p>Contrôle rapide du fichier détecté par le serveur, de la feuille lue et d'un aperçu des dernières lignes réellement exploitées.</p>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <a class="btn btn-secondary" href="./commerce-indicateurs.html">← Retour aux indicateurs</a>
+          <button class="btn btn-primary" id="refreshLinkButton" type="button">⟳ Actualiser</button>
+        </div>
+      </div>
+
+      <div id="commerceLinkAlerts"></div>
+
+      <div class="commerce-link-grid" id="commerceLinkCards"></div>
+
+      <div class="card">
+        <div class="card-title">
+          <h2>Aperçu des dernières lignes retenues</h2>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive" id="commercePreviewTable"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <h2>Points de contrôle</h2>
+        </div>
+        <div class="card-body">
+          <ol class="commerce-link-list">
+            <li>Le fichier doit être nommé avec une semaine du type <strong>S17 2026</strong> pour être détecté automatiquement.</li>
+            <li>La feuille attendue côté serveur est <strong>Indicateur commercial</strong>.</li>
+            <li>Les lignes utiles doivent contenir un mois exploitable en première colonne puis les montants <strong>en cours</strong>, <strong>terminés</strong> et <strong>total</strong>.</li>
+            <li>Si le dernier fichier n'apparaît pas, vérifier le dossier source côté serveur et la date de modification du fichier Excel.</li>
+          </ol>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const COMMERCE_LINK_API_URL = window.location.origin + '/api/commerce-link-status';
+
+    function formatDateTime(value) {
+      if (!value) return '—';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return String(value);
+      return date.toLocaleString('fr-FR');
+    }
+
+    function formatKeur(value) {
+      return `${(Number(value) || 0).toLocaleString('fr-FR', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      })} k€`;
+    }
+
+    function formatBytes(size) {
+      const bytes = Number(size) || 0;
+      if (bytes < 1024) return `${bytes} o`;
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} Ko`;
+      return `${(bytes / (1024 * 1024)).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} Mo`;
+    }
+
+    function renderLinkAlert(type, message) {
+      document.getElementById('commerceLinkAlerts').innerHTML = `<div class="alert alert-${type}">${escapeHtml(message)}</div>`;
+    }
+
+    function renderCards(payload) {
+      const cards = document.getElementById('commerceLinkCards');
+      const source = payload?.source || {};
+      const summary = payload?.summary || {};
+
+      cards.innerHTML = `
+        <div class="commerce-link-card">
+          <h3>Fichier détecté</h3>
+          <p><strong>${escapeHtml(source.fileName || '—')}</strong><br>${escapeHtml(source.fullPath || source.folder || '—')}</p>
+        </div>
+        <div class="commerce-link-card" style="border-top-color:#10b981;">
+          <h3>Feuille lue</h3>
+          <p>${escapeHtml(source.sheetName || '—')}<br>Détection: ${escapeHtml(source.weekLabel || '—')}</p>
+        </div>
+        <div class="commerce-link-card" style="border-top-color:#f59e0b;">
+          <h3>Horodatage</h3>
+          <p>Modifié le ${escapeHtml(formatDateTime(source.lastModified))}<br>Contrôlé le ${escapeHtml(formatDateTime(source.detectedAt))}</p>
+        </div>
+        <div class="commerce-link-card" style="border-top-color:#2563eb;">
+          <h3>Volume retenu</h3>
+          <p>${escapeHtml(String(summary.rowCount || 0))} lignes actives sur ${escapeHtml(String(summary.totalRowCount || 0))}<br>Taille fichier: ${escapeHtml(formatBytes(source.sizeBytes))}</p>
+        </div>
+      `;
+    }
+
+    function renderPreviewTable(payload) {
+      const container = document.getElementById('commercePreviewTable');
+      const rows = payload?.previewRows || [];
+
+      if (!rows.length) {
+        container.innerHTML = '<div class="commerce-link-empty">Aucune ligne de prévisualisation disponible.</div>';
+        return;
+      }
+
+      container.innerHTML = `
+        <table class="commerce-link-table">
+          <thead>
+            <tr>
+              <th>Mois</th>
+              <th>Exercice</th>
+              <th class="num">En cours</th>
+              <th class="num">Terminé</th>
+              <th class="num">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map((row) => `
+              <tr>
+                <td>${escapeHtml(row.monthLabel || row.isoMonth || '—')}</td>
+                <td>${escapeHtml(row.fiscalYearLabel || '—')}</td>
+                <td class="num">${escapeHtml(formatKeur(row.enCoursKeur))}</td>
+                <td class="num">${escapeHtml(formatKeur(row.terminesKeur))}</td>
+                <td class="num"><strong>${escapeHtml(formatKeur(row.totalKeur))}</strong></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    async function loadLinkStatus() {
+      const button = document.getElementById('refreshLinkButton');
+      button.disabled = true;
+      try {
+        const res = await fetch(COMMERCE_LINK_API_URL, { method: 'GET', cache: 'no-store' });
+        const payload = await res.json();
+        if (!res.ok || !payload.success) {
+          throw new Error(payload.error || 'Etat de la liaison indisponible');
+        }
+        document.getElementById('commerceLinkAlerts').innerHTML = '<div class="alert alert-success">Connexion Excel commerce valide et lecture serveur réussie.</div>';
+        renderCards(payload);
+        renderPreviewTable(payload);
+      } catch (error) {
+        renderLinkAlert('danger', error.message || 'Impossible de vérifier la liaison Excel commerce.');
+        document.getElementById('commerceLinkCards').innerHTML = '';
+        document.getElementById('commercePreviewTable').innerHTML = '';
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    let _commerceLinkInitDone = false;
+    async function init() {
+      if (_commerceLinkInitDone) return;
+      _commerceLinkInitDone = true;
+
+      document.getElementById('sidebar').innerHTML = getSidebar();
+      injectCommerceSecondaryBar();
+      document.getElementById('refreshLinkButton').addEventListener('click', loadLinkStatus);
+      await loadLinkStatus();
+    }
+
+    window.onServerReady(init);
+  </script>
+
+  <footer class="site-footer"></footer>
+</body>
+</html>
