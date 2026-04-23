@@ -1,52 +1,63 @@
+# graphify
+
+**graphify** (`~/.claude/skills/graphify/SKILL.md`) — transforme n'importe quelle entrée en graphe de connaissances : `/graphify`
+Quand l'utilisateur tape `/graphify`, invoquer l'outil Skill avec `skill: "graphify"` avant toute autre action.
+
+## Navigation dans le contexte (Graphify)
+
+Quand tu as besoin de comprendre le code, les modules, l'architecture ou l'historique de ce projet :
+
+1. **TOUJOURS interroger le graphe de connaissances en premier :** `/graphify query "ta question"`
+   (exécuté depuis `C:\Users\gdewazieres\Desktop\WikiBrain`)
+2. **Utiliser `C:\Users\gdewazieres\Desktop\WikiBrain\graphify-out\graph.json`** comme source de vérité sur les connexions entre concepts.
+3. **Utiliser `C:\Users\gdewazieres\Desktop\WikiBrain\wiki\index.md`** comme point d'entrée pour naviguer dans la structure du wiki.
+4. **Ne lire les fichiers source directement** (`server/server.js`, `client/js/*.js`, etc.) que si la requête au graphe ne retourne pas la réponse, ou si l'utilisateur demande explicitement.
+
+### Exemples de requêtes utiles sur ce projet
+
+- `graphify query "comment fonctionne le module achat"` → pipeline PDF, parsing, allocation
+- `graphify query "watcher excel"` → pattern commun CBCO / GM / RH
+- `graphify query "securite token"` → CSRF, CORS, rate limiting
+- `graphify query "permissions utilisateurs"` → rôles, Auth.requirePermission
+- `graphify query "bug résolu"` → historique des corrections
+
+---
+
 ## Navigation contextuelle (Wiki-Brain)
 
-Tu as accès à un wiki personnel situé dans `C:\Users\gdewazieres\Desktop\WikiBrain`. C'est la base de connaissance
-cumulative de l'utilisateur. Utilise-le comme source de contexte principale.
+Tu as accès à un wiki personnel situé dans `C:\Users\gdewazieres\Desktop\WikiBrain`. C'est la base de connaissance cumulative du projet Intranet Groupe Goudalle.
 
-Quand tu dois comprendre la codebase, les docs, les travaux passés ou toute connaissance stockée :
+Modules documentés : **Achat** (PDF Onaya), **Production CBCO** (usine), **Production Maçonnerie** (GM), **RH Sécurité** (accidents), **Commerce** (Excel Mathieu), **Comptabilité** (Sylve), **API Client** (ServerStorage), **Sécurité Serveur**.
 
-1. **Interroge TOUJOURS le graphe de connaissances en premier :** `graphify query "ta question"`
-   (lancé depuis `C:\Users\gdewazieres\Desktop\WikiBrain`).
-2. **Utilise `C:\Users\gdewazieres\Desktop\WikiBrain\wiki\index.md`** comme point d'entrée pour naviguer dans la structure du wiki.
-3. **Utilise `C:\Users\gdewazieres\Desktop\WikiBrain\graphify-out\wiki\index.md`** s'il existe — c'est l'index wiki généré automatiquement par Graphify.
-4. **Ne lis les fichiers bruts dans `C:\Users\gdewazieres\Desktop\WikiBrain\raw\`** que si l'utilisateur dit explicitement "lis le fichier brut" ou si la requête au graphe ne retourne pas la réponse.
+Quand tu dois comprendre la codebase, les décisions passées ou l'historique :
+
+1. **Interroge le graphe en premier :** `graphify query "ta question"` (depuis `C:\Users\gdewazieres\Desktop\WikiBrain`)
+2. **Lis `wiki\index.md`** pour naviguer dans les pages.
+3. **Ne lis les fichiers bruts dans `raw\`** que si l'utilisateur le demande explicitement.
 
 ## Règles de session Wiki-Brain
 
-**Ingestion de sources.** Quand l'utilisateur dépose un fichier dans `C:\Users\gdewazieres\Desktop\WikiBrain\raw\`
-et te demande de l'ingérer, suis `/wiki-brain ingest` — lis la source,
-résume, crée ou mets à jour les pages wiki, crée des liens croisés de façon agressive, mets à jour
-`wiki\index.md`, et ajoute une entrée dans `log.md`.
+**Ingestion.** Quand l'utilisateur dépose un fichier dans `C:\Users\gdewazieres\Desktop\WikiBrain\raw\` et demande de l'ingérer, suis `/wiki-brain ingest` — résume, crée/met à jour les pages wiki, crée des liens croisés `[[Nom de page]]`, mets à jour `wiki\index.md`, ajoute une entrée dans `log.md`.
 
-**Chaque session doit se terminer par une entrée de log.** Avant de terminer une session, ajoute
-une ligne dans `C:\Users\gdewazieres\Desktop\WikiBrain\log.md` avec ce format exact :
+**Fin de session — entrée de log obligatoire.** Avant de terminer, ajoute dans `C:\Users\gdewazieres\Desktop\WikiBrain\log.md` :
 
 ```
-## [YYYY-MM-DD HH:MM] session | <titre de session en 3-8 mots>
-Touchées : <pages wiki séparées par des virgules, ou "aucune">
+## [YYYY-MM-DD HH:MM] session | <titre en 3-8 mots>
+Touchées : <pages wiki modifiées, ou "aucune">
 ```
 
-**Si la session a produit une connaissance durable** (décisions prises, choses apprises,
-état du projet modifié, problèmes résolus) — mets à jour ou crée les pages wiki
-pertinentes avec cette connaissance avant de terminer. Crée des liens croisés avec `[[Nom de page]]`.
-Mets à jour `wiki\index.md`.
+**Si la session a produit une connaissance durable** (décision prise, bug résolu, feature ajoutée, changement d'architecture) → crée/mets à jour les pages wiki concernées, puis relance `/graphify --update C:\Users\gdewazieres\Desktop\WikiBrain` pour que le graphe intègre les nouvelles pages.
 
-**Si la session était triviale** (correctif ponctuel, tâche routinière, exploration) —
-passe la mise à jour wiki. Ajoute simplement la ligne de log.
+**Si la session était triviale** (correctif ponctuel, exploration sans conclusion) → log uniquement, pas de mise à jour wiki ni de rebuild graphe.
 
-**Ne jamais modifier les fichiers dans `raw\`.** Les sources sont immuables.
-**Claude possède entièrement `wiki\`.** Mets-le à jour, ne demande pas la permission pour chaque
-page — contente-toi de signaler ce qui a changé.
-**Mets toujours à jour `wiki\index.md`** quand tu crées ou renommes une page wiki.
-**Crée des liens croisés de façon agressive.** Syntaxe Obsidian `[[Nom de page]]`. Une page sans
-liens entrants est un cul-de-sac.
+**Ne jamais modifier `raw\`.** Claude possède entièrement `wiki\` — mets-le à jour sans demander la permission, signale ce qui a changé.
 
-## Commandes Wiki-Brain disponibles
+## Commandes disponibles
 
-- `/wiki-brain` — menu de statut
+- `/graphify` — construire ou mettre à jour le graphe de connaissances
+- `/graphify query "<question>"` — interroger le graphe
+- `/graphify --update C:\Users\gdewazieres\Desktop\WikiBrain` — rebuild incrémental après ajout de pages wiki
+- `/wiki-brain` — menu statut
 - `/wiki-brain ingest <fichier>` — ingérer une source
-- `/wiki-brain query "<question>"` — interroger le graphe et le wiki
 - `/wiki-brain lint` — vérification de santé du wiki
-- `/wiki-brain rebuild` — forcer une reconstruction Graphify
-- `/wiki-brain doctor` — vérifier l'installation
-- `/recall` — afficher les 5 dernières activités et lire les pages liées
+- `/recall` — 5 dernières activités du log
