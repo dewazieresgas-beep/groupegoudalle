@@ -2332,14 +2332,66 @@ function parseCommerceMonthCell(value) {
   return null;
 }
 
-function buildCommerceRow(row) {
-  const monthInfo = parseCommerceMonthCell(row?.[0]);
+function findCommerceColumns(rows = []) {
+  const normalizedRows = (rows || []).map((row) => (Array.isArray(row) ? row.map((cell) => normalizeText(cell)) : []));
+  const headerIndex = normalizedRows.findIndex((row) => {
+    return row.some((cell) => cell === 'mois')
+      && row.some((cell) => cell.includes('en cours'))
+      && row.some((cell) => cell.includes('termine'))
+      && row.some((cell) => cell.includes('total montant estime'));
+  });
+
+  if (headerIndex < 0) {
+    return {
+      headerIndex: -1,
+      monthCol: 0,
+      enCoursCol: 1,
+      terminesCol: 2,
+      totalCol: 3,
+      cumulativeCol: 4
+    };
+  }
+
+  const header = normalizedRows[headerIndex];
+  const findCol = (predicate, fallback) => {
+    const index = header.findIndex((cell) => predicate(String(cell || '')));
+    return index >= 0 ? index : fallback;
+  };
+
+  return {
+    headerIndex,
+    monthCol: findCol((cell) => cell === 'mois', 0),
+    enCoursCol: findCol((cell) => cell.includes('en cours'), 1),
+    terminesCol: findCol((cell) => cell.includes('termine'), 2),
+    totalCol: findCol((cell) => cell.includes('total montant estime') && !cell.includes('cumul'), 3),
+    cumulativeCol: findCol((cell) => cell.includes('cumul annuel'), 4)
+  };
+}
+
+function parseCommerceNumeric(rawValue, displayValue) {
+  if (typeof rawValue === 'number' && Number.isFinite(rawValue)) {
+    return rawValue;
+  }
+
+  if (rawValue instanceof Date || displayValue instanceof Date) {
+    return null;
+  }
+
+  const fromDisplay = toNumberFr(displayValue);
+  if (fromDisplay != null) return fromDisplay;
+
+  const fromRaw = toNumberFr(rawValue);
+  return fromRaw != null ? fromRaw : null;
+}
+
+function buildCommerceRow(rawRow, displayRow, columns) {
+  const monthInfo = parseCommerceMonthCell(displayRow?.[columns.monthCol] ?? rawRow?.[columns.monthCol]);
   if (!monthInfo) return null;
 
-  const enCours = toNumberFr(row?.[1]);
-  const termines = toNumberFr(row?.[2]);
-  const total = toNumberFr(row?.[3]);
-  const cumulativeAnnual = toNumberFr(row?.[4]);
+  const enCours = parseCommerceNumeric(rawRow?.[columns.enCoursCol], displayRow?.[columns.enCoursCol]);
+  const termines = parseCommerceNumeric(rawRow?.[columns.terminesCol], displayRow?.[columns.terminesCol]);
+  const total = parseCommerceNumeric(rawRow?.[columns.totalCol], displayRow?.[columns.totalCol]);
+  const cumulativeAnnual = parseCommerceNumeric(rawRow?.[columns.cumulativeCol], displayRow?.[columns.cumulativeCol]);
   const enCoursKeur = enCours ?? 0;
   const terminesKeur = termines ?? 0;
   const totalKeur = total ?? (enCoursKeur + terminesKeur);
@@ -2375,13 +2427,22 @@ function readCommerceIndicatorsSnapshot(folderPath = COMMERCE_EXCEL_FOLDER) {
     );
   }
 
-  const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
+  const displayRows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
     header: 1,
     defval: null,
     raw: false
   });
-  const parsedRows = rows
-    .map((row) => buildCommerceRow(row))
+  const rawRows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
+    header: 1,
+    defval: null,
+    raw: true
+  });
+  const columns = findCommerceColumns(displayRows);
+  const startIndex = columns.headerIndex >= 0 ? columns.headerIndex + 1 : 0;
+
+  const parsedRows = displayRows
+    .slice(startIndex)
+    .map((row, index) => buildCommerceRow(rawRows[startIndex + index], row, columns))
     .filter(Boolean)
     .sort((a, b) => (a.year !== b.year ? a.year - b.year : a.month - b.month));
 

@@ -27,10 +27,12 @@
       "Bash(grep -n \"app.use\\\\|catch.*all\\\\|\\\\\\\\*\\\\|static\\\\|sendFile\" c:/Users/gdewazieres/Desktop/groupegoudalle/server/server.js)",
       "Bash(grep -n \"ca-excel\\\\|catch-all\\\\|app.get.*\\\\\\\\*\" c:/Users/gdewazieres/Desktop/groupegoudalle/server/server.js)",
       "Read(//c/Users/gdewazieres/.claude/skills/wiki-brain/**)",
-      "Read(//c/Users/gdewazieres/Downloads/**)"
+      "Read(//c/Users/gdewazieres/Downloads/**)",
+      "Edit(~/.claude/skills/wiki-brain/**)"
     ],
     "additionalDirectories": [
-      "c:\\Users\\gdewazieres\\Desktop\\groupegoudalle"
+      "c:\\Users\\gdewazieres\\Desktop\\groupegoudalle",
+      "C:\\Users\\gdewazieres\\Desktop\\WikiBrain"
     ]
   }
 }
