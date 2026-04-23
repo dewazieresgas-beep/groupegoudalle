@@ -2743,6 +2743,7 @@ function readAOSnapshot(cfg) {
 
   const dataRows = rawRows.slice(cols.headerIndex + 1);
   const records = [];
+  const invalidDates = [];
 
   for (const row of dataRows) {
     if (!row || row.every((c) => c == null || c === '')) continue;
@@ -2752,13 +2753,18 @@ function readAOSnapshot(cfg) {
     const statusRaw = cols.statutCol >= 0 ? row[cols.statutCol] : null;
     const status = normalizeAOStatus(statusRaw);
 
-    const dateReponse = cols.dateReponseCol >= 0 ? parseAODate(row[cols.dateReponseCol]) : null;
-    const dateInfo = cols.dateInfoCol >= 0 ? parseAODate(row[cols.dateInfoCol]) : null;
+    // date butoir V1 = date d'entrée de l'AO dans le suivi → date principale
+    // date de réponse = résultat final (vide pour les "En attente") → fallback
+    const rawButoirCell = cols.dateButoirCol >= 0 ? row[cols.dateButoirCol] : null;
+    const rawReponseCell = cols.dateReponseCol >= 0 ? row[cols.dateReponseCol] : null;
+    const dateButoirV1 = parseAODate(rawButoirCell);
+    const dateReponse = parseAODate(rawReponseCell);
 
-    let effectiveDate = dateReponse;
-    if (!effectiveDate && (status === 'Gagné' || status === 'Perdu') && dateInfo) {
-      effectiveDate = dateInfo;
+    if (rawButoirCell != null && rawButoirCell !== '' && !dateButoirV1) {
+      invalidDates.push({ nom: String(nom).trim(), colonne: 'date butoir V1', valeurBrute: String(rawButoirCell) });
     }
+
+    const effectiveDate = dateButoirV1 || dateReponse || null;
 
     const montantRaw = cols.montantCol >= 0 ? row[cols.montantCol] : null;
     let montant = null;
@@ -2779,8 +2785,8 @@ function readAOSnapshot(cfg) {
       client: cols.clientCol >= 0 ? String(row[cols.clientCol] || '').trim() : '',
       statusRaw: statusRaw != null ? String(statusRaw).trim() : '',
       status,
+      dateButoirV1: dateButoirV1 ? dateButoirV1.toISOString().slice(0, 10) : null,
       dateReponse: dateReponse ? dateReponse.toISOString().slice(0, 10) : null,
-      dateInfo: dateInfo ? dateInfo.toISOString().slice(0, 10) : null,
       effectiveDate: effectiveDate ? effectiveDate.toISOString().slice(0, 10) : null,
       year: effectiveDate ? effectiveDate.getFullYear() : null,
       month: effectiveDate ? effectiveDate.getMonth() + 1 : null,
@@ -2819,9 +2825,11 @@ function readAOSnapshot(cfg) {
       periodEnd,
       availableYears: allYears,
       availableFiscalYears: allFiscalYears,
-      availableMonths: allMonths
+      availableMonths: allMonths,
+      invalidDateCount: invalidDates.length
     },
-    records: reliable
+    records: reliable,
+    invalidDates
   };
 }
 
