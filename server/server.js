@@ -23,6 +23,13 @@ const PORT = process.env.PORT || 3000;
 const COMMERCE_EXCEL_FOLDER = process.env.COMMERCE_EXCEL_FOLDER || 'Z:\\03-BE\\Projet en cours\\Mathieu';
 const COMMERCE_EXCEL_SHEET = 'Indicateur commercial';
 const COMMERCE_MIN_YEAR = 2021;
+const COMMERCE_CACHE_TTL_MS = 60 * 1000;
+
+let commerceIndicatorsCache = {
+  snapshot: null,
+  sourceKey: null,
+  cachedAt: 0
+};
 
 // ─── TOKEN DE SÉCURITÉ SERVEUR ────────────────────────────────────────────────
 // Généré aléatoirement à chaque démarrage du serveur.
@@ -2492,16 +2499,16 @@ function sheetToFormattedRows(worksheet) {
   return rows;
 }
 
-function readCommerceIndicatorsSnapshot(folderPath = COMMERCE_EXCEL_FOLDER) {
-  const sourceFile = detectLatestCommerceExcel(folderPath);
-  const workbook = XLSX.readFile(sourceFile.fullPath, { cellDates: true });
+function readCommerceIndicatorsSnapshot(folderPath = COMMERCE_EXCEL_FOLDER, sourceFile = null) {
+  const resolvedSourceFile = sourceFile || detectLatestCommerceExcel(folderPath);
+  const workbook = XLSX.readFile(resolvedSourceFile.fullPath, { cellDates: true });
   const targetSheetKey = normalizeText(COMMERCE_EXCEL_SHEET).replace(/\s+/g, '');
   const sheetName = workbook.SheetNames.find((name) => normalizeText(name).replace(/\s+/g, '') === targetSheetKey);
   const worksheet = workbook.Sheets[sheetName];
 
   if (!sheetName) {
     throw new Error(
-      `Feuille "${COMMERCE_EXCEL_SHEET}" introuvable dans "${sourceFile.filename}". ` +
+      `Feuille "${COMMERCE_EXCEL_SHEET}" introuvable dans "${resolvedSourceFile.filename}". ` +
       `Feuilles disponibles : ${workbook.SheetNames.join(', ')}`
     );
   }
@@ -2542,14 +2549,14 @@ function readCommerceIndicatorsSnapshot(folderPath = COMMERCE_EXCEL_FOLDER) {
   return {
     success: true,
     source: {
-      folder: sourceFile.folder,
-      fileName: sourceFile.filename,
-      fullPath: sourceFile.fullPath,
-      week: sourceFile.week,
-      year: sourceFile.year,
-      weekLabel: sourceFile.label,
-      lastModified: sourceFile.stat.mtime.toISOString(),
-      sizeBytes: sourceFile.stat.size,
+      folder: resolvedSourceFile.folder,
+      fileName: resolvedSourceFile.filename,
+      fullPath: resolvedSourceFile.fullPath,
+      week: resolvedSourceFile.week,
+      year: resolvedSourceFile.year,
+      weekLabel: resolvedSourceFile.label,
+      lastModified: resolvedSourceFile.stat.mtime.toISOString(),
+      sizeBytes: resolvedSourceFile.stat.size,
       sheetName,
       sheetNames: workbook.SheetNames,
       detectedAt: new Date().toISOString()
@@ -2570,6 +2577,37 @@ function readCommerceIndicatorsSnapshot(folderPath = COMMERCE_EXCEL_FOLDER) {
     rows: activeRows,
     previewRows: activeRows.slice(-12).reverse()
   };
+}
+
+function getCommerceSourceCacheKey(sourceFile) {
+  return [
+    sourceFile.fullPath,
+    sourceFile.stat?.mtimeMs ?? 0,
+    sourceFile.stat?.size ?? 0
+  ].join('|');
+}
+
+function getCommerceIndicatorsSnapshotCached({ folderPath = COMMERCE_EXCEL_FOLDER, forceRefresh = false } = {}) {
+  const now = Date.now();
+  if (!forceRefresh && commerceIndicatorsCache.snapshot && (now - commerceIndicatorsCache.cachedAt) < COMMERCE_CACHE_TTL_MS) {
+    return commerceIndicatorsCache.snapshot;
+  }
+
+  const sourceFile = detectLatestCommerceExcel(folderPath);
+  const sourceKey = getCommerceSourceCacheKey(sourceFile);
+
+  if (!forceRefresh && commerceIndicatorsCache.snapshot && commerceIndicatorsCache.sourceKey === sourceKey) {
+    commerceIndicatorsCache.cachedAt = now;
+    return commerceIndicatorsCache.snapshot;
+  }
+
+  const snapshot = readCommerceIndicatorsSnapshot(folderPath, sourceFile);
+  commerceIndicatorsCache = {
+    snapshot,
+    sourceKey,
+    cachedAt: now
+  };
+  return snapshot;
 }
 
 function parseRHSaisieWorkbook(company, folderPath) {
@@ -3072,7 +3110,8 @@ app.get('/api/rh-security-summary', (req, res) => {
 
 app.get('/api/commerce-indicators', (req, res) => {
   try {
-    const snapshot = readCommerceIndicatorsSnapshot();
+    const forceRefresh = req.query.refresh === '1' || req.query.force === '1';
+    const snapshot = getCommerceIndicatorsSnapshotCached({ forceRefresh });
     res.json(snapshot);
   } catch (e) {
     res.status(500).json({
@@ -3085,7 +3124,8 @@ app.get('/api/commerce-indicators', (req, res) => {
 
 app.get('/api/commerce-link-status', (req, res) => {
   try {
-    const snapshot = readCommerceIndicatorsSnapshot();
+    const forceRefresh = req.query.refresh === '1' || req.query.force === '1';
+    const snapshot = getCommerceIndicatorsSnapshotCached({ forceRefresh });
     res.json({
       success: true,
       source: snapshot.source,

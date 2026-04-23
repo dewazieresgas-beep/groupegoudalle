@@ -36,7 +36,8 @@
       "PowerShell(python -m pip --version)",
       "PowerShell(python -m pip install graphifyy 2>&1)",
       "PowerShell(& \"C:\\\\Users\\\\gdewazieres\\\\AppData\\\\Local\\\\Python\\\\pythoncore-3.14-64\\\\Scripts\\\\graphify.exe\" install 2>&1)",
-      "Read(//c/Users/gdewazieres/**)"
+      "Read(//c/Users/gdewazieres/**)",
+      "PowerShell(& \"C:\\\\Users\\\\gdewazieres\\\\AppData\\\\Local\\\\Python\\\\pythoncore-3.14-64\\\\Scripts\\\\graphify.exe\" --help 2>&1)"
     ],
     "additionalDirectories": [
       "c:\\Users\\gdewazieres\\Desktop\\groupegoudalle",

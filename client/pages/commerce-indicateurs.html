@@ -645,11 +645,12 @@
       renderCharts();
     }
 
-    async function loadCommerceIndicators() {
+    async function loadCommerceIndicators({ forceRefresh = false } = {}) {
       const refreshButton = document.getElementById('refreshButton');
       refreshButton.disabled = true;
       try {
-        const res = await fetch(COMMERCE_API_URL, { method: 'GET', cache: 'no-store' });
+        const requestUrl = forceRefresh ? `${COMMERCE_API_URL}?refresh=1` : COMMERCE_API_URL;
+        const res = await fetch(requestUrl, { method: 'GET', cache: 'no-store' });
         const payload = await res.json();
         if (!res.ok || !payload.success) {
           throw new Error(payload.error || 'Lecture des indicateurs impossible');
@@ -669,7 +670,7 @@
         renderCharts();
       });
 
-      document.getElementById('refreshButton').addEventListener('click', loadCommerceIndicators);
+      document.getElementById('refreshButton').addEventListener('click', () => loadCommerceIndicators({ forceRefresh: true }));
     }
 
     let _commerceIndicatorsInitDone = false;
