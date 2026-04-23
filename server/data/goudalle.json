@@ -5212,7 +5212,7 @@
   "rh_security_excel_config": {
     "folder": "W:\\RH paie\\ADMINISTRATIF PAIE\\Aministratif\\accident\\TABLEAU ACCIDENTS DU TRAVAIL toutes societes",
     "active": true,
-    "lastSync": "2026-04-22T07:21:46.415Z",
+    "lastSync": "2026-04-22T15:57:12.911Z",
     "lastSyncResult": {
       "imported": 186,
       "companies": 4
@@ -17050,6 +17050,95 @@
   "rh_security_modifications": {
     "rhsec_charpente_124": {
       "modifiedAt": "2026-04-22T07:17:02.100Z"
+    }
+  },
+  "users": {
+    "acgoudalle": {
+      "username": "acgoudalle",
+      "password": "123",
+      "role": "direction",
+      "displayName": "Anne-Cécile Goudalle",
+      "createdAt": "2026-03-12T14:18:30.344Z",
+      "createdBy": "SYSTEM",
+      "isActive": true
+    },
+    "compta": {
+      "username": "compta",
+      "password": "123",
+      "displayName": "Christelle Bridenne",
+      "email": "compta@cbco.fr",
+      "role": "lecture",
+      "createdAt": "2026-03-30T13:57:16.712Z",
+      "createdBy": "acgoudalle",
+      "isActive": true,
+      "customPermissions": [
+        "compta_indicateurs",
+        "compta_saisie",
+        "compta_paiements_charpente",
+        "compta_paiements_maconnerie",
+        "compta_paiements_cbco"
+      ]
+    },
+    "julie": {
+      "username": "julie",
+      "password": "123",
+      "displayName": "julie carlu",
+      "email": "julie.carlu@goudallemaconnerie.fr",
+      "role": "lecture",
+      "createdAt": "2026-03-17T13:48:26.16Z",
+      "createdBy": "acgoudalle",
+      "isActive": true,
+      "customPermissions": [
+        "production_indicateurs_maconnerie",
+        "production_saisie_maconnerie",
+        "compta_paiements_maconnerie",
+        "rh_indicateurs"
+      ]
+    },
+    "Sécurité": {
+      "username": "Sécurité",
+      "password": "123",
+      "displayName": "Christelle Paques",
+      "email": "drh@cbco2023",
+      "role": "lecture",
+      "createdAt": "2026-04-08T11:13:01.57Z",
+      "createdBy": "acgoudalle",
+      "isActive": true,
+      "customPermissions": [
+        "rh_indicateurs",
+        "rh_saisie",
+        "rh_security_admin"
+      ]
+    },
+    "Mickaël": {
+      "username": "Mickaël",
+      "password": "123",
+      "displayName": "Mickaël Caux",
+      "email": "mickael.caux@goudallecharpente.fr",
+      "role": "lecture",
+      "createdAt": "2026-04-13T13:27:41.632Z",
+      "createdBy": "acgoudalle",
+      "isActive": true,
+      "customPermissions": [
+        "compta_paiements_charpente",
+        "chantiers"
+      ]
+    },
+    "Antoine": {
+      "username": "Antoine",
+      "password": "123",
+      "displayName": "Antoine Goudalle",
+      "email": "antoine.goudalle@cbco.fr",
+      "role": "lecture",
+      "createdAt": "2026-04-22T13:20:32.859Z",
+      "createdBy": "acgoudalle",
+      "isActive": true,
+      "customPermissions": [
+        "production_indicateurs_generaux",
+        "production_indicateurs_usine",
+        "production_saisie_productivite",
+        "rh_indicateurs"
+      ]
     }
   }
 }

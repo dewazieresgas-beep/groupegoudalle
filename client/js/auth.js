@@ -19,7 +19,7 @@ const Auth = {
   // Permissions : la direction a toujours accès à tout (bypass dans hasAccess).
   // Les autres utilisateurs utilisent customPermissions (géré depuis la page utilisateurs).
   PERMISSIONS: {},
-  DEPRECATED_PERMISSIONS: ['production_export_maconnerie'],
+  DEPRECATED_PERMISSIONS: ['production_export_maconnerie', 'commerce_saisie_ca', 'commerce_saisie_indicateurs'],
 
   // ============ INITIALIZATION ============
   /**

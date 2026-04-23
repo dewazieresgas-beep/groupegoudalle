@@ -41,11 +41,9 @@ const KEY_TO_ENDPOINT = {
   'goudalle_admin_code':             '/admin-code',
   'goudalle_session':                null, // Session gardée en localStorage (propre à chaque navigateur)
   'goudalle_thresholds':             '/thresholds',
-  'goudalle_cbco_data':              '/cbco',
   'goudalle_cbco_productivite':      '/cbco-productivite',
   'goudalle_cbco_securite':          '/cbco-securite',
   'goudalle_rh_security_summary':    '/rh-security-summary',
-  'goudalle_cbco_commercial':        '/cbco-commercial',
   'goudalle_sylve_balance':          '/sylve-balance',
   'goudalle_sylve_ca':               '/sylve-ca',
   'goudalle_sylve_paiements_attente':'/sylve-paiements',
@@ -60,11 +58,17 @@ const LOCAL_ONLY_KEYS = new Set([
   'goudalle_session',
   'gm_sidebar_state',
   'gc_sidebar_state',
-  'cbco_sidebar_state',
   'users_sidebar_state',
   'sylve_sidebar_state',
   'GM_TREND_RANGE',
 ]);
+
+const DEPRECATED_LOCAL_KEYS = [
+  'goudalle_cbco_data',
+  'goudalle_cbco_commercial',
+  'cbco_sidebar_state',
+  'commercial_sidebar_state',
+];
 
 const DEFAULT_PRELOAD_KEYS = [
   'goudalle_users',
@@ -77,11 +81,9 @@ const PAGE_PRELOAD_KEYS = {
   'utilisateurs-code-admin.html': ['goudalle_users'],
   'production-indicateurs-maconnerie.html': ['goudalle_thresholds'],
   'production-saisie-maconnerie.html': ['goudalle_thresholds'],
-  'commerce-indicateurs.html': ['goudalle_cbco_data', 'goudalle_cbco_commercial'],
-  'commerce-saisie-ca.html': ['goudalle_cbco_data'],
+  'commerce-indicateurs.html': [],
   'production-indicateurs-usine-cbco.html': ['goudalle_cbco_productivite', 'goudalle_rh_security_summary'],
   'production-saisie-productivite-usine.html': ['goudalle_cbco_productivite'],
-  'commerce-saisie-indicateurs.html': ['goudalle_cbco_commercial'],
   'compta-indicateurs.html': ['goudalle_sylve_balance', 'goudalle_sylve_ca'],
   'compta-saisie.html': ['goudalle_sylve_balance', 'goudalle_sylve_ca'],
   'compta-paiements-maconnerie.html': ['goudalle_sylve_balance', 'goudalle_sylve_paiements_attente'],
@@ -90,8 +92,6 @@ const PAGE_PRELOAD_KEYS = {
   'production-indicateurs-generaux.html': ['goudalle_cbco_productivite'],
   'index.html': [
     'goudalle_thresholds',
-    'goudalle_cbco_data',
-    'goudalle_cbco_commercial',
     'goudalle_sylve_balance',
     'goudalle_rh_security_summary',
     'goudalle_cbco_productivite',
@@ -114,6 +114,12 @@ function getInitialPreloadKeys() {
   const page = getCurrentPageName();
   return [...new Set([...DEFAULT_PRELOAD_KEYS, ...(PAGE_PRELOAD_KEYS[page] || [])])];
 }
+
+function cleanupDeprecatedLocalKeys() {
+  DEPRECATED_LOCAL_KEYS.forEach((key) => localStorage.removeItem(key));
+}
+
+cleanupDeprecatedLocalKeys();
 
 // ─── VÉRIFICATION DU SERVEUR ────────────────────────────────────────────────────
 

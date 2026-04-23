@@ -131,7 +131,7 @@ function isProductionPage() {
  */
 function isCommercialPage() {
   const page = getCurrentPage();
-  return page === 'commerce-indicateurs.html' || page === 'commerce-saisie-ca.html' || page === 'commerce-saisie-indicateurs.html';
+  return page === 'commerce-indicateurs.html';
 }
 
 function isAchatPage() {
@@ -330,13 +330,9 @@ function getSidebar() {
   }
 
   // ===== COMMERCIAUX =====
-  if (Auth.hasAccess('commerce_indicateurs') || Auth.hasAccess('commerce_saisie_ca') || Auth.hasAccess('commerce_saisie_indicateurs')) {
+  if (Auth.hasAccess('commerce_indicateurs')) {
     const commercialActive = isCommercialPage() ? ' active' : '';
-    let commercialHref = `${base}pages/commerce-indicateurs.html`;
-    if (!Auth.hasAccess('commerce_indicateurs')) {
-      if (Auth.hasAccess('commerce_saisie_ca')) commercialHref = `${base}pages/commerce-saisie-ca.html`;
-      else if (Auth.hasAccess('commerce_saisie_indicateurs')) commercialHref = `${base}pages/commerce-saisie-indicateurs.html`;
-    }
+    const commercialHref = `${base}pages/commerce-indicateurs.html`;
     items += `<a href="${commercialHref}" class="sidebar-item${commercialActive}">💼 Commerce</a>`;
   }
 
@@ -515,234 +511,6 @@ function injectProductionSecondaryBar() {
       productionSidebar.classList.add('open');
     }
   }
-}
-
-/**
- * Génère et injecte la barre de navigation secondaire Goudalle Charpente
- * À appeler sur toutes les pages GC (gc.html, gc-saisie.html)
- */
-function injectCommercialSecondaryBar() {
-  const session = Auth.getSession();
-  if (!session) return;
-
-  const base = getBasePath();
-  const currentPage = getCurrentPage();
-
-  let secondaryItems = '';
-
-  if (Auth.hasAccess('commerce_indicateurs')) {
-    const bureauActive = currentPage === 'commerce-indicateurs.html' ? ' active' : '';
-    secondaryItems += `<a href="${base}pages/commerce-indicateurs.html" class="sidebar-item${bureauActive}">📊 Indicateurs Commercial</a>`;
-  }
-  if (Auth.hasAccess('commerce_saisie_ca')) {
-    const caActive = currentPage === 'commerce-saisie-ca.html' ? ' active' : '';
-    secondaryItems += `<a href="${base}pages/commerce-saisie-ca.html" class="sidebar-item${caActive}">✏️ Saisie Chiffre d'Affaires</a>`;
-  }
-  if (Auth.hasAccess('commerce_saisie_indicateurs')) {
-    const commercialActive = currentPage === 'commerce-saisie-indicateurs.html' ? ' active' : '';
-    secondaryItems += `<a href="${base}pages/commerce-saisie-indicateurs.html" class="sidebar-item${commercialActive}">✏️ Saisie Indicateurs Commerciaux</a>`;
-  }
-
-  if (secondaryItems) {
-    const barHTML = `
-      <aside class="sidebar-secondary" id="commercialSidebar">
-        <div class="sidebar-secondary-content">
-          <div class="sidebar-secondary-title">💼 Indicateurs Commerciaux</div>
-          <button class="sidebar-secondary-close" onclick="toggleCommercialSidebar();">✕</button>
-          <nav class="sidebar-secondary-nav">
-            ${secondaryItems}
-          </nav>
-        </div>
-      </aside>
-    `;
-
-    const sidebar = document.querySelector('.sidebar');
-    if (sidebar) {
-      sidebar.insertAdjacentHTML('afterend', barHTML);
-    }
-
-    const commercialSidebar = document.getElementById('commercialSidebar');
-    if (commercialSidebar) {
-      commercialSidebar.classList.add('open');
-    }
-  }
-}
-
-// ============ CBCO CHIFFRE D'AFFAIRES DATA ============
-/**
- * Récupère tous les enregistrements CBCO (chiffre d'affaires) du localStorage
- * @returns {Array} - Liste des enregistrements CBCO
- */
-function getCBCOData() {
-  const data = localStorage.getItem('goudalle_cbco_data');
-  const entries = data ? JSON.parse(data) : [];
-  
-  // Recalculer les cumuls pour garantir la cohérence
-  if (entries.length > 0) {
-    calculateCBCOCumuls(entries);
-  }
-  
-  return entries;
-}
-
-/**
- * Compare deux enregistrements CBCO par année et mois (décroissant)
- * Trie du plus récent au plus ancien
- * @param {Object} a - Premier enregistrement
- * @param {Object} b - Deuxième enregistrement
- * @returns {number} - Résultat pour Array.sort()
- */
-function compareByYearMonthDesc(a, b) {
-  if (a.year !== b.year) {
-    return b.year - a.year;  // Année la plus récente en premier
-  }
-  return b.month - a.month;  // Puis mois le plus récent
-}
-
-/**
- * Sauvegarde ou met à jour une entrée CBCO (chiffre d'affaires)
- * @param {number} year - Année
- * @param {number} month - Mois (1-12)
- * @param {number} montantChantiersCours - Montant chantiers en cours
- * @param {number} montantChantiersTermines - Montant chantiers terminés
- * @returns {Object} - Entrée CBCO créée/mise à jour
- */
-function saveCBCOEntry(year, month, montantChantiersCours, montantChantiersTermines) {
-  const data = getCBCOData();
-  
-  // Vérifier si une entrée existe déjà pour ce mois/année
-  const existing = data.find(e => e.year === year && e.month === month);
-  
-  // Calculer les totaux
-  const montantTotal = parseFloat(montantChantiersCours) + parseFloat(montantChantiersTermines);
-  
-  // Créer ou mettre à jour l'entrée
-  const entry = {
-    id: existing?.id || Date.now(),
-    year,
-    month,
-    montantChantiersCours: parseFloat(montantChantiersCours),
-    montantChantiersTermines: parseFloat(montantChantiersTermines),
-    montantTotal,
-    cumulAnnuel: 0,  // Sera calculé après tri
-    createdAt: existing?.createdAt || new Date().toISOString(),
-    createdBy: existing?.createdBy || Auth.getSession().username,
-    updatedAt: new Date().toISOString(),
-    updatedBy: Auth.getSession().username
-  };
-
-  // Remplacer l'ancien ou ajouter le nouveau
-  const filtered = data.filter(e => !(e.year === year && e.month === month));
-  filtered.push(entry);
-  
-  // Trier et calculer les cumuls annuels
-  const sorted = filtered.sort(compareByYearMonthDesc);
-  calculateCBCOCumuls(sorted);
-  
-  localStorage.setItem('goudalle_cbco_data', JSON.stringify(sorted));
-  
-  return entry;
-}
-
-/**
- * Calcule les cumuls annuels pour chaque année dans les données CBCO
- * Met à jour le champ cumulAnnuel pour chaque entrée
- * Règle métier : l'exercice fiscal CBCO va d'octobre (10) à septembre (9).
- * Exemple : Octobre 2025, Novembre 2025, ... Septembre 2026 appartiennent tous
- * au même exercice fiscal 2025 et le cumul se calcule dans cet ordre.
- * @param {Array} data - Données CBCO (ordre n'importe pas, sera trié par année/mois)
- */
-function calculateCBCOCumuls(data) {
-  // Trier par exercice fiscal, puis par position dans l'exercice (oct → sept)
-  data.sort((a, b) => {
-    const fyA = getFiscalYear(a.year, a.month);
-    const fyB = getFiscalYear(b.year, b.month);
-    if (fyA !== fyB) return fyA - fyB;
-    return getFiscalMonth(a.month) - getFiscalMonth(b.month);
-  });
-
-  // Grouper par exercice fiscal
-  const byFiscalYear = {};
-  data.forEach(entry => {
-    const fy = getFiscalYear(entry.year, entry.month);
-    if (!byFiscalYear[fy]) byFiscalYear[fy] = [];
-    byFiscalYear[fy].push(entry);
-  });
-
-  // Pour chaque exercice, calculer les cumuls cumulatifs (oct → sept)
-  Object.keys(byFiscalYear).sort((a, b) => a - b).forEach(fy => {
-    let cumul = 0;
-    byFiscalYear[fy].forEach(entry => {
-      cumul += entry.montantTotal;
-      entry.cumulAnnuel = cumul;
-    });
-  });
-}
-
-/**
- * Supprime une entrée CBCO (chiffre d'affaires)
- * @param {number} year - Année
- * @param {number} month - Mois
- * @returns {Object} - { success, message }
- */
-function deleteCBCOEntry(year, month) {
-  const data = getCBCOData();
-  const index = data.findIndex(e => e.year === year && e.month === month);
-
-  if (index === -1) return { success: false, message: '❌ Entrée non trouvée' };
-
-  data.splice(index, 1);
-  // Recalculer les cumuls
-  calculateCBCOCumuls(data);
-  localStorage.setItem('goudalle_cbco_data', JSON.stringify(data));
-
-  return { success: true, message: '✅ Entrée supprimée' };
-}
-
-/**
- * Récupère les données CBCO agrégées par année
- * Utile pour les graphiques annuels
- * @returns {Object} - { year: [{ month, montantTotal, cumulAnnuel }, ...], ... }
- */
-function getCBCOByYear() {
-  const data = getCBCOData();
-  const byFiscalYear = {};
-
-  data.forEach(entry => {
-    const fy = getFiscalYear(entry.year, entry.month);
-    if (!byFiscalYear[fy]) byFiscalYear[fy] = [];
-    byFiscalYear[fy].push(entry);
-  });
-
-  // Trier les entrées de chaque exercice par position fiscale (oct → sept)
-  Object.keys(byFiscalYear).forEach(fy => {
-    byFiscalYear[fy].sort((a, b) => getFiscalMonth(a.month) - getFiscalMonth(b.month));
-  });
-
-  return byFiscalYear;
-}
-
-/**
- * Récupère les cumuls annuels CBCO (cumul total par année)
- * @returns {Array} - [{ year, totalAnnuel }, ...]
- */
-function getCBCOYearlySummary() {
-  const byYear = getCBCOByYear();
-  
-  return Object.keys(byYear)
-    .map(year => {
-      const entries = byYear[year];
-      if (entries.length === 0) return null;
-      
-      // Le dernier mois de l'année aura le cumul annuel final
-      const lastEntry = entries[entries.length - 1];
-      return {
-        year: parseInt(year),
-        totalAnnuel: lastEntry.cumulAnnuel
-      };
-    })
-    .filter(e => e !== null)
-    .sort((a, b) => b.year - a.year);  // Trier par année décroissante
 }
 
 /**
@@ -948,21 +716,6 @@ function toggleProductionSidebar(event) {
 }
 
 /**
- * Toggle (ouvrir/fermer) la barre de navigation secondaire Goudalle Charpente
- * @param {Event} event - Événement optionnel du clic
- */
-function toggleCommercialSidebar(event) {
-  if (event) {
-    event.preventDefault();
-    event.stopPropagation();
-  }
-  const commercialSidebar = document.getElementById('commercialSidebar');
-  if (!commercialSidebar) return;
-  const isOpen = commercialSidebar.classList.toggle('open');
-  localStorage.setItem('commercial_sidebar_state', isOpen ? 'open' : 'closed');
-}
-
-/**
  * Toggle la barre de navigation secondaire CBCO
  * @param {Event} event - Événement du clic (optionnel)
  */
@@ -1065,15 +818,6 @@ function restoreSubMenuStates() {
     }
   }
 
-  // Restaurer l'état du sidebar secondaire Commercial
-  const commercialState = localStorage.getItem('commercial_sidebar_state');
-  if (commercialState === 'open') {
-    const commercialSidebar = document.getElementById('commercialSidebar');
-    if (commercialSidebar) {
-      commercialSidebar.classList.add('open');
-    }
-  }
-
   // Restaurer l'état du sidebar secondaire Comptabilité
   const comptaState = localStorage.getItem('compta_sidebar_state');
   if (comptaState === 'open') {
@@ -1102,11 +846,8 @@ function restoreSubMenuStates() {
   }
 }
 
-// ============ CBCO COMMERCIAL (MÉMOIRES TECHNIQUES) ============
-
 const CBCO_PRODUCTIVITE_KEY = 'goudalle_cbco_productivite';
 const CBCO_SECURITE_KEY = 'goudalle_cbco_securite';
-const CBCO_COMMERCIAL_KEY = 'goudalle_cbco_commercial';
 
 function normalizeCBCOProductiviteNumber(value) {
   if (value === null || value === undefined || value === '') return 0;
@@ -1263,83 +1004,6 @@ function getRHSecurityCBCOSummary() {
   } catch {
     return null;
   }
-}
-
-/**
- * Récupère toutes les affaires commerciales CBCO
- * @returns {Array}
- */
-function getCBCOCommercial() {
-  const data = localStorage.getItem(CBCO_COMMERCIAL_KEY);
-  return data ? JSON.parse(data) : [];
-}
-
-/**
- * Sauvegarde une nouvelle affaire commerciale
- * @param {Object} entry - { nomAffaire, montant, dateEnvoi }
- * @returns {Object} - L'entrée créée
- */
-function saveCBCOCommercialEntry(entry) {
-  const entries = getCBCOCommercial();
-  const newEntry = {
-    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
-    nomAffaire: entry.nomAffaire,
-    montant: parseFloat(entry.montant) || 0,
-    dateEnvoi: entry.dateEnvoi,
-    resultat: 'en_cours',
-    dateReponse: null,
-    createdAt: new Date().toISOString()
-  };
-  entries.push(newEntry);
-  localStorage.setItem(CBCO_COMMERCIAL_KEY, JSON.stringify(entries));
-  return newEntry;
-}
-
-/**
- * Met à jour une affaire commerciale existante
- * @param {string} id - ID de l'affaire
- * @param {Object} updates - Champs à mettre à jour
- * @returns {boolean}
- */
-function updateCBCOCommercialEntry(id, updates) {
-  const entries = getCBCOCommercial();
-  const index = entries.findIndex(e => e.id === id);
-  if (index === -1) return false;
-  entries[index] = { ...entries[index], ...updates };
-  localStorage.setItem(CBCO_COMMERCIAL_KEY, JSON.stringify(entries));
-  return true;
-}
-
-/**
- * Supprime une affaire commerciale
- * @param {string} id - ID de l'affaire
- * @returns {boolean}
- */
-function deleteCBCOCommercialEntry(id) {
-  const entries = getCBCOCommercial();
-  const filtered = entries.filter(e => e.id !== id);
-  if (filtered.length === entries.length) return false;
-  localStorage.setItem(CBCO_COMMERCIAL_KEY, JSON.stringify(filtered));
-  return true;
-}
-
-/**
- * Calcule le taux de réussite pour un mois/année donnés
- * @param {number} month - Mois (1-12)
- * @param {number} year - Année
- * @returns {Object} - { taux, gagnees, perdues, enCours, total }
- */
-function getCBCOCommercialTauxReussite(month, year) {
-  const entries = getCBCOCommercial().filter(e => {
-    const d = new Date(e.dateEnvoi);
-    return d.getMonth() + 1 === month && d.getFullYear() === year;
-  });
-  const gagnees = entries.filter(e => e.resultat === 'gagne').length;
-  const perdues = entries.filter(e => e.resultat === 'perdu').length;
-  const enCours = entries.filter(e => e.resultat === 'en_cours').length;
-  const cloturees = gagnees + perdues;
-  const taux = cloturees > 0 ? (gagnees / cloturees) * 100 : null;
-  return { taux, gagnees, perdues, enCours, total: entries.length };
 }
 
 // ============ SYLVE SUPPORT DATA ============
