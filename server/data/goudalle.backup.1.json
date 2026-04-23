@@ -5212,9 +5212,9 @@
   "rh_security_excel_config": {
     "folder": "W:\\RH paie\\ADMINISTRATIF PAIE\\Aministratif\\accident\\TABLEAU ACCIDENTS DU TRAVAIL toutes societes",
     "active": true,
-    "lastSync": "2026-04-22T15:57:03.347Z",
+    "lastSync": "2026-04-22T15:57:12.911Z",
     "lastSyncResult": {
-      "imported": 0,
+      "imported": 186,
       "companies": 4
     }
   },
@@ -17140,5 +17140,11 @@
         "rh_indicateurs"
       ]
     }
+  },
+  "ao_excel_config": {
+    "folder": "Z:\\03-BE\\Appel d'offre\\~A VOIR",
+    "filename": "Appels d'offre",
+    "active": true,
+    "lastSync": "2026-04-23T12:20:19.180Z"
   }
 }

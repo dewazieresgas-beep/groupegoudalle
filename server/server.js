@@ -25,11 +25,16 @@ const COMMERCE_EXCEL_SHEET = 'Indicateur commercial';
 const COMMERCE_MIN_YEAR = 2021;
 const COMMERCE_CACHE_TTL_MS = 60 * 1000;
 
+const AO_MIN_DATE = '2026-01-01';
+const AO_CACHE_TTL_MS = 60 * 1000;
+
 let commerceIndicatorsCache = {
   snapshot: null,
   sourceKey: null,
   cachedAt: 0
 };
+
+let aoCache = { snapshot: null, sourceKey: null, cachedAt: 0 };
 
 // ─── TOKEN DE SÉCURITÉ SERVEUR ────────────────────────────────────────────────
 // Généré aléatoirement à chaque démarrage du serveur.
@@ -2610,6 +2615,241 @@ function getCommerceIndicatorsSnapshotCached({ folderPath = COMMERCE_EXCEL_FOLDE
   return snapshot;
 }
 
+// ─── APPELS D'OFFRE : FONCTIONS UTILITAIRES ──────────────────────────────────
+
+function getAOConfig() {
+  return dbGet('ao_excel_config', null);
+}
+
+function normalizeAOStatus(raw) {
+  if (raw == null || raw === '') return 'Non renseigné';
+  const txt = normalizeText(String(raw)).trim().toLowerCase().replace(/\s+/g, ' ');
+  if (!txt) return 'Non renseigné';
+
+  if (txt === 'obtenu' || txt === 'retenu' || txt === 'r' || txt === 'o' || txt === 'oui') return 'Gagné';
+  if (txt === 'rejete' || txt === 'nr' || txt === 'non retenu' || txt === 'perdu' || txt === 'n') return 'Perdu';
+  if (txt.startsWith('en attente') || txt === 'attente' || txt === 'ea') return 'En attente';
+
+  return 'Non renseigné';
+}
+
+function parseAODate(value) {
+  if (value == null || value === '') return null;
+
+  const validYear = (d) => {
+    if (!d || isNaN(d.getTime())) return null;
+    const y = d.getFullYear();
+    return (y >= 2015 && y <= 2040) ? d : null;
+  };
+
+  if (value instanceof Date) {
+    return validYear(value);
+  }
+
+  if (typeof value === 'number' && value > 20000 && value < 100000) {
+    try {
+      const parsed = XLSX.SSF.parse_date_code(value);
+      if (parsed && parsed.y && parsed.m && parsed.d) {
+        return validYear(new Date(parsed.y, parsed.m - 1, parsed.d));
+      }
+    } catch (_) {}
+  }
+
+  if (typeof value === 'string') {
+    const raw = value.trim();
+    if (!raw) return null;
+
+    const dmyMatch = raw.match(/^(\d{1,2})[/\-.\\](\d{1,2})[/\-.\\](\d{2,4})$/);
+    if (dmyMatch) {
+      let year = parseInt(dmyMatch[3], 10);
+      if (year < 100) year += 2000;
+      return validYear(new Date(year, parseInt(dmyMatch[2], 10) - 1, parseInt(dmyMatch[1], 10)));
+    }
+
+    return validYear(new Date(raw));
+  }
+
+  return null;
+}
+
+function findAOColumns(rawRows) {
+  const normalized = rawRows.map((row) =>
+    (Array.isArray(row) ? row : []).map((cell) =>
+      normalizeText(String(cell || '')).toLowerCase().replace(/\s+/g, ' ').trim()
+    )
+  );
+
+  let headerIndex = 0;
+  for (let i = 0; i < Math.min(normalized.length, 10); i++) {
+    const row = normalized[i];
+    const hasNomOrDossier = row.some((c) => c.includes('nom') || c.includes('dossier') || c.includes('affaire'));
+    const hasDateOrStatut = row.some((c) =>
+      c.includes('reponse') || c.includes('obtenu') || c.includes('rejete') || c.includes('statut') || c.includes('attente')
+    );
+    if (hasNomOrDossier || hasDateOrStatut) {
+      headerIndex = i;
+      break;
+    }
+  }
+
+  const header = normalized[headerIndex] || [];
+
+  const findCol = (predicates, fallback) => {
+    for (const pred of predicates) {
+      const idx = header.findIndex((c) => pred(c));
+      if (idx >= 0) return idx;
+    }
+    return fallback;
+  };
+
+  return {
+    headerIndex,
+    nomCol: findCol(
+      [(c) => c.includes('dossier') || c.includes('affaire'), (c) => c === 'nom'],
+      0
+    ),
+    clientCol: findCol([(c) => c === 'client' || c.startsWith('client')], 1),
+    dateButoirCol: findCol([(c) => c.includes('butoir') || (c.includes('date') && c.includes('v1'))], -1),
+    dateReponseCol: findCol(
+      [(c) => c.includes('reponse') || (c.includes('date') && c.includes('rep'))],
+      3
+    ),
+    responsableCol: findCol([(c) => c.includes('responsable') || c.includes('etude')], -1),
+    statutCol: findCol(
+      [(c) => c.includes('obtenu') || c.includes('rejete') || c.includes('statut'), (c) => c.includes('attente')],
+      5
+    ),
+    dateInfoCol: findCol(
+      [(c) => (c.includes('date') && c.includes('info')) || c === "date d'info"],
+      -1
+    ),
+    classementCol: findCol([(c) => c.includes('classement')], -1),
+    montantCol: findCol(
+      [(c) => c.includes('montant') || c.includes('estimatif') || c.includes('budget') || c === 'devis' || c.includes('devis')],
+      header.length > 0 ? header.length - 1 : -1
+    )
+  };
+}
+
+function readAOSnapshot(cfg) {
+  const resolved = resolveExistingExcelPath(cfg.folder, cfg.filename);
+  const stat = fs.statSync(resolved.fullPath);
+  const workbook = XLSX.readFile(resolved.fullPath, { cellDates: true });
+  const sheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[sheetName];
+  const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: null, raw: true });
+  const cols = findAOColumns(rawRows);
+  const minDate = new Date(AO_MIN_DATE);
+
+  const dataRows = rawRows.slice(cols.headerIndex + 1);
+  const records = [];
+
+  for (const row of dataRows) {
+    if (!row || row.every((c) => c == null || c === '')) continue;
+    const nom = row[cols.nomCol];
+    if (!nom || String(nom).trim() === '') continue;
+
+    const statusRaw = cols.statutCol >= 0 ? row[cols.statutCol] : null;
+    const status = normalizeAOStatus(statusRaw);
+
+    const dateReponse = cols.dateReponseCol >= 0 ? parseAODate(row[cols.dateReponseCol]) : null;
+    const dateInfo = cols.dateInfoCol >= 0 ? parseAODate(row[cols.dateInfoCol]) : null;
+
+    let effectiveDate = dateReponse;
+    if (!effectiveDate && (status === 'Gagné' || status === 'Perdu') && dateInfo) {
+      effectiveDate = dateInfo;
+    }
+
+    const montantRaw = cols.montantCol >= 0 ? row[cols.montantCol] : null;
+    let montant = null;
+    if (typeof montantRaw === 'number' && isFinite(montantRaw)) {
+      montant = montantRaw;
+    } else if (montantRaw != null && montantRaw !== '') {
+      const parsed = parseFloat(String(montantRaw).replace(/[^\d.,\-]/g, '').replace(',', '.'));
+      if (isFinite(parsed)) montant = parsed;
+    }
+
+    const isReliable = effectiveDate != null && effectiveDate >= minDate;
+    const fiscalYear = effectiveDate
+      ? ((effectiveDate.getMonth() + 1) >= 10 ? effectiveDate.getFullYear() : effectiveDate.getFullYear() - 1)
+      : null;
+
+    records.push({
+      nom: String(nom).trim(),
+      client: cols.clientCol >= 0 ? String(row[cols.clientCol] || '').trim() : '',
+      statusRaw: statusRaw != null ? String(statusRaw).trim() : '',
+      status,
+      dateReponse: dateReponse ? dateReponse.toISOString().slice(0, 10) : null,
+      dateInfo: dateInfo ? dateInfo.toISOString().slice(0, 10) : null,
+      effectiveDate: effectiveDate ? effectiveDate.toISOString().slice(0, 10) : null,
+      year: effectiveDate ? effectiveDate.getFullYear() : null,
+      month: effectiveDate ? effectiveDate.getMonth() + 1 : null,
+      isoMonth: effectiveDate ? effectiveDate.toISOString().slice(0, 7) : null,
+      fiscalYear,
+      montant,
+      isReliable
+    });
+  }
+
+  const reliable = records.filter((r) => r.isReliable);
+  const allYears = [...new Set(reliable.map((r) => r.year).filter(Boolean))].sort((a, b) => b - a);
+  const allFiscalYears = [...new Set(reliable.map((r) => r.fiscalYear).filter(Boolean))].sort((a, b) => b - a);
+  const allMonths = [...new Set(reliable.map((r) => r.isoMonth).filter(Boolean))].sort().reverse();
+
+  const periodStart = allMonths.length ? allMonths[allMonths.length - 1] : null;
+  const periodEnd = allMonths.length ? allMonths[0] : null;
+
+  return {
+    success: true,
+    source: {
+      folder: cfg.folder,
+      fileName: resolved.resolvedFilename,
+      fullPath: resolved.fullPath,
+      lastModified: stat.mtime.toISOString(),
+      sizeBytes: stat.size,
+      sheetName,
+      sheetNames: workbook.SheetNames,
+      detectedAt: new Date().toISOString()
+    },
+    summary: {
+      totalRows: records.length,
+      reliableRows: reliable.length,
+      minReliableDate: AO_MIN_DATE,
+      periodStart,
+      periodEnd,
+      availableYears: allYears,
+      availableFiscalYears: allFiscalYears,
+      availableMonths: allMonths
+    },
+    records: reliable
+  };
+}
+
+function getAOSnapshotCached({ forceRefresh = false } = {}) {
+  const cfg = getAOConfig();
+  if (!cfg || !cfg.active) {
+    throw new Error('Aucun fichier Appels d\'offre configuré. Veuillez configurer la liaison depuis la page Liaison Excel.');
+  }
+
+  const now = Date.now();
+  if (!forceRefresh && aoCache.snapshot && (now - aoCache.cachedAt) < AO_CACHE_TTL_MS) {
+    return aoCache.snapshot;
+  }
+
+  const resolved = resolveExistingExcelPath(cfg.folder, cfg.filename);
+  const stat = fs.statSync(resolved.fullPath);
+  const sourceKey = [resolved.fullPath, stat.mtimeMs, stat.size].join('|');
+
+  if (!forceRefresh && aoCache.snapshot && aoCache.sourceKey === sourceKey) {
+    aoCache.cachedAt = now;
+    return aoCache.snapshot;
+  }
+
+  const snapshot = readAOSnapshot(cfg);
+  aoCache = { snapshot, sourceKey, cachedAt: now };
+  return snapshot;
+}
+
 function parseRHSaisieWorkbook(company, folderPath) {
   const resolved = resolveExistingExcelPath(folderPath, company.filename);
   const excelPath = resolved.fullPath;
@@ -3142,6 +3382,49 @@ app.get('/api/commerce-link-status', (req, res) => {
 });
 
 
+// ─── APPELS D'OFFRE : CONFIG + LECTURE DYNAMIQUE EXCEL ───────────────────────
+
+app.get('/api/ao-excel-config', (req, res) => {
+  res.json(getAOConfig());
+});
+
+app.put('/api/ao-excel-config', requireToken, requireWriteRateLimit, (req, res) => {
+  const { folder, filename } = req.body;
+  if (!folder || !filename) {
+    return res.status(400).json({ success: false, error: 'Champs manquants : folder, filename' });
+  }
+  try {
+    const snapshot = readAOSnapshot({ folder, filename });
+    const cfg = { folder, filename, active: true, lastSync: new Date().toISOString() };
+    dbSet('ao_excel_config', cfg);
+    aoCache = { snapshot: null, sourceKey: null, cachedAt: 0 };
+    res.json({ success: true, rowCount: snapshot.summary.totalRows, reliableRows: snapshot.summary.reliableRows });
+  } catch (e) {
+    res.status(500).json({ success: false, error: excelErrorMessage(e) });
+  }
+});
+
+app.delete('/api/ao-excel-config', (req, res) => {
+  dbSet('ao_excel_config', null);
+  aoCache = { snapshot: null, sourceKey: null, cachedAt: 0 };
+  res.json({ success: true });
+});
+
+app.get('/api/ao-indicateurs', (req, res) => {
+  try {
+    const forceRefresh = req.query.refresh === '1' || req.query.force === '1';
+    const snapshot = getAOSnapshotCached({ forceRefresh });
+    res.json(snapshot);
+  } catch (e) {
+    const cfg = getAOConfig();
+    res.status(cfg ? 500 : 404).json({
+      success: false,
+      error: e.message,
+      notConfigured: !cfg
+    });
+  }
+});
+
 // Servir les fichiers PDF du planning avec logging
 app.use('/server/uploads', (req, res, next) => {
   console.log('[Planning PDF] Accès demandé:', req.path);
@@ -3229,6 +3512,17 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ [Excel Commerce] Dernier fichier détecté : ${commerceSource.filename}`);
   } catch (e) {
     console.log(`⚠️  [Excel Commerce] ${e.message}`);
+  }
+  const aoCfg = getAOConfig();
+  if (aoCfg && aoCfg.active) {
+    try {
+      const resolved = resolveExistingExcelPath(aoCfg.folder, aoCfg.filename);
+      console.log(`✅ [Excel AO] Connecté : ${resolved.fullPath}`);
+    } catch (e) {
+      console.log(`❌ [Excel AO] Fichier introuvable : ${e.message}`);
+    }
+  } else {
+    console.log(`⚠️  [Excel AO] Aucun fichier configuré`);
   }
   console.log('');
 });

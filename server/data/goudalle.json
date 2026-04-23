@@ -17140,5 +17140,11 @@
         "rh_indicateurs"
       ]
     }
+  },
+  "ao_excel_config": {
+    "folder": "Z:\\03-BE\\Appel d'offre\\~A VOIR",
+    "filename": "Appels d'offre",
+    "active": true,
+    "lastSync": "2026-04-23T12:21:16.889Z"
   }
 }

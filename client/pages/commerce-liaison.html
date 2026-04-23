@@ -119,6 +119,46 @@
           </ol>
         </div>
       </div>
+
+      <!-- ── Liaison Appels d'offre ───────────────────────────────────────── -->
+      <div class="card" style="margin-top:28px;">
+        <div class="card-title">
+          <h2 id="aoCfgCardTitle">🔗 Appels d'offre — Fichier Excel</h2>
+        </div>
+        <div class="card-body">
+          <p style="color:var(--text-light); margin:0 0 18px;">
+            Connectez le fichier Excel de suivi des appels d'offre. Le serveur le relira à chaque ouverture de la page indicateur, sans rien enregistrer en base.
+          </p>
+          <div id="aoConfigMsg" style="display:none; margin-bottom:14px;"></div>
+          <form onsubmit="handleAOConnect(event)" id="aoConfigForm">
+            <div class="form-group">
+              <label for="aoCfgFolder">📁 Chemin du dossier</label>
+              <input type="text" id="aoCfgFolder" placeholder="Z:\03-BE\Appel d'offre\~A VOIR" required>
+            </div>
+            <div class="form-group">
+              <label for="aoCfgFilename">📄 Nom du fichier (sans l'extension .xlsx)</label>
+              <input type="text" id="aoCfgFilename" placeholder="Appels d'offre" required>
+            </div>
+            <div id="aoCfgLastSync" style="display:none; margin-bottom:12px; font-size:13px; color:#10b981;">
+              ✅ Dernière vérification : <span id="aoCfgDisplayLastSync"></span>
+            </div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <button type="submit" id="aoBtnConnect" class="btn btn-success" style="padding:10px 20px;">
+                🔗 Connecter
+              </button>
+              <button type="button" id="aoBtnModifier" class="btn btn-secondary" style="display:none;" onclick="aoUnlockConfig()">
+                ✏️ Modifier
+              </button>
+              <button type="button" id="aoBtnVerif" class="btn btn-secondary" style="display:none;" onclick="handleAOVerif()">
+                🔄 Vérifier connexion
+              </button>
+              <button type="button" id="aoBtnDesync" class="btn btn-danger" style="display:none;" onclick="handleAODesync()">
+                🔌 Désynchroniser
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </main>
   </div>
 
@@ -231,6 +271,120 @@
       }
     }
 
+    // ── Helper token ──────────────────────────────────────────────────────────
+
+    async function fetchWithToken(url, options = {}) {
+      await window.serverReady;
+      const headers = options.headers || {};
+      headers['Content-Type'] = 'application/json';
+      const token = window._serverToken;
+      if (token) headers['x-goudalle-token'] = token;
+      return fetch(url, { ...options, headers });
+    }
+
+    // ── AO Config ─────────────────────────────────────────────────────────────
+
+    function showAOMsg(msg, type) {
+      const el = document.getElementById('aoConfigMsg');
+      el.style.display = 'block';
+      el.className = `alert alert-${type}`;
+      el.textContent = msg;
+    }
+
+    function aoLockConfig(cfg) {
+      ['aoCfgFolder', 'aoCfgFilename'].forEach((id) => { document.getElementById(id).disabled = true; });
+      document.getElementById('aoBtnConnect').style.display = 'none';
+      document.getElementById('aoBtnModifier').style.display = 'inline-flex';
+      document.getElementById('aoBtnVerif').style.display = 'inline-flex';
+      document.getElementById('aoBtnDesync').style.display = 'inline-flex';
+      document.getElementById('aoCfgCardTitle').textContent = '✅ Appels d\'offre — Fichier Excel connecté';
+      document.getElementById('aoCfgLastSync').style.display = 'block';
+      if (cfg && cfg.lastSync) {
+        document.getElementById('aoCfgDisplayLastSync').textContent = new Date(cfg.lastSync).toLocaleString('fr-FR');
+      }
+    }
+
+    function aoUnlockConfig() {
+      ['aoCfgFolder', 'aoCfgFilename'].forEach((id) => { document.getElementById(id).disabled = false; });
+      document.getElementById('aoBtnConnect').style.display = 'inline-flex';
+      document.getElementById('aoBtnModifier').style.display = 'none';
+      document.getElementById('aoBtnVerif').style.display = 'none';
+      document.getElementById('aoBtnDesync').style.display = 'none';
+      document.getElementById('aoCfgCardTitle').textContent = '🔗 Appels d\'offre — Fichier Excel';
+      document.getElementById('aoCfgLastSync').style.display = 'none';
+    }
+
+    async function loadAOConfig() {
+      try {
+        const res = await fetch(window.location.origin + '/api/ao-excel-config', { cache: 'no-store' });
+        const cfg = await res.json();
+        if (cfg && cfg.active) {
+          document.getElementById('aoCfgFolder').value = cfg.folder;
+          document.getElementById('aoCfgFilename').value = cfg.filename;
+          aoLockConfig(cfg);
+        }
+      } catch (_) {}
+    }
+
+    async function handleAOConnect(event) {
+      event.preventDefault();
+      const btn = document.getElementById('aoBtnConnect');
+      btn.textContent = '⏳ Connexion…'; btn.disabled = true;
+      const body = {
+        folder: document.getElementById('aoCfgFolder').value.trim(),
+        filename: document.getElementById('aoCfgFilename').value.trim()
+      };
+      try {
+        const res = await fetchWithToken(window.location.origin + '/api/ao-excel-config', {
+          method: 'PUT',
+          body: JSON.stringify(body)
+        });
+        const result = await res.json();
+        if (!result.success) { showAOMsg(`❌ ${result.error}`, 'danger'); return; }
+        showAOMsg(`✅ Connexion réussie — ${result.reliableRows} affaires exploitables trouvées (sur ${result.rowCount} lignes).`, 'success');
+        aoLockConfig({ ...body, lastSync: new Date().toISOString() });
+      } catch (e) {
+        showAOMsg(`❌ Erreur : ${e.message}`, 'danger');
+      } finally {
+        btn.textContent = '🔗 Connecter'; btn.disabled = false;
+      }
+    }
+
+    async function handleAOVerif() {
+      const cfg = {
+        folder: document.getElementById('aoCfgFolder').value.trim(),
+        filename: document.getElementById('aoCfgFilename').value.trim()
+      };
+      try {
+        const res = await fetchWithToken(window.location.origin + '/api/ao-excel-config', {
+          method: 'PUT',
+          body: JSON.stringify(cfg)
+        });
+        const result = await res.json();
+        if (!result.success) { showAOMsg(`❌ ${result.error}`, 'danger'); return; }
+        showAOMsg(`✅ Connexion vérifiée — ${result.reliableRows} affaires exploitables.`, 'success');
+        document.getElementById('aoCfgDisplayLastSync').textContent = new Date().toLocaleString('fr-FR');
+      } catch (e) {
+        showAOMsg(`❌ Erreur : ${e.message}`, 'danger');
+      }
+    }
+
+    async function handleAODesync() {
+      if (!confirm('Désynchroniser le fichier Appels d\'offre ?')) return;
+      try {
+        await fetch(window.location.origin + '/api/ao-excel-config', { method: 'DELETE' });
+        showAOMsg('🔌 Désynchronisé.', 'success');
+        aoUnlockConfig();
+        document.getElementById('aoCfgFolder').value = '';
+        document.getElementById('aoCfgFilename').value = '';
+        document.getElementById('aoConfigMsg').style.display = 'none';
+      } catch (e) {
+        showAOMsg(`❌ Erreur : ${e.message}`, 'danger');
+      }
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+
     let _commerceLinkInitDone = false;
     async function init() {
       if (_commerceLinkInitDone) return;
@@ -239,7 +393,7 @@
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectCommerceSecondaryBar();
       document.getElementById('refreshLinkButton').addEventListener('click', loadLinkStatus);
-      await loadLinkStatus();
+      await Promise.all([loadLinkStatus(), loadAOConfig()]);
     }
 
     window.onServerReady(init);

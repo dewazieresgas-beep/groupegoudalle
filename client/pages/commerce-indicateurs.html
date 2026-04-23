@@ -189,6 +189,193 @@
       padding: 28px 16px;
     }
 
+    /* ── Appels d'offre ─────────────────────────────── */
+    .ao-filters {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 14px;
+      background: #f8faff;
+      border-radius: 10px;
+      border: 1px solid #dce8f6;
+      margin-bottom: 20px;
+    }
+
+    .ao-filter-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .ao-filter-group label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: var(--secondary);
+      white-space: nowrap;
+    }
+
+    .ao-mode-tabs {
+      display: flex;
+      gap: 4px;
+    }
+
+    .ao-mode-tab {
+      padding: 4px 11px;
+      border-radius: 6px;
+      border: 1px solid #c5d5e8;
+      background: #fff;
+      font-size: 12px;
+      font-weight: 600;
+      color: #5a7eb3;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .ao-mode-tab.active {
+      background: #5a7eb3;
+      color: #fff;
+      border-color: #5a7eb3;
+    }
+
+    .ao-chart-layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .ao-chart-wrap {
+      position: relative;
+    }
+
+    .ao-chart-center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .ao-chart-center-total {
+      font-size: 26px;
+      font-weight: 800;
+      color: #2d4d78;
+      font-family: 'Courier New', monospace;
+    }
+
+    .ao-chart-center-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .ao-legend {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .ao-legend-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: 10px;
+      background: #f8faff;
+      border: 1px solid #e8eef6;
+    }
+
+    .ao-legend-left {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .ao-legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .ao-legend-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    .ao-legend-count {
+      font-size: 17px;
+      font-weight: 800;
+      font-family: 'Courier New', monospace;
+      color: #2d4d78;
+    }
+
+    .ao-legend-pct {
+      font-size: 10px;
+      font-weight: 600;
+      color: #9ca3af;
+    }
+
+    .ao-debug {
+      margin-top: 16px;
+      padding: 12px 14px;
+      background: #f0f4fb;
+      border-radius: 8px;
+      border: 1px solid #dce8f6;
+      font-size: 11px;
+      color: #4b5563;
+    }
+
+    .ao-debug-title {
+      font-weight: 700;
+      color: #2d4d78;
+      margin-bottom: 6px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .ao-debug-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 4px 14px;
+    }
+
+    .ao-debug-row {
+      display: flex;
+      gap: 5px;
+    }
+
+    .ao-debug-key {
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .ao-not-configured {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 18px 16px;
+      background: #fffbf0;
+      border: 1px solid #fde68a;
+      border-radius: 10px;
+      color: #92400e;
+      font-size: 13px;
+    }
+
+    @media (max-width: 900px) {
+      .ao-chart-layout { grid-template-columns: 1fr; }
+    }
+
     @media (max-width: 1100px) {
       .ig-page-header {
         grid-template-columns: 1fr;
@@ -273,6 +460,37 @@
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- ── Appels d'offre ───────────────────────────────────────────────── -->
+      <div class="ig-machine-section" style="border-color:#d1d5db; background:linear-gradient(180deg,rgba(255,255,255,.97) 0%,#fff 100%);">
+        <div class="ig-section-header" style="background:linear-gradient(135deg,#f0f4fb 0%,#e5edf6 100%); border-left:4px solid #5a7eb3;">
+          <h2 style="color:#2d4d78;">Appels d'offre — Répartition par statut</h2>
+        </div>
+        <div class="ig-machine-container">
+          <div class="ao-filters">
+            <div class="ao-filter-group">
+              <label>Mode :</label>
+              <div class="ao-mode-tabs">
+                <button class="ao-mode-tab active" id="aoTabCivile" data-mode="civile">Année civile</button>
+                <button class="ao-mode-tab" id="aoTabFiscale" data-mode="fiscale">Année fiscale</button>
+              </div>
+            </div>
+            <div class="ao-filter-group">
+              <label>Année :</label>
+              <select id="aoYearSelect" class="gm-range-select" style="min-width:130px;"></select>
+            </div>
+            <div class="ao-filter-group">
+              <label>Mois :</label>
+              <select id="aoMonthSelect" class="gm-range-select" style="min-width:130px;"></select>
+            </div>
+            <button class="btn btn-secondary" id="aoRefreshBtn" type="button" style="margin-left:auto;">⟳ Actualiser</button>
+          </div>
+          <div id="aoChartContainer">
+            <div class="commerce-empty">Chargement…</div>
+          </div>
+          <div class="ao-debug" id="aoDebug" style="display:none;"></div>
         </div>
       </div>
 
@@ -673,6 +891,293 @@
       document.getElementById('refreshButton').addEventListener('click', () => loadCommerceIndicators({ forceRefresh: true }));
     }
 
+    // ── Appels d'offre ────────────────────────────────────────────────────────
+
+    const AO_API_URL = window.location.origin + '/api/ao-indicateurs';
+
+    const AO_STATUS_CONFIG = [
+      { key: 'Gagné',         color: '#0f766e' },
+      { key: 'Perdu',         color: '#b91c1c' },
+      { key: 'En attente',    color: '#d97706' },
+      { key: 'Non renseigné', color: '#9ca3af' }
+    ];
+
+    const AO_CIVIL_MONTHS = [
+      { num:1, label:'Janvier' }, { num:2, label:'Février' }, { num:3, label:'Mars' },
+      { num:4, label:'Avril' },   { num:5, label:'Mai' },     { num:6, label:'Juin' },
+      { num:7, label:'Juillet' }, { num:8, label:'Août' },    { num:9, label:'Septembre' },
+      { num:10, label:'Octobre' },{ num:11, label:'Novembre' },{ num:12, label:'Décembre' }
+    ];
+    const AO_FISCAL_MONTHS_ORDER = [10,11,12,1,2,3,4,5,6,7,8,9];
+    const AO_FISCAL_MONTHS_LABELS = ['Oct','Nov','Déc','Janv','Févr','Mars','Avr','Mai','Juin','Juil','Août','Sept'];
+
+    let aoSnapshot = null;
+    let aoMode = 'civile';
+    let aoYear = null;
+    let aoMonth = 0;
+    let aoChart = null;
+
+    function aoFiscalYear(year, month) {
+      return month >= 10 ? year : year - 1;
+    }
+
+    function aoFiscalLabel(fy) {
+      return `${fy}/${fy + 1}`;
+    }
+
+    function aoFormatDate(iso) {
+      if (!iso) return '—';
+      try { return new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric' }); }
+      catch (_) { return iso; }
+    }
+
+    function aoFilterRecords(records) {
+      if (!records || !records.length || !aoYear) return records || [];
+      return records.filter((r) => {
+        if (!r.effectiveDate || !r.year || !r.month) return false;
+        if (aoMode === 'civile') {
+          if (r.year !== aoYear) return false;
+          if (aoMonth && r.month !== aoMonth) return false;
+        } else {
+          if (aoFiscalYear(r.year, r.month) !== aoYear) return false;
+          if (aoMonth && r.month !== aoMonth) return false;
+        }
+        return true;
+      });
+    }
+
+    function aoCountByStatus(records) {
+      const counts = {};
+      AO_STATUS_CONFIG.forEach((s) => { counts[s.key] = 0; });
+      records.forEach((r) => {
+        if (counts[r.status] !== undefined) counts[r.status]++;
+        else counts['Non renseigné']++;
+      });
+      return counts;
+    }
+
+    function aoBuildYearOptions() {
+      const select = document.getElementById('aoYearSelect');
+      if (!aoSnapshot) return;
+      const years = aoMode === 'civile'
+        ? (aoSnapshot.summary.availableYears || [])
+        : (aoSnapshot.summary.availableFiscalYears || []);
+      if (!years.length) { select.innerHTML = '<option value="">Aucune donnée</option>'; select.disabled = true; return; }
+      if (!aoYear || !years.includes(aoYear)) aoYear = years[0];
+      select.disabled = false;
+      select.innerHTML = years.map((y) =>
+        `<option value="${y}" ${y === aoYear ? 'selected' : ''}>${escapeHtml(aoMode === 'fiscale' ? aoFiscalLabel(y) : String(y))}</option>`
+      ).join('');
+    }
+
+    function aoBuildMonthOptions() {
+      const select = document.getElementById('aoMonthSelect');
+      let html = '<option value="0">Tous les mois</option>';
+      if (aoMode === 'civile') {
+        AO_CIVIL_MONTHS.forEach(({ num, label }) => {
+          html += `<option value="${num}" ${aoMonth === num ? 'selected' : ''}>${escapeHtml(label)}</option>`;
+        });
+      } else {
+        AO_FISCAL_MONTHS_ORDER.forEach((num, idx) => {
+          html += `<option value="${num}" ${aoMonth === num ? 'selected' : ''}>${escapeHtml(AO_FISCAL_MONTHS_LABELS[idx])}</option>`;
+        });
+      }
+      select.innerHTML = html;
+      select.value = String(aoMonth);
+    }
+
+    function aoDestroyChart() {
+      if (aoChart) { aoChart.destroy(); aoChart = null; }
+    }
+
+    function aoRenderPie(counts, total) {
+      const ctx = document.getElementById('aoPieCanvas');
+      if (!ctx) return;
+      aoDestroyChart();
+      aoChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: AO_STATUS_CONFIG.map((s) => s.key),
+          datasets: [{
+            data: AO_STATUS_CONFIG.map((s) => counts[s.key] || 0),
+            backgroundColor: AO_STATUS_CONFIG.map((s) => s.color),
+            borderColor: '#fff',
+            borderWidth: 3,
+            hoverOffset: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          cutout: '62%',
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (c) => {
+                  const v = c.raw || 0;
+                  const pct = total > 0 ? Math.round(v / total * 100) : 0;
+                  return ` ${v} affaire${v > 1 ? 's' : ''} (${pct} %)`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function aoRenderLegend(counts, total) {
+      const el = document.getElementById('aoLegend');
+      if (!el) return;
+      el.innerHTML = AO_STATUS_CONFIG.map((s) => {
+        const count = counts[s.key] || 0;
+        const pct = total > 0 ? Math.round(count / total * 100) : 0;
+        return `<div class="ao-legend-item" style="border-color:${s.color}33;">
+          <div class="ao-legend-left">
+            <span class="ao-legend-dot" style="background:${s.color};"></span>
+            <span class="ao-legend-label">${escapeHtml(s.key)}</span>
+          </div>
+          <div style="text-align:right;">
+            <div class="ao-legend-count">${count}</div>
+            <div class="ao-legend-pct">${pct} %</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function aoPeriodLabel() {
+      if (!aoYear) return 'Toutes périodes';
+      const yearLabel = aoMode === 'fiscale' ? aoFiscalLabel(aoYear) : String(aoYear);
+      if (!aoMonth) return yearLabel;
+      if (aoMode === 'civile') return `${AO_CIVIL_MONTHS.find((m) => m.num === aoMonth)?.label || aoMonth} ${aoYear}`;
+      const idx = AO_FISCAL_MONTHS_ORDER.indexOf(aoMonth);
+      return `${idx >= 0 ? AO_FISCAL_MONTHS_LABELS[idx] : aoMonth} — ${aoFiscalLabel(aoYear)}`;
+    }
+
+    function aoUpdateDebug(filtered, total) {
+      const debug = document.getElementById('aoDebug');
+      if (!debug || !aoSnapshot) return;
+      debug.style.display = 'block';
+      const src = aoSnapshot.source;
+      const sum = aoSnapshot.summary;
+      const dates = filtered.map((r) => r.effectiveDate).filter(Boolean).sort();
+      debug.innerHTML = `<div class="ao-debug-title">Informations de lecture</div>
+        <div class="ao-debug-grid">
+          <div class="ao-debug-row"><span class="ao-debug-key">Fichier :</span><span>${escapeHtml(src.fileName || '—')}</span></div>
+          <div class="ao-debug-row"><span class="ao-debug-key">Feuille :</span><span>${escapeHtml(src.sheetName || '—')}</span></div>
+          <div class="ao-debug-row"><span class="ao-debug-key">Modifié le :</span><span>${escapeHtml(aoFormatDate(src.lastModified))}</span></div>
+          <div class="ao-debug-row"><span class="ao-debug-key">Lignes totales :</span><span>${sum.totalRows}</span></div>
+          <div class="ao-debug-row"><span class="ao-debug-key">Exploitables (≥ ${escapeHtml(sum.minReliableDate)}) :</span><span>${sum.reliableRows}</span></div>
+          <div class="ao-debug-row"><span class="ao-debug-key">Période :</span><span>${escapeHtml(aoPeriodLabel())}</span></div>
+          <div class="ao-debug-row"><span class="ao-debug-key">Affaires affichées :</span><span>${total}${dates.length ? ` (du ${escapeHtml(aoFormatDate(dates[0]))} au ${escapeHtml(aoFormatDate(dates[dates.length-1]))})` : ''}</span></div>
+        </div>`;
+    }
+
+    function aoRenderChart() {
+      const container = document.getElementById('aoChartContainer');
+      if (!aoSnapshot) return;
+
+      const filtered = aoFilterRecords(aoSnapshot.records);
+      const counts = aoCountByStatus(filtered);
+      const total = filtered.length;
+
+      if (!total) {
+        aoDestroyChart();
+        container.innerHTML = '<div class="commerce-empty">Aucune affaire sur la période sélectionnée.</div>';
+        aoUpdateDebug(filtered, total);
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="ao-chart-layout">
+          <div class="ao-chart-wrap">
+            <canvas id="aoPieCanvas"></canvas>
+            <div class="ao-chart-center">
+              <div class="ao-chart-center-total">${total}</div>
+              <div class="ao-chart-center-label">affaires</div>
+            </div>
+          </div>
+          <div class="ao-legend" id="aoLegend"></div>
+        </div>`;
+
+      aoRenderPie(counts, total);
+      aoRenderLegend(counts, total);
+      aoUpdateDebug(filtered, total);
+    }
+
+    async function loadAOIndicateurs({ forceRefresh = false } = {}) {
+      const btn = document.getElementById('aoRefreshBtn');
+      btn.disabled = true;
+      try {
+        const url = forceRefresh ? `${AO_API_URL}?refresh=1` : AO_API_URL;
+        const res = await fetch(url, { method: 'GET', cache: 'no-store' });
+        const payload = await res.json();
+
+        if (!res.ok && payload.notConfigured) {
+          document.getElementById('aoChartContainer').innerHTML = `
+            <div class="ao-not-configured">
+              ⚠️ Aucun fichier Appels d'offre configuré.
+              <a href="./commerce-liaison.html" class="btn btn-secondary" style="font-size:12px; padding:6px 12px;">Configurer la liaison →</a>
+            </div>`;
+          document.getElementById('aoDebug').style.display = 'none';
+          return;
+        }
+
+        if (!res.ok || !payload.success) throw new Error(payload.error || 'Lecture impossible');
+
+        aoSnapshot = payload;
+        const years = aoMode === 'civile'
+          ? aoSnapshot.summary.availableYears
+          : aoSnapshot.summary.availableFiscalYears;
+        if (!aoYear || !years.includes(aoYear)) {
+          aoYear = years && years.length ? years[0] : null;
+          aoMonth = 0;
+        }
+        aoBuildYearOptions();
+        aoBuildMonthOptions();
+        aoRenderChart();
+      } catch (err) {
+        document.getElementById('aoChartContainer').innerHTML =
+          `<div class="commerce-empty" style="color:#b91c1c;">Erreur : ${escapeHtml(err.message)}</div>`;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function bindAOEvents() {
+      document.getElementById('aoTabCivile').addEventListener('click', () => {
+        aoMode = 'civile';
+        document.getElementById('aoTabCivile').classList.add('active');
+        document.getElementById('aoTabFiscale').classList.remove('active');
+        aoMonth = 0;
+        aoBuildYearOptions();
+        aoBuildMonthOptions();
+        aoRenderChart();
+      });
+      document.getElementById('aoTabFiscale').addEventListener('click', () => {
+        aoMode = 'fiscale';
+        document.getElementById('aoTabFiscale').classList.add('active');
+        document.getElementById('aoTabCivile').classList.remove('active');
+        aoMonth = 0;
+        aoBuildYearOptions();
+        aoBuildMonthOptions();
+        aoRenderChart();
+      });
+      document.getElementById('aoYearSelect').addEventListener('change', (e) => {
+        aoYear = Number(e.target.value) || null;
+        aoMonth = 0;
+        document.getElementById('aoMonthSelect').value = '0';
+        aoRenderChart();
+      });
+      document.getElementById('aoMonthSelect').addEventListener('change', (e) => {
+        aoMonth = Number(e.target.value) || 0;
+        aoRenderChart();
+      });
+      document.getElementById('aoRefreshBtn').addEventListener('click', () => loadAOIndicateurs({ forceRefresh: true }));
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+
     let _commerceIndicatorsInitDone = false;
     async function init() {
       if (_commerceIndicatorsInitDone) return;
@@ -681,7 +1186,8 @@
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectCommerceSecondaryBar();
       bindEvents();
-      await loadCommerceIndicators();
+      bindAOEvents();
+      await Promise.all([loadCommerceIndicators(), loadAOIndicateurs()]);
     }
 
     window.onServerReady(init);
