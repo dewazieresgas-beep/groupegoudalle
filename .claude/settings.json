@@ -28,7 +28,15 @@
       "Bash(grep -n \"ca-excel\\\\|catch-all\\\\|app.get.*\\\\\\\\*\" c:/Users/gdewazieres/Desktop/groupegoudalle/server/server.js)",
       "Read(//c/Users/gdewazieres/.claude/skills/wiki-brain/**)",
       "Read(//c/Users/gdewazieres/Downloads/**)",
-      "Edit(~/.claude/skills/wiki-brain/**)"
+      "Edit(~/.claude/skills/wiki-brain/**)",
+      "WebSearch",
+      "Bash(pip install *)",
+      "PowerShell(pip install graphifyy 2>&1)",
+      "PowerShell(python --version)",
+      "PowerShell(python -m pip --version)",
+      "PowerShell(python -m pip install graphifyy 2>&1)",
+      "PowerShell(& \"C:\\\\Users\\\\gdewazieres\\\\AppData\\\\Local\\\\Python\\\\pythoncore-3.14-64\\\\Scripts\\\\graphify.exe\" install 2>&1)",
+      "Read(//c/Users/gdewazieres/**)"
     ],
     "additionalDirectories": [
       "c:\\Users\\gdewazieres\\Desktop\\groupegoudalle",

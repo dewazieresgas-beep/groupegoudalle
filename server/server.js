@@ -2265,13 +2265,13 @@ function getCommerceMonthNumber(token) {
   const txt = normalizeText(token).replace(/\./g, '');
   if (!txt) return null;
   if (txt.startsWith('jan')) return 1;
-  if (txt.startsWith('fev') || txt.startsWith('fvr')) return 2;
+  if (txt.startsWith('fev') || txt.startsWith('fvr') || txt.startsWith('feb')) return 2;
   if (txt.startsWith('mar')) return 3;
   if (txt.startsWith('avr') || txt.startsWith('apr')) return 4;
-  if (txt.startsWith('mai')) return 5;
+  if (txt.startsWith('mai') || txt.startsWith('may')) return 5;
   if (txt.startsWith('juil') || txt.startsWith('jul')) return 7;
   if (txt.startsWith('juin') || txt === 'jun') return 6;
-  if (txt.startsWith('aou') || txt === 'ao') return 8;
+  if (txt.startsWith('aou') || txt === 'ao' || txt.startsWith('aug')) return 8;
   if (txt.startsWith('sep')) return 9;
   if (txt.startsWith('oct')) return 10;
   if (txt.startsWith('nov')) return 11;
@@ -2369,18 +2369,60 @@ function findCommerceColumns(rows = []) {
 }
 
 function parseCommerceNumeric(rawValue, displayValue) {
-  if (typeof rawValue === 'number' && Number.isFinite(rawValue)) {
-    return rawValue;
+  const parseDisplayStyleNumber = (value) => {
+    if (value == null || value === '') return null;
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+
+    const txt = String(value).trim().replace(/\s/g, '').replace(/[^\d,.\-]/g, '');
+    if (!txt) return null;
+
+    // Le classeur affiche les kEUR avec des separateurs de milliers ("1,589 kEUR", "16.690 kEUR").
+    // Quand un separateur unique ou repete decoupe l'entier par groupes de 3 chiffres, il faut
+    // l'interpreter comme un separateur de milliers et non comme une decimale.
+    if (/^-?\d{1,3}(?:[.,]\d{3})+$/.test(txt) || /^-?\d+[.,]\d{3}$/.test(txt)) {
+      const normalized = txt.replace(/[.,]/g, '');
+      const parsed = parseFloat(normalized);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    if (/^-?\d{1,3}(?:[.,]\d{3})+(?:[.,]\d+)?$/.test(txt)) {
+      const lastSeparator = Math.max(txt.lastIndexOf(','), txt.lastIndexOf('.'));
+      const fractionalPart = lastSeparator >= 0 ? txt.slice(lastSeparator + 1) : '';
+      if (fractionalPart.length === 3) {
+        const normalized = txt.replace(/[.,]/g, '');
+        const parsed = parseFloat(normalized);
+        return Number.isFinite(parsed) ? parsed : null;
+      }
+
+      const decimalSeparator = txt.lastIndexOf(',') > txt.lastIndexOf('.') ? ',' : '.';
+      const normalized = txt
+        .replace(decimalSeparator === ',' ? /\./g : /,/g, '')
+        .replace(decimalSeparator, '.');
+      const parsed = parseFloat(normalized);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    if (/^-?\d+(?:,\d+)?$/.test(txt)) {
+      const parsed = parseFloat(txt.replace(',', '.'));
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    const fallback = toNumberFr(txt);
+    return fallback != null ? fallback : null;
+  };
+
+  const fromDisplay = parseDisplayStyleNumber(displayValue);
+  if (fromDisplay != null) {
+    return fromDisplay;
   }
 
   if (rawValue instanceof Date || displayValue instanceof Date) {
     return null;
   }
 
-  const fromDisplay = toNumberFr(displayValue);
-  if (fromDisplay != null) return fromDisplay;
-
-  const fromRaw = toNumberFr(rawValue);
+  const fromRaw = typeof rawValue === 'number' && Number.isFinite(rawValue)
+    ? rawValue / 1000
+    : parseDisplayStyleNumber(rawValue);
   return fromRaw != null ? fromRaw : null;
 }
 
@@ -2414,11 +2456,48 @@ function buildCommerceRow(rawRow, displayRow, columns) {
   };
 }
 
+function sheetToFormattedRows(worksheet) {
+  const ref = worksheet && worksheet['!ref'];
+  if (!ref) return [];
+
+  const range = XLSX.utils.decode_range(ref);
+  const rows = [];
+
+  for (let r = range.s.r; r <= range.e.r; r++) {
+    const row = [];
+    for (let c = range.s.c; c <= range.e.c; c++) {
+      const address = XLSX.utils.encode_cell({ r, c });
+      const cell = worksheet[address];
+      if (!cell) {
+        row.push(null);
+        continue;
+      }
+
+      let formatted = null;
+      if (cell.w != null && cell.w !== '') {
+        formatted = String(cell.w);
+      } else {
+        try {
+          const candidate = XLSX.utils.format_cell(cell);
+          formatted = candidate != null && candidate !== '' ? String(candidate) : null;
+        } catch {
+          formatted = cell.v != null ? String(cell.v) : null;
+        }
+      }
+      row.push(formatted);
+    }
+    rows.push(row);
+  }
+
+  return rows;
+}
+
 function readCommerceIndicatorsSnapshot(folderPath = COMMERCE_EXCEL_FOLDER) {
   const sourceFile = detectLatestCommerceExcel(folderPath);
   const workbook = XLSX.readFile(sourceFile.fullPath, { cellDates: true });
   const targetSheetKey = normalizeText(COMMERCE_EXCEL_SHEET).replace(/\s+/g, '');
   const sheetName = workbook.SheetNames.find((name) => normalizeText(name).replace(/\s+/g, '') === targetSheetKey);
+  const worksheet = workbook.Sheets[sheetName];
 
   if (!sheetName) {
     throw new Error(
@@ -2427,12 +2506,8 @@ function readCommerceIndicatorsSnapshot(folderPath = COMMERCE_EXCEL_FOLDER) {
     );
   }
 
-  const displayRows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
-    header: 1,
-    defval: null,
-    raw: false
-  });
-  const rawRows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
+  const displayRows = sheetToFormattedRows(worksheet);
+  const rawRows = XLSX.utils.sheet_to_json(worksheet, {
     header: 1,
     defval: null,
     raw: true
