@@ -428,8 +428,8 @@
             </div>
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
               <button type="submit" id="btnCfgConnect" class="btn btn-primary" style="white-space:nowrap;">🔗 Connecter</button>
-              <button type="button" id="btnCfgSync" class="btn btn-secondary" style="display:none; white-space:nowrap;" onclick="handleForceSync()">🔄 Sync</button>
-              <button type="button" id="btnCfgDesync" class="btn btn-danger" style="display:none; white-space:nowrap;" onclick="handleDesync()">🔌 Désynchroniser</button>
+              <button type="button" id="btnCfgSync" class="btn btn-secondary" style="display:none; white-space:nowrap;" onclick="handleForceSync()">🔄 Relire</button>
+              <button type="button" id="btnCfgDesync" class="btn btn-danger" style="display:none; white-space:nowrap;" onclick="handleDesync()">🔌 Déconnecter</button>
             </div>
           </form>
           <div id="cfgStatus" style="margin-top:10px; font-size:13px; color:var(--text-light);"></div>
@@ -549,8 +549,7 @@
         if (cfg && cfg.active) {
           document.getElementById('cfgFolder').value = cfg.folder || '';
           document.getElementById('cfgStatus').innerHTML =
-            `<span style="color:green;">✅ Connecté</span> — Dossier&nbsp;: <code>${escapeHtml(cfg.folder)}</code>` +
-            (cfg.lastSync ? ` — Dernière sync&nbsp;: ${new Date(cfg.lastSync).toLocaleString('fr-FR')}` : '');
+            `<span style="color:green;">✅ Connecté</span> — Dossier&nbsp;: <code>${escapeHtml(cfg.folder)}</code>`;
           document.getElementById('cfgFolder').disabled = true;
           document.getElementById('btnCfgConnect').style.display = 'none';
           document.getElementById('btnCfgSync').style.display = 'inline-flex';
@@ -579,7 +578,7 @@
           document.getElementById('cfgStatus').innerHTML = `<span style="color:red;">❌ ${escapeHtml(result.error)}</span>`;
           return;
         }
-        showMessage(`✅ Dossier connecté — ${result.incidentCount} accident(s) importé(s).`, 'success');
+        showMessage(`✅ Dossier connecté — ${result.incidentCount} accident(s) lu(s) dans Excel.`, 'success');
         loadConfig();
       } catch (e) {
         document.getElementById('cfgStatus').innerHTML = `<span style="color:red;">❌ ${escapeHtml(e.message)}</span>`;
@@ -593,7 +592,7 @@
         const res = await fetch(SERVER_URL + '/rh-security-import-excel', { method: 'POST' });
         const result = await res.json();
         if (result.success) {
-          showMessage(`✅ Sync effectuée — ${result.incidentCount} accident(s).`, 'success');
+          showMessage(`✅ Lecture Excel effectuée — ${result.incidentCount} accident(s).`, 'success');
           loadConfig();
         } else {
           showMessage(`❌ ${result.error}`, 'error');
@@ -604,14 +603,14 @@
     }
 
     async function handleDesync() {
-      if (!confirm('Désynchroniser le dossier Excel ?')) return;
+      if (!confirm('Déconnecter le dossier Excel ?')) return;
       await fetch(SERVER_URL + '/rh-security-excel-config', { method: 'DELETE' });
       document.getElementById('cfgFolder').disabled = false;
       document.getElementById('cfgFolder').value = '';
       document.getElementById('btnCfgConnect').style.display = 'inline-flex';
       document.getElementById('btnCfgSync').style.display = 'none';
       document.getElementById('btnCfgDesync').style.display = 'none';
-      document.getElementById('cfgStatus').textContent = 'Désynchronisé.';
+      document.getElementById('cfgStatus').textContent = 'Dossier déconnecté.';
     }
 
     function init() {

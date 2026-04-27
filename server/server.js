@@ -2949,9 +2949,18 @@ function parseRHSecurityExcels(cfg) {
   return allIncidents;
 }
 
-function applyRHSecurityIncidents(incidents) {
-  dbSet('rh_security_incidents', incidents);
-  return { imported: incidents.length, companies: RH_SECURITY_COMPANIES.length };
+function getRHSecurityConfig() {
+  return dbGet('rh_security_excel_config', null);
+}
+
+function readRHSecurityIncidentsFromExcel() {
+  const cfg = getRHSecurityConfig();
+  if (!cfg || !cfg.active) return [];
+  return parseRHSecurityExcels(cfg);
+}
+
+function buildRHSecurityReadResult(incidents) {
+  return { read: incidents.length, companies: RH_SECURITY_COMPANIES.length };
 }
 
 const RH_SECURITY_START_DATE = '2019-10-01';
@@ -3035,52 +3044,7 @@ function computeRHSecuritySummary(incidents = []) {
   };
 }
 
-let rhSecurityWatcher = null;
-
-function startRHSecurityWatcher(cfg) {
-  if (rhSecurityWatcher) {
-    clearInterval(rhSecurityWatcher);
-    rhSecurityWatcher = null;
-  }
-
-  const getFingerprints = () => RH_SECURITY_COMPANIES.map((company) => {
-    if (!company.filename) return `${company.id}:missing`;
-    try {
-      const resolved = resolveExistingExcelPath(cfg.folder, company.filename);
-      return `${company.id}:${resolved.resolvedFilename}:${fs.statSync(resolved.fullPath).mtimeMs}`;
-    } catch {
-      return `${company.id}:missing`;
-    }
-  }).join('|');
-
-  let lastFingerprint = getFingerprints();
-  rhSecurityWatcher = setInterval(() => {
-    try {
-      const nextFingerprint = getFingerprints();
-      if (nextFingerprint === lastFingerprint) return;
-      lastFingerprint = nextFingerprint;
-      const incidents = parseRHSecurityExcels(cfg);
-      const result = applyRHSecurityIncidents(incidents);
-      dbSet('rh_security_excel_config', {
-        ...cfg,
-        active: true,
-        lastSync: new Date().toISOString(),
-        lastSyncResult: result
-      });
-      console.log(`[RH-Securite] Import OK — ${incidents.length} accident(s) synchronisé(s).`);
-    } catch (e) {
-      console.error(`[RH-Securite] Erreur watcher : ${e.message}`);
-    }
-  }, 30000);
-}
-
-(function resumeRHSecurityWatcherOnStartup() {
-  const cfg = dbGet('rh_security_excel_config', null);
-  if (cfg && cfg.active) {
-    console.log('[RH-Securite] Reprise de la surveillance au démarrage...');
-    startRHSecurityWatcher(cfg);
-  }
-})();
+let rhSecurityWatcher = null; // Conservé pour compatibilité avec les anciennes routes.
 
 async function writeAccidentToExcel(folderPath, companyId, data) {
   const company = RH_SECURITY_COMPANIES.find((c) => c.id === companyId);
@@ -3206,53 +3170,58 @@ async function updateAccidentInExcel(folderPath, companyId, rowIndex, data) {
   await workbook.toFileAsync(excelPath);
 }
 
-// ─── RECHERCHE ACCIDENT (fuzzy, léger, depuis le cache) ──────────────────────
+// ─── RECHERCHE ACCIDENT (fuzzy, léger, depuis les fichiers Excel) ────────────
 
 app.get('/api/rh-security-search', (req, res) => {
-  const q = String(req.query.q || '').trim();
-  if (!q || q.length < 2) return res.json([]);
+  try {
+    const q = String(req.query.q || '').trim();
+    if (!q || q.length < 2) return res.json([]);
 
-  const normalize = (s) =>
-    String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    const normalize = (s) =>
+      String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 
-  const terms = normalize(q).split(/\s+/).filter(Boolean);
-  const incidents = dbGet('rh_security_incidents', []);
-  const modifications = dbGet('rh_security_modifications', {});
+    const terms = normalize(q).split(/\s+/).filter(Boolean);
+    const incidents = readRHSecurityIncidentsFromExcel();
 
-  const matches = incidents.filter((inc) => {
-    const nom = normalize(inc.nom);
-    const prenom = normalize(inc.prenom);
-    const full1 = `${nom} ${prenom}`;
-    const full2 = `${prenom} ${nom}`;
-    return terms.every((t) => full1.includes(t) || full2.includes(t) || nom.includes(t) || prenom.includes(t));
-  });
+    const matches = incidents.filter((inc) => {
+      const nom = normalize(inc.nom);
+      const prenom = normalize(inc.prenom);
+      const full1 = `${nom} ${prenom}`;
+      const full2 = `${prenom} ${nom}`;
+      return terms.every((t) => full1.includes(t) || full2.includes(t) || nom.includes(t) || prenom.includes(t));
+    });
 
-  res.json(matches.slice(0, 30).map((inc) => ({
-    id: inc.id,
-    employeeName: inc.employeeName,
-    accidentDate: inc.accidentDate,
-    companyLabel: inc.companyLabel,
-    companyId: inc.companyId,
-    gravite: inc.gravite,
-    cause: inc.cause,
-    modifiedAt: modifications[inc.id]?.modifiedAt || null,
-  })));
+    res.json(matches.slice(0, 30).map((inc) => ({
+      id: inc.id,
+      employeeName: inc.employeeName,
+      accidentDate: inc.accidentDate,
+      companyLabel: inc.companyLabel,
+      companyId: inc.companyId,
+      gravite: inc.gravite,
+      cause: inc.cause,
+    })));
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 // ─── DÉTAIL D'UN ACCIDENT (chargement lazy au clic) ─────────────────────────
 
 app.get('/api/rh-security-incident/:id', (req, res) => {
-  const incidents = dbGet('rh_security_incidents', []);
-  const inc = incidents.find((i) => i.id === req.params.id);
-  if (!inc) return res.status(404).json({ success: false, error: 'Accident introuvable.' });
-  const modifications = dbGet('rh_security_modifications', {});
-  res.json({ ...inc, modifiedAt: modifications[inc.id]?.modifiedAt || null });
+  try {
+    const incidents = readRHSecurityIncidentsFromExcel();
+    const inc = incidents.find((i) => i.id === req.params.id);
+    if (!inc) return res.status(404).json({ success: false, error: 'Accident introuvable.' });
+    res.json(inc);
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 // ─── MODIFICATION D'UN ACCIDENT ───────────────────────────────────────────────
 
 app.put('/api/rh-security-update-accident', requireToken, requireWriteRateLimit, async (req, res) => {
-  const cfg = dbGet('rh_security_excel_config', null);
+  const cfg = getRHSecurityConfig();
   if (!cfg || !cfg.active) {
     return res.status(400).json({ success: false, error: "Aucun dossier Excel configuré." });
   }
@@ -3267,16 +3236,7 @@ app.put('/api/rh-security-update-accident', requireToken, requireWriteRateLimit,
 
   try {
     await updateAccidentInExcel(cfg.folder, companyId, rowIndex, data);
-
-    // Enregistrer la date de modification
-    const modifications = dbGet('rh_security_modifications', {});
-    modifications[id] = { modifiedAt: new Date().toISOString() };
-    dbSet('rh_security_modifications', modifications);
-
-    // Re-sync du cache
     const incidents = parseRHSecurityExcels(cfg);
-    applyRHSecurityIncidents(incidents);
-
     res.json({ success: true, incidentCount: incidents.length });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -3284,7 +3244,7 @@ app.put('/api/rh-security-update-accident', requireToken, requireWriteRateLimit,
 });
 
 app.get('/api/rh-security-excel-config', (req, res) => {
-  res.json(dbGet('rh_security_excel_config', null));
+  res.json(getRHSecurityConfig());
 });
 
 app.put('/api/rh-security-excel-config', requireToken, requireWriteRateLimit, (req, res) => {
@@ -3295,10 +3255,8 @@ app.put('/api/rh-security-excel-config', requireToken, requireWriteRateLimit, (r
   try {
     const cfg = { folder, active: true };
     const incidents = parseRHSecurityExcels(cfg);
-    const result = applyRHSecurityIncidents(incidents);
-    const storedCfg = { ...cfg, lastSync: new Date().toISOString(), lastSyncResult: result };
-    dbSet('rh_security_excel_config', storedCfg);
-    startRHSecurityWatcher(storedCfg);
+    const result = buildRHSecurityReadResult(incidents);
+    dbSet('rh_security_excel_config', cfg);
     res.json({ success: true, result, incidentCount: incidents.length });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -3306,7 +3264,7 @@ app.put('/api/rh-security-excel-config', requireToken, requireWriteRateLimit, (r
 });
 
 app.post('/api/rh-security-add-accident', requireToken, requireWriteRateLimit, async (req, res) => {
-  const cfg = dbGet('rh_security_excel_config', null);
+  const cfg = getRHSecurityConfig();
   if (!cfg || !cfg.active) {
     return res.status(400).json({ success: false, error: "Aucun dossier Excel configure. Connecter d'abord le dossier depuis la page RH admin." });
   }
@@ -3317,7 +3275,6 @@ app.post('/api/rh-security-add-accident', requireToken, requireWriteRateLimit, a
   try {
     const writeResult = await writeAccidentToExcel(cfg.folder, companyId, req.body);
     const incidents = parseRHSecurityExcels(cfg);
-    applyRHSecurityIncidents(incidents);
     res.json({ success: true, ...writeResult, incidentCount: incidents.length });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -3334,14 +3291,13 @@ app.delete('/api/rh-security-excel-config', (req, res) => {
 });
 
 app.post('/api/rh-security-import-excel', (req, res) => {
-  const cfg = dbGet('rh_security_excel_config', null);
+  const cfg = getRHSecurityConfig();
   if (!cfg || !cfg.active) {
-    return res.status(400).json({ success: false, error: 'Aucune synchronisation configurée.' });
+    return res.status(400).json({ success: false, error: 'Aucun dossier Excel configuré.' });
   }
   try {
     const incidents = parseRHSecurityExcels(cfg);
-    const result = applyRHSecurityIncidents(incidents);
-    dbSet('rh_security_excel_config', { ...cfg, lastSync: new Date().toISOString(), lastSyncResult: result });
+    const result = buildRHSecurityReadResult(incidents);
     res.json({ success: true, result, incidentCount: incidents.length });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -3349,12 +3305,20 @@ app.post('/api/rh-security-import-excel', (req, res) => {
 });
 
 app.get('/api/rh-security-incidents', (req, res) => {
-  res.json(dbGet('rh_security_incidents', []));
+  try {
+    res.json(readRHSecurityIncidentsFromExcel());
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 app.get('/api/rh-security-summary', (req, res) => {
-  const incidents = dbGet('rh_security_incidents', []);
-  res.json({ success: true, ...computeRHSecuritySummary(incidents) });
+  try {
+    const incidents = readRHSecurityIncidentsFromExcel();
+    res.json({ success: true, ...computeRHSecuritySummary(incidents) });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 // ─── COMMERCE : LECTURE DYNAMIQUE DU DERNIER EXCEL ───────────────────────────
