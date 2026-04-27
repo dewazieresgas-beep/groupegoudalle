@@ -75,7 +75,7 @@
               <input type="number" id="inputObjectif" step="0.01" style="display:none; width:90px; padding:4px 8px; font-size:13px; border:1px solid var(--border); border-radius:4px;" onchange="saveObjectif()" onblur="toggleObjectifEdit(true)">
             </div>
 
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:20px; margin-bottom:20px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr 1fr; gap:20px; margin-bottom:20px;">
               <!-- Temps détaillés -->
               <div class="form-group">
                 <label for="inputBeton">Heures béton</label>
@@ -92,6 +92,10 @@
               <div class="form-group">
                 <label for="inputCentrale">Heures Centrale à béton</label>
                 <input type="number" id="inputCentrale" step="0.01">
+              </div>
+              <div class="form-group">
+                <label for="inputChantier">Heures Chantier</label>
+                <input type="number" id="inputChantier" step="0.01">
               </div>
             </div>
 
@@ -148,13 +152,14 @@
                 <th>Acier (h)</th>
                 <th>Chargement (h)</th>
                 <th>Centrale à béton (h)</th>
+                <th>Chantier (h)</th>
                 <th>Acier façonné (T)</th>
                 <th>Commentaire</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              <tr><td colspan="11" style="text-align:center; padding:20px;">Chargement...</td></tr>
+              <tr><td colspan="12" style="text-align:center; padding:20px;">Chargement...</td></tr>
             </tbody>
           </table>
           </div>
@@ -361,6 +366,7 @@
         tempsAciers: document.getElementById('inputAciers').value || null,
         tempsChargement: document.getElementById('inputChargement').value || null,
         tempsCentrale: document.getElementById('inputCentrale').value || null,
+        tempsChantier: document.getElementById('inputChantier').value || null,
         qtAcierFaconne: document.getElementById('inputAcierFaconne').value || null,
         comment: document.getElementById('inputComment').value
       };
@@ -423,6 +429,7 @@
       document.getElementById('inputAciers').value = kpi.tempsAciers || '';
       document.getElementById('inputChargement').value = kpi.tempsChargement || '';
       document.getElementById('inputCentrale').value = kpi.tempsCentrale || '';
+      document.getElementById('inputChantier').value = kpi.tempsChantier || '';
       document.getElementById('inputAcierFaconne').value = kpi.qtAcierFaconne || '';
       document.getElementById('inputComment').value = kpi.comment || '';
 
@@ -593,7 +600,7 @@
       count.className = kpis.length > 0 ? 'badge badge-success' : 'badge badge-secondary';
 
       if (kpis.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:20px;">Aucun indicateur pour cette période</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;padding:20px;">Aucun indicateur pour cette période</td></tr>`;
         return;
       }
 
@@ -609,6 +616,7 @@
           <td>${k.tempsAciers != null ? parseFloat(k.tempsAciers).toFixed(2) : '—'}</td>
           <td>${k.tempsChargement != null ? parseFloat(k.tempsChargement).toFixed(2) : '—'}</td>
           <td>${k.tempsCentrale != null ? parseFloat(k.tempsCentrale).toFixed(2) : '—'}</td>
+          <td>${k.tempsChantier != null ? parseFloat(k.tempsChantier).toFixed(2) : '—'}</td>
           <td>${k.qtAcierFaconne != null ? parseFloat(k.qtAcierFaconne).toFixed(2) : '—'}</td>
           <td><small style="white-space:pre-wrap;">${escapeHtml(k.comment || '')}</small></td>
           <td style="white-space:nowrap;">

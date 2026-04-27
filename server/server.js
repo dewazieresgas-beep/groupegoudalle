@@ -1700,8 +1700,9 @@ function parseGMExcel(cfg) {
       tempsAciers:     toNum(row[6]),   // G : Heures acier
       tempsChargement: toNum(row[7]),   // H : Heures Chargement
       tempsCentrale:   toNum(row[8]),   // I : Heures Centrale à béton
-      qtAcierFaconne:  toNum(row[9]),   // J : Qté acier façonné (T)
-      comment:         row[10] ? String(row[10]).trim() : ''  // K : Commentaire de la semaine
+      tempsChantier:   toNum(row[9]),   // J : Heures Chantier
+      qtAcierFaconne:  toNum(row[10]),  // K : Qté acier façonné (T)
+      comment:         row[11] ? String(row[11]).trim() : ''  // L : Commentaire de la semaine
     });
   }
   return data;
@@ -1761,8 +1762,9 @@ function writeKpiToExcel(kpi, cfg) {
     kpi.tempsAciers !== null ? kpi.tempsAciers : null,                  // G : Heures acier
     kpi.tempsChargement !== null ? kpi.tempsChargement : null,          // H : Heures Chargement
     kpi.tempsCentrale !== null ? kpi.tempsCentrale : null,              // I : Heures Centrale à béton
-    kpi.qtAcierFaconne !== null ? kpi.qtAcierFaconne : null,            // J : Qté acier façonné (T)
-    kpi.comment || ''                                                   // K : Commentaire de la semaine
+    kpi.tempsChantier !== null ? kpi.tempsChantier : null,              // J : Heures Chantier
+    kpi.qtAcierFaconne !== null ? kpi.qtAcierFaconne : null,            // K : Qté acier façonné (T)
+    kpi.comment || ''                                                   // L : Commentaire de la semaine
   ];
 
   if (targetRowIndex >= 0) {
@@ -1929,7 +1931,7 @@ app.post('/api/gm-import-excel', (req, res) => {
 
 // Créer ou mettre à jour un KPI (écriture directe dans Excel)
 app.post('/api/gm-kpi', requireToken, requireWriteRateLimit, (req, res) => {
-  const { year, week, m3, hours, objectifRatio, tempsBeton, tempsAciers, tempsChargement, tempsCentrale, qtAcierFaconne, comment } = req.body;
+  const { year, week, m3, hours, objectifRatio, tempsBeton, tempsAciers, tempsChargement, tempsCentrale, tempsChantier, qtAcierFaconne, comment } = req.body;
 
   if (!year || !week) {
     return res.status(400).json({ success: false, error: 'Année et semaine sont obligatoires.' });
@@ -1953,6 +1955,7 @@ app.post('/api/gm-kpi', requireToken, requireWriteRateLimit, (req, res) => {
     tempsAciers: tempsAciers !== null && tempsAciers !== '' ? parseFloat(tempsAciers) : null,
     tempsChargement: tempsChargement !== null && tempsChargement !== '' ? parseFloat(tempsChargement) : null,
     tempsCentrale: tempsCentrale !== null && tempsCentrale !== '' ? parseFloat(tempsCentrale) : null,
+    tempsChantier: tempsChantier !== null && tempsChantier !== '' ? parseFloat(tempsChantier) : null,
     qtAcierFaconne: qtAcierFaconne !== null && qtAcierFaconne !== '' ? parseFloat(qtAcierFaconne) : null,
     comment: comment.trim()
   };
