@@ -1,6 +1,34 @@
 {
   "rh_security_incidents": [
     {
+      "id": "rhsec_charpente_125",
+      "companyId": "charpente",
+      "companyLabel": "Goudalle Charpente",
+      "employeeName": "PEKERGIN OZGUN",
+      "nom": "PEKERGIN",
+      "prenom": "OZGUN",
+      "statut": "Intérimaire",
+      "accidentDate": "2026-04-23",
+      "accidentYear": 2026,
+      "type": "AT Travail",
+      "gravite": "Avec arrêt",
+      "cause": "Sur-effort / TMS",
+      "description": "Chantier Lycée Brasseur à BOURBOURG: bardage du bâtiment , utilisation du cloueur pneumatique , geste répétitif.  douleur poignet.............",
+      "stopStartDate": "2026-04-22",
+      "stopEndDate": "2026-04-25",
+      "stopDays": 4,
+      "debutArret": "2026-04-22",
+      "finArret": "2026-04-25",
+      "prolongation": null,
+      "soins": null,
+      "debutSoins": null,
+      "finSoins": null,
+      "siege": "Poignet",
+      "nature": "Douleur / TMS",
+      "sourceFile": "GoudalleCharpente_Suivi_Accidents.xlsx",
+      "sourceRow": 125
+    },
+    {
       "id": "rhsec_cbco_53",
       "companyId": "cbco",
       "companyLabel": "Concept Bois Côte d'Opale",
@@ -5212,9 +5240,9 @@
   "rh_security_excel_config": {
     "folder": "W:\\RH paie\\ADMINISTRATIF PAIE\\Aministratif\\accident\\TABLEAU ACCIDENTS DU TRAVAIL toutes societes",
     "active": true,
-    "lastSync": "2026-04-22T15:57:12.911Z",
+    "lastSync": "2026-04-24T22:49:53.756Z",
     "lastSyncResult": {
-      "imported": 186,
+      "imported": 0,
       "companies": 4
     }
   },
@@ -17016,6 +17044,74 @@
       "acompte": 0,
       "commentaire": "",
       "updatedAt": "2026-03-13T07:53:11.939Z"
+    },
+    "gm::mmol6sfskuncq::GOUDALLE CHARPENTE": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 144990.48
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 144990.48,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-04-24T11:44:36.360Z"
+    },
+    "gm::mmol6sfskuncq::DILLY - SCEA LAIT LOU": {
+      "selectedTypes": [
+        "rg_attente",
+        "litiges"
+      ],
+      "amounts": {
+        "rg_attente": 0,
+        "litiges": 52188.79
+      },
+      "chkSansRaison": false,
+      "chkAvecReserves": false,
+      "chkRgAttente": true,
+      "chkLitiges": true,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 0,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 52188.79,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-04-24T11:44:52.764Z"
+    },
+    "gc::mmol6fp1eski8::COMMUNE DE LONGFOSSE": {
+      "selectedTypes": [
+        "sans_raison"
+      ],
+      "amounts": {
+        "sans_raison": 208381.31
+      },
+      "chkSansRaison": true,
+      "chkAvecReserves": false,
+      "chkRgAttente": false,
+      "chkLitiges": false,
+      "chkSolde": false,
+      "chkAcompte": false,
+      "sansRaison": 208381.31,
+      "avecReserves": 0,
+      "rgAttente": 0,
+      "litiges": 0,
+      "solde": 0,
+      "acompte": 0,
+      "commentaire": "",
+      "updatedAt": "2026-04-24T11:45:35.523Z"
     }
   },
   "cbco_commercial": [
@@ -17145,6 +17241,6 @@
     "folder": "Z:\\03-BE\\Appel d'offre\\~A VOIR",
     "filename": "Appels d'offre",
     "active": true,
-    "lastSync": "2026-04-23T12:20:19.180Z"
+    "lastSync": "2026-04-23T12:21:16.889Z"
   }
 }
