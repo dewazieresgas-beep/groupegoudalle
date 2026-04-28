@@ -16,7 +16,6 @@ const fs = require('fs');
 const XLSX = require('xlsx');
 const XlsxPopulate = require('xlsx-populate');
 const { PDFParse } = require('pdf-parse');
-const multer = require('multer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -72,18 +71,6 @@ if (fs.existsSync(DB_PATH)) {
 }
 
 function saveStore() {
-  // Sauvegarde de sécurité avant chaque écriture (garde les 3 dernières)
-  if (fs.existsSync(DB_PATH)) {
-    const backupBase = DB_PATH.replace('.json', '');
-    // Rotation : backup.2 → backup.3 (supprimé), backup.1 → backup.2, courant → backup.1
-    if (fs.existsSync(backupBase + '.backup.2.json')) {
-      fs.renameSync(backupBase + '.backup.2.json', backupBase + '.backup.3.json');
-    }
-    if (fs.existsSync(backupBase + '.backup.1.json')) {
-      fs.renameSync(backupBase + '.backup.1.json', backupBase + '.backup.2.json');
-    }
-    fs.copyFileSync(DB_PATH, backupBase + '.backup.1.json');
-  }
   fs.writeFileSync(DB_PATH, JSON.stringify(store, null, 2), 'utf8');
 }
 
@@ -596,48 +583,6 @@ function requireWriteRateLimit(req, res, next) {
 
 // Sert les fichiers statiques du site (HTML, CSS, JS, images)
 app.use(express.static(path.join(__dirname, '../client')));
-
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadsDir = path.join(__dirname, 'uploads');
-    cb(null, uploadsDir);
-  },
-  filename: function (req, file, cb) {
-    // Garder le nom original avec timestamp
-    const timestamp = Date.now();
-    const filename = `planning-${timestamp}.pdf`;
-    console.log('[Multer] Filename:', filename);
-    cb(null, filename);
-  }
-});
-
-const upload = multer({
-  storage: storage,
-  fileFilter: function (req, file, cb) {
-    console.log('[Multer] File received:', file.originalname, 'Type:', file.mimetype);
-    if (file.mimetype === 'application/pdf') {
-      cb(null, true);
-    } else {
-      cb(new Error('Seuls les fichiers PDF sont acceptés'), false);
-    }
-  },
-  limits: { fileSize: 100 * 1024 * 1024 } // 100MB
-});
-
-// Middleware de gestion des erreurs multer
-app.use((err, req, res, next) => {
-  if (err instanceof multer.MulterError) {
-    console.error('[Multer Error]', err.code, err.message);
-    if (err.code === 'FILE_TOO_LARGE') {
-      return res.status(400).json({ success: false, error: 'Fichier trop volumineux (max 100MB)' });
-    }
-    return res.status(400).json({ success: false, error: 'Erreur upload: ' + err.message });
-  } else if (err) {
-    console.error('[Upload Error]', err.message);
-    return res.status(400).json({ success: false, error: err.message });
-  }
-  next();
-});
 
 // ─── ROUTES : UTILISATEURS ──────────────────────────────────────────────────────
 
