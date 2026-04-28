@@ -186,6 +186,18 @@ async function loadKeysFromServer(keys = [], options = {}) {
       if (res.ok) {
         const data = await res.json();
 
+        if (key === 'goudalle_cbco_productivite') {
+          // Le serveur renvoie { entries: [...] } ou { entries: [], error: '...' }
+          const entries = (data && !Array.isArray(data) && data.entries) ? data.entries : (Array.isArray(data) ? data : []);
+          const status = (data && !Array.isArray(data) && data.error) ? { error: data.error, message: data.message || null } : null;
+          _cache[key] = entries;
+          _cache['goudalle_cbco_excel_status'] = status;
+          try { _origSet(key, JSON.stringify(entries)); } catch {}
+          try { _origSet('goudalle_cbco_excel_status', JSON.stringify(status)); } catch {}
+          _loadedServerKeys.add(key);
+          return;
+        }
+
         if (key === 'goudalle_users') {
           const serverUsers = (data && typeof data === 'object' && !Array.isArray(data)) ? data : {};
           const isEmptyServer = Object.keys(serverUsers).length === 0;

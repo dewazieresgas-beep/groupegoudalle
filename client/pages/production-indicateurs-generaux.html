@@ -184,6 +184,8 @@
         </div>
       </div>
 
+      <div id="excelErrorBanner" style="display:none; background:#fff3cd; border:1px solid #ffc107; border-radius:8px; padding:12px 16px; margin-bottom:14px; color:#856404; font-size:0.95em;"></div>
+
       <!-- ═══ SYNTHÈSE EXERCICE ═══ -->
       <div class="ig-summary-strip">
         <!-- Total Poutres -->
@@ -975,6 +977,22 @@
       );
     }
 
+    function renderExcelStatus() {
+      const banner = document.getElementById('excelErrorBanner');
+      if (!banner) return;
+      try {
+        const raw = localStorage.getItem('goudalle_cbco_excel_status');
+        const status = raw ? JSON.parse(raw) : null;
+        if (!status || !status.error) { banner.style.display = 'none'; return; }
+        if (status.error === 'no_config') {
+          banner.textContent = '⚠️ Fichier Excel non lié — rendez-vous dans la page de configuration pour connecter le fichier KPI.';
+        } else {
+          banner.textContent = `⚠️ Les données dans l'Excel ne sont pas lisibles${status.message ? ' : ' + status.message : '.'}`;
+        }
+        banner.style.display = 'block';
+      } catch { banner.style.display = 'none'; }
+    }
+
     function init() {
       if (!Auth.hasAccess('production_indicateurs_generaux')) {
         window.location.href = './erreur-acces.html';
@@ -984,12 +1002,14 @@
       injectProductionSecondaryBar();
       document.getElementById('igYearSelect').addEventListener('change', buildCharts);
 
+      renderExcelStatus();
       buildCharts();
 
       (async () => {
         try {
           await loadServerKeys(['goudalle_cbco_productivite'], { force: true });
           await new Promise(resolve => setTimeout(resolve, 100));
+          renderExcelStatus();
           if (getCBCOProductiviteData()?.length > 0) buildCharts();
         } catch (e) {
           console.warn('[IG] Erreur rechargement:', e.message);

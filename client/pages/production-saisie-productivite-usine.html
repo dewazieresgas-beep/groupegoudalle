@@ -40,20 +40,17 @@
               <input type="text" id="cfgFilename" placeholder="ex: Productivite CBCO.xlsx" required>
             </div>
             <p style="font-size:0.83em; color:#888; margin-bottom:12px;">
-              Les feuilles <strong>SC, ULTRA, EXTRA, COLLAGE, ASSEMBLAGE, QUALITÉ, SÉCURITÉ</strong> sont lues automatiquement. La synchronisation se fait toutes les 30 secondes dès qu'une modification du fichier est détectée.
+              Les feuilles <strong>SC, ULTRA, EXTRA, COLLAGE, ASSEMBLAGE, QUALITÉ</strong> sont lues en direct à chaque ouverture de la page indicateurs.
             </p>
-            <div id="cfgLastSync" style="display:none; font-size:13px; color:var(--text-light); margin-bottom:12px;">
-              Dernière sync : <strong id="cfgDisplayLastSync">—</strong>
-            </div>
             <div style="display:flex; gap:10px; flex-wrap:wrap;">
               <button type="submit" id="btnConnect" class="btn btn-success" style="padding:12px 24px; font-size:15px;">
-                🔗 Connecter et synchroniser
+                🔗 Connecter
               </button>
               <button type="button" id="btnModifier" class="btn btn-secondary" style="display:none;" onclick="unlockConfig()">
                 ✏️ Modifier
               </button>
-              <button type="button" id="btnForceSync" class="btn btn-primary" style="display:none;" onclick="handleForceSync()">
-                🔄 Sync maintenant
+              <button type="button" id="btnTest" class="btn btn-primary" style="display:none;" onclick="handleTest()">
+                🔍 Tester la lecture
               </button>
               <button type="button" id="btnDesync" class="btn btn-danger" style="display:none;" onclick="handleDesync()">
                 🔌 Désynchroniser
@@ -63,28 +60,6 @@
         </div>
       </div>
 
-      <!-- ═══ HISTORIQUE ═══ -->
-      <div class="card" style="margin-top:20px;">
-        <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
-          <h2 style="margin:0;">📁 Historique semaines importées</h2>
-          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-            <label for="machineViewSelect" style="font-size:0.85em; font-weight:600;">Vue machine</label>
-            <select id="machineViewSelect" onchange="refreshHistory()" style="min-width:140px;">
-              <option value="speedcut">Speedcut</option>
-              <option value="ultra">Ultra</option>
-              <option value="extra">Extra</option>
-              <option value="collage">Collage</option>
-              <option value="assemblage">Assemblage</option>
-              <option value="qualite">Qualité</option>
-              <option value="securite">Sécurité</option>
-            </select>
-            <span class="badge badge-secondary" id="countImports">0 semaine</span>
-          </div>
-        </div>
-        <div class="card-body" id="historyBody">
-          <p style="color:var(--text-muted);">Aucune donnée — connectez un fichier Excel ci-dessus.</p>
-        </div>
-      </div>
     </main>
   </div>
 
@@ -106,27 +81,22 @@
       if (type === 'success') setTimeout(() => { d.style.display = 'none'; }, 6000);
     }
 
-    function lockConfig(cfg) {
+    function lockConfig() {
       ['cfgFolder', 'cfgFilename'].forEach(id => { document.getElementById(id).disabled = true; });
-      document.getElementById('btnConnect').style.display   = 'none';
-      document.getElementById('btnModifier').style.display  = 'inline-flex';
-      document.getElementById('btnForceSync').style.display = 'inline-flex';
-      document.getElementById('btnDesync').style.display    = 'inline-flex';
-      document.getElementById('cfgCardTitle').textContent   = '✅ Synchronisation active';
-      document.getElementById('cfgLastSync').style.display  = 'block';
-      if (cfg && cfg.lastSync) {
-        document.getElementById('cfgDisplayLastSync').textContent = new Date(cfg.lastSync).toLocaleString('fr-FR');
-      }
+      document.getElementById('btnConnect').style.display  = 'none';
+      document.getElementById('btnModifier').style.display = 'inline-flex';
+      document.getElementById('btnTest').style.display     = 'inline-flex';
+      document.getElementById('btnDesync').style.display   = 'inline-flex';
+      document.getElementById('cfgCardTitle').textContent  = '✅ Fichier Excel lié';
     }
 
     function unlockConfig() {
       ['cfgFolder', 'cfgFilename'].forEach(id => { document.getElementById(id).disabled = false; });
-      document.getElementById('btnConnect').style.display   = 'inline-flex';
-      document.getElementById('btnModifier').style.display  = 'none';
-      document.getElementById('btnForceSync').style.display = 'none';
-      document.getElementById('btnDesync').style.display    = 'none';
-      document.getElementById('cfgCardTitle').textContent   = '✏️ Modifier la connexion';
-      document.getElementById('cfgLastSync').style.display  = 'none';
+      document.getElementById('btnConnect').style.display  = 'inline-flex';
+      document.getElementById('btnModifier').style.display = 'none';
+      document.getElementById('btnTest').style.display     = 'none';
+      document.getElementById('btnDesync').style.display   = 'none';
+      document.getElementById('cfgCardTitle').textContent  = '✏️ Modifier la connexion';
     }
 
     async function loadConfig() {
@@ -136,7 +106,7 @@
         if (cfg && cfg.active) {
           document.getElementById('cfgFolder').value   = cfg.folder;
           document.getElementById('cfgFilename').value = cfg.filename;
-          lockConfig(cfg);
+          lockConfig();
         }
       } catch { /* pas de config, formulaire reste déverrouillé */ }
     }
@@ -157,232 +127,53 @@
         });
         const result = await res.json();
         if (!result.success) { showMessage(`❌ ${result.error}`, 'error'); return; }
-        const r = result.result;
         const s = result.stats || {};
-        showMessage(`✅ Connexion réussie ! ${r.added} semaine(s) ajoutée(s), ${r.updated} mise(s) à jour. SC:${s.sc||0} Ultra:${s.ultra||0} Extra:${s.extra||0} Collage:${s.collage||0} Assemblage:${s.assemblage||0} Qualité:${s.qualite||0}. La synchronisation est maintenant automatique.`, 'success');
-        lockConfig({ ...body, lastSync: new Date().toISOString() });
-        refreshHistory();
+        showMessage(`✅ Fichier lié ! SC:${s.sc||0} Ultra:${s.ultra||0} Extra:${s.extra||0} Collage:${s.collage||0} Assemblage:${s.assemblage||0} Qualité:${s.qualite||0} semaines trouvées. Les données sont lues en direct à chaque consultation.`, 'success');
+        lockConfig();
       } catch(e) {
         showMessage(`❌ Erreur : ${e.message}`, 'error');
       } finally {
-        btn.textContent = '🔗 Connecter et synchroniser'; btn.disabled = false;
+        btn.textContent = '🔗 Connecter'; btn.disabled = false;
       }
     }
 
-    async function handleForceSync() {
-      const btn = document.getElementById('btnForceSync');
-      btn.textContent = '⏳ Sync...'; btn.disabled = true;
+    async function handleTest() {
+      const btn = document.getElementById('btnTest');
+      btn.textContent = '⏳ Lecture...'; btn.disabled = true;
       try {
-        const res = await fetch(SERVER_URL + '/cbco-productivite-import-excel', { method: 'POST' });
+        const res = await fetch(SERVER_URL + '/cbco-productivite', { cache: 'no-store' });
         const result = await res.json();
-        if (!result.success) { showMessage(`❌ ${result.error}`, 'error'); return; }
-        const r = result.result;
-        showMessage(`✅ Synchronisation effectuée — ${r.added} ajouté(s), ${r.updated} mis à jour.`, 'success');
-        document.getElementById('cfgDisplayLastSync').textContent = new Date().toLocaleString('fr-FR');
-        refreshHistory();
+        if (result.error) {
+          showMessage(`❌ ${result.error === 'no_config' ? 'Aucun fichier configuré.' : result.message || 'Erreur lecture Excel.'}`, 'error');
+          return;
+        }
+        const n = (result.entries || []).length;
+        showMessage(`✅ Lecture OK — ${n} semaine(s) lue(s) depuis l'Excel.`, 'success');
       } catch(e) {
         showMessage(`❌ Erreur : ${e.message}`, 'error');
       } finally {
-        btn.textContent = '🔄 Sync maintenant'; btn.disabled = false;
+        btn.textContent = '🔍 Tester la lecture'; btn.disabled = false;
       }
     }
 
     async function handleDesync() {
-      if (!confirm('Désynchroniser le fichier Excel ?\n\nToutes les données importées depuis l\'Excel seront supprimées.')) return;
+      if (!confirm('Désynchroniser le fichier Excel ?')) return;
       try {
         await fetch(SERVER_URL + '/cbco-productivite-excel-config', { method: 'DELETE' });
-        // Vider le localStorage local pour forcer un rechargement complètement propre
-        localStorage.removeItem('goudalle_cbco_productivite');
-        showMessage('🔌 Désynchronisé. Les données Excel ont été supprimées.', 'success');
+        showMessage('🔌 Désynchronisé.', 'success');
         unlockConfig();
-        await loadServerKeys(['goudalle_cbco_productivite'], { force: true });
-        refreshHistory();
+        document.getElementById('cfgFolder').value   = '';
+        document.getElementById('cfgFilename').value = '';
       } catch(e) {
         showMessage(`❌ Erreur : ${e.message}`, 'error');
       }
     }
 
-
-    function fmtH(h) {
-      if (h === null || h === undefined) return '—';
-      return parseFloat(h).toFixed(2) + ' h';
-    }
-    function fmtN(v, dec = 2) {
-      if (v === null || v === undefined) return '—';
-      return parseFloat(v).toFixed(dec);
-    }
-    function fmtPct(v) {
-      if (v === null || v === undefined) return '—';
-      return (parseFloat(v) * 100).toFixed(1) + ' %';
-    }
-    function esc(s) {
-      return (String(s||'')).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
-
-    function hasSignificantValue(val) {
-      if (val === null || val === undefined || val === '' || Number.isNaN(val)) return false;
-      const n = Number(val);
-      return Number.isFinite(n) && n !== 0;
-    }
-
-    function hasDataForMachine(entry, machine) {
-      // Vérifie uniquement les colonnes de production principale (cubage/quantité)
-      if (machine === 'speedcut') return hasSignificantValue(entry.speedcutM3);
-      if (machine === 'ultra') return hasSignificantValue(entry.ultraM3);
-      if (machine === 'extra') return hasSignificantValue(entry.extraM2);
-      if (machine === 'collage') return hasSignificantValue(entry.collagePresses);
-      if (machine === 'assemblage') return hasSignificantValue(entry.assemblageTempsRealise);
-      if (machine === 'qualite') return hasSignificantValue(entry.qualiteTests);
-      return false;
-    }
-
-    function renderWeekCard(entry, machine) {
-      let mainKPI = '';
-      let fields = [];
-      let accentColor = '#2a9d8f';
-      
-      if (machine === 'speedcut') {
-        accentColor = '#2e7d32';
-        mainKPI = `${fmtN(entry.speedcutProductivite)} m³/h`;
-        fields = [
-          { label: 'm³', value: fmtN(entry.speedcutM3) },
-          { label: 'H. Onaya', value: fmtH(entry.speedcutHeuresOnaya) },
-          { label: 'Cible', value: fmtN(entry.speedcutCibleProductivite) },
-          { label: 'TRS', value: fmtPct(entry.speedcutTRS) },
-          { label: 'Remarques', value: entry.speedcutRemarques || '', full: true }
-        ];
-      } else if (machine === 'ultra') {
-        accentColor = '#0277bd';
-        mainKPI = `${fmtN(entry.ultraProductivite)} m³/h`;
-        fields = [
-          { label: 'm³', value: fmtN(entry.ultraM3) },
-          { label: 'H. Onaya', value: fmtH(entry.ultraHeuresOnaya) },
-          { label: 'Cible', value: fmtN(entry.ultraCibleProductivite) },
-          { label: 'TRS', value: fmtPct(entry.ultraTRS) },
-          { label: 'Remarques', value: entry.ultraRemarques || '', full: true }
-        ];
-      } else if (machine === 'extra') {
-        accentColor = '#7b1fa2';
-        mainKPI = `${fmtN(entry.extraProductivite)} m²/h`;
-        fields = [
-          { label: 'm²', value: fmtN(entry.extraM2) },
-          { label: 'H. Onaya', value: fmtH(entry.extraHeuresOnaya) },
-          { label: 'Cible', value: fmtN(entry.extraCibleProductivite) },
-          { label: 'TRS', value: fmtPct(entry.extraTRS) },
-          { label: 'Remarques', value: entry.extraRemarques || '', full: true }
-        ];
-      } else if (machine === 'collage') {
-        accentColor = '#e65100';
-        mainKPI = `${fmtH(entry.collageTempsPressee)}/pressée`;
-        fields = [
-          { label: 'Pressées', value: fmtN(entry.collagePresses, 0) },
-          { label: 'Heures', value: fmtH(entry.collageHeures) },
-          { label: 'Surface collée', value: fmtN(entry.collageSurface) + ' m²' },
-          { label: 'Caissons', value: fmtN(entry.collageNombreCaissons, 0) },
-          { label: 'Cible', value: fmtH(entry.collageCibleTempsPressee) },
-          { label: 'Commentaire', value: entry.collageCommentaire || '', full: true }
-        ];
-      } else if (machine === 'assemblage') {
-        accentColor = '#c2185b';
-        const variation = entry.assemblageVariation;
-        const varColor = variation !== null ? (variation > 0 ? '#e16566' : '#27ae60') : 'inherit';
-        mainKPI = `<span style="color:${varColor}; font-weight:600;">${variation !== null ? fmtN(variation,1)+' %' : '—'}</span>`;
-        fields = [
-          { label: 'T. Réalisé', value: fmtH(entry.assemblageTempsRealise) },
-          { label: 'T. Théorique', value: fmtH(entry.assemblageTempsTheorique) },
-          { label: 'Caissons', value: fmtN(entry.assemblageNombreCaissons, 0) },
-          { label: 'Surface', value: fmtN(entry.assemblageSurface) + ' m²' },
-          { label: 'Commentaire', value: entry.assemblageCommentaire || '', full: true }
-        ];
-      } else if (machine === 'qualite') {
-        accentColor = '#1976d2';
-        const ncColor = (entry.qualiteNonConformites||0) > 0 ? '#e16566' : '#666';
-        const clColor = (entry.qualiteReclamationsClients||0) > 0 ? '#e16566' : '#666';
-        mainKPI = `${fmtN(entry.qualiteTests, 0)} tests`;
-        fields = [
-          { label: 'NC', value: `<span style="color:${ncColor}; font-weight:600;">${fmtN(entry.qualiteNonConformites, 0)}</span>` },
-          { label: 'Réclamations', value: `<span style="color:${clColor}; font-weight:600;">${fmtN(entry.qualiteReclamationsClients, 0)}</span>` },
-          { label: 'Année', value: entry.qualiteAnnee || '—' },
-          { label: 'Détail', value: entry.qualiteDetail || '', full: true }
-        ];
-      }
-
-      const detailsHTML = fields.map(f => 
-        f.full 
-          ? `<div style="grid-column:1/-1; padding-top:8px; border-top:1px solid #e0e0e0; margin-top:8px;"><div style="color:#666; font-size:0.9em; line-height:1.4;">${esc(f.value)}</div></div>`
-          : `<div style="border-left:3px solid ${accentColor}; padding-left:12px;"><div style="font-size:0.8em; color:#999; font-weight:600; text-transform:uppercase; margin-bottom:2px;">${f.label}</div><div style="font-size:1.15em; font-weight:600; color:#2a2a2a;">${f.value}</div></div>`
-      ).join('');
-
-      return `
-        <div style="border:1px solid #e0e0e0; border-radius:12px; background:#fff; overflow:hidden; margin-bottom:12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); transition: box-shadow 0.2s ease;">
-          <div style="padding:16px; background: linear-gradient(135deg, ${accentColor}15 0%, ${accentColor}08 100%); border-bottom:2px solid ${accentColor}30; display:flex; align-items:center; gap:16px; cursor:pointer; justify-content:space-between;" onclick="const detail = this.parentElement.querySelector('[data-detail]'); detail.style.display = detail.style.display === 'none' ? 'block' : 'none';" class="_card-toggle">
-            <div style="flex:1; display:flex; align-items:center; gap:14px; min-width:0;">
-              <div>
-                <div style="font-size:1.05em; font-weight:700; color:#2a2a2a;">${esc(entry.semaineLabel)}</div>
-                <div style="font-size:1.35em; font-weight:700; color:${accentColor}; line-height:1;">${mainKPI}</div>
-              </div>
-            </div>
-            <span style="color:#aaa; font-size:1.2em; flex-shrink:0; transition: transform 0.2s;">▼</span>
-          </div>
-          <div data-detail style="display:none; padding:16px; background:#fafafa;">
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; row-gap:12px;">
-              ${detailsHTML}
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    function refreshHistory() {
-      const view  = document.getElementById('machineViewSelect').value;
-      const data  = getCBCOProductiviteData();
-      const count = document.getElementById('countImports');
-      const body  = document.getElementById('historyBody');
-
-      if (view === 'securite') {
-        const sec = getCBCOSecuriteData();
-        count.textContent = sec ? '1' : '0';
-        count.className = sec ? 'badge badge-success' : 'badge badge-secondary';
-        if (!sec || !sec.joursSansAccident) {
-          body.innerHTML = '<p style="color:var(--text-muted);">Aucune donnée sécurité importée.</p>';
-        } else {
-          body.innerHTML = `<div style="display:flex; gap:20px; flex-wrap:wrap;">
-            <div style="background:#f0f8f0; border:1px solid #d3e9d3; border-radius:8px; padding:16px 24px; text-align:center;">
-              <div style="font-size:2em; font-weight:700; color:#27ae60;">${sec.joursSansAccident}</div>
-              <div style="font-size:0.85em; color:#555;">Jours sans accident</div>
-            </div>
-            <div style="background:#fdf6f0; border:1px solid #f5dfc2; border-radius:8px; padding:16px 24px; text-align:center;">
-              <div style="font-size:2em; font-weight:700; color:#e67e22;">${sec.nombreAnnuelAccidents}</div>
-              <div style="font-size:0.85em; color:#555;">Accidents ${sec.anneeReference||''}</div>
-            </div>
-            <div style="background:#f0f4ff; border:1px solid #d0d8f0; border-radius:8px; padding:16px 24px; text-align:center;">
-              <div style="font-size:2em; font-weight:700; color:var(--accent);">${sec.recordJoursSansAccident}</div>
-              <div style="font-size:0.85em; color:#555;">Record jours sans accident</div>
-            </div>
-          </div>
-          <p style="margin-top:16px; color:#666; font-size:0.88em;">Dernier accident : <strong>${esc(sec.lastAccidentDate||'—')}</strong>${sec.lastAccidentPerson ? ' — ' + esc(sec.lastAccidentPerson) : ''}</p>`;
-        }
-        return;
-      }
-
-      const filtered = data.filter(e => hasDataForMachine(e, view));
-      count.textContent = filtered.length + ' semaine' + (filtered.length > 1 ? 's' : '');
-      count.className   = filtered.length > 0 ? 'badge badge-success' : 'badge badge-secondary';
-
-      if (filtered.length === 0) {
-        body.innerHTML = '<p style="color:var(--text-muted);">Aucune donnée pour cette machine.</p>';
-        return;
-      }
-
-      const html = filtered.map(e => renderWeekCard(e, view)).join('');
-      body.innerHTML = html;
-    }
 
     function init() {
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectProductionSecondaryBar();
       loadConfig();
-      refreshHistory();
     }
 
     window.onServerReady(init);

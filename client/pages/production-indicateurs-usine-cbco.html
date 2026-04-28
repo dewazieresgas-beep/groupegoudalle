@@ -46,6 +46,8 @@
         <h1>Dashboard Usine CBCO</h1>
       </div>
 
+      <div id="excelErrorBanner" style="display:none; background:#fff3cd; border:1px solid #ffc107; border-radius:8px; padding:12px 16px; margin-bottom:14px; color:#856404; font-size:0.95em;"></div>
+
       <div class="card" style="margin-bottom:18px;">
         <div class="card-body" style="padding:12px 14px;">
           <h2 style="margin:0 0 10px 0;">Sécurité</h2>
@@ -838,10 +840,27 @@
       content.style.display = '';
     }
 
+    function renderExcelStatus() {
+      const banner = document.getElementById('excelErrorBanner');
+      if (!banner) return;
+      try {
+        const raw = localStorage.getItem('goudalle_cbco_excel_status');
+        const status = raw ? JSON.parse(raw) : null;
+        if (!status || !status.error) { banner.style.display = 'none'; return; }
+        if (status.error === 'no_config') {
+          banner.textContent = '⚠️ Fichier Excel non lié — rendez-vous dans la page de configuration pour connecter le fichier KPI.';
+        } else {
+          banner.textContent = `⚠️ Les données dans l'Excel ne sont pas lisibles${status.message ? ' : ' + status.message : '.'}`;
+        }
+        banner.style.display = 'block';
+      } catch { banner.style.display = 'none'; }
+    }
+
     async function init() {
       console.log('[CBCO] init() - Initialisation du dashboard');
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectProductionSecondaryBar();
+      renderExcelStatus();
       
       // Affiche le dashboard IMMÉDIATEMENT (peut être vide au départ)
       renderSecuriteHeader();
@@ -865,9 +884,9 @@
           // Vérifie qu'on a maintenant des données
           const data = getCBCOProductiviteData();
           console.log(`[CBCO] Phase 2 - Données serveur chargées: ${data ? data.length : 0} entrées`);
+          renderExcelStatus();
           if (data && data.length > 0) {
             console.log('[CBCO] Phase 2 - Re-rendu des indicateurs...');
-            // Données chargées ! Re-afficher tout les indicateurs et graphiques
             renderSecuriteHeader();
             renderQualiteHeader();
             renderMachineSection('sc');

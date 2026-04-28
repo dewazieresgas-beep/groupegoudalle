@@ -687,12 +687,14 @@ app.put('/api/thresholds', requireToken, requireWriteRateLimit, (req, res) => {
 // ─── ROUTES : CBCO PRODUCTIVITÉ USINE ────────────────────────────────────────────
 
 app.get('/api/cbco-productivite', (req, res) => {
-  res.json(dbGet('cbco_productivite', []));
-});
-
-app.put('/api/cbco-productivite', requireToken, requireWriteRateLimit, (req, res) => {
-  dbSet('cbco_productivite', req.body);
-  res.json({ success: true });
+  const cfg = dbGet('cbco_productivite_excel_config', null);
+  if (!cfg || !cfg.active) return res.json({ entries: [], error: 'no_config' });
+  try {
+    const parsed = parseCBCOProdExcel(cfg);
+    res.json({ entries: parsed.entries });
+  } catch(e) {
+    res.json({ entries: [], error: 'excel_error', message: e.message });
+  }
 });
 
 app.get('/api/cbco-securite', (req, res) => {
@@ -763,8 +765,8 @@ function parseCBCOProdExcel(cfg) {
       const cubageVal = toNum(row[colCfg.F]);
       if (cubageVal === null) { if (++emptyStreak >= 50) break; continue; }
       emptyStreak = 0;
-      const semaineAnnuelle = toNum(row[colCfg.B]); // col B = numéro de semaine (1-52)
-      const anneeDirecte    = toNum(row[colCfg.C]); // col C = année (2025, 2026...) — ex-"semaine cumulée"
+      const semaineAnnuelle = toNum(row[colCfg.B]);    // col B = numéro de semaine (1-52)
+      const anneeDirecte    = toNum(row[colCfg.ANNEE]); // colonne Année (variable selon la feuille)
       const heuresOnaya     = toDur(row[colCfg.D]);
       const heuresPerdues   = toDur(row[colCfg.E]);
       const cubage          = cubageVal;
@@ -785,7 +787,7 @@ function parseCBCOProdExcel(cfg) {
       const vals = { heuresOnaya, heuresPerdues, cubage, productivite };
       if (req.some(f => vals[f] === null)) continue;
 
-      // Utilisation directe : col B = semaine, col C = année
+      // col B = semaine, colonne ANNEE = année (index variable par feuille)
       const week = Math.round(semaineAnnuelle);
       const year = Math.round(anneeDirecte);
       if (!week || !year) continue;
@@ -811,7 +813,7 @@ function parseCBCOProdExcel(cfg) {
       }
       emptyStreak = 0;
       const semaineAnnuelle = toNum(row[1]); // col B = numéro de semaine
-      const anneeDirecte    = toNum(row[2]); // col C = année (2025, 2026...)
+      const anneeDirecte    = toNum(row[7]); // col H = Année
       const tests           = toNum(row[3]); // col D
       const nonConformites  = toNum(row[4]); // col E
       const detail          = hasVal(row[5]) ? String(row[5]).trim() : null; // col F
@@ -827,11 +829,11 @@ function parseCBCOProdExcel(cfg) {
     return Object.values(byWeek);
   }
 
-  const sc         = parseMachine('sc',         { B:1, C:2, D:3, E:4, F:5, G:6, H:7, J:9,  TRS:11, TEMPS:13 });
-  const ultra      = parseMachine('ultra',       { B:1, C:2, D:3, E:4, F:5, G:6, H:7, J:9,  TRS:10, TEMPS:8  });
-  const extra      = parseMachine('extra',       { B:1, C:2, D:3, E:4, F:5, G:6, H:7, J:9,  TRS:11, TEMPS:8, PRODHM:10, VOLUME:12 });
-  const collage    = parseMachine('collage',     { B:1, C:2, D:3, E:4, F:5, G:6, H:7, J:9,  PRESSES:5, CAISSONS:8, SURFACE:10, productiviteDur:true, cibleDur:true, required:['heuresOnaya', 'cubage'] });
-  const assemblage = parseMachine('assemblage',  { B:1, C:2, D:3, E:4, F:5, G:6, H:7, TEMPS:8, VOLUME:8, required:['heuresOnaya','heuresPerdues','cubage'] });
+  const sc         = parseMachine('sc',         { B:1, ANNEE:14, D:3, E:4, F:5, G:6, H:7, J:9,  TRS:11, TEMPS:13 });
+  const ultra      = parseMachine('ultra',       { B:1, ANNEE:13, D:3, E:4, F:5, G:6, H:7, J:9,  TRS:10, TEMPS:8  });
+  const extra      = parseMachine('extra',       { B:1, ANNEE:15, D:3, E:4, F:5, G:6, H:7, J:9,  TRS:11, TEMPS:8, PRODHM:10, VOLUME:12 });
+  const collage    = parseMachine('collage',     { B:1, ANNEE:11, D:3, E:4, F:5, G:6, H:7, J:9,  PRESSES:5, CAISSONS:8, SURFACE:10, productiviteDur:true, cibleDur:true, required:['heuresOnaya', 'cubage'] });
+  const assemblage = parseMachine('assemblage',  { B:1, ANNEE:9,  D:3, E:4, F:5, G:6, H:7, TEMPS:8, VOLUME:8, required:['heuresOnaya','heuresPerdues','cubage'] });
   const qualite    = parseQualite();
 
   const merged = {};
@@ -850,24 +852,6 @@ function parseCBCOProdExcel(cfg) {
 
   const entries = Object.values(merged).sort((a,b) => a.year !== b.year ? a.year - b.year : a.week - b.week);
   return { entries, stats: { sc: sc.length, ultra: ultra.length, extra: extra.length, collage: collage.length, assemblage: assemblage.length, qualite: qualite.length } };
-}
-
-function applyCBCOProdData(entries) {
-  const existing = dbGet('cbco_productivite', []);
-  const now = new Date().toISOString();
-  let added = 0, updated = 0;
-  const excelKeys = new Set(entries.map(e => `${e.year}_${e.week}`));
-  const kept = existing.filter(k => {
-    if (k.createdBy === 'excel-auto' && !excelKeys.has(`${k.year}_${k.week}`)) return false;
-    return true;
-  });
-  for (const entry of entries) {
-    const idx = kept.findIndex(k => k.year === entry.year && k.week === entry.week);
-    if (idx >= 0) { kept[idx] = { ...kept[idx], ...entry, updatedAt: now, updatedBy: 'excel-auto' }; updated++; }
-    else { kept.push({ ...entry, status: 'published', createdAt: now, createdBy: 'excel-auto', updatedAt: now, updatedBy: 'excel-auto' }); added++; }
-  }
-  dbSet('cbco_productivite', kept);
-  return { added, updated };
 }
 
 // ─── UTILITAIRE POUR RÉSOUDRE LES CHEMINS EXCEL ──────────────────────────────
@@ -912,44 +896,6 @@ function resolveExistingExcelPath(folder, filename) {
   throw new Error(`Fichier introuvable : "${directPath}".${availableFiles}`);
 }
 
-let cbcoProdWatcher = null;
-
-function startCBCOProdWatcher(cfg) {
-  if (cbcoProdWatcher) { clearInterval(cbcoProdWatcher); cbcoProdWatcher = null; }
-  let excelPath;
-  try {
-    const resolved = resolveExistingExcelPath(cfg.folder, cfg.filename);
-    excelPath = resolved.fullPath;
-  } catch (e) {
-    console.log(`[CBCO-Prod-Watch] Fichier introuvable : ${e.message}`);
-    return;
-  }
-  let lastMtime = fs.statSync(excelPath).mtimeMs;
-  cbcoProdWatcher = setInterval(() => {
-    try {
-      if (!fs.existsSync(excelPath)) return;
-      const mtime = fs.statSync(excelPath).mtimeMs;
-      if (mtime !== lastMtime) {
-        lastMtime = mtime;
-        console.log(`[CBCO-Prod-Watch] Modification détectée : ${cfg.filename}`);
-        try {
-          const parsed = parseCBCOProdExcel(cfg);
-          const result = applyCBCOProdData(parsed.entries);
-          const cfg2 = dbGet('cbco_productivite_excel_config', {});
-          dbSet('cbco_productivite_excel_config', { ...cfg2, lastSync: new Date().toISOString(), lastSyncResult: result });
-          console.log(`[CBCO-Prod-Watch] Import OK — ${result.added} ajouté(s), ${result.updated} mis à jour`);
-        } catch(e) { console.error(`[CBCO-Prod-Watch] Erreur : ${e.message}`); }
-      }
-    } catch(e) { console.error(`[CBCO-Prod-Watch] Erreur stat : ${e.message}`); }
-  }, 30000);
-  console.log(`[CBCO-Prod-Watch] Surveillance active (polling 30s) : ${excelPath}`);
-}
-
-(function resumeCBCOProdWatcher() {
-  const cfg = dbGet('cbco_productivite_excel_config', null);
-  if (cfg && cfg.active) { console.log('[CBCO-Prod-Watch] Reprise surveillance au démarrage...'); startCBCOProdWatcher(cfg); }
-})();
-
 app.get('/api/cbco-productivite-excel-config', (req, res) => {
   res.json(dbGet('cbco_productivite_excel_config', null));
 });
@@ -959,32 +905,15 @@ app.put('/api/cbco-productivite-excel-config', requireToken, requireWriteRateLim
   if (!folder || !filename) return res.status(400).json({ success: false, error: 'Champs manquants : folder, filename' });
   try {
     const parsed = parseCBCOProdExcel({ folder, filename });
-    const result = applyCBCOProdData(parsed.entries);
-    const cfg = { folder, filename, active: true, lastSync: new Date().toISOString(), lastSyncResult: result };
+    const cfg = { folder, filename, active: true, stats: parsed.stats };
     dbSet('cbco_productivite_excel_config', cfg);
-    startCBCOProdWatcher(cfg);
-    res.json({ success: true, result, stats: parsed.stats });
+    res.json({ success: true, stats: parsed.stats });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
 app.delete('/api/cbco-productivite-excel-config', (req, res) => {
-  if (cbcoProdWatcher) { clearInterval(cbcoProdWatcher); cbcoProdWatcher = null; }
   dbSet('cbco_productivite_excel_config', null);
-  // Supprimer toutes les entrées importées depuis l'Excel lors de la désynchronisation
-  const remaining = (dbGet('cbco_productivite', []) || []).filter(e => e.createdBy !== 'excel-auto');
-  dbSet('cbco_productivite', remaining);
   res.json({ success: true });
-});
-
-app.post('/api/cbco-productivite-import-excel', (req, res) => {
-  const cfg = dbGet('cbco_productivite_excel_config', null);
-  if (!cfg || !cfg.active) return res.status(400).json({ success: false, error: 'Aucune synchronisation configurée.' });
-  try {
-    const parsed = parseCBCOProdExcel(cfg);
-    const result = applyCBCOProdData(parsed.entries);
-    dbSet('cbco_productivite_excel_config', { ...cfg, lastSync: new Date().toISOString(), lastSyncResult: result });
-    res.json({ success: true, result, stats: parsed.stats, source: cfg.filename });
-  } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
 // ─── ROUTES : SYLVE BALANCE ─────────────────────────────────────────────────────
