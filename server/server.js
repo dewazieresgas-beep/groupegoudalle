@@ -34,6 +34,7 @@ let commerceIndicatorsCache = {
 };
 
 let aoCache = { snapshot: null, sourceKey: null, cachedAt: 0 };
+const excelReadCaches = new Map();
 
 // ─── TOKEN DE SÉCURITÉ SERVEUR ────────────────────────────────────────────────
 // Généré aléatoirement à chaque démarrage du serveur.
@@ -135,6 +136,43 @@ function pickRobustInvoiceTotal(headerTotal, totalBon, sumLines) {
   }
 
   return h;
+}
+
+function buildExcelSourceSignature(sourceFiles = []) {
+  return sourceFiles
+    .filter(Boolean)
+    .map((source) => {
+      const fullPath = source.fullPath || source.path || source;
+      const stat = source.stat || fs.statSync(fullPath);
+      return [
+        path.resolve(fullPath).toLowerCase(),
+        stat.mtimeMs,
+        stat.size
+      ].join('|');
+    })
+    .sort()
+    .join('||');
+}
+
+function getCachedExcelRead(cacheName, sourceFiles, reader, options = {}) {
+  const forceRefresh = options.forceRefresh === true;
+  const now = Date.now();
+  const sourceKey = buildExcelSourceSignature(sourceFiles);
+  const cached = excelReadCaches.get(cacheName);
+
+  if (!forceRefresh && cached && cached.sourceKey === sourceKey) {
+    cached.cachedAt = now;
+    return cached.value;
+  }
+
+  const value = reader();
+  excelReadCaches.set(cacheName, { sourceKey, value, cachedAt: now });
+  return value;
+}
+
+function clearExcelReadCache(cacheName = null) {
+  if (cacheName) excelReadCaches.delete(cacheName);
+  else excelReadCaches.clear();
 }
 
 function dedupeRepeatedLine(line) {
@@ -635,8 +673,9 @@ app.get('/api/cbco-productivite', (req, res) => {
   const cfg = dbGet('cbco_productivite_excel_config', null);
   if (!cfg || !cfg.active) return res.json({ entries: [], error: 'no_config' });
   try {
-    const parsed = parseCBCOProdExcel(cfg);
-    res.json({ entries: parsed.entries });
+    const forceRefresh = req.query.refresh === '1' || req.query.force === '1';
+    const parsed = getCBCOProdExcelCached(cfg, { forceRefresh });
+    res.json({ entries: parsed.entries, source: parsed.source || null });
   } catch(e) {
     res.json({ entries: [], error: 'excel_error', message: e.message });
   }
@@ -654,13 +693,9 @@ app.put('/api/cbco-securite', requireToken, requireWriteRateLimit, (req, res) =>
 // ─── EXCEL CBCO PRODUCTIVITÉ : CONFIG + WATCHER + AUTO-IMPORT ────────────────
 
 function parseCBCOProdExcel(cfg) {
-  let excelPath = path.join(cfg.folder, cfg.filename);
-  if (!fs.existsSync(excelPath)) {
-    const candidates = ['.xlsx', '.xlsm', '.xls'];
-    const found = candidates.find(ext => fs.existsSync(excelPath + ext));
-    if (found) excelPath = excelPath + found;
-    else throw new Error(`Fichier introuvable : "${excelPath}"`);
-  }
+  const resolved = resolveCBCOProdExcelPath(cfg);
+  const excelPath = resolved.fullPath;
+  const stat = fs.statSync(excelPath);
 
   const wb = XLSX.readFile(excelPath);
   const normName = (n) => String(n || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '');
@@ -796,7 +831,38 @@ function parseCBCOProdExcel(cfg) {
   qualite.forEach(e => { const r = ensureWeek(e.week, e.year); r.qualiteTests=e.tests; r.qualiteNonConformites=e.nonConformites; r.qualiteDetail=e.detail; r.qualiteReclamationsClients=e.reclamationsClients; r.qualiteAnnee=e.annee; });
 
   const entries = Object.values(merged).sort((a,b) => a.year !== b.year ? a.year - b.year : a.week - b.week);
-  return { entries, stats: { sc: sc.length, ultra: ultra.length, extra: extra.length, collage: collage.length, assemblage: assemblage.length, qualite: qualite.length } };
+  return {
+    entries,
+    stats: { sc: sc.length, ultra: ultra.length, extra: extra.length, collage: collage.length, assemblage: assemblage.length, qualite: qualite.length },
+    source: {
+      fileName: path.basename(excelPath),
+      fullPath: excelPath,
+      lastModified: stat.mtime.toISOString(),
+      sizeBytes: stat.size,
+      cachedAt: new Date().toISOString()
+    }
+  };
+}
+
+function resolveCBCOProdExcelPath(cfg) {
+  let excelPath = path.join(cfg.folder, cfg.filename);
+  if (!fs.existsSync(excelPath)) {
+    const candidates = ['.xlsx', '.xlsm', '.xls'];
+    const found = candidates.find(ext => fs.existsSync(excelPath + ext));
+    if (found) excelPath = excelPath + found;
+    else throw new Error(`Fichier introuvable : "${excelPath}"`);
+  }
+  return { fullPath: excelPath, stat: fs.statSync(excelPath) };
+}
+
+function getCBCOProdExcelCached(cfg, options = {}) {
+  const resolved = resolveCBCOProdExcelPath(cfg);
+  return getCachedExcelRead(
+    'cbco_productivite',
+    [resolved],
+    () => parseCBCOProdExcel(cfg),
+    options
+  );
 }
 
 // ─── UTILITAIRE POUR RÉSOUDRE LES CHEMINS EXCEL ──────────────────────────────
@@ -852,12 +918,14 @@ app.put('/api/cbco-productivite-excel-config', requireToken, requireWriteRateLim
     const parsed = parseCBCOProdExcel({ folder, filename });
     const cfg = { folder, filename, active: true, stats: parsed.stats };
     dbSet('cbco_productivite_excel_config', cfg);
+    clearExcelReadCache('cbco_productivite');
     res.json({ success: true, stats: parsed.stats });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
 app.delete('/api/cbco-productivite-excel-config', (req, res) => {
   dbSet('cbco_productivite_excel_config', null);
+  clearExcelReadCache('cbco_productivite');
   res.json({ success: true });
 });
 
@@ -1533,18 +1601,23 @@ app.get('/api/achats-v2/indicators-monthly', (req, res) => {
 
 // ─── EXCEL GOUDALLE MAÇONNERIE : CONFIG + WATCHER + AUTO-IMPORT ─────────────────
 
-// Fonction qui parse le fichier Excel et retourne les données
-function parseGMExcel(cfg) {
-  // Ajouter automatiquement l'extension .xlsx si elle n'est pas présente
+function resolveGMExcelPath(cfg) {
   let filename = cfg.filename;
-  if (!filename.toLowerCase().endsWith('.xlsx') && !filename.toLowerCase().endsWith('.xls')) {
+  if (!/\.(xlsx|xlsm|xls)$/i.test(filename)) {
     filename += '.xlsx';
   }
-  
+
   const excelPath = path.join(cfg.folder, filename);
   if (!fs.existsSync(excelPath)) {
     throw new Error(`Fichier introuvable : "${excelPath}"`);
   }
+  return { fullPath: excelPath, stat: fs.statSync(excelPath), filename };
+}
+
+// Fonction qui parse le fichier Excel et retourne les données
+function parseGMExcel(cfg) {
+  const resolved = resolveGMExcelPath(cfg);
+  const excelPath = resolved.fullPath;
   const workbook = XLSX.readFile(excelPath);
   const sheet = workbook.Sheets[cfg.sheet];
   if (!sheet) {
@@ -1582,6 +1655,16 @@ function parseGMExcel(cfg) {
   return data;
 }
 
+function getGMExcelCached(cfg, options = {}) {
+  const resolved = resolveGMExcelPath(cfg);
+  return getCachedExcelRead(
+    'gm_kpis',
+    [resolved],
+    () => parseGMExcel(cfg),
+    options
+  );
+}
+
 // ─── ÉCRITURE DANS L'EXCEL ───────────────────────────────────────────────────────
 
 /**
@@ -1590,16 +1673,7 @@ function parseGMExcel(cfg) {
  * @param {Object} cfg - Configuration Excel (folder, filename, sheet)
  */
 function writeKpiToExcel(kpi, cfg) {
-  // Ajouter automatiquement l'extension .xlsx si elle n'est pas présente
-  let filename = cfg.filename;
-  if (!filename.toLowerCase().endsWith('.xlsx') && !filename.toLowerCase().endsWith('.xls')) {
-    filename += '.xlsx';
-  }
-  
-  const excelPath = path.join(cfg.folder, filename);
-  if (!fs.existsSync(excelPath)) {
-    throw new Error(`Fichier Excel introuvable : "${excelPath}"`);
-  }
+  const excelPath = resolveGMExcelPath(cfg).fullPath;
 
   const workbook = XLSX.readFile(excelPath);
   const sheet = workbook.Sheets[cfg.sheet];
@@ -1671,6 +1745,7 @@ function writeKpiToExcel(kpi, cfg) {
 
   // Sauvegarder le fichier
   XLSX.writeFile(workbook, excelPath);
+  clearExcelReadCache('gm_kpis');
 }
 
 /**
@@ -1680,16 +1755,7 @@ function writeKpiToExcel(kpi, cfg) {
  * @param {Object} cfg - Configuration Excel (folder, filename, sheet)
  */
 function deleteKpiFromExcel(year, week, cfg) {
-  // Ajouter automatiquement l'extension .xlsx si elle n'est pas présente
-  let filename = cfg.filename;
-  if (!filename.toLowerCase().endsWith('.xlsx') && !filename.toLowerCase().endsWith('.xls')) {
-    filename += '.xlsx';
-  }
-  
-  const excelPath = path.join(cfg.folder, filename);
-  if (!fs.existsSync(excelPath)) {
-    throw new Error(`Fichier Excel introuvable : "${excelPath}"`);
-  }
+  const excelPath = resolveGMExcelPath(cfg).fullPath;
 
   const workbook = XLSX.readFile(excelPath);
   const sheet = workbook.Sheets[cfg.sheet];
@@ -1730,6 +1796,7 @@ function deleteKpiFromExcel(year, week, cfg) {
 
   // Sauvegarder
   XLSX.writeFile(workbook, excelPath);
+  clearExcelReadCache('gm_kpis');
 }
 
 // Helper : récupérer la config GM (retourne null si non configurée)
@@ -1773,6 +1840,7 @@ app.put('/api/gm-excel-config', requireToken, requireWriteRateLimit, (req, res) 
     const data = parseGMExcel({ folder, filename, sheet });
     const cfg = { folder, filename, sheet, active: true, lastSync: new Date().toISOString() };
     dbSet('gm_excel_config', cfg);
+    clearExcelReadCache('gm_kpis');
     res.json({ success: true, result: { added: 0, updated: 0 }, rowCount: data.length });
   } catch (e) {
     res.status(500).json({ success: false, error: excelErrorMessage(e) });
@@ -1783,6 +1851,7 @@ app.put('/api/gm-excel-config', requireToken, requireWriteRateLimit, (req, res) 
 app.delete('/api/gm-excel-config', (req, res) => {
   if (gmWatcher) { clearInterval(gmWatcher); gmWatcher = null; }
   dbSet('gm_excel_config', null);
+  clearExcelReadCache('gm_kpis');
   res.json({ success: true });
 });
 
@@ -1793,7 +1862,7 @@ app.post('/api/gm-import-excel', (req, res) => {
     return res.status(400).json({ success: false, error: 'Aucune synchronisation configurée.' });
   }
   try {
-    const data = parseGMExcel(cfg);
+    const data = getGMExcelCached(cfg, { forceRefresh: true });
     dbSet('gm_excel_config', { ...cfg, lastSync: new Date().toISOString() });
     res.json({ success: true, result: { added: 0, updated: 0 }, rowCount: data.length, source: cfg.filename });
   } catch (e) {
@@ -1836,7 +1905,7 @@ app.post('/api/gm-kpi', requireToken, requireWriteRateLimit, (req, res) => {
 
   try {
     // Vérifier si la semaine existe déjà dans l'Excel
-    const existing = parseGMExcel(cfg);
+    const existing = getGMExcelCached(cfg);
     const action = existing.find(k => k.year === kpi.year && k.week === kpi.week) ? 'updated' : 'created';
 
     // Écriture directe dans l'Excel
@@ -1887,7 +1956,8 @@ app.get('/api/gm-kpis-by-period', (req, res) => {
 
   try {
     const { year, month } = req.query;
-    let kpis = parseGMExcel(cfg);
+    const forceRefresh = req.query.refresh === '1' || req.query.force === '1';
+    let kpis = getGMExcelCached(cfg, { forceRefresh });
 
     if (year) {
       const yearNum = parseInt(year);
@@ -1917,7 +1987,8 @@ app.get('/api/gm-available-periods', (req, res) => {
 
   try {
     const { year } = req.query;
-    const allKpis = parseGMExcel(cfg);
+    const forceRefresh = req.query.refresh === '1' || req.query.force === '1';
+    const allKpis = getGMExcelCached(cfg, { forceRefresh });
 
     const years = [...new Set(allKpis.map(k => k.year))].sort((a, b) => b - a);
 
@@ -2823,6 +2894,32 @@ function parseRHSecurityExcels(cfg) {
   return allIncidents;
 }
 
+function getRHSecuritySourceFiles(cfg) {
+  const folder = cfg?.folder || '';
+  const sources = [];
+  for (const company of RH_SECURITY_COMPANIES) {
+    if (!company.filename) continue;
+    try {
+      const resolved = resolveExistingExcelPath(folder, company.filename);
+      sources.push({ fullPath: resolved.fullPath, stat: fs.statSync(resolved.fullPath) });
+    } catch (_) {
+      // Les fichiers manquants sont déjà ignorés par parseRHSecurityExcels.
+    }
+  }
+  return sources;
+}
+
+function getRHSecurityIncidentsCached(cfg, options = {}) {
+  const sources = getRHSecuritySourceFiles(cfg);
+  if (!sources.length) return parseRHSecurityExcels(cfg);
+  return getCachedExcelRead(
+    'rh_security_incidents',
+    sources,
+    () => parseRHSecurityExcels(cfg),
+    options
+  );
+}
+
 function getRHSecurityConfig() {
   return dbGet('rh_security_excel_config', null);
 }
@@ -2830,7 +2927,7 @@ function getRHSecurityConfig() {
 function readRHSecurityIncidentsFromExcel() {
   const cfg = getRHSecurityConfig();
   if (!cfg || !cfg.active) return [];
-  return parseRHSecurityExcels(cfg);
+  return getRHSecurityIncidentsCached(cfg);
 }
 
 function buildRHSecurityReadResult(incidents) {
@@ -3110,7 +3207,8 @@ app.put('/api/rh-security-update-accident', requireToken, requireWriteRateLimit,
 
   try {
     await updateAccidentInExcel(cfg.folder, companyId, rowIndex, data);
-    const incidents = parseRHSecurityExcels(cfg);
+    clearExcelReadCache('rh_security_incidents');
+    const incidents = getRHSecurityIncidentsCached(cfg, { forceRefresh: true });
     res.json({ success: true, incidentCount: incidents.length });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -3131,6 +3229,7 @@ app.put('/api/rh-security-excel-config', requireToken, requireWriteRateLimit, (r
     const incidents = parseRHSecurityExcels(cfg);
     const result = buildRHSecurityReadResult(incidents);
     dbSet('rh_security_excel_config', cfg);
+    clearExcelReadCache('rh_security_incidents');
     res.json({ success: true, result, incidentCount: incidents.length });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -3148,7 +3247,8 @@ app.post('/api/rh-security-add-accident', requireToken, requireWriteRateLimit, a
   }
   try {
     const writeResult = await writeAccidentToExcel(cfg.folder, companyId, req.body);
-    const incidents = parseRHSecurityExcels(cfg);
+    clearExcelReadCache('rh_security_incidents');
+    const incidents = getRHSecurityIncidentsCached(cfg, { forceRefresh: true });
     res.json({ success: true, ...writeResult, incidentCount: incidents.length });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -3161,6 +3261,7 @@ app.delete('/api/rh-security-excel-config', (req, res) => {
     rhSecurityWatcher = null;
   }
   dbSet('rh_security_excel_config', null);
+  clearExcelReadCache('rh_security_incidents');
   res.json({ success: true });
 });
 
@@ -3170,7 +3271,7 @@ app.post('/api/rh-security-import-excel', (req, res) => {
     return res.status(400).json({ success: false, error: 'Aucun dossier Excel configuré.' });
   }
   try {
-    const incidents = parseRHSecurityExcels(cfg);
+    const incidents = getRHSecurityIncidentsCached(cfg, { forceRefresh: true });
     const result = buildRHSecurityReadResult(incidents);
     res.json({ success: true, result, incidentCount: incidents.length });
   } catch (e) {
