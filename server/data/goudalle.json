@@ -3388,35 +3388,6 @@
       "updatedAt": "2026-04-24T11:45:35.523Z"
     }
   },
-  "cbco_commercial": [
-    {
-      "id": "mmno7fq2tpi3e",
-      "nomAffaire": "R├®novation Mairie de Preures",
-      "montant": 150000,
-      "dateEnvoi": "2026-01-01",
-      "resultat": "gagne",
-      "dateReponse": "2026-01-22",
-      "createdAt": "2026-03-12T16:16:41.306Z"
-    },
-    {
-      "id": "mmno85ufmw4ql",
-      "nomAffaire": "dnzethb",
-      "montant": 4528752,
-      "dateEnvoi": "2026-05-01",
-      "resultat": "perdu",
-      "dateReponse": "2026-02-01",
-      "createdAt": "2026-03-12T16:17:15.159Z"
-    },
-    {
-      "id": "mmno92whpz5hv",
-      "nomAffaire": "ihoyhy├¿_├ºt",
-      "montant": 712587,
-      "dateEnvoi": "2026-01-06",
-      "resultat": "gagne",
-      "dateReponse": "2026-02-01",
-      "createdAt": "2026-03-12T16:17:58.001Z"
-    }
-  ],
   "users": {
     "acgoudalle": {
       "username": "acgoudalle",
