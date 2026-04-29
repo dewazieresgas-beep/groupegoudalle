@@ -2303,14 +2303,7 @@ function findCommerceColumns(rows = []) {
   });
 
   if (headerIndex < 0) {
-    return {
-      headerIndex: -1,
-      monthCol: 0,
-      enCoursCol: 1,
-      terminesCol: 2,
-      totalCol: 3,
-      cumulativeCol: 4
-    };
+    throw new Error('Format Commerce invalide : en-tête "Mois / Montant estimé chantiers en cours / terminés / Total Montant estimé" introuvable.');
   }
 
   const header = normalizedRows[headerIndex];
@@ -2319,13 +2312,21 @@ function findCommerceColumns(rows = []) {
     return index >= 0 ? index : fallback;
   };
 
-  return {
+  const columns = {
     headerIndex,
     monthCol: findCol((cell) => cell === 'mois', 0),
     enCoursCol: findCol((cell) => cell.includes('en cours'), 1),
     terminesCol: findCol((cell) => cell.includes('termine'), 2),
     totalCol: findCol((cell) => cell.includes('total montant estime') && !cell.includes('cumul'), 3),
     cumulativeCol: findCol((cell) => cell.includes('cumul annuel'), 4)
+  };
+
+  return {
+    ...columns,
+    enCoursHeader: header[columns.enCoursCol] || '',
+    terminesHeader: header[columns.terminesCol] || '',
+    totalHeader: header[columns.totalCol] || '',
+    cumulativeHeader: header[columns.cumulativeCol] || ''
   };
 }
 
@@ -2374,7 +2375,7 @@ function parseCommerceNumeric(rawValue, displayValue) {
 
   const fromDisplay = parseDisplayStyleNumber(displayValue);
   if (fromDisplay != null) {
-    return fromDisplay;
+    return fromDisplay / 1000;
   }
 
   if (rawValue instanceof Date || displayValue instanceof Date) {
@@ -2382,9 +2383,9 @@ function parseCommerceNumeric(rawValue, displayValue) {
   }
 
   const fromRaw = typeof rawValue === 'number' && Number.isFinite(rawValue)
-    ? rawValue / 1000
+    ? rawValue
     : parseDisplayStyleNumber(rawValue);
-  return fromRaw != null ? fromRaw : null;
+  return fromRaw != null ? fromRaw / 1000 : null;
 }
 
 function buildCommerceRow(rawRow, displayRow, columns) {
@@ -2456,6 +2457,20 @@ function sheetToFormattedRows(worksheet) {
 function readCommerceIndicatorsSnapshot(folderPath = COMMERCE_EXCEL_FOLDER, sourceFile = null) {
   const resolvedSourceFile = sourceFile || detectLatestCommerceExcel(folderPath);
   const workbook = XLSX.readFile(resolvedSourceFile.fullPath, { cellDates: true });
+  const normalizedSheetNames = workbook.SheetNames.map((name) => normalizeText(name).replace(/\s+/g, ''));
+  const requiredNewFormatSheets = ['rappels', 'encours', 'termines', 'indicateurcommercial'];
+  const missingNewFormatSheets = requiredNewFormatSheets.filter((name) => !normalizedSheetNames.includes(name));
+  if (missingNewFormatSheets.length) {
+    const err = new Error(
+      `Format Commerce non supporté pour "${resolvedSourceFile.filename}". ` +
+      `Le nouveau format attendu doit contenir les feuilles : Rappels, En Cours, Terminés, Indicateur commercial.`
+    );
+    err.code = 'COMMERCE_UNSUPPORTED_FORMAT';
+    err.sourceFile = resolvedSourceFile;
+    err.availableSheets = workbook.SheetNames;
+    throw err;
+  }
+
   const targetSheetKey = normalizeText(COMMERCE_EXCEL_SHEET).replace(/\s+/g, '');
   const sheetName = workbook.SheetNames.find((name) => normalizeText(name).replace(/\s+/g, '') === targetSheetKey);
   const worksheet = workbook.Sheets[sheetName];
@@ -2562,6 +2577,39 @@ function getCommerceIndicatorsSnapshotCached({ folderPath = COMMERCE_EXCEL_FOLDE
     cachedAt: now
   };
   return snapshot;
+}
+
+function commerceErrorPayload(error) {
+  const payload = {
+    success: false,
+    error: error.message,
+    sourceFolder: COMMERCE_EXCEL_FOLDER
+  };
+
+  const detected = error.sourceFile || (() => {
+    try {
+      return detectLatestCommerceExcel();
+    } catch (_) {
+      return null;
+    }
+  })();
+
+  if (detected) {
+    payload.detectedSource = {
+      folder: detected.folder,
+      fileName: detected.filename,
+      fullPath: detected.fullPath,
+      week: detected.week,
+      year: detected.year,
+      weekLabel: detected.label,
+      lastModified: detected.stat?.mtime ? detected.stat.mtime.toISOString() : null,
+      sizeBytes: detected.stat?.size ?? null,
+      sheetNames: error.availableSheets || null
+    };
+  }
+
+  if (error.code) payload.code = error.code;
+  return payload;
 }
 
 // ─── APPELS D'OFFRE : FONCTIONS UTILITAIRES ──────────────────────────────────
@@ -3397,11 +3445,7 @@ app.get('/api/commerce-indicators', (req, res) => {
     const snapshot = getCommerceIndicatorsSnapshotCached({ forceRefresh });
     res.json(snapshot);
   } catch (e) {
-    res.status(500).json({
-      success: false,
-      error: e.message,
-      sourceFolder: COMMERCE_EXCEL_FOLDER
-    });
+    res.status(e.code === 'COMMERCE_UNSUPPORTED_FORMAT' ? 422 : 500).json(commerceErrorPayload(e));
   }
 });
 
@@ -3416,11 +3460,7 @@ app.get('/api/commerce-link-status', (req, res) => {
       previewRows: snapshot.previewRows
     });
   } catch (e) {
-    res.status(500).json({
-      success: false,
-      error: e.message,
-      sourceFolder: COMMERCE_EXCEL_FOLDER
-    });
+    res.status(e.code === 'COMMERCE_UNSUPPORTED_FORMAT' ? 422 : 500).json(commerceErrorPayload(e));
   }
 });
 

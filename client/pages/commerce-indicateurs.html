@@ -217,32 +217,9 @@
       white-space: nowrap;
     }
 
-    .ao-mode-tabs {
-      display: flex;
-      gap: 4px;
-    }
-
-    .ao-mode-tab {
-      padding: 4px 11px;
-      border-radius: 6px;
-      border: 1px solid #c5d5e8;
-      background: #fff;
-      font-size: 12px;
-      font-weight: 600;
-      color: #5a7eb3;
-      cursor: pointer;
-      transition: background 0.15s, color 0.15s;
-    }
-
-    .ao-mode-tab.active {
-      background: #5a7eb3;
-      color: #fff;
-      border-color: #5a7eb3;
-    }
-
     .ao-kpi-grid {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 12px;
       margin-bottom: 16px;
     }
@@ -282,124 +259,75 @@
       text-overflow: ellipsis;
     }
 
-    .ao-chart-layout {
+    .ao-analysis-grid {
       display: grid;
-      grid-template-columns: 280px 1fr;
-      gap: 24px;
-      align-items: start;
+      grid-template-columns: minmax(0, 1.25fr) minmax(0, .85fr);
+      gap: 14px;
+      margin-top: 14px;
     }
 
-    .ao-chart-wrap {
-      position: relative;
+    .ao-panel {
+      background: #fff;
+      border: 1px solid #e3ebf6;
+      border-radius: 8px;
+      padding: 14px;
+      min-width: 0;
     }
 
-    .ao-chart-center {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
-    }
-
-    .ao-chart-center-total {
-      font-size: 26px;
-      font-weight: 800;
-      color: #2d4d78;
-      font-family: 'Courier New', monospace;
-    }
-
-    .ao-chart-center-label {
-      font-size: 10px;
-      font-weight: 600;
-      color: #9ca3af;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-    }
-
-    .ao-legend {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .ao-legend-item {
+    .ao-panel-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 10px;
-      padding: 9px 12px;
-      border-radius: 10px;
-      background: #f8faff;
-      border: 1px solid #e8eef6;
+      gap: 12px;
+      margin-bottom: 10px;
     }
 
-    .ao-legend-left {
+    .ao-panel-title {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 800;
+      color: #2d4d78;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .ao-panel-note {
+      font-size: 11px;
+      color: #64748b;
+      white-space: nowrap;
+    }
+
+    .ao-chart-box {
+      min-height: 260px;
+      position: relative;
+    }
+
+    .ao-age-list {
       display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .ao-age-row {
+      display: grid;
+      grid-template-columns: 92px 1fr 48px;
       align-items: center;
       gap: 9px;
-    }
-
-    .ao-legend-dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    .ao-legend-label {
-      font-size: 13px;
-      font-weight: 600;
+      font-size: 12px;
       color: #374151;
     }
 
-    .ao-legend-count {
-      font-size: 17px;
-      font-weight: 800;
-      font-family: 'Courier New', monospace;
-      color: #2d4d78;
+    .ao-age-track {
+      height: 9px;
+      border-radius: 999px;
+      background: #eef3f9;
+      overflow: hidden;
     }
 
-    .ao-legend-pct {
-      font-size: 10px;
-      font-weight: 600;
-      color: #9ca3af;
-    }
-
-    .ao-debug {
-      margin-top: 16px;
-      padding: 12px 14px;
-      background: #f0f4fb;
-      border-radius: 8px;
-      border: 1px solid #dce8f6;
-      font-size: 11px;
-      color: #4b5563;
-    }
-
-    .ao-debug-title {
-      font-weight: 700;
-      color: #2d4d78;
-      margin-bottom: 6px;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-    }
-
-    .ao-debug-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 4px 14px;
-    }
-
-    .ao-debug-row {
-      display: flex;
-      gap: 5px;
-    }
-
-    .ao-debug-key {
-      font-weight: 600;
-      flex-shrink: 0;
+    .ao-age-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: #d97706;
     }
 
     .ao-not-configured {
@@ -415,12 +343,13 @@
     }
 
     @media (max-width: 900px) {
-      .ao-chart-layout { grid-template-columns: 1fr; }
-      .ao-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .ao-kpi-grid,
+      .ao-analysis-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
 
     @media (max-width: 620px) {
-      .ao-kpi-grid { grid-template-columns: 1fr; }
+      .ao-kpi-grid,
+      .ao-analysis-grid { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 1100px) {
@@ -513,7 +442,7 @@
       <!-- ── Appels d'offre ───────────────────────────────────────────────── -->
       <div class="ig-machine-section" style="border-color:#d1d5db; background:linear-gradient(180deg,rgba(255,255,255,.97) 0%,#fff 100%);">
         <div class="ig-section-header" style="background:linear-gradient(135deg,#f0f4fb 0%,#e5edf6 100%); border-left:4px solid #5a7eb3;">
-          <h2 style="color:#2d4d78;">Appels d'offre — Répartition par statut</h2>
+          <h2 style="color:#2d4d78;">Appels d'offre — Pipeline et performance</h2>
         </div>
         <div class="ig-machine-container">
           <div class="ao-filters">
@@ -530,7 +459,6 @@
           <div id="aoChartContainer">
             <div class="commerce-empty">Chargement…</div>
           </div>
-          <div class="ao-debug" id="aoDebug" style="display:none;"></div>
         </div>
       </div>
 
@@ -948,7 +876,7 @@
     let aoSnapshot = null;
     let aoYear = null;
     let aoMonth = 0;
-    let aoChart = null;
+    const aoCharts = {};
 
     function aoFiscalYear(year, month) {
       return month >= 10 ? year : year - 1;
@@ -979,6 +907,28 @@
       return `${num.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`;
     }
 
+    function aoParseDate(iso) {
+      if (!iso) return null;
+      const date = new Date(`${iso}T12:00:00`);
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    function aoDaysBetween(startIso, endDate = new Date()) {
+      const start = aoParseDate(startIso);
+      if (!start) return null;
+      const diff = Math.floor((endDate.getTime() - start.getTime()) / 86400000);
+      return Math.max(0, diff);
+    }
+
+    function aoFiscalMonthIndex(month) {
+      return AO_FISCAL_MONTHS_ORDER.indexOf(Number(month));
+    }
+
+    function aoMonthShort(year, month) {
+      const date = new Date(year, month - 1, 1);
+      return date.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '');
+    }
+
     function aoFilterRecords(records) {
       if (!records || !records.length || !aoYear) return records || [];
       return records.filter((r) => {
@@ -999,42 +949,178 @@
       return counts;
     }
 
+    function aoMonthlyRows(records) {
+      const rows = AO_FISCAL_MONTHS_ORDER.map((month, index) => {
+        const year = month >= 10 ? aoYear : aoYear + 1;
+        return {
+          month,
+          year,
+          index,
+          label: AO_FISCAL_MONTHS_LABELS[index],
+          total: 0,
+          gagné: 0,
+          perdu: 0,
+          attente: 0,
+          nonRenseigne: 0
+        };
+      });
+
+      records.forEach((record) => {
+        const idx = aoFiscalMonthIndex(record.month);
+        if (idx < 0) return;
+        rows[idx].total += 1;
+        if (record.status === 'Gagné') rows[idx].gagné += 1;
+        else if (record.status === 'Perdu') rows[idx].perdu += 1;
+        else if (record.status === 'En attente') rows[idx].attente += 1;
+        else rows[idx].nonRenseigne += 1;
+      });
+
+      return rows;
+    }
+
+    function aoPendingAgeBuckets(records) {
+      const now = new Date();
+      const buckets = [
+        { key: '0-30', label: '< 30 j', count: 0, amount: 0, color: '#0f766e' },
+        { key: '30-90', label: '30-90 j', count: 0, amount: 0, color: '#d97706' },
+        { key: '90+', label: '> 90 j', count: 0, amount: 0, color: '#b91c1c' }
+      ];
+
+      records.filter((r) => r.status === 'En attente').forEach((record) => {
+        const age = aoDaysBetween(record.dateEntree || record.effectiveDate, now);
+        const target = age == null || age < 30 ? buckets[0] : (age < 90 ? buckets[1] : buckets[2]);
+        target.count += 1;
+        target.amount += Number(record.montant) || 0;
+      });
+
+      return buckets;
+    }
+
     function aoComputeMetrics(records) {
       const counts = aoCountByStatus(records);
       const decided = (counts['Gagné'] || 0) + (counts['Perdu'] || 0);
+      const decisionRate = records.length > 0 ? (decided / records.length) * 100 : null;
       const wonRate = decided > 0 ? ((counts['Gagné'] || 0) / decided) * 100 : null;
       const actionRequired = records.filter((r) => String(r.action || '').toLowerCase().includes('action requise')).length;
       const totalAmount = records.reduce((sum, r) => sum + (Number(r.montant) || 0), 0);
       const wonAmount = records
         .filter((r) => r.status === 'Gagné')
         .reduce((sum, r) => sum + (Number(r.montant) || 0), 0);
-      const multiVersion = records.filter((r) => Number(r.versionCount || 0) > 1).length;
-      return { counts, decided, wonRate, actionRequired, totalAmount, wonAmount, multiVersion };
+      const pendingRecords = records.filter((r) => r.status === 'En attente');
+      const pendingAmount = pendingRecords.reduce((sum, r) => sum + (Number(r.montant) || 0), 0);
+      const weightedPipeline = pendingAmount * ((wonRate || 0) / 100);
+      const resultDelays = records
+        .filter((r) => r.dateResultat && (r.status === 'Gagné' || r.status === 'Perdu'))
+        .map((r) => aoDaysBetween(r.dateEntree || r.effectiveDate, aoParseDate(r.dateResultat)))
+        .filter((days) => Number.isFinite(days));
+      const avgResultDelay = resultDelays.length
+        ? resultDelays.reduce((sum, days) => sum + days, 0) / resultDelays.length
+        : null;
+      const withoutAmount = records.filter((r) => r.montant == null).length;
+      const decidedWithoutResultDate = records.filter((r) => (r.status === 'Gagné' || r.status === 'Perdu') && !r.dateResultat).length;
+      const noStatus = records.filter((r) => r.status === 'Non renseigné').length;
+      return {
+        counts,
+        decided,
+        decisionRate,
+        wonRate,
+        actionRequired,
+        totalAmount,
+        wonAmount,
+        pendingRecords,
+        pendingAmount,
+        weightedPipeline,
+        avgResultDelay,
+        withoutAmount,
+        decidedWithoutResultDate,
+        noStatus,
+        monthlyRows: aoMonthlyRows(records),
+        ageBuckets: aoPendingAgeBuckets(records)
+      };
     }
 
     function aoRenderKpis(records, metrics) {
       return `<div class="ao-kpi-grid">
         <div class="ao-kpi-card" style="border-top-color:#2d4d78;">
-          <div class="ao-kpi-label">Affaires entrées</div>
+          <div class="ao-kpi-label">Flux entrant</div>
           <div class="ao-kpi-value">${records.length}</div>
           <div class="ao-kpi-sub">${escapeHtml(aoPeriodLabel())}</div>
         </div>
+        <div class="ao-kpi-card" style="border-top-color:#5a7eb3;">
+          <div class="ao-kpi-label">Résultat connu</div>
+          <div class="ao-kpi-value">${escapeHtml(aoFormatPercent(metrics.decisionRate))}</div>
+          <div class="ao-kpi-sub">${metrics.decided} avec résultat / ${records.length} entrées</div>
+        </div>
         <div class="ao-kpi-card" style="border-top-color:#0f766e;">
-          <div class="ao-kpi-label">Taux de gain</div>
+          <div class="ao-kpi-label">Gain sur résultat connu</div>
           <div class="ao-kpi-value">${escapeHtml(aoFormatPercent(metrics.wonRate))}</div>
-          <div class="ao-kpi-sub">${metrics.counts['Gagné'] || 0} gagnées / ${metrics.decided} tranchées</div>
+          <div class="ao-kpi-sub">${metrics.counts['Gagné'] || 0} gagnées / ${metrics.decided} avec résultat</div>
         </div>
         <div class="ao-kpi-card" style="border-top-color:#d97706;">
-          <div class="ao-kpi-label">En attente</div>
-          <div class="ao-kpi-value">${metrics.counts['En attente'] || 0}</div>
-          <div class="ao-kpi-sub">${metrics.actionRequired} avec action requise</div>
+          <div class="ao-kpi-label">Pipeline en attente</div>
+          <div class="ao-kpi-value">${escapeHtml(aoFormatMoney(metrics.pendingAmount))}</div>
+          <div class="ao-kpi-sub">${metrics.counts['En attente'] || 0} affaires dont ${metrics.actionRequired} à traiter</div>
         </div>
         <div class="ao-kpi-card" style="border-top-color:#2563eb;">
-          <div class="ao-kpi-label">Montant devis</div>
-          <div class="ao-kpi-value">${escapeHtml(aoFormatMoney(metrics.totalAmount))}</div>
-          <div class="ao-kpi-sub">${escapeHtml(aoFormatMoney(metrics.wonAmount))} gagnés</div>
+          <div class="ao-kpi-label">Pipeline pondéré</div>
+          <div class="ao-kpi-value">${escapeHtml(aoFormatMoney(metrics.weightedPipeline))}</div>
+          <div class="ao-kpi-sub">attente × taux de gain décidé</div>
         </div>
       </div>`;
+    }
+
+    function aoDestroyChart(id) {
+      if (aoCharts[id]) {
+        aoCharts[id].destroy();
+        delete aoCharts[id];
+      }
+    }
+
+    function aoRenderMonthlyFlow(metrics) {
+      aoDestroyChart('monthly');
+      const ctx = document.getElementById('aoMonthlyFlowChart')?.getContext('2d');
+      if (!ctx) return;
+      const rows = metrics.monthlyRows;
+      aoCharts.monthly = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: rows.map((row) => row.label),
+          datasets: [
+            { label: 'Gagné', data: rows.map((row) => row.gagné), backgroundColor: '#0f766e', stack: 'ao' },
+            { label: 'Perdu', data: rows.map((row) => row.perdu), backgroundColor: '#b91c1c', stack: 'ao' },
+            { label: 'En attente', data: rows.map((row) => row.attente), backgroundColor: '#d97706', stack: 'ao' },
+            { label: 'Non renseigné', data: rows.map((row) => row.nonRenseigne), backgroundColor: '#9ca3af', stack: 'ao' }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
+            tooltip: { callbacks: { label: (ctx2) => `${ctx2.dataset.label}: ${ctx2.raw} affaire${ctx2.raw > 1 ? 's' : ''}` } }
+          },
+          scales: {
+            x: { stacked: true, grid: { display: false }, ticks: { color: '#64748b' } },
+            y: { stacked: true, beginAtZero: true, ticks: { precision: 0, color: '#64748b' }, grid: { color: '#edf2f7' } }
+          }
+        }
+      });
+    }
+
+    function aoRenderAgeBuckets(metrics) {
+      const el = document.getElementById('aoAgeBuckets');
+      if (!el) return;
+      const max = metrics.ageBuckets.reduce((best, row) => Math.max(best, row.count), 0) || 1;
+      el.innerHTML = metrics.ageBuckets.map((row) => `
+        <div class="ao-age-row">
+          <span>${escapeHtml(row.label)}</span>
+          <div class="ao-age-track">
+            <div class="ao-age-fill" style="width:${Math.max(4, Math.round(row.count / max * 100))}%; background:${row.color};"></div>
+          </div>
+          <strong>${row.count}</strong>
+        </div>
+        <div class="ao-kpi-sub" style="margin:-6px 0 0 101px;">${escapeHtml(aoFormatMoney(row.amount))}</div>
+      `).join('');
     }
 
     function aoBuildYearOptions() {
@@ -1059,65 +1145,6 @@
       select.value = String(aoMonth);
     }
 
-    function aoDestroyChart() {
-      if (aoChart) { aoChart.destroy(); aoChart = null; }
-    }
-
-    function aoRenderPie(counts, total) {
-      const ctx = document.getElementById('aoPieCanvas');
-      if (!ctx) return;
-      aoDestroyChart();
-      aoChart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          labels: AO_STATUS_CONFIG.map((s) => s.key),
-          datasets: [{
-            data: AO_STATUS_CONFIG.map((s) => counts[s.key] || 0),
-            backgroundColor: AO_STATUS_CONFIG.map((s) => s.color),
-            borderColor: '#fff',
-            borderWidth: 3,
-            hoverOffset: 8
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: true,
-          cutout: '62%',
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                label: (c) => {
-                  const v = c.raw || 0;
-                  const pct = total > 0 ? Math.round(v / total * 100) : 0;
-                  return ` ${v} affaire${v > 1 ? 's' : ''} (${pct} %)`;
-                }
-              }
-            }
-          }
-        }
-      });
-    }
-
-    function aoRenderLegend(counts, total) {
-      const el = document.getElementById('aoLegend');
-      if (!el) return;
-      el.innerHTML = AO_STATUS_CONFIG.map((s) => {
-        const count = counts[s.key] || 0;
-        const pct = total > 0 ? Math.round(count / total * 100) : 0;
-        return `<div class="ao-legend-item" style="border-color:${s.color}33;">
-          <div class="ao-legend-left">
-            <span class="ao-legend-dot" style="background:${s.color};"></span>
-            <span class="ao-legend-label">${escapeHtml(s.key)}</span>
-          </div>
-          <div style="text-align:right;">
-            <div class="ao-legend-count">${count}</div>
-            <div class="ao-legend-pct">${pct} %</div>
-          </div>
-        </div>`;
-      }).join('');
-    }
-
     function aoPeriodLabel() {
       if (!aoYear) return 'Toutes périodes';
       const yearLabel = aoFiscalLabel(aoYear);
@@ -1126,64 +1153,42 @@
       return `${idx >= 0 ? AO_FISCAL_MONTHS_LABELS[idx] : aoMonth} — ${aoFiscalLabel(aoYear)}`;
     }
 
-    function aoUpdateDebug(filtered, total) {
-      const debug = document.getElementById('aoDebug');
-      if (!debug || !aoSnapshot) return;
-      debug.style.display = 'block';
-      const src = aoSnapshot.source;
-      const sum = aoSnapshot.summary;
-      const dates = filtered.map((r) => r.effectiveDate).filter(Boolean).sort();
-      debug.innerHTML = `<div class="ao-debug-title">Informations de lecture</div>
-        <div class="ao-debug-grid">
-          <div class="ao-debug-row"><span class="ao-debug-key">Fichier :</span><span>${escapeHtml(src.fileName || '—')}</span></div>
-          <div class="ao-debug-row"><span class="ao-debug-key">Feuille :</span><span>${escapeHtml(src.sheetName || '—')}</span></div>
-          <div class="ao-debug-row"><span class="ao-debug-key">Modifié le :</span><span>${escapeHtml(aoFormatDate(src.lastModified))}</span></div>
-          <div class="ao-debug-row"><span class="ao-debug-key">Lignes totales :</span><span>${sum.totalRows}</span></div>
-          <div class="ao-debug-row"><span class="ao-debug-key">Exploitables (${escapeHtml(sum.dateField || 'Date')} ≥ ${escapeHtml(sum.minReliableDate)}) :</span><span>${sum.reliableRows}</span></div>
-          <div class="ao-debug-row"><span class="ao-debug-key">Période :</span><span>${escapeHtml(aoPeriodLabel())}</span></div>
-          <div class="ao-debug-row"><span class="ao-debug-key">Affaires affichées :</span><span>${total}${dates.length ? ` (du ${escapeHtml(aoFormatDate(dates[0]))} au ${escapeHtml(aoFormatDate(dates[dates.length-1]))})` : ''}</span></div>
-        </div>${(() => {
-          const inv = aoSnapshot.invalidDates || [];
-          if (!inv.length) return '';
-          return `<div style="margin-top:10px; padding:8px 12px; background:#fff7ed; border:1px solid #fed7aa; border-radius:7px; font-size:11px;">
-            <div style="font-weight:700; color:#9a3412; margin-bottom:5px;">⚠️ ${inv.length} dossier${inv.length > 1 ? 's' : ''} avec date butoir V1 illisible :</div>
-            ${inv.map((r) => `<div style="color:#7c2d12; margin:2px 0;"><strong>${escapeHtml(r.nom)}</strong> — valeur brute : <code>${escapeHtml(r.valeurBrute)}</code></div>`).join('')}
-          </div>`;
-        })()}`;
-    }
-
     function aoRenderChart() {
       const container = document.getElementById('aoChartContainer');
       if (!aoSnapshot) return;
 
       const filtered = aoFilterRecords(aoSnapshot.records);
-      const counts = aoCountByStatus(filtered);
       const metrics = aoComputeMetrics(filtered);
       const total = filtered.length;
 
       if (!total) {
-        aoDestroyChart();
+        Object.keys(aoCharts).forEach(aoDestroyChart);
         container.innerHTML = '<div class="commerce-empty">Aucune affaire sur la période sélectionnée.</div>';
-        aoUpdateDebug(filtered, total);
         return;
       }
 
       container.innerHTML = `
         ${aoRenderKpis(filtered, metrics)}
-        <div class="ao-chart-layout">
-          <div class="ao-chart-wrap">
-            <canvas id="aoPieCanvas"></canvas>
-            <div class="ao-chart-center">
-              <div class="ao-chart-center-total">${total}</div>
-              <div class="ao-chart-center-label">affaires</div>
+        <div class="ao-analysis-grid">
+          <div class="ao-panel">
+            <div class="ao-panel-header">
+              <h3 class="ao-panel-title">Flux mensuel par statut</h3>
+              <span class="ao-panel-note">${escapeHtml(aoPeriodLabel())}</span>
             </div>
+            <div class="ao-chart-box"><canvas id="aoMonthlyFlowChart"></canvas></div>
           </div>
-          <div class="ao-legend" id="aoLegend"></div>
+          <div class="ao-panel">
+            <div class="ao-panel-header">
+              <h3 class="ao-panel-title">Ancienneté des attentes</h3>
+              <span class="ao-panel-note">${metrics.counts['En attente'] || 0} dossiers</span>
+            </div>
+            <div class="ao-age-list" id="aoAgeBuckets"></div>
+          </div>
+        </div>
         </div>`;
 
-      aoRenderPie(counts, total);
-      aoRenderLegend(counts, total);
-      aoUpdateDebug(filtered, total);
+      aoRenderMonthlyFlow(metrics);
+      aoRenderAgeBuckets(metrics);
     }
 
     async function loadAOIndicateurs({ forceRefresh = false } = {}) {
@@ -1200,7 +1205,6 @@
               ⚠️ Aucun fichier Appels d'offre configuré.
               <a href="./commerce-liaison.html" class="btn btn-secondary" style="font-size:12px; padding:6px 12px;">Configurer la liaison →</a>
             </div>`;
-          document.getElementById('aoDebug').style.display = 'none';
           return;
         }
 
