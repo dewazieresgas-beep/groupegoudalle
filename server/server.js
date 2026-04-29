@@ -24,8 +24,9 @@ const COMMERCE_EXCEL_SHEET = 'Indicateur commercial';
 const COMMERCE_MIN_YEAR = 2021;
 const COMMERCE_CACHE_TTL_MS = 60 * 1000;
 
-const AO_MIN_DATE = '2026-01-01';
+const AO_MIN_DATE = '2025-10-01';
 const AO_CACHE_TTL_MS = 60 * 1000;
+const AO_MAX_FUTURE_YEARS = 1;
 
 let commerceIndicatorsCache = {
   snapshot: null,
@@ -2575,10 +2576,19 @@ function normalizeAOStatus(raw) {
   if (!txt) return 'Non renseigné';
 
   if (txt === 'obtenu' || txt === 'retenu' || txt === 'r' || txt === 'o' || txt === 'oui') return 'Gagné';
-  if (txt === 'rejete' || txt === 'nr' || txt === 'non retenu' || txt === 'perdu' || txt === 'n') return 'Perdu';
+  if (txt === 'rejete' || txt === 'nr' || txt === 'non retenu' || txt === 'perdu' || txt === 'annule' || txt === 'annulé' || txt === 'n') return 'Perdu';
   if (txt.startsWith('en attente') || txt === 'attente' || txt === 'ea') return 'En attente';
 
   return 'Non renseigné';
+}
+
+function formatAODate(date) {
+  if (!date || isNaN(date.getTime())) return null;
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0')
+  ].join('-');
 }
 
 function parseAODate(value) {
@@ -2652,20 +2662,28 @@ function findAOColumns(rawRows) {
 
   return {
     headerIndex,
-    nomCol: findCol(
-      [(c) => c.includes('dossier') || c.includes('affaire'), (c) => c === 'nom'],
+    dateEntreeCol: findCol(
+      [(c) => c.includes('date') && (c.includes('entree') || c.includes('entrée'))],
       0
     ),
+    nomCol: findCol(
+      [(c) => c.includes('dossier') || c.includes('affaire'), (c) => c === 'nom'],
+      1
+    ),
     clientCol: findCol([(c) => c === 'client' || c.startsWith('client')], 1),
+    typeCol: findCol([(c) => c.includes('type') && c.includes('principal')], -1),
     dateButoirCol: findCol([(c) => c.includes('butoir') || (c.includes('date') && c.includes('v1'))], -1),
     dateReponseCol: findCol(
-      [(c) => c.includes('reponse') || (c.includes('date') && c.includes('rep'))],
-      3
+      [(c) => c.includes('resultat') || c.includes('résultat') || c.includes('reponse') || (c.includes('date') && c.includes('rep'))],
+      -1
     ),
     responsableCol: findCol([(c) => c.includes('responsable') || c.includes('etude')], -1),
+    actionCol: findCol([(c) => c === 'action' || c.includes('action requise')], -1),
+    derniereActionCol: findCol([(c) => c.includes('derniere action') || c.includes('dernière action')], -1),
+    remarquesCol: findCol([(c) => c.includes('remarque')], -1),
     statutCol: findCol(
       [(c) => c.includes('obtenu') || c.includes('rejete') || c.includes('statut'), (c) => c.includes('attente')],
-      5
+      -1
     ),
     dateInfoCol: findCol(
       [(c) => (c.includes('date') && c.includes('info')) || c === "date d'info"],
@@ -2674,8 +2692,77 @@ function findAOColumns(rawRows) {
     classementCol: findCol([(c) => c.includes('classement')], -1),
     montantCol: findCol(
       [(c) => c.includes('montant') || c.includes('estimatif') || c.includes('budget') || c === 'devis' || c.includes('devis')],
-      header.length > 0 ? header.length - 1 : -1
-    )
+      -1
+    ),
+    versionCols: header
+      .map((c, idx) => (/^v\d+$/i.test(c) ? idx : -1))
+      .filter((idx) => idx >= 0),
+    questionCols: header
+      .map((c, idx) => (/^q\d+$/i.test(c) ? idx : -1))
+      .filter((idx) => idx >= 0),
+    negoCols: header
+      .map((c, idx) => (/^rn\d+$/i.test(c) ? idx : -1))
+      .filter((idx) => idx >= 0)
+  };
+}
+
+function topAOBuckets(records, key, limit = 6) {
+  const buckets = new Map();
+  for (const record of records) {
+    const label = String(record[key] || 'Non renseigné').trim() || 'Non renseigné';
+    buckets.set(label, (buckets.get(label) || 0) + 1);
+  }
+  return [...buckets.entries()]
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'fr'))
+    .slice(0, limit);
+}
+
+function buildAOSummary(records, reliable, invalidDates) {
+  const statusCounts = { 'Gagné': 0, 'Perdu': 0, 'En attente': 0, 'Non renseigné': 0 };
+  let totalAmount = 0;
+  let wonAmount = 0;
+  let amountCount = 0;
+  let actionRequiredCount = 0;
+  let pendingCount = 0;
+
+  for (const record of reliable) {
+    statusCounts[record.status] = (statusCounts[record.status] || 0) + 1;
+    if (record.montant != null) {
+      totalAmount += record.montant;
+      amountCount += 1;
+      if (record.status === 'Gagné') wonAmount += record.montant;
+    }
+    if (normalizeText(record.action).toLowerCase().includes('action requise')) actionRequiredCount += 1;
+    if (record.status === 'En attente') pendingCount += 1;
+  }
+
+  const decided = (statusCounts['Gagné'] || 0) + (statusCounts['Perdu'] || 0);
+  const allYears = [...new Set(reliable.map((r) => r.year).filter(Boolean))].sort((a, b) => b - a);
+  const allFiscalYears = [...new Set(reliable.map((r) => r.fiscalYear).filter(Boolean))].sort((a, b) => b - a);
+  const allMonths = [...new Set(reliable.map((r) => r.isoMonth).filter(Boolean))].sort().reverse();
+
+  return {
+    totalRows: records.length,
+    reliableRows: reliable.length,
+    minReliableDate: AO_MIN_DATE,
+    dateField: 'Date d\'entrée',
+    periodStart: allMonths.length ? allMonths[allMonths.length - 1] : null,
+    periodEnd: allMonths.length ? allMonths[0] : null,
+    availableYears: allYears,
+    availableFiscalYears: allFiscalYears,
+    availableMonths: allMonths,
+    invalidDateCount: invalidDates.length,
+    statusCounts,
+    wonRate: decided > 0 ? ((statusCounts['Gagné'] || 0) / decided) * 100 : null,
+    decidedCount: decided,
+    pendingCount,
+    actionRequiredCount,
+    amountCount,
+    totalAmount,
+    wonAmount,
+    topResponsables: topAOBuckets(reliable, 'responsable'),
+    topTypes: topAOBuckets(reliable, 'typePrincipal')
   };
 }
 
@@ -2688,6 +2775,8 @@ function readAOSnapshot(cfg) {
   const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: null, raw: true });
   const cols = findAOColumns(rawRows);
   const minDate = new Date(AO_MIN_DATE);
+  const maxDate = new Date();
+  maxDate.setFullYear(maxDate.getFullYear() + AO_MAX_FUTURE_YEARS);
 
   const dataRows = rawRows.slice(cols.headerIndex + 1);
   const records = [];
@@ -2701,18 +2790,28 @@ function readAOSnapshot(cfg) {
     const statusRaw = cols.statutCol >= 0 ? row[cols.statutCol] : null;
     const status = normalizeAOStatus(statusRaw);
 
-    // date butoir V1 = date d'entrée de l'AO dans le suivi → date principale
-    // date de réponse = résultat final (vide pour les "En attente") → fallback
+    // Le nouveau tableau pilote les périodes avec la date d'entrée. La date
+    // résultat reste disponible pour analyser les affaires tranchées.
+    const rawEntreeCell = cols.dateEntreeCol >= 0 ? row[cols.dateEntreeCol] : null;
     const rawButoirCell = cols.dateButoirCol >= 0 ? row[cols.dateButoirCol] : null;
     const rawReponseCell = cols.dateReponseCol >= 0 ? row[cols.dateReponseCol] : null;
+    const dateEntree = parseAODate(rawEntreeCell);
     const dateButoirV1 = parseAODate(rawButoirCell);
-    const dateReponse = parseAODate(rawReponseCell);
+    const dateResultat = parseAODate(rawReponseCell);
 
-    if (rawButoirCell != null && rawButoirCell !== '' && !dateButoirV1) {
-      invalidDates.push({ nom: String(nom).trim(), colonne: 'date butoir V1', valeurBrute: String(rawButoirCell) });
+    if (rawEntreeCell != null && rawEntreeCell !== '' && !dateEntree) {
+      invalidDates.push({ nom: String(nom).trim(), colonne: 'Date d\'entrée', valeurBrute: String(rawEntreeCell) });
     }
 
-    const effectiveDate = dateButoirV1 || dateReponse || null;
+    const effectiveDate = dateEntree || dateButoirV1 || dateResultat || null;
+    if (effectiveDate && effectiveDate > maxDate) {
+      invalidDates.push({
+        nom: String(nom).trim(),
+        colonne: 'Date d\'entrée',
+        valeurBrute: formatAODate(effectiveDate),
+        raison: 'Date trop future'
+      });
+    }
 
     const montantRaw = cols.montantCol >= 0 ? row[cols.montantCol] : null;
     let montant = null;
@@ -2723,7 +2822,7 @@ function readAOSnapshot(cfg) {
       if (isFinite(parsed)) montant = parsed;
     }
 
-    const isReliable = effectiveDate != null && effectiveDate >= minDate;
+    const isReliable = effectiveDate != null && effectiveDate >= minDate && effectiveDate <= maxDate;
     const fiscalYear = effectiveDate
       ? ((effectiveDate.getMonth() + 1) >= 10 ? effectiveDate.getFullYear() : effectiveDate.getFullYear() - 1)
       : null;
@@ -2731,27 +2830,31 @@ function readAOSnapshot(cfg) {
     records.push({
       nom: String(nom).trim(),
       client: cols.clientCol >= 0 ? String(row[cols.clientCol] || '').trim() : '',
+      typePrincipal: cols.typeCol >= 0 ? String(row[cols.typeCol] || '').trim() : '',
+      responsable: cols.responsableCol >= 0 ? String(row[cols.responsableCol] || '').trim() : '',
+      action: cols.actionCol >= 0 ? String(row[cols.actionCol] || '').trim() : '',
+      derniereAction: cols.derniereActionCol >= 0 ? formatAODate(parseAODate(row[cols.derniereActionCol])) : null,
+      remarques: cols.remarquesCol >= 0 ? String(row[cols.remarquesCol] || '').trim() : '',
       statusRaw: statusRaw != null ? String(statusRaw).trim() : '',
       status,
-      dateButoirV1: dateButoirV1 ? dateButoirV1.toISOString().slice(0, 10) : null,
-      dateReponse: dateReponse ? dateReponse.toISOString().slice(0, 10) : null,
-      effectiveDate: effectiveDate ? effectiveDate.toISOString().slice(0, 10) : null,
+      dateEntree: formatAODate(dateEntree),
+      dateButoirV1: formatAODate(dateButoirV1),
+      dateResultat: formatAODate(dateResultat),
+      dateReponse: formatAODate(dateResultat),
+      effectiveDate: formatAODate(effectiveDate),
       year: effectiveDate ? effectiveDate.getFullYear() : null,
       month: effectiveDate ? effectiveDate.getMonth() + 1 : null,
-      isoMonth: effectiveDate ? effectiveDate.toISOString().slice(0, 7) : null,
+      isoMonth: effectiveDate ? formatAODate(effectiveDate).slice(0, 7) : null,
       fiscalYear,
       montant,
+      versionCount: cols.versionCols.filter((idx) => row[idx] != null && row[idx] !== '').length,
+      questionCount: cols.questionCols.filter((idx) => row[idx] != null && row[idx] !== '').length,
+      negotiationCount: cols.negoCols.filter((idx) => row[idx] != null && row[idx] !== '').length,
       isReliable
     });
   }
 
   const reliable = records.filter((r) => r.isReliable);
-  const allYears = [...new Set(reliable.map((r) => r.year).filter(Boolean))].sort((a, b) => b - a);
-  const allFiscalYears = [...new Set(reliable.map((r) => r.fiscalYear).filter(Boolean))].sort((a, b) => b - a);
-  const allMonths = [...new Set(reliable.map((r) => r.isoMonth).filter(Boolean))].sort().reverse();
-
-  const periodStart = allMonths.length ? allMonths[allMonths.length - 1] : null;
-  const periodEnd = allMonths.length ? allMonths[0] : null;
 
   return {
     success: true,
@@ -2765,17 +2868,7 @@ function readAOSnapshot(cfg) {
       sheetNames: workbook.SheetNames,
       detectedAt: new Date().toISOString()
     },
-    summary: {
-      totalRows: records.length,
-      reliableRows: reliable.length,
-      minReliableDate: AO_MIN_DATE,
-      periodStart,
-      periodEnd,
-      availableYears: allYears,
-      availableFiscalYears: allFiscalYears,
-      availableMonths: allMonths,
-      invalidDateCount: invalidDates.length
-    },
+    summary: buildAOSummary(records, reliable, invalidDates),
     records: reliable,
     invalidDates
   };

@@ -240,6 +240,48 @@
       border-color: #5a7eb3;
     }
 
+    .ao-kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .ao-kpi-card {
+      background: #fff;
+      border: 1px solid #e3ebf6;
+      border-top: 3px solid #5a7eb3;
+      border-radius: 8px;
+      padding: 12px 14px;
+      min-width: 0;
+    }
+
+    .ao-kpi-label {
+      font-size: 10px;
+      font-weight: 800;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 6px;
+    }
+
+    .ao-kpi-value {
+      font-size: 24px;
+      font-weight: 800;
+      color: #2d4d78;
+      font-family: 'Courier New', monospace;
+      line-height: 1;
+    }
+
+    .ao-kpi-sub {
+      margin-top: 5px;
+      font-size: 11px;
+      color: #64748b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
     .ao-chart-layout {
       display: grid;
       grid-template-columns: 280px 1fr;
@@ -374,6 +416,11 @@
 
     @media (max-width: 900px) {
       .ao-chart-layout { grid-template-columns: 1fr; }
+      .ao-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 620px) {
+      .ao-kpi-grid { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 1100px) {
@@ -471,14 +518,7 @@
         <div class="ig-machine-container">
           <div class="ao-filters">
             <div class="ao-filter-group">
-              <label>Mode :</label>
-              <div class="ao-mode-tabs">
-                <button class="ao-mode-tab active" id="aoTabCivile" data-mode="civile">Année civile</button>
-                <button class="ao-mode-tab" id="aoTabFiscale" data-mode="fiscale">Année fiscale</button>
-              </div>
-            </div>
-            <div class="ao-filter-group">
-              <label>Année :</label>
+              <label>Exercice :</label>
               <select id="aoYearSelect" class="gm-range-select" style="min-width:130px;"></select>
             </div>
             <div class="ao-filter-group">
@@ -902,17 +942,10 @@
       { key: 'Non renseigné', color: '#9ca3af' }
     ];
 
-    const AO_CIVIL_MONTHS = [
-      { num:1, label:'Janvier' }, { num:2, label:'Février' }, { num:3, label:'Mars' },
-      { num:4, label:'Avril' },   { num:5, label:'Mai' },     { num:6, label:'Juin' },
-      { num:7, label:'Juillet' }, { num:8, label:'Août' },    { num:9, label:'Septembre' },
-      { num:10, label:'Octobre' },{ num:11, label:'Novembre' },{ num:12, label:'Décembre' }
-    ];
     const AO_FISCAL_MONTHS_ORDER = [10,11,12,1,2,3,4,5,6,7,8,9];
     const AO_FISCAL_MONTHS_LABELS = ['Oct','Nov','Déc','Janv','Févr','Mars','Avr','Mai','Juin','Juil','Août','Sept'];
 
     let aoSnapshot = null;
-    let aoMode = 'civile';
     let aoYear = null;
     let aoMonth = 0;
     let aoChart = null;
@@ -931,17 +964,27 @@
       catch (_) { return iso; }
     }
 
+    function aoFormatMoney(value) {
+      const num = Number(value);
+      if (!Number.isFinite(num) || num <= 0) return '—';
+      if (num >= 1000000) {
+        return `${(num / 1000000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} M€`;
+      }
+      return `${(num / 1000).toLocaleString('fr-FR', { maximumFractionDigits: 0 })} k€`;
+    }
+
+    function aoFormatPercent(value) {
+      const num = Number(value);
+      if (!Number.isFinite(num)) return '—';
+      return `${num.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`;
+    }
+
     function aoFilterRecords(records) {
       if (!records || !records.length || !aoYear) return records || [];
       return records.filter((r) => {
         if (!r.effectiveDate || !r.year || !r.month) return false;
-        if (aoMode === 'civile') {
-          if (r.year !== aoYear) return false;
-          if (aoMonth && r.month !== aoMonth) return false;
-        } else {
-          if (aoFiscalYear(r.year, r.month) !== aoYear) return false;
-          if (aoMonth && r.month !== aoMonth) return false;
-        }
+        if (aoFiscalYear(r.year, r.month) !== aoYear) return false;
+        if (aoMonth && r.month !== aoMonth) return false;
         return true;
       });
     }
@@ -956,32 +999,62 @@
       return counts;
     }
 
+    function aoComputeMetrics(records) {
+      const counts = aoCountByStatus(records);
+      const decided = (counts['Gagné'] || 0) + (counts['Perdu'] || 0);
+      const wonRate = decided > 0 ? ((counts['Gagné'] || 0) / decided) * 100 : null;
+      const actionRequired = records.filter((r) => String(r.action || '').toLowerCase().includes('action requise')).length;
+      const totalAmount = records.reduce((sum, r) => sum + (Number(r.montant) || 0), 0);
+      const wonAmount = records
+        .filter((r) => r.status === 'Gagné')
+        .reduce((sum, r) => sum + (Number(r.montant) || 0), 0);
+      const multiVersion = records.filter((r) => Number(r.versionCount || 0) > 1).length;
+      return { counts, decided, wonRate, actionRequired, totalAmount, wonAmount, multiVersion };
+    }
+
+    function aoRenderKpis(records, metrics) {
+      return `<div class="ao-kpi-grid">
+        <div class="ao-kpi-card" style="border-top-color:#2d4d78;">
+          <div class="ao-kpi-label">Affaires entrées</div>
+          <div class="ao-kpi-value">${records.length}</div>
+          <div class="ao-kpi-sub">${escapeHtml(aoPeriodLabel())}</div>
+        </div>
+        <div class="ao-kpi-card" style="border-top-color:#0f766e;">
+          <div class="ao-kpi-label">Taux de gain</div>
+          <div class="ao-kpi-value">${escapeHtml(aoFormatPercent(metrics.wonRate))}</div>
+          <div class="ao-kpi-sub">${metrics.counts['Gagné'] || 0} gagnées / ${metrics.decided} tranchées</div>
+        </div>
+        <div class="ao-kpi-card" style="border-top-color:#d97706;">
+          <div class="ao-kpi-label">En attente</div>
+          <div class="ao-kpi-value">${metrics.counts['En attente'] || 0}</div>
+          <div class="ao-kpi-sub">${metrics.actionRequired} avec action requise</div>
+        </div>
+        <div class="ao-kpi-card" style="border-top-color:#2563eb;">
+          <div class="ao-kpi-label">Montant devis</div>
+          <div class="ao-kpi-value">${escapeHtml(aoFormatMoney(metrics.totalAmount))}</div>
+          <div class="ao-kpi-sub">${escapeHtml(aoFormatMoney(metrics.wonAmount))} gagnés</div>
+        </div>
+      </div>`;
+    }
+
     function aoBuildYearOptions() {
       const select = document.getElementById('aoYearSelect');
       if (!aoSnapshot) return;
-      const years = aoMode === 'civile'
-        ? (aoSnapshot.summary.availableYears || [])
-        : (aoSnapshot.summary.availableFiscalYears || []);
+      const years = aoSnapshot.summary.availableFiscalYears || [];
       if (!years.length) { select.innerHTML = '<option value="">Aucune donnée</option>'; select.disabled = true; return; }
       if (!aoYear || !years.includes(aoYear)) aoYear = years[0];
       select.disabled = false;
       select.innerHTML = years.map((y) =>
-        `<option value="${y}" ${y === aoYear ? 'selected' : ''}>${escapeHtml(aoMode === 'fiscale' ? aoFiscalLabel(y) : String(y))}</option>`
+        `<option value="${y}" ${y === aoYear ? 'selected' : ''}>${escapeHtml(aoFiscalLabel(y))}</option>`
       ).join('');
     }
 
     function aoBuildMonthOptions() {
       const select = document.getElementById('aoMonthSelect');
       let html = '<option value="0">Tous les mois</option>';
-      if (aoMode === 'civile') {
-        AO_CIVIL_MONTHS.forEach(({ num, label }) => {
-          html += `<option value="${num}" ${aoMonth === num ? 'selected' : ''}>${escapeHtml(label)}</option>`;
-        });
-      } else {
-        AO_FISCAL_MONTHS_ORDER.forEach((num, idx) => {
-          html += `<option value="${num}" ${aoMonth === num ? 'selected' : ''}>${escapeHtml(AO_FISCAL_MONTHS_LABELS[idx])}</option>`;
-        });
-      }
+      AO_FISCAL_MONTHS_ORDER.forEach((num, idx) => {
+        html += `<option value="${num}" ${aoMonth === num ? 'selected' : ''}>${escapeHtml(AO_FISCAL_MONTHS_LABELS[idx])}</option>`;
+      });
       select.innerHTML = html;
       select.value = String(aoMonth);
     }
@@ -1047,9 +1120,8 @@
 
     function aoPeriodLabel() {
       if (!aoYear) return 'Toutes périodes';
-      const yearLabel = aoMode === 'fiscale' ? aoFiscalLabel(aoYear) : String(aoYear);
+      const yearLabel = aoFiscalLabel(aoYear);
       if (!aoMonth) return yearLabel;
-      if (aoMode === 'civile') return `${AO_CIVIL_MONTHS.find((m) => m.num === aoMonth)?.label || aoMonth} ${aoYear}`;
       const idx = AO_FISCAL_MONTHS_ORDER.indexOf(aoMonth);
       return `${idx >= 0 ? AO_FISCAL_MONTHS_LABELS[idx] : aoMonth} — ${aoFiscalLabel(aoYear)}`;
     }
@@ -1067,7 +1139,7 @@
           <div class="ao-debug-row"><span class="ao-debug-key">Feuille :</span><span>${escapeHtml(src.sheetName || '—')}</span></div>
           <div class="ao-debug-row"><span class="ao-debug-key">Modifié le :</span><span>${escapeHtml(aoFormatDate(src.lastModified))}</span></div>
           <div class="ao-debug-row"><span class="ao-debug-key">Lignes totales :</span><span>${sum.totalRows}</span></div>
-          <div class="ao-debug-row"><span class="ao-debug-key">Exploitables (date butoir V1 ≥ ${escapeHtml(sum.minReliableDate)}) :</span><span>${sum.reliableRows}</span></div>
+          <div class="ao-debug-row"><span class="ao-debug-key">Exploitables (${escapeHtml(sum.dateField || 'Date')} ≥ ${escapeHtml(sum.minReliableDate)}) :</span><span>${sum.reliableRows}</span></div>
           <div class="ao-debug-row"><span class="ao-debug-key">Période :</span><span>${escapeHtml(aoPeriodLabel())}</span></div>
           <div class="ao-debug-row"><span class="ao-debug-key">Affaires affichées :</span><span>${total}${dates.length ? ` (du ${escapeHtml(aoFormatDate(dates[0]))} au ${escapeHtml(aoFormatDate(dates[dates.length-1]))})` : ''}</span></div>
         </div>${(() => {
@@ -1086,6 +1158,7 @@
 
       const filtered = aoFilterRecords(aoSnapshot.records);
       const counts = aoCountByStatus(filtered);
+      const metrics = aoComputeMetrics(filtered);
       const total = filtered.length;
 
       if (!total) {
@@ -1096,6 +1169,7 @@
       }
 
       container.innerHTML = `
+        ${aoRenderKpis(filtered, metrics)}
         <div class="ao-chart-layout">
           <div class="ao-chart-wrap">
             <canvas id="aoPieCanvas"></canvas>
@@ -1133,9 +1207,7 @@
         if (!res.ok || !payload.success) throw new Error(payload.error || 'Lecture impossible');
 
         aoSnapshot = payload;
-        const years = aoMode === 'civile'
-          ? aoSnapshot.summary.availableYears
-          : aoSnapshot.summary.availableFiscalYears;
+        const years = aoSnapshot.summary.availableFiscalYears;
         if (!aoYear || !years.includes(aoYear)) {
           aoYear = years && years.length ? years[0] : null;
           aoMonth = 0;
@@ -1152,24 +1224,6 @@
     }
 
     function bindAOEvents() {
-      document.getElementById('aoTabCivile').addEventListener('click', () => {
-        aoMode = 'civile';
-        document.getElementById('aoTabCivile').classList.add('active');
-        document.getElementById('aoTabFiscale').classList.remove('active');
-        aoMonth = 0;
-        aoBuildYearOptions();
-        aoBuildMonthOptions();
-        aoRenderChart();
-      });
-      document.getElementById('aoTabFiscale').addEventListener('click', () => {
-        aoMode = 'fiscale';
-        document.getElementById('aoTabFiscale').classList.add('active');
-        document.getElementById('aoTabCivile').classList.remove('active');
-        aoMonth = 0;
-        aoBuildYearOptions();
-        aoBuildMonthOptions();
-        aoRenderChart();
-      });
       document.getElementById('aoYearSelect').addEventListener('change', (e) => {
         aoYear = Number(e.target.value) || null;
         aoMonth = 0;

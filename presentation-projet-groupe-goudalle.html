@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rapport de mi-projet - Intranet Groupe Goudalle</title>
+  <style>
+    :root {
+      --bois: #4f4032;
+      --bois-2: #7a6a5a;
+      --vert: #7bad75;
+      --vert-2: #5f8f64;
+      --ocre: #d4a574;
+      --bleu: #6b8e9f;
+      --rouge: #b85c5c;
+      --fond: #faf8f5;
+      --papier: #ffffff;
+      --sable: #f3eee8;
+      --ligne: #ded4ca;
+      --texte: #2f2a25;
+      --muted: #675f58;
+      --ombre: 0 18px 45px rgba(61, 52, 41, 0.12);
+      --radius: 8px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--texte);
+      background: var(--fond);
+      line-height: 1.6;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .page {
+      min-height: 100vh;
+      background:
+        radial-gradient(850px 300px at 5% 0%, rgba(123, 173, 117, 0.2), transparent),
+        radial-gradient(760px 320px at 96% 2%, rgba(212, 165, 116, 0.16), transparent);
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: rgba(255,255,255,0.94);
+      border-bottom: 1px solid var(--ligne);
+      backdrop-filter: blur(12px);
+    }
+
+    .topbar-inner {
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 900;
+      color: var(--bois);
+      white-space: nowrap;
+    }
+
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: white;
+      background: var(--bois);
+      font-size: 14px;
+    }
+
+    .nav {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .nav a {
+      padding: 7px 9px;
+      border-radius: 6px;
+    }
+
+    .nav a:hover { background: var(--sable); color: var(--bois); }
+
+    .hero {
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 58px 24px 38px;
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 36px;
+      align-items: center;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--vert-2);
+      font-size: 13px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 16px;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 30px;
+      height: 3px;
+      border-radius: 999px;
+      background: var(--vert);
+    }
+
+    h1, h2, h3 { color: var(--bois); line-height: 1.15; margin: 0; }
+    h1 { font-size: clamp(38px, 6vw, 76px); letter-spacing: -1px; max-width: 780px; }
+    h2 { font-size: clamp(27px, 3vw, 42px); margin-bottom: 14px; }
+    h3 { font-size: 19px; margin-bottom: 8px; }
+
+    .lead {
+      margin: 22px 0 0;
+      max-width: 720px;
+      font-size: 19px;
+      color: var(--muted);
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 28px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 11px 16px;
+      border-radius: 7px;
+      font-weight: 900;
+      border: 1px solid transparent;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 14px;
+    }
+
+    .btn-primary { background: var(--vert-2); color: white; }
+    .btn-secondary { background: white; color: var(--bois); border-color: var(--ligne); }
+
+    .hero-visual {
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: var(--ombre);
+      border: 1px solid rgba(90,74,58,0.14);
+      background: white;
+    }
+
+    .hero-visual img { display: block; width: 100%; height: auto; }
+
+    .section {
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 56px 24px;
+    }
+
+    .band {
+      background: white;
+      border-top: 1px solid var(--ligne);
+      border-bottom: 1px solid var(--ligne);
+    }
+
+    .section-intro {
+      max-width: 860px;
+      color: var(--muted);
+      font-size: 17px;
+      margin: 0 0 26px;
+    }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+
+    .card {
+      background: var(--papier);
+      border: 1px solid var(--ligne);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: 0 10px 26px rgba(61,52,41,0.06);
+    }
+
+    .card p { margin: 0; color: var(--muted); }
+
+    .card img {
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid var(--ligne);
+      background: var(--fond);
+      margin-bottom: 16px;
+    }
+
+    .metric {
+      background: white;
+      border: 1px solid var(--ligne);
+      border-radius: var(--radius);
+      padding: 22px;
+      min-height: 132px;
+      box-shadow: 0 8px 24px rgba(61,52,41,0.06);
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 34px;
+      line-height: 1;
+      color: var(--bois);
+      margin-bottom: 10px;
+    }
+
+    .metric span { color: var(--muted); font-size: 14px; }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--sable);
+      color: var(--bois);
+      border: 1px solid var(--ligne);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .module-list {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+      margin-top: 24px;
+    }
+
+    .module {
+      display: grid;
+      grid-template-columns: 48px 1fr;
+      gap: 14px;
+      padding: 18px;
+      background: var(--fond);
+      border: 1px solid var(--ligne);
+      border-radius: var(--radius);
+    }
+
+    .icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      background: var(--vert);
+      color: white;
+      font-weight: 900;
+      font-size: 18px;
+    }
+
+    .module strong { display: block; color: var(--bois); margin-bottom: 4px; }
+    .module span { color: var(--muted); font-size: 14px; }
+
+    .timeline {
+      display: grid;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 54px 1fr;
+      gap: 16px;
+      align-items: start;
+      background: white;
+      border: 1px solid var(--ligne);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+
+    .step-number {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: var(--bois);
+      color: white;
+      font-weight: 900;
+    }
+
+    .step p { margin: 0; color: var(--muted); }
+
+    .progress {
+      display: grid;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .progress-row {
+      display: grid;
+      grid-template-columns: 190px 1fr 70px;
+      gap: 14px;
+      align-items: center;
+      background: white;
+      border: 1px solid var(--ligne);
+      border-radius: var(--radius);
+      padding: 14px;
+    }
+
+    .bar {
+      height: 12px;
+      background: var(--sable);
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid var(--ligne);
+    }
+
+    .bar span {
+      display: block;
+      height: 100%;
+      background: linear-gradient(90deg, var(--vert), var(--vert-2));
+      border-radius: 999px;
+    }
+
+    .architecture {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-top: 24px;
+    }
+
+    .arch-box {
+      background: var(--bois);
+      color: white;
+      border-radius: var(--radius);
+      padding: 22px;
+      min-height: 168px;
+    }
+
+    .arch-box:nth-child(2) { background: var(--vert-2); }
+    .arch-box:nth-child(3) { background: #8b6d4f; }
+    .arch-box h3 { color: white; }
+    .arch-box p { color: rgba(255,255,255,0.86); margin: 0; }
+
+    .demo-board {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 22px;
+      margin-top: 24px;
+    }
+
+    .screen-list {
+      background: var(--bois);
+      color: white;
+      border-radius: var(--radius);
+      padding: 18px;
+      display: grid;
+      gap: 8px;
+      align-content: start;
+    }
+
+    .screen-list a {
+      padding: 10px;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.92);
+      font-weight: 800;
+      font-size: 14px;
+    }
+
+    .screen-list a:hover { background: rgba(255,255,255,0.16); }
+
+    .screen {
+      background: white;
+      border: 1px solid var(--ligne);
+      border-radius: var(--radius);
+      padding: 20px;
+      min-height: 310px;
+      box-shadow: 0 10px 26px rgba(61,52,41,0.06);
+    }
+
+    .fake-window {
+      border: 1px solid var(--ligne);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--fond);
+      margin-top: 16px;
+    }
+
+    .fake-window-head {
+      height: 38px;
+      background: #ffffff;
+      border-bottom: 1px solid var(--ligne);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 0 12px;
+    }
+
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--rouge); }
+    .dot:nth-child(2) { background: var(--ocre); }
+    .dot:nth-child(3) { background: var(--vert); }
+
+    .fake-body {
+      padding: 18px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .fake-card {
+      background: white;
+      border: 1px solid var(--ligne);
+      border-radius: 8px;
+      min-height: 96px;
+      padding: 14px;
+    }
+
+    .fake-card strong { display: block; color: var(--bois); font-size: 24px; margin-bottom: 8px; }
+    .fake-card span { display: block; height: 9px; background: var(--sable); border-radius: 999px; margin-top: 8px; }
+
+    .risk {
+      display: grid;
+      grid-template-columns: 30px 1fr;
+      gap: 12px;
+      align-items: start;
+      padding: 14px;
+      background: white;
+      border: 1px solid var(--ligne);
+      border-radius: var(--radius);
+    }
+
+    .risk-marker {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: white;
+      background: var(--ocre);
+      font-weight: 900;
+    }
+
+    .risk p { margin: 0; color: var(--muted); }
+
+    .quote {
+      background: var(--bois);
+      color: white;
+      border-radius: var(--radius);
+      padding: 34px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 20px;
+      align-items: center;
+    }
+
+    .quote p {
+      margin: 0;
+      color: rgba(255,255,255,0.9);
+      font-size: 20px;
+      max-width: 850px;
+    }
+
+    .small-note {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .footer {
+      padding: 34px 24px;
+      text-align: center;
+      color: var(--muted);
+      border-top: 1px solid var(--ligne);
+      background: white;
+      font-size: 14px;
+    }
+
+    @media (max-width: 940px) {
+      .hero, .grid-2, .grid-3, .architecture, .demo-board { grid-template-columns: 1fr; }
+      .grid-4 { grid-template-columns: repeat(2, 1fr); }
+      .module-list { grid-template-columns: 1fr; }
+      .topbar-inner { align-items: flex-start; flex-direction: column; }
+      .progress-row { grid-template-columns: 1fr; }
+      .quote { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 600px) {
+      .nav { display: none; }
+      .hero { padding-top: 34px; }
+      .section { padding: 40px 18px; }
+      .grid-4, .fake-body { grid-template-columns: 1fr; }
+      .card, .quote { padding: 20px; }
+    }
+
+    @media print {
+      .topbar, .hero-actions { display: none; }
+      body, .page { background: white; }
+      .section, .hero { padding: 22px 0; max-width: 100%; }
+      .card, .metric, .step, .arch-box, .screen, .risk, .quote { box-shadow: none; break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="#top" aria-label="Retour en haut">
+          <span class="brand-mark">PPI</span>
+          <span>Rapport de mi-projet</span>
+        </a>
+        <nav class="nav" aria-label="Navigation">
+          <a href="#contexte">Contexte</a>
+          <a href="#objectifs">Objectifs</a>
+          <a href="#cahier">CdC</a>
+          <a href="#modules">Modules</a>
+          <a href="#avancement">Avancement</a>
+          <a href="#demo">Démonstration</a>
+          <a href="#suite">Suite</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div>
+          <div class="eyebrow">Projet Pré-Ingénieur - mi-parcours</div>
+          <h1>Intranet de pilotage de la performance</h1>
+          <p class="lead">
+            Développement d'une application web interne permettant de centraliser les saisies,
+            automatiser une partie des imports, contrôler les données et restituer les indicateurs
+            clés des différents services du Groupe Goudalle, dans une logique de management visuel.
+          </p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="#avancement">Voir les avancées</a>
+            <button class="btn btn-secondary" type="button" onclick="window.print()">Imprimer / exporter PDF</button>
+          </div>
+        </div>
+        <div class="hero-visual">
+          <img alt="Illustration du projet Intranet Groupe Goudalle" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAwIDUyMCI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjNWE0YTNhIi8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjN2JhZDc1Ii8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3Qgd2lkdGg9IjEyMDAiIGhlaWdodD0iNTIwIiBmaWxsPSIjZmFmOGY1Ii8+PHBhdGggZD0iTTAgNDIwIEMxODAgMzYwIDI4MCA0NzAgNDcwIDM5MCBDNjcwIDMwNSA4MDAgNDA1IDEyMDAgMjYwIEwxMjAwIDUyMCBMMCA1MjAgWiIgZmlsbD0iI2U3ZWVlNCIvPjxwYXRoIGQ9Ik04NSAzMTUgTDI1NSAyMTAgTDQyNSAzMTUgVjQzMCBIODUgWiIgZmlsbD0idXJsKCNnKSIgb3BhY2l0eT0iLjk1Ii8+PHBhdGggZD0iTTE4MCA0MzAgVjMyNSBIMzMwIFY0MzAiIGZpbGw9IiNmYWY4ZjUiIG9wYWNpdHk9Ii45MiIvPjxwYXRoIGQ9Ik01MDUgMTY1IEgxMDc1IFY0MDUgSDUwNSBaIiBmaWxsPSIjZmZmIiBvcGFjaXR5PSIuODYiLz48dGV4dCB4PSI1NTUiIHk9IjI0NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjU4IiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjNWE0YTNhIj5JbnRyYW5ldCBHcm91cGUgR291ZGFsbGU8L3RleHQ+PHRleHQgeD0iNTU1IiB5PSIzMTAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIyOCIgZmlsbD0iIzZiOGU2ZiI+UGlsb3RhZ2UsIHNhaXNpZSBldCBzdWl2aSBkZXMgaW5kaWNhdGV1cnMgbWV0aWVyczwvdGV4dD48Y2lyY2xlIGN4PSI5ODUiIGN5PSIxMTgiIHI9IjU0IiBmaWxsPSIjZDRhNTc0IiBvcGFjaXR5PSIuNDUiLz48L3N2Zz4=">
+        </div>
+      </section>
+
+      <section class="section" id="contexte">
+        <h2>Contexte et problématique</h2>
+        <p class="section-intro">
+          Le Groupe Goudalle est en phase de structuration et de croissance. Plusieurs entités coexistent
+          avec des activités différentes, mais les informations de performance restent dispersées entre
+          fichiers Excel, échanges informels, suivis terrain et pratiques propres à chaque pôle.
+          Le besoin identifié est de fournir un outil commun pour rendre les indicateurs visibles,
+          homogènes et exploitables au quotidien.
+        </p>
+        <div class="grid-3">
+          <div class="card"><h3>Situation initiale</h3><p>Les données ne sont pas toujours homogènes, les indicateurs ne sont pas toujours comparables et l'information circule difficilement entre les équipes.</p></div>
+          <div class="card"><h3>Besoin métier</h3><p>Créer une base unique d'information pour suivre la performance, faciliter les réunions et soutenir la démarche Bpifrance de management visuel.</p></div>
+          <div class="card"><h3>Réponse proposée</h3><p>Un site intranet simple, organisé par entité et par métier, avec saisie, consultation, supervision et tableaux de bord.</p></div>
+        </div>
+      </section>
+
+      <section class="band" id="objectifs">
+        <div class="section">
+          <h2>Objectifs du projet</h2>
+          <p class="section-intro">
+            L'objectif défini dans le cahier des charges est de mettre en place avant la fin du PPI,
+            en juin 2026, un intranet permettant la saisie des indicateurs, la centralisation des données
+            et la visualisation des performances. L'outil doit rester simple, utilisable au quotidien et
+            évolutif.
+          </p>
+          <div class="grid-4">
+            <div class="metric"><strong>22</strong><span>pages HTML côté client, réparties par service</span></div>
+            <div class="metric"><strong>71</strong><span>routes API Express détectées dans le serveur</span></div>
+            <div class="metric"><strong>6</strong><span>grands domaines métier couverts</span></div>
+            <div class="metric"><strong>1</strong><span>fichier HTML autonome pour le rapport et l'oral</span></div>
+          </div>
+          <div class="pill-row">
+            <span class="pill">Structurer les indicateurs</span>
+            <span class="pill">Développer le site</span>
+            <span class="pill">Gérer les rôles</span>
+            <span class="pill">Assurer une saisie simple</span>
+            <span class="pill">Prévoir l'évolution</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="cahier">
+        <h2>Extraits structurants du cahier des charges</h2>
+        <p class="section-intro">
+          Les documents fournis cadrent le projet autour de trois enjeux : structurer le pilotage,
+          garantir l'adhésion des utilisateurs terrain et améliorer la lecture de la performance.
+        </p>
+        <div class="grid-3">
+          <div class="card">
+            <h3>Enjeu organisationnel</h3>
+            <p>Créer un outil commun, accessible et partagé afin de réduire les écarts de pratiques, disposer d'une base unique d'information et faciliter le suivi global.</p>
+          </div>
+          <div class="card">
+            <h3>Enjeu humain</h3>
+            <p>L'outil doit être clair, rapide à comprendre et ne pas ajouter de complexité. L'adhésion des utilisateurs est un facteur clé de réussite.</p>
+          </div>
+          <div class="card">
+            <h3>Enjeu de pilotage</h3>
+            <p>Visualiser rapidement la situation, suivre les évolutions semaine/mois, identifier les écarts et faciliter les échanges en réunion.</p>
+          </div>
+        </div>
+        <div class="grid-2" style="margin-top:18px;">
+          <div class="card">
+            <h3>Critères de réussite</h3>
+            <p>Le site doit être opérationnel, utilisé en conditions réelles, permettre aux pôles de saisir leurs indicateurs, produire des données cohérentes et rendre les utilisateurs autonomes.</p>
+          </div>
+          <div class="card">
+            <h3>Périmètre retenu</h3>
+            <p>Conception de l'intranet, développement des pages, formulaires de saisie, affichage des indicateurs, organisation des données et formation des utilisateurs.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="band" id="maquette">
+        <div class="section">
+          <h2>Apports de la maquette de validation</h2>
+          <p class="section-intro">
+            La maquette PPI précise le positionnement du projet : concevoir, développer et déployer
+            un site intranet complet, depuis l'analyse du besoin jusqu'à la formation des utilisateurs.
+            Elle confirme aussi que le projet doit représenter une rupture par rapport aux missions précédentes,
+            par sa dimension technique, organisationnelle et humaine.
+          </p>
+          <div class="grid-2">
+            <div class="card">
+              <h3>Objectif général validé</h3>
+              <p>Concevoir, développer et déployer un intranet permettant la saisie, la centralisation et la visualisation des indicateurs de performance.</p>
+              <div class="pill-row"><span class="pill">Front-end</span><span class="pill">Logique applicative</span><span class="pill">Données</span><span class="pill">Formation</span></div>
+            </div>
+            <div class="card">
+              <h3>Critères de réussite maquette</h3>
+              <p>Site accessible en interne, pôles ciblés capables de saisir et consulter, temps de saisie raisonnable, données structurées et autonomie des utilisateurs.</p>
+              <div class="pill-row"><span class="pill">Accessible</span><span class="pill">Simple</span><span class="pill">Exploitable</span><span class="pill">Évolutif</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="modules">
+        <h2>Périmètre fonctionnel réalisé</h2>
+        <p class="section-intro">
+          L'intranet est construit autour d'une navigation par activité. Chaque module répond à un besoin
+          opérationnel précis, avec des pages de saisie, des indicateurs ou des écrans de contrôle.
+        </p>
+        <div class="module-list">
+          <div class="module"><div class="icon">P</div><div><strong>Production</strong><span>Indicateurs généraux, maçonnerie, usine CBCO, saisie des volumes et productivité usine.</span></div></div>
+          <div class="module"><div class="icon">A</div><div><strong>Achats</strong><span>Import de PDF ONAYA, analyse des factures, contrôle d'historique, reconstruction visuelle et indicateurs mensuels.</span></div></div>
+          <div class="module"><div class="icon">C</div><div><strong>Commerce</strong><span>Liaison avec un fichier Excel, indicateurs mensuels, cumulés et suivi des appels d'offres.</span></div></div>
+          <div class="module"><div class="icon">€</div><div><strong>Comptabilité</strong><span>Import de balance âgée, suivi des retards clients et paiements en attente par société.</span></div></div>
+          <div class="module"><div class="icon">RH</div><div><strong>Ressources humaines</strong><span>Déclaration d'accident, lecture de fichiers Excel sécurité, recherche et synthèse des incidents.</span></div></div>
+          <div class="module"><div class="icon">U</div><div><strong>Administration</strong><span>Connexion, profils, gestion utilisateurs, permissions personnalisées et code d'administration.</span></div></div>
+        </div>
+      </section>
+
+      <section class="band" id="acteurs">
+        <div class="section">
+          <h2>Acteurs et rôle dans le projet</h2>
+          <p class="section-intro">
+            La maquette de validation positionne l'élève ingénieur comme pilote et réalisateur du projet,
+            avec un accompagnement direction et des validations terrain.
+          </p>
+          <div class="grid-3">
+            <div class="card"><h3>Anne-Cécile Goudalle</h3><p>Sponsor principal et pilote entreprise : arbitrages, validation, suivi rapproché et regard administratif/financier.</p></div>
+            <div class="card"><h3>Antoine Goudalle</h3><p>Validation opérationnelle, besoins terrain et cohérence des indicateurs liés à la production.</p></div>
+            <div class="card"><h3>José Goudalle</h3><p>Présidence du groupe : information, décisions stratégiques et validation finale.</p></div>
+            <div class="card"><h3>Équipes utilisatrices</h3><p>Consultation, tests terrain, appropriation de l'outil et utilisation au quotidien.</p></div>
+            <div class="card"><h3>Bpifrance Conseil</h3><p>Cadrage de la démarche de management visuel, des indicateurs et de l'animation de la performance.</p></div>
+            <div class="card"><h3>Gaspard de Wazières</h3><p>Cadrage, conception fonctionnelle, développement, coordination, tests, déploiement, formation et documentation.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="band" id="architecture">
+        <div class="section">
+          <h2>Architecture technique</h2>
+          <p class="section-intro">
+            Le choix technique reste pragmatique : une interface web statique, un serveur Node.js Express
+            et un stockage local en JSON avec des connecteurs vers PDF et Excel.
+          </p>
+          <div class="architecture">
+            <div class="arch-box"><h3>Client web</h3><p>HTML, CSS et JavaScript. Les pages sont séparées par métier et réutilisent une navigation commune, des composants visuels et des helpers partagés.</p></div>
+            <div class="arch-box"><h3>API Node.js</h3><p>Serveur Express exposant les routes de lecture, écriture, import, configuration Excel, contrôle achats et synchronisation de données.</p></div>
+            <div class="arch-box"><h3>Données</h3><p>Stockage JSON local côté serveur, localStorage côté navigateur pour certains usages, lecture PDF et fichiers Excel métier.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="avancement">
+        <h2>Avancement à mi-projet</h2>
+        <p class="section-intro">
+          La base de l'application est opérationnelle : authentification, menus, modules principaux,
+          import de données, graphiques et contrôles. Le travail restant porte surtout sur la consolidation,
+          les tests utilisateurs, la documentation et les finitions de robustesse.
+        </p>
+        <div class="progress">
+          <div class="progress-row"><strong>Structure globale</strong><div class="bar"><span style="width:88%"></span></div><span>88%</span></div>
+          <div class="progress-row"><strong>Authentification</strong><div class="bar"><span style="width:82%"></span></div><span>82%</span></div>
+          <div class="progress-row"><strong>Modules métiers</strong><div class="bar"><span style="width:76%"></span></div><span>76%</span></div>
+          <div class="progress-row"><strong>Imports PDF / Excel</strong><div class="bar"><span style="width:70%"></span></div><span>70%</span></div>
+          <div class="progress-row"><strong>Contrôle et qualité</strong><div class="bar"><span style="width:62%"></span></div><span>62%</span></div>
+          <div class="progress-row"><strong>Documentation finale</strong><div class="bar"><span style="width:45%"></span></div><span>45%</span></div>
+        </div>
+      </section>
+
+      <section class="band">
+        <div class="section">
+          <h2>Ce qui a déjà été développé</h2>
+          <div class="grid-3">
+            <div class="card">
+              <h3>Interface et navigation</h3>
+              <p>Création d'une interface cohérente, avec barre de navigation principale, sous-menus métier et pages protégées par permissions.</p>
+              <div class="pill-row"><span class="pill">Responsive</span><span class="pill">Menus</span><span class="pill">Profils</span></div>
+            </div>
+            <div class="card">
+              <h3>Traitement des données</h3>
+              <p>Mise en place de mécanismes d'import, parsing PDF achats, lecture Excel, historisation et restitution sous forme d'indicateurs.</p>
+              <div class="pill-row"><span class="pill">PDF</span><span class="pill">Excel</span><span class="pill">JSON</span></div>
+            </div>
+            <div class="card">
+              <h3>Sécurité applicative</h3>
+              <p>Connexion, expiration de session, rôles, permissions personnalisées, rate limiting et token serveur pour les écritures sensibles.</p>
+              <div class="pill-row"><span class="pill">Session</span><span class="pill">Permissions</span><span class="pill">Token</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="demo">
+        <h2>Démonstration prévue à l'oral</h2>
+        <p class="section-intro">
+          Pour l'oral de mi-projet, l'objectif est de montrer que le projet n'est pas seulement conceptuel :
+          il existe déjà une application navigable avec de vrais écrans et des traitements métier.
+        </p>
+        <div class="demo-board">
+          <div class="screen-list">
+            <a href="#demo">1. Connexion et droits</a>
+            <a href="#demo">2. Production</a>
+            <a href="#demo">3. Import achats PDF</a>
+            <a href="#demo">4. Contrôle imports</a>
+            <a href="#demo">5. Balance âgée</a>
+            <a href="#demo">6. RH sécurité</a>
+          </div>
+          <div class="screen">
+            <h3>Fil conducteur de présentation</h3>
+            <p>Commencer par le besoin métier, ouvrir l'application, montrer la navigation par service, puis détailler un exemple fort : l'import achats PDF et son contrôle. Terminer par l'architecture et les prochaines étapes.</p>
+            <div class="fake-window">
+              <div class="fake-window-head"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+              <div class="fake-body">
+                <div class="fake-card"><strong>PDF</strong><span></span><span></span></div>
+                <div class="fake-card"><strong>Excel</strong><span></span><span></span></div>
+                <div class="fake-card"><strong>KPI</strong><span></span><span></span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="band" id="icam">
+        <div class="section">
+          <h2>Alignement avec les attentes ICAM</h2>
+          <p class="section-intro">
+            Le cahier des charges PPI insiste sur la nécessité de présenter un projet concret,
+            piloté par l'élève ingénieur, avec des résultats mesurables et une prise de recul sur les
+            dimensions techniques, organisationnelles, économiques et humaines.
+          </p>
+          <div class="grid-4">
+            <div class="card"><h3>Gestion de projet</h3><p>Cadre, objectifs, planning, jalons, arbitrages et suivi d'avancement.</p></div>
+            <div class="card"><h3>Management humain</h3><p>Compréhension des besoins terrain, adoption utilisateur, formation et accompagnement.</p></div>
+            <div class="card"><h3>Approche économique</h3><p>Gain de temps, fiabilisation des données, meilleure prise de décision et évolutivité interne.</p></div>
+            <div class="card"><h3>Démarche technique</h3><p>Conception web, architecture, sécurité, parsing PDF, liaisons Excel et structuration des données.</p></div>
+          </div>
+          <div class="grid-2" style="margin-top:18px;">
+            <div class="card"><h3>Rapport écrit</h3><p>Le support doit mettre en évidence l'introduction, le contexte d'entreprise, les missions, la démarche projet, les résultats et le retour d'expérience.</p></div>
+            <div class="card"><h3>Oral</h3><p>L'évaluation porte sur la clarté, la méthode, la qualité des supports, la maîtrise du sujet et la capacité à répondre aux questions.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Focus : module Achats</h2>
+        <p class="section-intro">
+          Le module Achats est l'un des axes les plus avancés et les plus intéressants à présenter,
+          car il combine import PDF, transformation de données, contrôle utilisateur et indicateurs.
+        </p>
+        <div class="timeline">
+          <div class="step"><div class="step-number">1</div><div><h3>Dépôt des fichiers PDF</h3><p>L'utilisateur ajoute un ou plusieurs PDF ONAYA depuis la page de saisie achats.</p></div></div>
+          <div class="step"><div class="step-number">2</div><div><h3>Analyse serveur</h3><p>Le serveur extrait les factures et lignes, repère les montants, ressources, chantiers, BL, ARC et informations utiles.</p></div></div>
+          <div class="step"><div class="step-number">3</div><div><h3>Contrôle et historique</h3><p>Les imports sont historisés. La page de contrôle permet de filtrer par période, ouvrir le détail et supprimer un import.</p></div></div>
+          <div class="step"><div class="step-number">4</div><div><h3>Indicateurs</h3><p>Les données importées alimentent les tableaux de suivi mensuels et facilitent l'analyse des achats.</p></div></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Difficultés rencontrées</h2>
+        <p class="section-intro">
+          Le projet touche à plusieurs sujets réels : les formats de documents, la cohérence des données,
+          les droits utilisateurs et la qualité d'affichage. Ces difficultés ont guidé les choix techniques.
+        </p>
+        <div class="grid-2">
+          <div class="risk"><div class="risk-marker">!</div><div><h3>Formats PDF variables</h3><p>Les lignes de facture peuvent être irrégulières. Il faut donc prévoir des parsers tolérants, des avertissements et un contrôle visuel.</p></div></div>
+          <div class="risk"><div class="risk-marker">!</div><div><h3>Données Excel externes</h3><p>Les fichiers peuvent être déplacés, renommés ou modifiés. Le serveur gère des configurations, détections et messages d'erreur.</p></div></div>
+          <div class="risk"><div class="risk-marker">!</div><div><h3>Permissions</h3><p>Les écrans doivent être accessibles aux bonnes personnes seulement, sans bloquer la direction qui doit conserver un accès complet.</p></div></div>
+          <div class="risk"><div class="risk-marker">!</div><div><h3>Lisibilité des tableaux</h3><p>Certains écrans affichent beaucoup d'informations. Il faut travailler les filtres, tableaux responsives et états vides.</p></div></div>
+        </div>
+      </section>
+
+      <section class="band" id="suite">
+        <div class="section">
+          <h2>Prochaines étapes</h2>
+          <p class="section-intro">
+            La suite du projet consiste à stabiliser, tester avec des utilisateurs réels et préparer une version
+            présentable en fin de projet avec documentation et scénario de démonstration complet.
+          </p>
+          <div class="grid-3">
+            <div class="card"><h3>1. Stabiliser</h3><p>Vérifier les imports avec plusieurs jeux de données, corriger les cas limites et renforcer les messages d'erreur.</p></div>
+            <div class="card"><h3>2. Finaliser l'UX</h3><p>Harmoniser les écrans, réduire les zones trop chargées et rendre les workflows les plus fréquents plus fluides.</p></div>
+            <div class="card"><h3>3. Documenter</h3><p>Rédiger le guide d'utilisation, le bilan technique, les limites actuelles et les perspectives d'évolution.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="quote">
+          <p>
+            À mi-projet, l'application possède déjà une base fonctionnelle solide : elle permet de démontrer
+            une solution concrète, connectée aux besoins métier, et de préparer les validations terrain.
+          </p>
+          <a class="btn btn-primary" href="#top">Retour en haut</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      Rapport HTML autonome - styles, micro-interactions et visuels intégrés au fichier. Ouverture possible directement dans un navigateur, sans serveur.
+    </footer>
+  </div>
+</body>
+</html>
