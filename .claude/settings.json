@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(cd c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle; Get-ChildItem -Recurse | Where-Object {$_.PSIsContainer} | Select-Object FullName)",
+      "PowerShell(cd c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle; Get-ChildItem -Recurse -Directory | ForEach-Object {$_.FullName})"
+    ]
+  }
+}
