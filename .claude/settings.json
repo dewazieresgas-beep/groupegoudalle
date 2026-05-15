@@ -2,7 +2,24 @@
   "permissions": {
     "allow": [
       "PowerShell(cd c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle; Get-ChildItem -Recurse | Where-Object {$_.PSIsContainer} | Select-Object FullName)",
-      "PowerShell(cd c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle; Get-ChildItem -Recurse -Directory | ForEach-Object {$_.FullName})"
+      "PowerShell(cd c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle; Get-ChildItem -Recurse -Directory | ForEach-Object {$_.FullName})",
+      "PowerShell(cd c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle; Get-ChildItem -Recurse -File | Where-Object {$_.FullName -notmatch \"node_modules\"} | Group-Object Extension | Select-Object Name, Count)",
+      "Bash(cd c:\\\\\\\\Users\\\\\\\\gdewazieres\\\\\\\\Desktop\\\\\\\\groupegoudalle)",
+      "Bash(grep -E '\\\\.\\(html|js|css|json|md|bat|png\\)$')",
+      "PowerShell(cd \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\"; @\\(\"Index.html\", \"connexion.html\", \"inscription.html\"\\) | ForEach-Object { Write-Host \"=== client\\\\$_ ===\" ; \\(Get-Content \"client\\\\$_\" -TotalCount 30\\) -join \"`n\" })",
+      "PowerShell(cd \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\\\\client\\\\pages\"; Get-ChildItem -File | ForEach-Object {$_.Name})",
+      "Read(//c/Users/gdewazieres/Desktop/**)",
+      "Bash(python3 -c ' *)",
+      "Read(//mnt/c/Users/gdewazieres/**)",
+      "Read(//c/Users//**)",
+      "Read(//c//**)",
+      "Bash(python3 -c \"import os; print\\(os.listdir\\('/c/Users/gdewazieres/Desktop/groupegoudalle/client/assets/'\\)\\)\")",
+      "Bash(python3 -c \"import os; print\\(os.listdir\\(r'C:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\\\\client\\\\assets'\\)\\)\")",
+      "PowerShell(python3 \"C:\\\\Users\\\\gdewazieres\\\\Desktop\\\\gen_presentation.py\")"
+    ],
+    "additionalDirectories": [
+      "\\tmp",
+      "C:\\Users\\gdewazieres\\Desktop"
     ]
   }
 }
