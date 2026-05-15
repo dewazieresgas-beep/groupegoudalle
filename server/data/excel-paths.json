@@ -1,0 +1,15 @@
+{
+  "cbco_productivite": {
+    "folder": "Z:\\05-Production (CUB)\\4-Production\\00-KPI",
+    "filename": "KPI"
+  },
+  "gm": {
+    "folder": "X:\\03-Affaires\\INDICATEUR",
+    "filename": "INDICATEURS Goudalle Maçonnerie",
+    "sheet": "Données indicateurs"
+  },
+  "ao": {
+    "folder": "Z:\\03-BE\\Appel d'offre\\~A VOIR",
+    "filename": "Appels d'offre"
+  }
+}

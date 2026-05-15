@@ -670,8 +670,23 @@ app.put('/api/thresholds', requireToken, requireWriteRateLimit, (req, res) => {
 
 // ─── ROUTES : CBCO PRODUCTIVITÉ USINE ────────────────────────────────────────────
 
+function getCBCOProdConfig() {
+  let cfg = dbGet('cbco_productivite_excel_config', null);
+  if (!cfg || !cfg.active) {
+    try {
+      const backup = readExcelPathsBackup().cbco_productivite;
+      if (backup?.folder && backup?.filename) {
+        cfg = { ...backup, active: true };
+        dbSet('cbco_productivite_excel_config', cfg);
+        console.log(`[CBCO Productivité] Config restaurée depuis excel-paths.json : ${backup.folder}`);
+      }
+    } catch (_) {}
+  }
+  return cfg;
+}
+
 app.get('/api/cbco-productivite', (req, res) => {
-  const cfg = dbGet('cbco_productivite_excel_config', null);
+  const cfg = getCBCOProdConfig();
   if (!cfg || !cfg.active) return res.json({ entries: [], error: 'no_config' });
   try {
     const forceRefresh = req.query.refresh === '1' || req.query.force === '1';
@@ -909,7 +924,7 @@ function resolveExistingExcelPath(folder, filename) {
 }
 
 app.get('/api/cbco-productivite-excel-config', (req, res) => {
-  res.json(dbGet('cbco_productivite_excel_config', null));
+  res.json(getCBCOProdConfig());
 });
 
 app.put('/api/cbco-productivite-excel-config', requireToken, requireWriteRateLimit, (req, res) => {
@@ -919,6 +934,7 @@ app.put('/api/cbco-productivite-excel-config', requireToken, requireWriteRateLim
     const parsed = parseCBCOProdExcel({ folder, filename });
     const cfg = { folder, filename, active: true, stats: parsed.stats };
     dbSet('cbco_productivite_excel_config', cfg);
+    saveExcelPathBackup('cbco_productivite', { folder, filename });
     clearExcelReadCache('cbco_productivite');
     res.json({ success: true, stats: parsed.stats });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
@@ -926,6 +942,7 @@ app.put('/api/cbco-productivite-excel-config', requireToken, requireWriteRateLim
 
 app.delete('/api/cbco-productivite-excel-config', (req, res) => {
   dbSet('cbco_productivite_excel_config', null);
+  deleteExcelPathBackup('cbco_productivite');
   clearExcelReadCache('cbco_productivite');
   res.json({ success: true });
 });
@@ -1802,7 +1819,18 @@ function deleteKpiFromExcel(year, week, cfg) {
 
 // Helper : récupérer la config GM (retourne null si non configurée)
 function getGMConfig() {
-  return dbGet('gm_excel_config', null);
+  let cfg = dbGet('gm_excel_config', null);
+  if (!cfg || !cfg.active) {
+    try {
+      const backup = readExcelPathsBackup().gm;
+      if (backup?.folder && backup?.filename) {
+        cfg = { ...backup, active: true };
+        dbSet('gm_excel_config', cfg);
+        console.log(`[GM] Config restaurée depuis excel-paths.json : ${backup.folder}`);
+      }
+    } catch (_) {}
+  }
+  return cfg;
 }
 
 // Helper : message d'erreur lisible pour les erreurs fichier Excel
@@ -1841,6 +1869,7 @@ app.put('/api/gm-excel-config', requireToken, requireWriteRateLimit, (req, res) 
     const data = parseGMExcel({ folder, filename, sheet });
     const cfg = { folder, filename, sheet, active: true, lastSync: new Date().toISOString() };
     dbSet('gm_excel_config', cfg);
+    saveExcelPathBackup('gm', { folder, filename, sheet });
     clearExcelReadCache('gm_kpis');
     res.json({ success: true, result: { added: 0, updated: 0 }, rowCount: data.length });
   } catch (e) {
@@ -1852,6 +1881,7 @@ app.put('/api/gm-excel-config', requireToken, requireWriteRateLimit, (req, res) 
 app.delete('/api/gm-excel-config', (req, res) => {
   if (gmWatcher) { clearInterval(gmWatcher); gmWatcher = null; }
   dbSet('gm_excel_config', null);
+  deleteExcelPathBackup('gm');
   clearExcelReadCache('gm_kpis');
   res.json({ success: true });
 });
@@ -2615,7 +2645,18 @@ function commerceErrorPayload(error) {
 // ─── APPELS D'OFFRE : FONCTIONS UTILITAIRES ──────────────────────────────────
 
 function getAOConfig() {
-  return dbGet('ao_excel_config', null);
+  let cfg = dbGet('ao_excel_config', null);
+  if (!cfg || !cfg.active) {
+    try {
+      const backup = readExcelPathsBackup().ao;
+      if (backup?.folder && backup?.filename) {
+        cfg = { ...backup, active: true };
+        dbSet('ao_excel_config', cfg);
+        console.log(`[AO] Config restaurée depuis excel-paths.json : ${backup.folder}`);
+      }
+    } catch (_) {}
+  }
+  return cfg;
 }
 
 function normalizeAOStatus(raw) {
@@ -3061,8 +3102,59 @@ function getRHSecurityIncidentsCached(cfg, options = {}) {
   );
 }
 
+const EXCEL_PATHS_BACKUP_PATH = path.join(__dirname, 'data', 'excel-paths.json');
+
+function readExcelPathsBackup() {
+  try {
+    if (fs.existsSync(EXCEL_PATHS_BACKUP_PATH)) {
+      return JSON.parse(fs.readFileSync(EXCEL_PATHS_BACKUP_PATH, 'utf8'));
+    }
+  } catch (_) {}
+  return {};
+}
+
+function saveExcelPathBackup(key, pathData) {
+  try {
+    const all = readExcelPathsBackup();
+    all[key] = pathData;
+    fs.writeFileSync(EXCEL_PATHS_BACKUP_PATH, JSON.stringify(all, null, 2), 'utf8');
+  } catch (_) {}
+}
+
+function deleteExcelPathBackup(key) {
+  try {
+    const all = readExcelPathsBackup();
+    delete all[key];
+    fs.writeFileSync(EXCEL_PATHS_BACKUP_PATH, JSON.stringify(all, null, 2), 'utf8');
+  } catch (_) {}
+}
+
+const RH_FOLDER_BACKUP_PATH = path.join(__dirname, 'data', 'rh-folder.txt');
+
+function saveRHFolderBackup(folder) {
+  try { fs.writeFileSync(RH_FOLDER_BACKUP_PATH, folder, 'utf8'); } catch (_) {}
+}
+
+function deleteRHFolderBackup() {
+  try { if (fs.existsSync(RH_FOLDER_BACKUP_PATH)) fs.unlinkSync(RH_FOLDER_BACKUP_PATH); } catch (_) {}
+}
+
 function getRHSecurityConfig() {
-  return dbGet('rh_security_excel_config', null);
+  let cfg = dbGet('rh_security_excel_config', null);
+  if (!cfg || !cfg.active) {
+    // Restauration automatique depuis le fichier de sauvegarde du chemin
+    try {
+      if (fs.existsSync(RH_FOLDER_BACKUP_PATH)) {
+        const folder = fs.readFileSync(RH_FOLDER_BACKUP_PATH, 'utf8').trim();
+        if (folder) {
+          cfg = { folder, active: true };
+          dbSet('rh_security_excel_config', cfg);
+          console.log(`[RH Sécurité] Config restaurée depuis rh-folder.txt : ${folder}`);
+        }
+      }
+    } catch (_) {}
+  }
+  return cfg;
 }
 
 function readRHSecurityIncidentsFromExcel() {
@@ -3370,6 +3462,7 @@ app.put('/api/rh-security-excel-config', requireToken, requireWriteRateLimit, (r
     const incidents = parseRHSecurityExcels(cfg);
     const result = buildRHSecurityReadResult(incidents);
     dbSet('rh_security_excel_config', cfg);
+    saveRHFolderBackup(folder);
     clearExcelReadCache('rh_security_incidents');
     res.json({ success: true, result, incidentCount: incidents.length });
   } catch (e) {
@@ -3402,6 +3495,7 @@ app.delete('/api/rh-security-excel-config', (req, res) => {
     rhSecurityWatcher = null;
   }
   dbSet('rh_security_excel_config', null);
+  deleteRHFolderBackup();
   clearExcelReadCache('rh_security_incidents');
   res.json({ success: true });
 });
@@ -3480,6 +3574,7 @@ app.put('/api/ao-excel-config', requireToken, requireWriteRateLimit, (req, res) 
     const snapshot = readAOSnapshot({ folder, filename });
     const cfg = { folder, filename, active: true, lastSync: new Date().toISOString() };
     dbSet('ao_excel_config', cfg);
+    saveExcelPathBackup('ao', { folder, filename });
     aoCache = { snapshot: null, sourceKey: null, cachedAt: 0 };
     res.json({ success: true, rowCount: snapshot.summary.totalRows, reliableRows: snapshot.summary.reliableRows });
   } catch (e) {
@@ -3489,6 +3584,7 @@ app.put('/api/ao-excel-config', requireToken, requireWriteRateLimit, (req, res) 
 
 app.delete('/api/ao-excel-config', (req, res) => {
   dbSet('ao_excel_config', null);
+  deleteExcelPathBackup('ao');
   aoCache = { snapshot: null, sourceKey: null, cachedAt: 0 };
   res.json({ success: true });
 });
