@@ -5,6 +5,63 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Saisie Factures - Comptabilité - Intranet</title>
   <link rel="stylesheet" href="../css/style.css">
+  <style>
+    #message {
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      z-index: 9999;
+      min-width: 260px;
+      max-width: min(420px, calc(100vw - 32px));
+      margin: 0;
+      box-shadow: 0 10px 28px rgba(32, 45, 32, 0.18);
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.22s ease, transform 0.22s ease;
+      pointer-events: none;
+    }
+
+    #message.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .action-confirmation {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 7px 11px;
+      border-radius: 6px;
+      background: #e8f6e8;
+      border: 1px solid #cce8cc;
+      color: #256b31;
+      font-size: 0.86em;
+      font-weight: 700;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+
+    .action-confirmation.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .btn.btn-confirmed {
+      background: #5f9561;
+      box-shadow: 0 0 0 4px rgba(123, 173, 117, 0.22);
+    }
+
+    .flash-saved {
+      animation: flashSaved 1.6s ease;
+    }
+
+    @keyframes flashSaved {
+      0% { box-shadow: 0 0 0 0 rgba(123, 173, 117, 0); }
+      18% { box-shadow: 0 0 0 4px rgba(123, 173, 117, 0.28), var(--shadow-lg); }
+      100% { box-shadow: var(--shadow); }
+    }
+  </style>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -25,7 +82,7 @@
       <h1>🏗️ Sylve Support — Import Balance Âgée</h1>
       <p class="subtitle" style="margin-bottom: 24px; color: #666;">Importez l'export Excel Sage « Balance Âgée » pour chaque entreprise, mois par mois</p>
 
-      <div id="message" class="alert" style="display:none;"></div>
+      <div id="message" class="alert" style="display:none;" aria-live="polite"></div>
 
       <!-- ZONE D'IMPORT COMMUNE -->
       <div class="card ss-import-card">
@@ -60,7 +117,7 @@
       </div>
 
       <!-- CA DE REFERENCE PAR ENTREPRISE -->
-      <div class="card ss-import-card">
+      <div class="card ss-import-card" id="caReferenceCard">
         <div class="card-title"><h2 style="margin:0;">💰 CA de reference par entreprise (HT)</h2></div>
         <div class="card-body">
           <p style="color:var(--text-muted-dark); font-size:0.88em; margin-bottom:14px;">Reference unique (dernier bilan): saisissez le CA mensuel moyen HT, calcule a partir du bilan annuel / 12.</p>
@@ -83,6 +140,7 @@
             </div>
             <button class="btn btn-primary" id="caSaveBtn" onclick="saveCA()">💾 Enregistrer</button>
             <button class="btn btn-secondary" id="caEditBtn" onclick="editCAReference()" style="display:none;">✏️ Modifier</button>
+            <span id="caSaveStatus" class="action-confirmation" aria-live="polite">✅ CA enregistré</span>
           </div>
         </div>
       </div>
@@ -137,8 +195,43 @@
       msgDiv.textContent = message;
       msgDiv.className = `alert alert-${type}`;
       msgDiv.style.display = 'block';
-      window.scrollTo(0, 0);
-      if (type === 'success') setTimeout(() => { msgDiv.style.display = 'none'; }, 5000);
+      clearTimeout(window._messageTimer);
+      clearTimeout(window._messageHideTimer);
+      requestAnimationFrame(() => { msgDiv.classList.add('show'); });
+      if (type === 'success') {
+        window._messageTimer = setTimeout(() => {
+          msgDiv.classList.remove('show');
+          window._messageHideTimer = setTimeout(() => { msgDiv.style.display = 'none'; }, 240);
+        }, 3200);
+      }
+    }
+
+    function flashButton(btn, confirmedText) {
+      if (!btn) return;
+      const originalText = btn.textContent;
+      btn.textContent = confirmedText;
+      btn.classList.add('btn-confirmed');
+      setTimeout(() => {
+        btn.textContent = originalText;
+        btn.classList.remove('btn-confirmed');
+      }, 1600);
+    }
+
+    function showInlineStatus(id, text) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = text;
+      el.classList.add('show');
+      clearTimeout(el._hideTimer);
+      el._hideTimer = setTimeout(() => { el.classList.remove('show'); }, 3200);
+    }
+
+    function flashSection(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.remove('flash-saved');
+      void el.offsetWidth;
+      el.classList.add('flash-saved');
     }
 
     /**
@@ -436,7 +529,7 @@
             </table>
           </div>
           <div style="display:flex; gap:10px; margin-top:16px;">
-            <button class="btn btn-primary" onclick="confirmImport()">✅ Valider l'import</button>
+            <button class="btn btn-primary" onclick="confirmImport(this)">✅ Valider l'import</button>
             <button class="btn btn-secondary" onclick="cancelPreview()">❌ Annuler</button>
           </div>
         </div>`;
@@ -451,17 +544,19 @@
     /**
      * Confirme et sauvegarde l'import
      */
-    function confirmImport() {
+    function confirmImport(btn) {
       const p = window._pendingImport;
       if (!p) return;
 
       importSylveBalanceForEntreprise(p.entrepriseId, p.clients, p.periode, p.mois, p.annee);
       Auth.audit('SYLVE_IMPORT', `Import balance âgée ${ENT_LABELS[p.entrepriseId]} — ${MOIS_NOMS[p.mois]} ${p.annee} — ${p.clients.length} clients`);
       showMessage(`✅ Import ${ENT_LABELS[p.entrepriseId]} — ${MOIS_NOMS[p.mois]} ${p.annee} : ${p.clients.length} clients importés`, 'success');
+      flashButton(btn, '✅ Import validé');
 
       delete window._pendingImport;
       cancelPreview();
       refreshHistory();
+      flashSection('history' + p.entrepriseId.toUpperCase());
     }
 
     /**
@@ -478,7 +573,7 @@
     /**
      * Supprime un import spécifique
      */
-    function deleteImport(entrepriseId, importId) {
+    function deleteImport(entrepriseId, importId, btn) {
       const imports = getSylveImports(entrepriseId);
       const imp = imports.find(i => i.id === importId);
       if (!imp) return;
@@ -489,7 +584,9 @@
       deleteSylveImport(entrepriseId, importId);
       Auth.audit('SYLVE_IMPORT_DELETED', `Suppression import ${label}`);
       showMessage(`🗑️ Import ${label} supprimé`, 'success');
+      flashButton(btn, '✅ Supprimé');
       refreshHistory();
+      flashSection('history' + entrepriseId.toUpperCase());
     }
 
     /**
@@ -621,7 +718,7 @@
               <td style="text-align:center; white-space:nowrap;">
                 <button class="btn btn-small btn-secondary" onclick="showImportDetails('${id}', '${imp.id}')" title="Voir les données">👁️</button>
                 <button class="btn btn-small btn-secondary" onclick="replaceImport('${id}', ${imp.mois}, ${imp.annee})" title="Remplacer ce fichier">🔄</button>
-                <button class="btn btn-small btn-danger" onclick="deleteImport('${id}', '${imp.id}')" title="Supprimer">🗑️</button>
+                <button class="btn btn-small btn-danger" onclick="deleteImport('${id}', '${imp.id}', this)" title="Supprimer">🗑️</button>
               </td>
             </tr>`;
         });
@@ -708,6 +805,9 @@
       const dateTxt = ca.bilanDate ? new Date(ca.bilanDate).toLocaleDateString('fr-FR') : 'non renseignée';
       Auth.audit('SYLVE_CA', `CA de référence MAJ — date bilan: ${ca.bilanDate || 'N/A'} — CBCO: ${ca.cbco}, GC: ${ca.gc}, GM: ${ca.gm}`);
       showMessage(`✅ CA de référence enregistré (bilan du ${dateTxt})`, 'success');
+      flashButton(document.getElementById('caSaveBtn'), '✅ Enregistré');
+      showInlineStatus('caSaveStatus', `✅ CA enregistré (bilan du ${dateTxt})`);
+      flashSection('caReferenceCard');
       setCAEditable(false);
     }
 
