@@ -21,7 +21,10 @@
       "Bash(ConvertTo-Csv -NoTypeInformation)",
       "Bash(Out-String)",
       "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\" -Recurse -Force | Select-Object FullName | ForEach-Object { $_.FullName })",
-      "Bash(python -c ' *)"
+      "Bash(python -c ' *)",
+      "Bash(Get-ChildItem -Recurse -Directory)",
+      "Bash(Select-Object -First 50 FullName)",
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\\\\server\" -Exclude \"node_modules\" -Recurse | Where-Object {$_.Extension -in \".js\", \".json\"} | Select-Object FullName)"
     ],
     "additionalDirectories": [
       "\\tmp",
