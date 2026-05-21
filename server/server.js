@@ -64,16 +64,34 @@ setInterval(() => {
 
 // Fichier de stockage JSON
 const DB_PATH = path.join(__dirname, 'data', 'goudalle.json');
+const DB_BACKUP_PATH = path.join(__dirname, 'data', 'goudalle.json.bak');
 
 // ─── INITIALISATION DU STOCKAGE ──────────────────────────────────────────────────
 
 let store = {};
+function tryParseDB(filePath) {
+  try { return JSON.parse(fs.readFileSync(filePath, 'utf8')); } catch { return null; }
+}
 if (fs.existsSync(DB_PATH)) {
-  try { store = JSON.parse(fs.readFileSync(DB_PATH, 'utf8')); } catch { store = {}; }
+  const parsed = tryParseDB(DB_PATH);
+  if (parsed !== null) {
+    store = parsed;
+  } else if (fs.existsSync(DB_BACKUP_PATH)) {
+    // Fichier principal corrompu → restauration depuis la sauvegarde
+    const backup = tryParseDB(DB_BACKUP_PATH);
+    if (backup !== null) {
+      store = backup;
+      console.warn('[DB] goudalle.json corrompu, restauré depuis goudalle.json.bak');
+    }
+  }
 }
 
 function saveStore() {
-  fs.writeFileSync(DB_PATH, JSON.stringify(store, null, 2), 'utf8');
+  const json = JSON.stringify(store, null, 2);
+  const tmp = DB_PATH + '.tmp';
+  fs.writeFileSync(tmp, json, 'utf8');
+  fs.renameSync(tmp, DB_PATH); // écriture atomique : évite la corruption si crash pendant l'écriture
+  try { fs.writeFileSync(DB_BACKUP_PATH, json, 'utf8'); } catch (_) {}
 }
 
 // ─── UTILITAIRES ────────────────────────────────────────────────────────────────
@@ -3489,7 +3507,7 @@ app.post('/api/rh-security-add-accident', requireToken, requireWriteRateLimit, a
   }
 });
 
-app.delete('/api/rh-security-excel-config', (req, res) => {
+app.delete('/api/rh-security-excel-config', requireToken, (req, res) => {
   if (rhSecurityWatcher) {
     clearInterval(rhSecurityWatcher);
     rhSecurityWatcher = null;
