@@ -15175,207 +15175,11 @@
   },
   "chantiers": [
     {
-      "nom": "Wimereux 4",
+      "nom": "Wimereux 11",
       "adresse": "22 bis rue jean moulin, Wimereux 62930",
       "societe": "charpente",
       "chef": "Gaspard de Wazières",
-      "dateDebut": "2025-09-01",
-      "dateFin": "2026-09-01",
-      "montant": "500000",
-      "statut": "en_cours",
-      "lat": null,
-      "lng": null,
-      "suivi": {
-        "workflow": {
-          "obtention_marche": {
-            "done": false,
-            "notes": "Test contenus",
-            "docs": [
-              {
-                "id": "doc_1780306281289_lj3q",
-                "nom": "Suivi d'opération.pdf",
-                "description": "Suivie d'opérations",
-                "date": "2026-06-01",
-                "type": "application/pdf",
-                "size": 65846,
-                "path": "01-Obtention-Marche",
-                "thumb": null
-              },
-              {
-                "id": "doc_1780306294462_lz05",
-                "nom": "signature mail.png",
-                "description": "Signature mail",
-                "date": "2026-06-01",
-                "type": "image/png",
-                "size": 22453,
-                "path": "01-Obtention-Marche",
-                "thumb": "data:image/jpeg;base64,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"
-              }
-            ],
-            "checks": {}
-          },
-          "reunion_transfert": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {}
-          },
-          "signature_marche": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {
-              "signature_dossier": false,
-              "planning_contractuel": false
-            }
-          },
-          "comprendre_dossier": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {
-              "reunion_chantier_1": false
-            }
-          },
-          "planning_previsionnel": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {}
-          },
-          "pic": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {}
-          },
-          "liste_besoins": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {
-              "reunion_chantier_2": false
-            }
-          },
-          "suivi_etudes": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {
-              "ddc": false,
-              "delais_types": false,
-              "dossier_technique": false,
-              "plan_charpente": false,
-              "carnet_detail": false,
-              "note_calcul": false,
-              "calcul_specifiques": false
-            }
-          },
-          "bordereaux_envoi": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {}
-          },
-          "suivi_visas_etape": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {}
-          },
-          "faire_relances": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {}
-          },
-          "validation_etudes": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {}
-          },
-          "preparation_chantier": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {
-              "mode_operatoire": false,
-              "hygiene_securite": false,
-              "delais": false,
-              "budget_previsionnel": false,
-              "convention_prorata": false,
-              "ppsps": false,
-              "verification_assemblages": false
-            }
-          },
-          "reunion_passation": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {}
-          },
-          "lancement_commandes": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {
-              "compatibilite_pose": false,
-              "actualisation_planning": false
-            }
-          },
-          "reception_supports": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {
-              "qualite_reception": false,
-              "actualisation_planning_2": false
-            }
-          },
-          "suivi_chantier_ops": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {
-              "respect_delais": false,
-              "qualite_nc": false,
-              "securite": false
-            }
-          },
-          "fin_chantier": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {
-              "doe": false,
-              "pv_reception": false
-            }
-          },
-          "rex": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {
-              "retour_info": false,
-              "resultats": false
-            }
-          }
-        },
-        "lastModified": "2026-06-01T09:31:36.463Z"
-      },
-      "syncedAt": "2026-06-01T09:31:37.323Z",
-      "id": "9c09bbd76e55a9c9",
-      "createdBy": "sync-agent",
-      "createdAt": "2026-06-01T09:31:37.324Z",
-      "updatedAt": "2026-06-01T09:31:37.324Z"
-    },
-    {
-      "nom": "Wimereux 5",
-      "adresse": "22 bis rue jean moulin Wimereux 62930",
-      "societe": "charpente",
-      "chef": "Gaspard de Wazières",
-      "dateDebut": "2025-09-01",
+      "dateDebut": "2025-12-01",
       "dateFin": "2026-09-01",
       "montant": "500000",
       "statut": "en_cours",
@@ -15393,7 +15197,9 @@
             "done": false,
             "notes": "",
             "docs": [],
-            "checks": {}
+            "checks": {
+              "cr_transfert": false
+            }
           },
           "signature_marche": {
             "done": false,
@@ -15408,8 +15214,14 @@
             "done": false,
             "notes": "",
             "docs": [],
+            "checks": {}
+          },
+          "reunion_chantier_1": {
+            "done": false,
+            "notes": "",
+            "docs": [],
             "checks": {
-              "reunion_chantier_1": false
+              "cr_redige": false
             }
           },
           "planning_previsionnel": {
@@ -15434,8 +15246,15 @@
             "docs": [],
             "checks": {
               "liste_besoins_doc": false,
-              "jalons_doc": false,
-              "reunion_chantier_2": false
+              "jalons_doc": false
+            }
+          },
+          "reunion_chantier_2": {
+            "done": false,
+            "notes": "",
+            "docs": [],
+            "checks": {
+              "cr_redige": false
             }
           },
           "suivi_etudes": {
@@ -15455,14 +15274,6 @@
               "faire_relances": false
             }
           },
-          "validation_etudes": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {
-              "visa_obtenu": false
-            }
-          },
           "preparation_chantier": {
             "done": false,
             "notes": "",
@@ -15475,6 +15286,14 @@
               "convention_prorata": false,
               "ppsps": false,
               "verification_assemblages": false
+            }
+          },
+          "validation_etudes": {
+            "done": false,
+            "notes": "",
+            "docs": [],
+            "checks": {
+              "visa_obtenu": false
             }
           },
           "reunion_passation": {
@@ -15532,183 +15351,13 @@
             }
           }
         },
-        "lastModified": "2026-06-01T11:04:30.111Z"
+        "lastModified": "2026-06-01T13:41:01.415Z"
       },
-      "syncedAt": "2026-06-01T11:04:55.129Z",
-      "id": "1e87ff94d8714d31",
+      "syncedAt": "2026-06-01T13:41:03.306Z",
+      "id": "a41d5bac26414aea",
       "createdBy": "sync-agent",
-      "createdAt": "2026-06-01T10:03:47.836Z",
-      "updatedAt": "2026-06-01T11:04:55.129Z"
-    },
-    {
-      "nom": "",
-      "adresse": "",
-      "societe": "charpente",
-      "chef": "",
-      "dateDebut": "",
-      "dateFin": "",
-      "montant": "",
-      "statut": "planifie",
-      "lat": null,
-      "lng": null,
-      "suivi": {
-        "workflow": {
-          "obtention_marche": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {}
-          },
-          "reunion_transfert": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {}
-          },
-          "signature_marche": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {
-              "signature_dossier": false,
-              "planning_contractuel": false
-            }
-          },
-          "comprendre_dossier": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {
-              "reunion_chantier_1": false
-            }
-          },
-          "planning_previsionnel": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {
-              "planning_doc": false
-            }
-          },
-          "pic": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {
-              "pic_doc": false
-            }
-          },
-          "liste_besoins": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {
-              "liste_besoins_doc": false,
-              "jalons_doc": false,
-              "reunion_chantier_2": false
-            }
-          },
-          "suivi_etudes": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {
-              "ddc": false,
-              "delais_types": false,
-              "dossier_technique": false,
-              "plan_charpente": false,
-              "carnet_detail": false,
-              "note_calcul": false,
-              "calcul_specifiques": false,
-              "bordereaux_envoi": false,
-              "suivi_visas": false,
-              "faire_relances": false
-            }
-          },
-          "validation_etudes": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {
-              "visa_obtenu": false
-            }
-          },
-          "preparation_chantier": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {
-              "mode_operatoire": false,
-              "hygiene_securite": false,
-              "delais": false,
-              "budget_previsionnel": false,
-              "convention_prorata": false,
-              "ppsps": false,
-              "verification_assemblages": false
-            }
-          },
-          "reunion_passation": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {
-              "cr_passation": false
-            }
-          },
-          "lancement_commandes": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {
-              "compatibilite_pose": false,
-              "actualisation_planning": false
-            }
-          },
-          "reception_supports": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {
-              "qualite_reception": false,
-              "actualisation_planning_2": false
-            }
-          },
-          "suivi_chantier_ops": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {
-              "respect_delais": false,
-              "qualite_nc": false,
-              "securite": false
-            }
-          },
-          "fin_chantier": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {
-              "doe": false,
-              "pv_reception": false
-            }
-          },
-          "rex": {
-            "done": false,
-            "notes": "",
-            "docs": [],
-            "checks": {
-              "retour_info": false,
-              "resultats": false
-            }
-          }
-        },
-        "lastModified": "2026-06-01T11:05:22.606Z"
-      },
-      "syncedAt": "2026-06-01T11:05:25.103Z",
-      "id": "160d3b674255e8f7",
-      "createdBy": "sync-agent",
-      "createdAt": "2026-06-01T11:05:25.103Z",
-      "updatedAt": "2026-06-01T11:05:25.103Z"
+      "createdAt": "2026-06-01T13:41:03.311Z",
+      "updatedAt": "2026-06-01T13:41:03.311Z"
     }
   ]
 }
