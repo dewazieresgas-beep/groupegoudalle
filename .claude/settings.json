@@ -29,11 +29,18 @@
       "Bash(dir /b /s \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\")",
       "Bash(grep -E \"\\\\.\\(html|css|js\\)$\")",
       "Bash(node -e ' *)",
-      "Bash(powershell -Command \"\\(Get-Content 'client\\\\pages\\\\chantiers-charpente.html' -Raw\\) -replace 'SOCIETE = .charpente.', \\\\\"SOCIETE = 'maconnerie'\\\\\" -replace '🪵 Goudalle Charpente', '🧱 Goudalle Maçonnerie' -replace 'Chantiers Goudalle Charpente', 'Chantiers Goudalle Maçonnerie' -replace 'Réfection toiture Dupont', 'Mur de soutènement Martin' | Set-Content 'client\\\\pages\\\\chantiers-maconnerie.html' -Encoding UTF8\")"
+      "Bash(powershell -Command \"\\(Get-Content 'client\\\\pages\\\\chantiers-charpente.html' -Raw\\) -replace 'SOCIETE = .charpente.', \\\\\"SOCIETE = 'maconnerie'\\\\\" -replace '🪵 Goudalle Charpente', '🧱 Goudalle Maçonnerie' -replace 'Chantiers Goudalle Charpente', 'Chantiers Goudalle Maçonnerie' -replace 'Réfection toiture Dupont', 'Mur de soutènement Martin' | Set-Content 'client\\\\pages\\\\chantiers-maconnerie.html' -Encoding UTF8\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\" -Recurse -Depth 2)",
+      "Bash(Select-Object FullName, PSIsContainer)",
+      "Bash(Format-Table -AutoSize)",
+      "Bash(node -e \"const fs=require\\('fs'\\); const db=JSON.parse\\(fs.readFileSync\\('c:/Users/gdewazieres/Desktop/groupegoudalle/server/data/goudalle.json','utf8'\\)\\); console.log\\('clés:', Object.keys\\(db\\)\\); console.log\\('chantiers:', JSON.stringify\\(db.chantiers||[], null,2\\).substring\\(0,500\\)\\)\")",
+      "Bash(Copy-Item \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\\\\chantier-template\\\\index.html\" \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\\\\chantier-template\\\\Suivi-Chantier.html\")",
+      "PowerShell(Copy-Item \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\\\\chantier-template\\\\index.html\" \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\\\\chantier-template\\\\Suivi-Chantier.html\")"
     ],
     "additionalDirectories": [
       "\\tmp",
-      "C:\\Users\\gdewazieres\\Desktop"
+      "C:\\Users\\gdewazieres\\Desktop",
+      "c:\\Users\\gdewazieres\\.claude\\projects\\c--Users-gdewazieres-Desktop-groupegoudalle\\memory"
     ]
   }
 }

@@ -1,0 +1,14 @@
+{
+  "_notice": "Copier ce fichier en config.json et remplir les champs ci-dessous",
+
+  "serverUrl": "http://192.168.1.100:3000",
+  "serverToken": "COLLER_LE_TOKEN_DU_SERVEUR_ICI",
+
+  "chantiersFolder": "C:\\Users\\VOTRE_NOM\\Documents\\Chantiers",
+
+  "companyWifi": "NomDuWiFiEntreprise",
+
+  "syncIntervalMinutes": 5,
+
+  "maxFileMB": 40
+}

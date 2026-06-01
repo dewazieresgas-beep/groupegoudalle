@@ -72,6 +72,27 @@
     .save-status { font-size:13px; color:var(--text-muted-dark); }
     .save-status.ok { color:#1e8449; }
     .save-status.err { color:#b85c5c; }
+
+    /* Galerie dossier local */
+    .galerie-section { margin-top:22px; background:white; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,.07); overflow:hidden; }
+    .galerie-header { padding:13px 18px; background:#1e8449; color:white; font-weight:700; font-size:14px; display:flex; align-items:center; justify-content:space-between; }
+    .galerie-body { padding:16px 18px; }
+    .galerie-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:10px; }
+    .galerie-item { border-radius:8px; overflow:hidden; cursor:pointer; border:2px solid transparent; transition:border-color .2s; }
+    .galerie-item:hover { border-color:#1e8449; }
+    .galerie-item img { width:100%; aspect-ratio:1; object-fit:cover; display:block; }
+    .galerie-item-info { padding:5px 7px; background:#f7f3ef; font-size:11px; color:#5a6a7a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .galerie-doc-item { display:flex; align-items:center; gap:10px; padding:8px 10px; background:#f7f3ef; border-radius:7px; }
+    .galerie-doc-icon { font-size:22px; flex-shrink:0; }
+    .galerie-doc-info { flex:1; min-width:0; }
+    .galerie-doc-name { font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .galerie-doc-meta { font-size:11px; color:#8a7a6a; }
+    .galerie-empty { text-align:center; padding:32px 20px; color:#aaa; font-size:13px; }
+    .galerie-empty-icon { font-size:40px; margin-bottom:8px; }
+    .local-app-banner { background:#e8f5e9; border:1px solid #a5d6a7; border-radius:7px; padding:10px 14px; font-size:12.5px; color:#1e5a2e; display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+    .lightbox-bg { position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:999; display:flex; align-items:center; justify-content:center; cursor:zoom-out; }
+    .lightbox-img { max-width:90vw; max-height:90vh; border-radius:8px; box-shadow:0 4px 40px rgba(0,0,0,.5); }
+    .lightbox-cap { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); color:white; background:rgba(0,0,0,.6); padding:6px 16px; border-radius:20px; font-size:13px; }
   </style>
 </head>
 <body>
@@ -352,6 +373,81 @@
       cancelAddDoc(id);
       scheduleSave();
     }
+    // ===== GALERIE =====
+    function renderGalerie(wf) {
+      const photos = [], docs = [];
+      for (const phase of WORKFLOW_DEF) {
+        for (const etape of phase.etapes) {
+          for (const d of (wf[etape.id]?.docs || [])) {
+            if (d.thumb) photos.push({ ...d, etapeLabel: etape.label });
+            else if (d.nom) docs.push({ ...d, etapeLabel: etape.label });
+          }
+        }
+      }
+      const lastSync = chantier.suivi?.lastModified;
+      const syncLabel = lastSync ? 'Synchronisé le ' + new Date(lastSync).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) : 'Aucune synchronisation';
+      let html = `
+        <div class="galerie-section">
+          <div class="galerie-header">
+            📸 Dossier chantier — Photos &amp; Documents
+            <span style="font-size:12px;opacity:.8;font-weight:400;">${syncLabel}</span>
+          </div>
+          <div class="galerie-body">
+            <div class="local-app-banner">
+              🏗️ <span>Le conducteur de travaux remplit et ajoute les fichiers dans l'application locale sur son ordinateur. Les photos et documents s'affichent ici après synchronisation sur le réseau.</span>
+            </div>`;
+      if (photos.length === 0 && docs.length === 0) {
+        html += `<div class="galerie-empty"><div class="galerie-empty-icon">📂</div>Aucun fichier synchronisé pour l'instant.</div>`;
+      } else {
+        if (photos.length > 0) {
+          html += `<div class="docs-title" style="margin-bottom:10px;">🖼️ Photos (${photos.length})</div>
+            <div class="galerie-grid">
+              ${photos.map((p, i) => `
+                <div class="galerie-item" onclick="openLightbox('${i}')">
+                  <img src="${p.thumb}" alt="${escapeHtml(p.nom)}" loading="lazy">
+                  <div class="galerie-item-info" title="${escapeHtml(p.description || p.nom)}">${escapeHtml(p.description || p.nom)}</div>
+                </div>`).join('')}
+            </div>`;
+        }
+        if (docs.length > 0) {
+          html += `<div class="docs-title" style="margin-bottom:10px;margin-top:${photos.length ? 16 : 0}px;">📎 Documents (${docs.length})</div>
+            <div style="display:flex;flex-direction:column;gap:7px;">
+              ${docs.map(d => `
+                <div class="galerie-doc-item">
+                  <div class="galerie-doc-icon">${getDocIcon(d.nom, d.type)}</div>
+                  <div class="galerie-doc-info">
+                    <div class="galerie-doc-name" title="${escapeHtml(d.nom)}">${escapeHtml(d.nom)}</div>
+                    <div class="galerie-doc-meta">${escapeHtml(d.description || '')} · ${escapeHtml(d.date || '')} · ${escapeHtml(d.etapeLabel || '')}</div>
+                  </div>
+                </div>`).join('')}
+            </div>`;
+        }
+      }
+      html += '</div></div>';
+      window._galeriePhotos = photos;
+      return html;
+    }
+
+    function getDocIcon(nom, type) {
+      if (type && type.startsWith('image/')) return '🖼️';
+      if (/\.pdf$/i.test(nom||'')) return '📄';
+      if (/\.(xlsx?|csv)$/i.test(nom||'')) return '📊';
+      if (/\.(docx?)$/i.test(nom||'')) return '📝';
+      if (/\.(dwg|dxf)$/i.test(nom||'')) return '📐';
+      if (/\.(zip|rar)$/i.test(nom||'')) return '🗜️';
+      return '📎';
+    }
+
+    function openLightbox(idx) {
+      const photos = window._galeriePhotos || [];
+      const p = photos[idx]; if (!p) return;
+      const bg = document.createElement('div');
+      bg.className = 'lightbox-bg';
+      bg.innerHTML = `<img class="lightbox-img" src="${p.thumb}" alt="${escapeHtml(p.nom)}"><div class="lightbox-cap">${escapeHtml(p.description || p.nom)}</div>`;
+      bg.addEventListener('click', () => bg.remove());
+      document.body.appendChild(bg);
+    }
+
     function removeDoc(id, idx) {
       if (!confirm('Supprimer ce document ?')) return;
       chantier.suivi.workflow[id].docs.splice(idx, 1);
@@ -458,6 +554,8 @@
         </div>
 
         ${WORKFLOW_DEF.map(phase => renderPhase(phase, wf)).join('')}
+
+        ${renderGalerie(wf)}
 
         <div class="save-bar">
           ${isMine ? `<button onclick="save()" class="btn btn-primary" id="btn-save">💾 Enregistrer</button>` : ''}

@@ -3732,6 +3732,114 @@ app.delete('/api/chantiers/:id', requireToken, requireWriteRateLimit, (req, res)
   res.json({ success: true });
 });
 
+// ─── ROUTES : SYNC DOSSIER CHANTIER LOCAL ────────────────────────────────────────
+
+// POST /api/chantiers/sync
+// Reçoit data.json depuis l'agent de synchro, crée ou met à jour le chantier.
+// Retourne l'id serveur (stocké dans data.meta.serverId pour les syncs suivantes).
+app.post('/api/chantiers/sync', requireToken, requireWriteRateLimit, (req, res) => {
+  const { data, chantierId } = req.body;
+  if (!data || !data.infos) return res.status(400).json({ error: 'data invalide' });
+
+  const chantiers = dbGet('chantiers', []);
+  let idx = chantierId ? chantiers.findIndex(c => c.id === chantierId) : -1;
+
+  const infos    = data.infos   || {};
+  const workflow = data.workflow || {};
+  const meta     = data.meta    || {};
+
+  // Construire l'objet chantier à partir de data.json
+  const patch = {
+    nom       : infos.nom       || '',
+    adresse   : infos.adresse   || '',
+    societe   : infos.societe   || 'charpente',
+    chef      : infos.chef      || '',
+    dateDebut : infos.dateDebut || '',
+    dateFin   : infos.dateFin   || '',
+    montant   : infos.montant   || '',
+    statut    : infos.statut    || 'planifie',
+    lat       : infos.lat       || null,
+    lng       : infos.lng       || null,
+    suivi     : {
+      workflow,
+      lastModified : meta.lastModified || new Date().toISOString(),
+    },
+    syncedAt  : new Date().toISOString(),
+  };
+
+  if (idx !== -1) {
+    // Mise à jour — on préserve createdBy et createdAt
+    chantiers[idx] = {
+      ...chantiers[idx],
+      ...patch,
+      id        : chantiers[idx].id,
+      createdBy : chantiers[idx].createdBy,
+      createdAt : chantiers[idx].createdAt,
+      updatedAt : new Date().toISOString(),
+    };
+    dbSet('chantiers', chantiers);
+    return res.json({ success: true, chantierId: chantiers[idx].id, created: false });
+  }
+
+  // Nouveau chantier
+  const newChantier = {
+    ...patch,
+    id        : crypto.randomBytes(8).toString('hex'),
+    createdBy : 'sync-agent',
+    createdAt : new Date().toISOString(),
+    updatedAt : new Date().toISOString(),
+  };
+  chantiers.push(newChantier);
+  dbSet('chantiers', chantiers);
+  res.json({ success: true, chantierId: newChantier.id, created: true });
+});
+
+// POST /api/chantiers/:id/file
+// Reçoit un fichier encodé en base64 et le sauvegarde dans uploads/chantiers/:id/
+app.post('/api/chantiers/:id/file', requireToken, requireWriteRateLimit, (req, res) => {
+  const { path: filePath, content_b64 } = req.body;
+  const chantierId = req.params.id;
+
+  if (!filePath || !content_b64) return res.status(400).json({ error: 'path et content_b64 requis' });
+
+  // Sécurité : interdire la traversée de répertoire
+  const safePath = filePath.replace(/\.\./g, '_').replace(/^[/\\]+/, '');
+  if (!safePath || safePath.includes('..')) return res.status(400).json({ error: 'chemin invalide' });
+
+  const uploadDir = path.join(__dirname, 'uploads', 'chantiers', chantierId, path.dirname(safePath));
+  const fileName  = path.basename(safePath);
+
+  try {
+    fs.mkdirSync(uploadDir, { recursive: true });
+    const fileBuffer = Buffer.from(content_b64, 'base64');
+    fs.writeFileSync(path.join(uploadDir, fileName), fileBuffer);
+    res.json({ success: true, path: safePath, size: fileBuffer.length });
+  } catch (e) {
+    console.error('[sync] Erreur écriture fichier:', e.message);
+    res.status(500).json({ error: 'Erreur serveur: ' + e.message });
+  }
+});
+
+// GET /api/chantiers/:id/files
+// Liste les fichiers uploadés pour un chantier (utilisé par la fiche intranet)
+app.get('/api/chantiers/:id/files', (req, res) => {
+  const uploadDir = path.join(__dirname, 'uploads', 'chantiers', req.params.id);
+  if (!fs.existsSync(uploadDir)) return res.json([]);
+
+  function scanDir(dir, root, acc = []) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) scanDir(full, root, acc);
+      else acc.push({ path: path.relative(root, full).replace(/\\/g, '/'), size: fs.statSync(full).size });
+    }
+    return acc;
+  }
+  res.json(scanDir(uploadDir, uploadDir));
+});
+
+// Servir les fichiers uploadés en statique (lecture seule)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // ─── ROUTE FALLBACK ─────────────────────────────────────────────────────────────
 
 app.get('*', (req, res) => {
