@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chantiers Goudalle Charpente - Intranet Goudalle</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <style>
+    #map { height: 460px; width: 100%; z-index: 1; }
+
+    .filter-btn {
+      padding: 6px 14px; border: 1.5px solid var(--border); border-radius: 20px;
+      background: var(--lighter); color: var(--dark); cursor: pointer;
+      font-size: 13px; font-weight: 500; transition: all 0.2s;
+    }
+    .filter-btn:hover { border-color: var(--accent); background: var(--light); }
+    .filter-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+    .toggle-view-btn {
+      padding: 7px 16px; border-radius: 20px; border: 1.5px solid var(--border);
+      background: var(--lighter); cursor: pointer; font-size: 13px; font-weight: 500;
+      transition: all 0.2s; color: var(--dark);
+    }
+    .toggle-view-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+    .kpi-stat {
+      background: white; border-radius: 10px; padding: 14px 16px;
+      border: 1px solid var(--border); text-align: center; flex: 1; min-width: 90px;
+    }
+    .kpi-stat-value { font-size: 24px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+    .kpi-stat-label { font-size: 11px; color: var(--text-muted-dark); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    .chantier-card {
+      background: white; border-radius: 10px; border: 1px solid var(--border);
+      padding: 16px; transition: box-shadow 0.2s;
+    }
+    .chantier-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+
+    .badge-statut { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; color: white; }
+    .badge-mine { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; background: var(--light); color: var(--text-muted-dark); border: 1px solid var(--border); }
+
+    .btn-sm { padding: 5px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--lighter); cursor: pointer; font-size: 12px; transition: all 0.2s; white-space: nowrap; }
+    .btn-sm:hover { background: var(--light); border-color: var(--accent); }
+    .btn-danger-sm { border-color: #f5ecec; background: #f5ecec; color: var(--danger); }
+    .btn-danger-sm:hover { background: var(--danger); color: white; border-color: var(--danger); }
+    .btn-fiche { background: var(--primary); color: white; border-color: var(--primary); }
+    .btn-fiche:hover { background: var(--secondary); border-color: var(--secondary); color: white; }
+
+    /* Modal */
+    #modal-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px; }
+    #modal-box { background:white; border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,0.3); width:100%; max-width:560px; max-height:92vh; overflow-y:auto; }
+    .modal-header { padding:20px 24px 16px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); position:sticky; top:0; background:white; z-index:1; }
+    .modal-title { font-size:18px; font-weight:700; color:var(--dark); margin:0; }
+    .modal-close { background:none; border:none; font-size:22px; cursor:pointer; color:var(--text-muted-dark); padding:0; line-height:1; }
+    .modal-close:hover { color:var(--danger); }
+    .modal-body { padding:20px 24px; }
+    .modal-footer { padding:16px 24px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:flex-end; position:sticky; bottom:0; background:white; }
+    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .form-group { margin-bottom:14px; }
+    .form-group label { display:block; font-size:13px; font-weight:600; margin-bottom:5px; color:var(--dark); }
+    .form-group input, .form-group select, .form-group textarea { width:100%; padding:8px 10px; border:1.5px solid var(--border); border-radius:6px; font-size:13px; box-sizing:border-box; background:var(--lighter); color:var(--dark); font-family:inherit; transition:border-color 0.2s; }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline:none; border-color:var(--accent); background:white; }
+    .form-group textarea { resize:vertical; }
+    .btn-geocode { padding:8px 12px; background:var(--accent); color:white; border:none; border-radius:6px; cursor:pointer; font-size:12px; white-space:nowrap; transition:background 0.2s; flex-shrink:0; }
+    .btn-geocode:hover { background:var(--accent-dark); }
+    .btn-geocode:disabled { opacity:0.6; cursor:not-allowed; }
+    .geocode-row { display:flex; gap:8px; align-items:center; }
+    .geocode-row input { flex:1; }
+    #geocode-feedback { font-size:12px; margin-top:4px; padding:4px 8px; border-radius:4px; display:none; }
+    #geocode-feedback.success { background:#edf4ec; color:var(--success); }
+    #geocode-feedback.error { background:#f5ecec; color:var(--danger); }
+    .map-click-hint { background:var(--light); border:1px solid var(--border); border-radius:6px; padding:8px 12px; font-size:12px; color:var(--text-muted-dark); margin-top:6px; }
+    .empty-state { text-align:center; padding:48px 24px; color:var(--text-muted-dark); }
+    .empty-state p:first-child { font-size:40px; margin-bottom:8px; }
+    .loading-overlay { display:flex; align-items:center; justify-content:center; height:200px; color:var(--text-muted-dark); font-size:14px; gap:8px; }
+  </style>
+</head>
+<body>
+  <script src="../js/api.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+  <script>Auth.requirePermission('chantiers');</script>
+
+  <div class="app-container">
+    <div id="sidebar"></div>
+    <main class="main-content">
+
+      <div class="d-flex justify-between items-center mb-3" style="gap:12px;flex-wrap:wrap;">
+        <div>
+          <h1 class="mb-0">🪵 Goudalle Charpente</h1>
+          <p style="color:var(--text-muted-dark);margin:4px 0 0;font-size:14px;">Géolocalisation et suivi des chantiers</p>
+        </div>
+        <button onclick="openModal()" class="btn btn-primary">+ Ajouter un chantier</button>
+      </div>
+
+      <!-- KPI + toggle vue -->
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+        <div id="stats-row" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span style="font-size:13px;color:var(--text-muted-dark);">Afficher :</span>
+          <button class="toggle-view-btn active" id="btn-mes" onclick="setScope('mes')">👤 Mes chantiers</button>
+          <button class="toggle-view-btn" id="btn-tous" onclick="setScope('tous')">🌍 Tous</button>
+        </div>
+      </div>
+
+      <!-- Filtres statut -->
+      <div class="card" style="padding:14px 18px;margin-bottom:16px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <span style="font-size:13px;font-weight:600;color:var(--text-muted-dark);margin-right:4px;">Filtrer :</span>
+          <button onclick="setFilter('tous')" id="filter-tous" class="filter-btn active">Tous</button>
+          <button onclick="setFilter('planifie')" id="filter-planifie" class="filter-btn">🔵 Planifié</button>
+          <button onclick="setFilter('en_cours')" id="filter-en_cours" class="filter-btn">🟠 En cours</button>
+          <button onclick="setFilter('termine')" id="filter-termine" class="filter-btn">🟢 Terminé</button>
+          <button onclick="setFilter('probleme')" id="filter-probleme" class="filter-btn">🔴 Problème</button>
+        </div>
+      </div>
+
+      <!-- Carte -->
+      <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;border-radius:10px;">
+        <div id="map"></div>
+        <div style="padding:10px 14px;border-top:1px solid var(--border);background:var(--lighter);display:flex;gap:18px;flex-wrap:wrap;">
+          <span style="font-size:12px;color:var(--text-muted-dark);"><span style="display:inline-block;width:12px;height:12px;background:#6b8e9f;border-radius:50%;margin-right:5px;vertical-align:middle;"></span>Planifié</span>
+          <span style="font-size:12px;color:var(--text-muted-dark);"><span style="display:inline-block;width:12px;height:12px;background:#d4a574;border-radius:50%;margin-right:5px;vertical-align:middle;"></span>En cours</span>
+          <span style="font-size:12px;color:var(--text-muted-dark);"><span style="display:inline-block;width:12px;height:12px;background:#7bad75;border-radius:50%;margin-right:5px;vertical-align:middle;"></span>Terminé</span>
+          <span style="font-size:12px;color:var(--text-muted-dark);"><span style="display:inline-block;width:12px;height:12px;background:#b85c5c;border-radius:50%;margin-right:5px;vertical-align:middle;"></span>Problème</span>
+        </div>
+      </div>
+
+      <!-- Liste -->
+      <div id="chantiers-list"></div>
+    </main>
+  </div>
+
+  <!-- Modal -->
+  <div id="modal-overlay" style="display:none;">
+    <div id="modal-box">
+      <div class="modal-header">
+        <h2 class="modal-title" id="modal-title">Ajouter un chantier</h2>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Nom du chantier *</label>
+          <input type="text" id="form-nom" placeholder="Ex : Réfection toiture Dupont">
+        </div>
+        <div class="form-group">
+          <label>Adresse</label>
+          <div class="geocode-row">
+            <input type="text" id="form-adresse" placeholder="Ex : 12 rue de la Paix, 75001 Paris">
+            <button type="button" class="btn-geocode" onclick="geocodeAdresse()" id="btn-geocode">📍 Localiser</button>
+          </div>
+          <div id="geocode-feedback"></div>
+          <div class="map-click-hint">🖱️ Ou <strong>cliquez sur la carte</strong> pour placer le marqueur</div>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="margin-bottom:0;"><label>Latitude</label><input type="number" id="form-lat" step="any" placeholder="48.856600"></div>
+          <div class="form-group" style="margin-bottom:0;"><label>Longitude</label><input type="number" id="form-lng" step="any" placeholder="2.352200"></div>
+        </div>
+        <div style="margin-bottom:14px;"></div>
+        <div class="form-group">
+          <label>Statut</label>
+          <select id="form-statut">
+            <option value="planifie">🔵 Planifié</option>
+            <option value="en_cours">🟠 En cours</option>
+            <option value="termine">🟢 Terminé</option>
+            <option value="probleme">🔴 Problème</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Chef de chantier</label><input type="text" id="form-chef" placeholder="Prénom Nom"></div>
+        <div class="form-row">
+          <div class="form-group" style="margin-bottom:0;"><label>Date de début</label><input type="date" id="form-date-debut"></div>
+          <div class="form-group" style="margin-bottom:0;"><label>Date de fin prévue</label><input type="date" id="form-date-fin"></div>
+        </div>
+        <div style="margin-bottom:14px;"></div>
+        <div class="form-group"><label>Montant HT (€)</label><input type="number" id="form-montant" placeholder="85000" step="100" min="0"></div>
+        <div class="form-group" style="margin-bottom:0;"><label>Notes</label><textarea id="form-notes" rows="2" placeholder="Informations complémentaires..."></textarea></div>
+      </div>
+      <div class="modal-footer">
+        <button onclick="closeModal()" class="btn btn-secondary">Annuler</button>
+        <button onclick="saveChantier()" class="btn btn-primary" id="btn-save">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const SOCIETE = 'charpente';
+    const STATUTS = {
+      planifie: { label: 'Planifié',  color: '#6b8e9f' },
+      en_cours: { label: 'En cours',  color: '#d4a574' },
+      termine:  { label: 'Terminé',   color: '#7bad75' },
+      probleme: { label: 'Problème',  color: '#b85c5c' },
+    };
+
+    // Ordre des étapes du workflow (même ordre que la fiche)
+    const ETAPES_ORDER = [
+      ["S'approprier", 'obtention_marche',      'Obtention du marché'],
+      ["S'approprier", 'reunion_transfert',      'Réunion de transfert'],
+      ["S'approprier", 'signature_marche',       'Signature du marché'],
+      ["S'approprier", 'comprendre_dossier',     'Comprendre le dossier'],
+      ['Lancement',    'planning_previsionnel',  'Planning Prévisionnel'],
+      ['Lancement',    'pic',                    'PIC'],
+      ['Lancement',    'liste_besoins',          "Besoins d'étude + Jalons"],
+      ['Études',       'suivi_etudes',           'Diffusion EXE'],
+      ['Études',       'bordereaux_envoi',       "Bordereaux d'envoi"],
+      ['Études',       'suivi_visas_etape',      'Suivi des visas'],
+      ['Études',       'faire_relances',         'Relances'],
+      ['Études',       'validation_etudes',      'Validation des études'],
+      ['Méthodes',     'preparation_chantier',   'Préparation chantier'],
+      ['Méthodes',     'reunion_passation',      'Réunion de passation'],
+      ['Suivi',        'lancement_commandes',    'Lancement des commandes'],
+      ['Suivi',        'reception_supports',     'Réception des supports'],
+      ['Suivi',        'suivi_chantier_ops',     'Suivi chantier'],
+      ['Suivi',        'fin_chantier',           'Fin de chantier'],
+      ['Suivi',        'rex',                    'REX'],
+    ];
+
+    function getChantierProgress(c) {
+      const wf = c.suivi?.workflow || {};
+      const total = ETAPES_ORDER.length;
+      const done = ETAPES_ORDER.filter(([, id]) => wf[id]?.done).length;
+      const current = ETAPES_ORDER.find(([, id]) => !wf[id]?.done);
+      const pct = Math.round(done / total * 100);
+      return { total, done, pct, phase: current?.[0] || null, label: current?.[2] || null };
+    }
+
+    let map, markers = {}, allChantiers = [], editingId = null;
+    let currentFilter = 'tous', currentScope = 'mes', tempClickMarker = null;
+    let currentUser = null;
+
+    // ===== API =====
+    async function apiGet(path) {
+      const res = await fetch(SERVER_URL + path);
+      return res.ok ? res.json() : null;
+    }
+    async function apiPost(path, body) {
+      const res = await fetch(SERVER_URL + path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goudalle-token': window._serverToken },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+      return data;
+    }
+    async function apiPut(path, body) {
+      const res = await fetch(SERVER_URL + path, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-goudalle-token': window._serverToken },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+      return data;
+    }
+    async function apiDelete(path) {
+      const res = await fetch(SERVER_URL + path, {
+        method: 'DELETE',
+        headers: { 'x-goudalle-token': window._serverToken }
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
+      return data;
+    }
+
+    // ===== MÉTÉO =====
+    const weatherCache = {};
+    function wmoToEmoji(c) {
+      if (c === 0) return '☀️';
+      if (c <= 2) return '🌤️';
+      if (c <= 3) return '☁️';
+      if (c <= 48) return '🌫️';
+      if (c <= 57) return '🌦️';
+      if (c <= 67) return '🌧️';
+      if (c <= 77) return '❄️';
+      if (c <= 82) return '🌦️';
+      if (c <= 86) return '🌨️';
+      return '⛈️';
+    }
+    async function fetchWeather(lat, lng, containerId) {
+      const el = document.getElementById(containerId);
+      if (!el) return;
+      const key = `${lat},${lng}`;
+      if (weatherCache[key]) { el.innerHTML = weatherCache[key]; return; }
+      try {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max&timezone=Europe%2FParis&forecast_days=5`;
+        const data = await (await fetch(url)).json();
+        const d = data.daily;
+        const noms = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+        let html = '<div style="margin-top:10px;padding-top:8px;border-top:1px solid #e8e0d8;"><div style="font-size:11px;font-weight:700;color:#7a6a5a;margin-bottom:6px;letter-spacing:.5px;">PRÉVISIONS MÉTÉO</div><div style="display:flex;gap:5px;">';
+        for (let i = 0; i < 5; i++) {
+          const date = new Date(d.time[i]);
+          const jour = i === 0 ? 'Auj.' : noms[date.getDay()];
+          const precip = d.precipitation_sum[i];
+          const wind = Math.round(d.windspeed_10m_max[i]);
+          html += `<div style="flex:1;text-align:center;background:#f7f3ef;border-radius:7px;padding:5px 2px;">
+            <div style="font-size:10px;font-weight:600;color:#8a7a6a;">${jour}</div>
+            <div style="font-size:17px;line-height:1.3;">${wmoToEmoji(d.weathercode[i])}</div>
+            <div style="font-size:11px;color:#c0392b;font-weight:700;">${Math.round(d.temperature_2m_max[i])}°</div>
+            <div style="font-size:10px;color:#7f8c8d;">${Math.round(d.temperature_2m_min[i])}°</div>
+            ${precip > 0 ? `<div style="font-size:9px;color:#2980b9;">💧${precip}mm</div>` : ''}
+            <div style="font-size:9px;color:#95a5a6;">💨${wind}km/h</div>
+          </div>`;
+        }
+        html += '</div></div>';
+        weatherCache[key] = html;
+        if (document.getElementById(containerId)) el.innerHTML = html;
+      } catch { if (document.getElementById(containerId)) el.innerHTML = '<div style="font-size:11px;color:#aaa;margin-top:8px;">Météo indisponible</div>'; }
+    }
+
+    // ===== DONNÉES =====
+    async function loadChantiers() {
+      const all = await apiGet('/chantiers') || [];
+      allChantiers = all.filter(c => c.societe === SOCIETE);
+    }
+
+    function getFilteredList() {
+      let list = currentScope === 'mes'
+        ? allChantiers.filter(c => c.createdBy === currentUser)
+        : allChantiers;
+      if (currentFilter !== 'tous') list = list.filter(c => c.statut === currentFilter);
+      return list;
+    }
+
+    // ===== CARTE =====
+    function initMap() {
+      map = L.map('map').setView([46.5, 2.5], 6);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19
+      }).addTo(map);
+      map.on('click', e => {
+        if (document.getElementById('modal-overlay').style.display === 'none') return;
+        document.getElementById('form-lat').value = e.latlng.lat.toFixed(6);
+        document.getElementById('form-lng').value = e.latlng.lng.toFixed(6);
+        if (tempClickMarker) map.removeLayer(tempClickMarker);
+        tempClickMarker = L.marker([e.latlng.lat, e.latlng.lng], { icon: dotIcon('#8ba88a') }).addTo(map);
+      });
+    }
+
+    function pinIcon(color) {
+      return L.divIcon({
+        html: `<div style="background:${color};width:22px;height:22px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.35);"></div>`,
+        iconSize: [22,22], iconAnchor: [11,22], popupAnchor: [0,-26], className: ''
+      });
+    }
+    function dotIcon(color) {
+      return L.divIcon({
+        html: `<div style="background:${color};width:16px;height:16px;border-radius:50%;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.4);"></div>`,
+        iconSize: [16,16], iconAnchor: [8,8], className: ''
+      });
+    }
+
+    function buildProgressHTML(c) {
+      const p = getChantierProgress(c);
+      const barColor = p.pct === 100 ? '#7bad75' : p.pct >= 50 ? '#d4a574' : '#6b8e9f';
+      return `<div style="margin:8px 0;padding:8px 0;border-top:1px solid #eee;border-bottom:1px solid #eee;">
+        <div style="display:flex;justify-content:space-between;font-size:10.5px;color:#777;margin-bottom:4px;">
+          <span style="font-weight:600;">Avancement</span>
+          <span>${p.done}/${p.total} étapes · ${p.pct}%</span>
+        </div>
+        <div style="background:#e8e3de;border-radius:4px;height:6px;overflow:hidden;margin-bottom:5px;">
+          <div style="background:${barColor};height:100%;width:${p.pct}%;border-radius:4px;"></div>
+        </div>
+        ${p.label
+          ? `<div style="font-size:11px;color:#7a6a5a;">📍 <strong>${escapeHtml(p.phase)}</strong> — ${escapeHtml(p.label)}</div>`
+          : `<div style="font-size:11px;color:#1e8449;font-weight:600;">✅ Toutes les étapes sont terminées</div>`
+        }
+      </div>`;
+    }
+
+    function buildPopupHTML(c) {
+      const s = STATUTS[c.statut] || STATUTS.planifie;
+      const montant = c.montant ? Number(c.montant).toLocaleString('fr-FR') + ' € HT' : '';
+      const dates = (c.dateDebut || c.dateFin) ? `📅 ${formatDate(c.dateDebut)} → ${formatDate(c.dateFin)}` : '';
+      const isMine = c.createdBy === currentUser;
+      return `
+        <div style="min-width:210px;font-family:Arial,sans-serif;font-size:13px;line-height:1.5;">
+          <div style="font-weight:700;font-size:15px;margin-bottom:4px;">${escapeHtml(c.nom)}</div>
+          ${c.adresse ? `<div style="color:#555;margin-bottom:4px;">📍 ${escapeHtml(c.adresse)}</div>` : ''}
+          <div style="margin-bottom:6px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+            <span style="background:${s.color};color:white;padding:2px 9px;border-radius:12px;font-size:12px;font-weight:600;">${s.label}</span>
+            ${c.chef ? `<span style="font-size:12px;">👷 ${escapeHtml(c.chef)}</span>` : ''}
+          </div>
+          ${dates ? `<div style="margin-bottom:3px;">${dates}</div>` : ''}
+          ${montant ? `<div style="margin-bottom:3px;">💶 ${montant}</div>` : ''}
+          ${!isMine ? `<div style="font-size:11px;color:#888;margin-bottom:4px;">CT : ${escapeHtml(c.createdBy || '')}</div>` : ''}
+          ${buildProgressHTML(c)}
+          <div style="display:flex;gap:5px;margin-top:10px;flex-wrap:wrap;">
+            <a href="chantiers-fiche.html?id=${c.id}" style="flex:1;text-align:center;padding:5px 8px;background:var(--primary,#5a4a3a);color:white;border:none;border-radius:5px;cursor:pointer;font-size:12px;text-decoration:none;">📋 Fiche</a>
+            ${isMine ? `<button onclick="editChantier('${c.id}')" style="flex:1;padding:5px 8px;background:#6b8e9f;color:white;border:none;border-radius:5px;cursor:pointer;font-size:12px;">✏️ Modifier</button>` : ''}
+            ${isMine ? `<button onclick="deleteChantier('${c.id}')" style="flex:1;padding:5px 8px;background:#b85c5c;color:white;border:none;border-radius:5px;cursor:pointer;font-size:12px;">🗑️</button>` : ''}
+          </div>
+          ${c.lat && c.lng ? `<div id="meteo-${c.id}" style="font-size:11px;color:#aaa;margin-top:8px;">⏳ Chargement météo…</div>` : ''}
+        </div>`;
+    }
+
+    function renderMarkers() {
+      Object.values(markers).forEach(m => map.removeLayer(m));
+      markers = {};
+      getFilteredList().forEach(c => {
+        if (!c.lat || !c.lng) return;
+        const s = STATUTS[c.statut] || STATUTS.planifie;
+        const m = L.marker([c.lat, c.lng], { icon: pinIcon(s.color) })
+          .addTo(map).bindPopup(buildPopupHTML(c), { maxWidth: 320 });
+        m.on('popupopen', () => fetchWeather(c.lat, c.lng, `meteo-${c.id}`));
+        markers[c.id] = m;
+      });
+    }
+
+    // ===== STATS =====
+    function renderStats() {
+      const base = currentScope === 'mes' ? allChantiers.filter(c => c.createdBy === currentUser) : allChantiers;
+      const counts = { planifie:0, en_cours:0, termine:0, probleme:0 };
+      base.forEach(c => { if (counts[c.statut] !== undefined) counts[c.statut]++; });
+      document.getElementById('stats-row').innerHTML = `
+        <div class="kpi-stat"><div class="kpi-stat-value" style="color:var(--primary);">${base.length}</div><div class="kpi-stat-label">Total</div></div>
+        <div class="kpi-stat"><div class="kpi-stat-value" style="color:#6b8e9f;">${counts.planifie}</div><div class="kpi-stat-label">Planifiés</div></div>
+        <div class="kpi-stat"><div class="kpi-stat-value" style="color:#d4a574;">${counts.en_cours}</div><div class="kpi-stat-label">En cours</div></div>
+        <div class="kpi-stat"><div class="kpi-stat-value" style="color:#7bad75;">${counts.termine}</div><div class="kpi-stat-label">Terminés</div></div>
+        <div class="kpi-stat"><div class="kpi-stat-value" style="color:#b85c5c;">${counts.probleme}</div><div class="kpi-stat-label">Problèmes</div></div>`;
+    }
+
+    // ===== LISTE =====
+    function buildCardHTML(c) {
+      const s = STATUTS[c.statut] || STATUTS.planifie;
+      const montant = c.montant ? Number(c.montant).toLocaleString('fr-FR') + ' € HT' : '';
+      const dates = (c.dateDebut || c.dateFin) ? `📅 ${formatDate(c.dateDebut)} → ${formatDate(c.dateFin)}` : '';
+      const isMine = c.createdBy === currentUser;
+      return `
+        <div class="chantier-card" style="border-left:4px solid ${s.color};">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;gap:8px;">
+            <div style="font-weight:700;font-size:15px;color:var(--dark);">${escapeHtml(c.nom)}</div>
+            <div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">
+              ${!isMine ? `<span class="badge-mine">CT: ${escapeHtml(c.createdBy || '')}</span>` : ''}
+              <span class="badge-statut" style="background:${s.color};">${s.label}</span>
+            </div>
+          </div>
+          ${c.adresse ? `<div style="font-size:13px;color:var(--text-muted-dark);margin-bottom:3px;">📍 ${escapeHtml(c.adresse)}</div>` : ''}
+          ${c.chef ? `<div style="font-size:13px;margin-bottom:3px;">👷 ${escapeHtml(c.chef)}</div>` : ''}
+          ${dates ? `<div style="font-size:13px;margin-bottom:3px;">${dates}</div>` : ''}
+          ${montant ? `<div style="font-size:13px;margin-bottom:3px;">💶 ${montant}</div>` : ''}
+          <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
+            <a href="chantiers-fiche.html?id=${c.id}" class="btn-sm btn-fiche">📋 Fiche suivi</a>
+            ${c.lat && c.lng ? `<button onclick="centerOnMarker('${c.id}')" class="btn-sm">🗺️ Carte</button>` : ''}
+            ${isMine ? `<button onclick="editChantier('${c.id}')" class="btn-sm">✏️</button>` : ''}
+            ${isMine ? `<button onclick="deleteChantier('${c.id}')" class="btn-sm btn-danger-sm">🗑️</button>` : ''}
+          </div>
+        </div>`;
+    }
+
+    function renderList() {
+      const list = getFilteredList();
+      const container = document.getElementById('chantiers-list');
+      if (list.length === 0) {
+        container.innerHTML = `<div class="card empty-state"><p>🗺️</p><p style="font-size:15px;">Aucun chantier${currentFilter !== 'tous' ? ' dans cette catégorie' : currentScope === 'mes' ? ' — vous n\'en avez pas encore créé' : ''}.</p><p style="font-size:13px;">Cliquez sur <strong>+ Ajouter un chantier</strong> pour commencer.</p></div>`;
+        return;
+      }
+      container.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;">${list.map(buildCardHTML).join('')}</div>`;
+    }
+
+    function render() { renderStats(); renderMarkers(); renderList(); }
+
+    // ===== FILTRES & SCOPE =====
+    function setFilter(f) {
+      currentFilter = f;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('filter-' + f).classList.add('active');
+      renderMarkers(); renderList();
+    }
+    function setScope(s) {
+      currentScope = s;
+      document.querySelectorAll('.toggle-view-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('btn-' + s).classList.add('active');
+      render();
+    }
+
+    // ===== CENTRER =====
+    function centerOnMarker(id) {
+      const c = allChantiers.find(x => x.id === id);
+      if (!c || !c.lat || !c.lng) return;
+      map.setView([c.lat, c.lng], 14);
+      if (markers[id]) markers[id].openPopup();
+      window.scrollTo({ top: document.getElementById('map').getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
+    }
+
+    // ===== MODAL =====
+    function openModal(id) {
+      editingId = id || null;
+      document.getElementById('modal-title').textContent = id ? 'Modifier le chantier' : 'Ajouter un chantier';
+      const c = id ? allChantiers.find(x => x.id === id) : null;
+      document.getElementById('form-nom').value = c?.nom || '';
+      document.getElementById('form-adresse').value = c?.adresse || '';
+      document.getElementById('form-lat').value = c?.lat || '';
+      document.getElementById('form-lng').value = c?.lng || '';
+      document.getElementById('form-statut').value = c?.statut || 'en_cours';
+      document.getElementById('form-chef').value = c?.chef || '';
+      document.getElementById('form-date-debut').value = c?.dateDebut || '';
+      document.getElementById('form-date-fin').value = c?.dateFin || '';
+      document.getElementById('form-montant').value = c?.montant || '';
+      document.getElementById('form-notes').value = c?.notes || '';
+      document.getElementById('geocode-feedback').style.display = 'none';
+      if (tempClickMarker) { map.removeLayer(tempClickMarker); tempClickMarker = null; }
+      document.getElementById('modal-overlay').style.display = 'flex';
+    }
+    function closeModal() {
+      document.getElementById('modal-overlay').style.display = 'none';
+      if (tempClickMarker) { map.removeLayer(tempClickMarker); tempClickMarker = null; }
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+    document.getElementById('modal-overlay').addEventListener('click', e => { if (e.target === document.getElementById('modal-overlay')) closeModal(); });
+
+    async function saveChantier() {
+      const nom = document.getElementById('form-nom').value.trim();
+      if (!nom) { alert('Le nom est obligatoire.'); return; }
+      const btn = document.getElementById('btn-save');
+      btn.disabled = true; btn.textContent = '⏳ Enregistrement…';
+      const data = {
+        nom, societe: SOCIETE,
+        adresse: document.getElementById('form-adresse').value.trim(),
+        lat: parseFloat(document.getElementById('form-lat').value) || null,
+        lng: parseFloat(document.getElementById('form-lng').value) || null,
+        statut: document.getElementById('form-statut').value,
+        chef: document.getElementById('form-chef').value.trim(),
+        dateDebut: document.getElementById('form-date-debut').value,
+        dateFin: document.getElementById('form-date-fin').value,
+        montant: document.getElementById('form-montant').value ? Number(document.getElementById('form-montant').value) : null,
+        notes: document.getElementById('form-notes').value.trim(),
+      };
+      try {
+        if (editingId) {
+          await apiPut('/chantiers/' + editingId, data);
+        } else {
+          data.createdBy = currentUser;
+          await apiPost('/chantiers', data);
+        }
+        closeModal();
+        await loadChantiers();
+        render();
+      } catch (err) { alert('Erreur lors de l\'enregistrement : ' + (err.message || err)); }
+      finally { btn.disabled = false; btn.textContent = 'Enregistrer'; }
+    }
+
+    function editChantier(id) { map.closePopup(); openModal(id); }
+
+    async function deleteChantier(id) {
+      const c = allChantiers.find(x => x.id === id);
+      if (!c || !confirm(`Supprimer le chantier "${c.nom}" ?`)) return;
+      await apiDelete('/chantiers/' + id);
+      map.closePopup();
+      await loadChantiers();
+      render();
+    }
+
+    // ===== GÉOCODAGE =====
+    async function geocodeAdresse() {
+      const adresse = document.getElementById('form-adresse').value.trim();
+      if (!adresse) { alert('Veuillez entrer une adresse.'); return; }
+      const btn = document.getElementById('btn-geocode');
+      const feedback = document.getElementById('geocode-feedback');
+      btn.textContent = '⏳'; btn.disabled = true; feedback.style.display = 'none';
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(adresse)}&limit=1&countrycodes=fr`, { headers: { 'Accept-Language': 'fr' } });
+        const data = await res.json();
+        if (!data.length) { feedback.textContent = '❌ Adresse introuvable.'; feedback.className = 'error'; feedback.style.display = 'block'; return; }
+        const lat = parseFloat(data[0].lat), lng = parseFloat(data[0].lon);
+        document.getElementById('form-lat').value = lat.toFixed(6);
+        document.getElementById('form-lng').value = lng.toFixed(6);
+        map.setView([lat, lng], 14);
+        if (tempClickMarker) map.removeLayer(tempClickMarker);
+        tempClickMarker = L.marker([lat, lng], { icon: dotIcon('#8ba88a') }).addTo(map);
+        feedback.textContent = '✅ Position trouvée !'; feedback.className = 'success'; feedback.style.display = 'block';
+      } catch { feedback.textContent = '❌ Erreur réseau.'; feedback.className = 'error'; feedback.style.display = 'block'; }
+      finally { btn.textContent = '📍 Localiser'; btn.disabled = false; }
+    }
+    document.getElementById('form-adresse').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); geocodeAdresse(); } });
+
+    // ===== UTILS =====
+    function formatDate(d) { if (!d) return '—'; const [y,m,j] = d.split('-'); return `${j}/${m}/${y}`; }
+
+    // ===== INIT =====
+    async function init() {
+      document.getElementById('sidebar').innerHTML = getSidebar();
+      injectChantiersSecondaryBar();
+      const session = Auth.getSession();
+      currentUser = session?.username || '';
+      initMap();
+      document.getElementById('chantiers-list').innerHTML = '<div class="loading-overlay">⏳ Chargement des chantiers…</div>';
+      await loadChantiers();
+      render();
+    }
+
+    window.onServerReady(init);
+  </script>
+
+  <footer class="site-footer"></footer>
+</body>
+</html>

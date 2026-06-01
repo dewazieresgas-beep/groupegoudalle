@@ -3642,6 +3642,58 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', token: SERVER_TOKEN, timestamp: new Date().toISOString() });
 });
 
+// ─── ROUTES : CHANTIERS ─────────────────────────────────────────────────────────
+
+app.get('/api/chantiers', (req, res) => {
+  const chantiers = dbGet('chantiers', []);
+  res.json(Array.isArray(chantiers) ? chantiers : []);
+});
+
+app.get('/api/chantiers/:id', (req, res) => {
+  const chantiers = dbGet('chantiers', []);
+  const chantier = chantiers.find(c => c.id === req.params.id);
+  if (!chantier) return res.status(404).json({ error: 'Chantier introuvable' });
+  res.json(chantier);
+});
+
+app.post('/api/chantiers', requireToken, requireWriteRateLimit, (req, res) => {
+  const chantiers = dbGet('chantiers', []);
+  const newChantier = {
+    ...req.body,
+    id: crypto.randomBytes(8).toString('hex'),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  chantiers.push(newChantier);
+  dbSet('chantiers', chantiers);
+  res.json({ success: true, chantier: newChantier });
+});
+
+app.put('/api/chantiers/:id', requireToken, requireWriteRateLimit, (req, res) => {
+  const chantiers = dbGet('chantiers', []);
+  const idx = chantiers.findIndex(c => c.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Chantier introuvable' });
+  chantiers[idx] = {
+    ...chantiers[idx],
+    ...req.body,
+    id: req.params.id,
+    createdBy: chantiers[idx].createdBy,
+    createdAt: chantiers[idx].createdAt,
+    updatedAt: new Date().toISOString(),
+  };
+  dbSet('chantiers', chantiers);
+  res.json({ success: true, chantier: chantiers[idx] });
+});
+
+app.delete('/api/chantiers/:id', requireToken, requireWriteRateLimit, (req, res) => {
+  const chantiers = dbGet('chantiers', []);
+  const idx = chantiers.findIndex(c => c.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Chantier introuvable' });
+  chantiers.splice(idx, 1);
+  dbSet('chantiers', chantiers);
+  res.json({ success: true });
+});
+
 // ─── ROUTE FALLBACK ─────────────────────────────────────────────────────────────
 
 app.get('*', (req, res) => {

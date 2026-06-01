@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fiche Chantier — Intranet Goudalle</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .back-link { display:inline-flex; align-items:center; gap:6px; color:var(--text-muted-dark); font-size:13px; text-decoration:none; margin-bottom:16px; transition:color .2s; }
+    .back-link:hover { color:var(--accent-dark); }
+    .badge { display:inline-block; padding:3px 12px; border-radius:12px; font-size:12px; font-weight:600; color:white; }
+    .loading-full { display:flex; align-items:center; justify-content:center; height:300px; color:var(--text-muted-dark); font-size:15px; }
+
+    /* Progress */
+    .global-progress { background:var(--lighter); border:1px solid var(--border); border-radius:8px; padding:12px 16px; margin-bottom:20px; }
+    .progress-bar-outer { background:#e0dbd5; border-radius:6px; height:10px; margin-top:8px; overflow:hidden; }
+    .progress-bar-inner { height:100%; border-radius:6px; background:linear-gradient(90deg,#7bad75,#5a9a52); transition:width .4s ease; }
+
+    /* Phase */
+    .phase-section { margin-bottom:18px; border-radius:10px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,.07); }
+    .phase-header { display:flex; align-items:center; justify-content:space-between; padding:13px 18px; color:white; font-weight:700; font-size:14px; }
+    .phase-badge { background:rgba(255,255,255,.25); padding:3px 12px; border-radius:12px; font-size:12px; font-weight:600; }
+
+    /* Etape */
+    .etape-card { background:white; border-left:4px solid transparent; padding:14px 18px; border-bottom:1px solid #f0ece8; }
+    .etape-card:last-child { border-bottom:none; }
+    .etape-card.is-done { background:#f9fdf8; }
+    .etape-header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+    .etape-title { font-weight:700; font-size:13.5px; color:var(--dark); flex:1; line-height:1.4; }
+    .done-label { display:flex; align-items:center; gap:6px; cursor:pointer; flex-shrink:0; white-space:nowrap; font-size:12px; font-weight:600; padding:4px 12px; border-radius:6px; border:1.5px solid #ddd; background:var(--lighter); user-select:none; transition:all .2s; }
+    .done-label.is-done { background:#eafaf1; border-color:#7bad75; color:#1e8449; }
+    .done-label input[type=checkbox] { display:none; }
+    .done-label-readonly { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; padding:4px 12px; border-radius:6px; border:1.5px solid #7bad75; background:#eafaf1; color:#1e8449; flex-shrink:0; }
+
+    /* Checks */
+    .checks-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:6px; margin:10px 0 0; }
+    .check-item { display:flex; align-items:center; gap:8px; font-size:12.5px; cursor:pointer; background:#f7f3ef; border-radius:6px; padding:6px 10px; transition:background .2s; }
+    .check-item:hover { background:#eee8e2; }
+    .check-item input { width:16px; height:16px; flex-shrink:0; cursor:pointer; }
+    .check-item.checked { background:#f0faf0; color:#777; }
+    .check-item.checked span { text-decoration:line-through; }
+
+    /* Notes */
+    .notes-area { width:100%; box-sizing:border-box; min-height:46px; resize:vertical; padding:7px 10px; border:1.5px solid var(--border); border-radius:6px; font-size:13px; background:var(--lighter); color:var(--dark); font-family:inherit; margin-top:10px; transition:border-color .2s; }
+    .notes-area:focus { outline:none; border-color:var(--accent); background:white; }
+    .notes-area[readonly] { cursor:default; color:var(--text-muted-dark); }
+
+    /* Docs */
+    .docs-zone { margin-top:10px; }
+    .docs-title { font-size:11px; font-weight:700; color:#8a7a6a; text-transform:uppercase; letter-spacing:.5px; margin-bottom:5px; }
+    .doc-item { display:flex; align-items:center; gap:8px; background:#f5f0eb; border-radius:6px; padding:5px 10px; font-size:12.5px; margin-bottom:4px; }
+    .doc-nom { font-weight:600; flex:1; }
+    .doc-meta { color:#888; font-size:11px; font-style:italic; }
+    .doc-del { background:none; border:none; cursor:pointer; color:#b85c5c; font-size:13px; padding:0 2px; line-height:1; }
+    .doc-del:hover { color:darkred; }
+    .add-doc-form { display:none; margin-top:6px; background:#f7f3ef; border-radius:7px; padding:10px; gap:6px; flex-wrap:wrap; align-items:center; }
+    .add-doc-form.open { display:flex; }
+    .btn-add-doc { font-size:11px; padding:4px 10px; background:var(--lighter); border:1.5px solid var(--border); border-radius:6px; cursor:pointer; color:var(--text-muted-dark); margin-top:6px; transition:all .2s; }
+    .btn-add-doc:hover { border-color:var(--accent); color:var(--accent-dark); }
+    .btn-sm-confirm { padding:5px 12px; background:#7bad75; color:white; border:none; border-radius:6px; cursor:pointer; font-size:12px; font-weight:600; }
+    .btn-sm-confirm:hover { background:#5a9a52; }
+    .btn-sm-cancel { padding:5px 10px; background:#f0ece8; color:#7a6a5a; border:none; border-radius:6px; cursor:pointer; font-size:12px; }
+    .btn-sm-cancel:hover { background:#e0dbd5; }
+    .field-input-sm { padding:5px 9px; border:1.5px solid var(--border); border-radius:6px; font-size:12px; background:white; color:var(--dark); font-family:inherit; box-sizing:border-box; }
+    .field-input-sm:focus { outline:none; border-color:var(--accent); }
+
+    /* Readonly banner */
+    .readonly-banner { background:#fff8e1; border:1px solid #ffe082; border-radius:7px; padding:8px 14px; font-size:12.5px; color:#7a5c00; display:flex; align-items:center; gap:8px; margin-bottom:16px; }
+
+    /* Save bar */
+    .save-bar { position:sticky; bottom:0; background:white; border-top:2px solid var(--border); padding:12px 0; margin-top:20px; display:flex; align-items:center; gap:14px; z-index:10; }
+    .save-status { font-size:13px; color:var(--text-muted-dark); }
+    .save-status.ok { color:#1e8449; }
+    .save-status.err { color:#b85c5c; }
+  </style>
+</head>
+<body>
+  <script src="../js/api.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+  <script>Auth.requirePermission('chantiers');</script>
+
+  <div class="app-container">
+    <div id="sidebar"></div>
+    <main class="main-content" id="main-content">
+      <div class="loading-full">⏳ Chargement de la fiche…</div>
+    </main>
+  </div>
+
+  <script>
+    const STATUTS = {
+      planifie: { label:'Planifié', color:'#6b8e9f' },
+      en_cours: { label:'En cours', color:'#d4a574' },
+      termine:  { label:'Terminé',  color:'#7bad75' },
+      probleme: { label:'Problème', color:'#b85c5c' },
+    };
+
+    const WORKFLOW_DEF = [
+      {
+        id: 'approprier', label: "S'approprier le chantier", color: '#c0392b',
+        etapes: [
+          { id: 'obtention_marche', label: 'Obtention du marché', checks: [] },
+          { id: 'reunion_transfert', label: 'Réunion de transfert — Passation Commerce/Travaux', checks: [] },
+          { id: 'signature_marche', label: 'Réunion — Signature du marché', checks: [
+            { key: 'signature_dossier', label: 'Signature dossier marché' },
+            { key: 'planning_contractuel', label: 'Planning contractuel' },
+          ]},
+          { id: 'comprendre_dossier', label: 'Comprendre le dossier (CCTP, plans, thermique, sismique, stabilité au feu…)', checks: [
+            { key: 'reunion_chantier_1', label: '1ère réunion de chantier' },
+          ]},
+        ]
+      },
+      {
+        id: 'lancement', label: 'Lancement du chantier', color: '#d35400',
+        etapes: [
+          { id: 'planning_previsionnel', label: 'Planning Prévisionnel', checks: [] },
+          { id: 'pic', label: "PIC — Plan d'Installation de Chantier", checks: [] },
+          { id: 'liste_besoins', label: "Liste des besoins d'étude + Jalons", checks: [
+            { key: 'reunion_chantier_2', label: '2ème réunion de chantier' },
+          ]},
+        ]
+      },
+      {
+        id: 'etudes', label: 'Suivi des études', color: '#2471a3',
+        etapes: [
+          { id: 'suivi_etudes', label: 'Suivi des études — Diffusion EXE', checks: [
+            { key: 'ddc',               label: '1_ DDC' },
+            { key: 'delais_types',      label: '2_ Délais Types' },
+            { key: 'dossier_technique', label: '3_ Dossier Technique' },
+            { key: 'plan_charpente',    label: '4_ Plan Charpente' },
+            { key: 'carnet_detail',     label: '5_ Carnet de détail' },
+            { key: 'note_calcul',       label: '6_ Note de calcul' },
+            { key: 'calcul_specifiques',label: '7_ Calcul / Détails spécifiques' },
+          ]},
+          { id: 'bordereaux_envoi',  label: "Bordereaux d'envoi", checks: [] },
+          { id: 'suivi_visas_etape', label: 'Suivi des visas', checks: [] },
+          { id: 'faire_relances',    label: 'Faire des relances', checks: [] },
+          { id: 'validation_etudes', label: 'Validation des études', checks: [] },
+        ]
+      },
+      {
+        id: 'methodes', label: 'Méthodes et organisation', color: '#1a5276',
+        etapes: [
+          { id: 'preparation_chantier', label: 'Préparation chantier', checks: [
+            { key: 'mode_operatoire',         label: 'Mode opératoire de levage' },
+            { key: 'hygiene_securite',         label: 'Hygiène et sécurité' },
+            { key: 'delais',                   label: 'Délais' },
+            { key: 'budget_previsionnel',      label: 'Budget Prévisionnel' },
+            { key: 'convention_prorata',       label: 'Convention compte prorata' },
+            { key: 'ppsps',                    label: 'PPSPS' },
+            { key: 'verification_assemblages', label: 'Vérification des assemblages et du modèle 3D' },
+          ]},
+          { id: 'reunion_passation', label: 'Réunion de passation', checks: [] },
+        ]
+      },
+      {
+        id: 'suivi', label: 'Suivi de chantier', color: '#1e8449',
+        etapes: [
+          { id: 'lancement_commandes', label: 'Lancement des commandes', checks: [
+            { key: 'compatibilite_pose',    label: 'Compatibilité avec démarrage de pose' },
+            { key: 'actualisation_planning',label: 'Actualisation du planning' },
+          ]},
+          { id: 'reception_supports', label: 'Réception des supports', checks: [
+            { key: 'qualite_reception',       label: 'Qualité' },
+            { key: 'actualisation_planning_2',label: 'Actualisation planning' },
+          ]},
+          { id: 'suivi_chantier_ops', label: 'Suivi chantier', checks: [
+            { key: 'respect_delais', label: 'Respect des délais' },
+            { key: 'qualite_nc',     label: 'Qualité (Non-conformités et incidences associées)' },
+            { key: 'securite',       label: "Sécurité (Fiche analyse et 1/4 d'heure sécurité)" },
+          ]},
+          { id: 'fin_chantier', label: 'Fin de chantier', checks: [
+            { key: 'doe',          label: 'DOE' },
+            { key: 'pv_reception', label: 'PV réception' },
+          ]},
+          { id: 'rex', label: "REX — Retour d'expérience", checks: [
+            { key: 'retour_info', label: "Retour d'information" },
+            { key: 'resultats',   label: 'Résultats' },
+          ]},
+        ]
+      },
+    ];
+
+    let chantier = null, currentUser = null, isMine = false, saveTimeout = null;
+
+    // ===== API =====
+    async function apiGet(path) { const r = await fetch(SERVER_URL + path); return r.ok ? r.json() : null; }
+    async function apiPut(path, body) {
+      const r = await fetch(SERVER_URL + path, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-goudalle-token': window._serverToken },
+        body: JSON.stringify(body)
+      });
+      return r.json();
+    }
+
+    // ===== UTILS =====
+    function getParam(k) { return new URLSearchParams(window.location.search).get(k); }
+    function fmtDate(d) { if (!d) return '—'; const [y, m, j] = d.split('-'); return `${j}/${m}/${y}`; }
+    function getPath(obj, path) { return path.split('.').reduce((o, k) => (o && typeof o === 'object' ? o[k] : undefined), obj); }
+    function setPath(obj, path, value) {
+      const keys = path.split('.');
+      let cur = obj;
+      for (let i = 0; i < keys.length - 1; i++) {
+        if (!cur[keys[i]] || typeof cur[keys[i]] !== 'object') cur[keys[i]] = {};
+        cur = cur[keys[i]];
+      }
+      cur[keys[keys.length - 1]] = value;
+    }
+    function deepMerge(target, source) {
+      if (typeof target !== 'object' || target === null) return source;
+      const out = { ...target };
+      for (const k of Object.keys(source || {})) {
+        out[k] = (typeof source[k] === 'object' && source[k] !== null && !Array.isArray(source[k]))
+          ? deepMerge(target[k] || {}, source[k]) : source[k];
+      }
+      return out;
+    }
+
+    // ===== DEFAULT WORKFLOW =====
+    function defaultWorkflow() {
+      const wf = {};
+      for (const phase of WORKFLOW_DEF) {
+        for (const etape of phase.etapes) {
+          const e = { done: false, notes: '', docs: [] };
+          if (etape.checks.length > 0) {
+            e.checks = {};
+            for (const c of etape.checks) e.checks[c.key] = false;
+          }
+          wf[etape.id] = e;
+        }
+      }
+      return wf;
+    }
+
+    // ===== PROGRESS =====
+    function calcProgress(wf) {
+      let total = 0, done = 0;
+      for (const phase of WORKFLOW_DEF)
+        for (const e of phase.etapes) { total++; if (wf[e.id]?.done) done++; }
+      return { total, done };
+    }
+    function calcPhaseProgress(phase, wf) {
+      let done = 0;
+      for (const e of phase.etapes) if (wf[e.id]?.done) done++;
+      return { done, total: phase.etapes.length };
+    }
+    function updateProgress() {
+      const wf = chantier.suivi.workflow;
+      const { total, done } = calcProgress(wf);
+      const pct = total > 0 ? Math.round(done / total * 100) : 0;
+      const bar = document.getElementById('global-progress-bar');
+      const txt = document.getElementById('global-progress-text');
+      if (bar) bar.style.width = pct + '%';
+      if (txt) txt.textContent = `${done} / ${total} étapes terminées — ${pct}%`;
+      for (const phase of WORKFLOW_DEF) {
+        const { done: pd, total: pt } = calcPhaseProgress(phase, wf);
+        const badge = document.getElementById(`phase-badge-${phase.id}`);
+        if (badge) badge.textContent = `${pd}/${pt}`;
+      }
+    }
+
+    // ===== SAVE =====
+    function setSaveStatus(msg, cls) {
+      const el = document.getElementById('save-status');
+      if (el) { el.textContent = msg; el.className = 'save-status ' + (cls || ''); }
+    }
+    async function save() {
+      const btn = document.getElementById('btn-save');
+      if (btn) { btn.disabled = true; btn.textContent = '⏳ Enregistrement…'; }
+      setSaveStatus('Enregistrement…', '');
+      try {
+        const res = await apiPut('/chantiers/' + chantier.id, chantier);
+        if (res?.success) {
+          chantier = res.chantier;
+          setSaveStatus('✅ Enregistré à ' + new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' }), 'ok');
+        } else {
+          setSaveStatus('❌ Erreur lors de l\'enregistrement.', 'err');
+        }
+      } catch { setSaveStatus('❌ Erreur réseau.', 'err'); }
+      finally { if (btn) { btn.disabled = false; btn.textContent = '💾 Enregistrer'; } }
+    }
+    function scheduleSave() {
+      setSaveStatus('Modifications non enregistrées…', '');
+      clearTimeout(saveTimeout);
+      saveTimeout = setTimeout(save, 2000);
+    }
+
+    // ===== BIND AUTO-SAVE =====
+    function bindAutoSave(container) {
+      container.querySelectorAll('[data-path]').forEach(el => {
+        const path = el.getAttribute('data-path');
+        const evt = el.type === 'checkbox' ? 'change' : 'input';
+        el.addEventListener(evt, () => {
+          const val = el.type === 'checkbox' ? el.checked : el.value;
+          if (!chantier.suivi) chantier.suivi = {};
+          if (!chantier.suivi.workflow) chantier.suivi.workflow = defaultWorkflow();
+          setPath(chantier.suivi.workflow, path, val);
+          scheduleSave();
+          if (path.endsWith('.done')) {
+            const card = el.closest('.etape-card');
+            if (card) card.classList.toggle('is-done', el.checked);
+            const lbl = el.closest('.done-label');
+            if (lbl) {
+              lbl.classList.toggle('is-done', el.checked);
+              const sp = lbl.querySelector('.done-text');
+              if (sp) sp.textContent = el.checked ? '✅ Terminé' : 'En cours';
+            }
+            updateProgress();
+          }
+          if (path.includes('.checks.')) {
+            const item = el.closest('.check-item');
+            if (item) item.classList.toggle('checked', el.checked);
+          }
+        });
+      });
+    }
+
+    // ===== DOCUMENTS =====
+    function renderDocsList(etapeId, docs) {
+      if (!docs || !docs.length) return '';
+      return `<div class="docs-title">📎 Documents joints</div>` + docs.map((d, i) => `
+        <div class="doc-item">
+          <span class="doc-nom">${escapeHtml(d.nom)}</span>
+          ${d.date ? `<span class="doc-meta">${fmtDate(d.date)}</span>` : ''}
+          ${d.notes ? `<span class="doc-meta">${escapeHtml(d.notes)}</span>` : ''}
+          ${isMine ? `<button class="doc-del" onclick="removeDoc('${etapeId}',${i})" title="Supprimer">✕</button>` : ''}
+        </div>`).join('');
+    }
+
+    function showAddDocForm(id) {
+      document.getElementById(`add-doc-form-${id}`).classList.add('open');
+      document.getElementById(`btn-add-doc-${id}`).style.display = 'none';
+      document.getElementById(`doc-nom-${id}`).focus();
+    }
+    function cancelAddDoc(id) {
+      document.getElementById(`add-doc-form-${id}`).classList.remove('open');
+      document.getElementById(`btn-add-doc-${id}`).style.display = '';
+      document.getElementById(`doc-nom-${id}`).value = '';
+      document.getElementById(`doc-date-${id}`).value = '';
+      document.getElementById(`doc-notes-${id}`).value = '';
+    }
+    function confirmAddDoc(id) {
+      const nom = document.getElementById(`doc-nom-${id}`).value.trim();
+      if (!nom) { alert('Le nom du document est obligatoire.'); return; }
+      const date = document.getElementById(`doc-date-${id}`).value;
+      const notes = document.getElementById(`doc-notes-${id}`).value.trim();
+      const wf = chantier.suivi.workflow;
+      if (!wf[id].docs) wf[id].docs = [];
+      wf[id].docs.push({ nom, date, notes });
+      document.getElementById(`docs-zone-${id}`).innerHTML = renderDocsList(id, wf[id].docs);
+      cancelAddDoc(id);
+      scheduleSave();
+    }
+    function removeDoc(id, idx) {
+      if (!confirm('Supprimer ce document ?')) return;
+      chantier.suivi.workflow[id].docs.splice(idx, 1);
+      document.getElementById(`docs-zone-${id}`).innerHTML = renderDocsList(id, chantier.suivi.workflow[id].docs);
+      scheduleSave();
+    }
+
+    // ===== RENDER =====
+    function renderEtapeCard(phase, etape, wf) {
+      const ed = wf[etape.id] || { done: false, notes: '', docs: [] };
+      const isDone = !!ed.done;
+      const checksData = ed.checks || {};
+      const docs = ed.docs || [];
+      return `
+        <div class="etape-card ${isDone ? 'is-done' : ''}" style="border-left-color:${phase.color};">
+          <div class="etape-header">
+            <span class="etape-title">${escapeHtml(etape.label)}</span>
+            ${isMine
+              ? `<label class="done-label ${isDone ? 'is-done' : ''}" title="Marquer terminé">
+                   <input type="checkbox" class="field-check" data-path="${etape.id}.done" ${isDone ? 'checked' : ''} style="accent-color:${phase.color};">
+                   <span class="done-text">${isDone ? '✅ Terminé' : 'En cours'}</span>
+                 </label>`
+              : (isDone ? '<span class="done-label-readonly">✅ Terminé</span>' : '')
+            }
+          </div>
+
+          ${etape.checks.length > 0 ? `
+            <div class="checks-grid">
+              ${etape.checks.map(c => `
+                <label class="check-item ${checksData[c.key] ? 'checked' : ''}">
+                  <input type="checkbox" class="field-check" data-path="${etape.id}.checks.${c.key}"
+                    style="accent-color:${phase.color};"
+                    ${checksData[c.key] ? 'checked' : ''} ${!isMine ? 'disabled' : ''}>
+                  <span>${escapeHtml(c.label)}</span>
+                </label>`).join('')}
+            </div>` : ''}
+
+          <textarea class="notes-area" placeholder="Notes, observations, dates clés…"
+            data-path="${etape.id}.notes" ${!isMine ? 'readonly' : ''}>${escapeHtml(ed.notes || '')}</textarea>
+
+          <div class="docs-zone">
+            <div id="docs-zone-${etape.id}">${renderDocsList(etape.id, docs)}</div>
+            ${isMine ? `
+              <div class="add-doc-form" id="add-doc-form-${etape.id}">
+                <input type="text" class="field-input-sm" id="doc-nom-${etape.id}" placeholder="Nom du document…" style="flex:1;min-width:150px;">
+                <input type="date" class="field-input-sm" id="doc-date-${etape.id}" style="width:130px;">
+                <input type="text" class="field-input-sm" id="doc-notes-${etape.id}" placeholder="Commentaire (optionnel)…" style="flex:1;min-width:130px;">
+                <button class="btn-sm-confirm" onclick="confirmAddDoc('${etape.id}')">Ajouter</button>
+                <button class="btn-sm-cancel" onclick="cancelAddDoc('${etape.id}')">Annuler</button>
+              </div>
+              <button class="btn-add-doc" id="btn-add-doc-${etape.id}" onclick="showAddDocForm('${etape.id}')">+ Ajouter un document</button>
+            ` : ''}
+          </div>
+        </div>`;
+    }
+
+    function renderPhase(phase, wf) {
+      const { done, total } = calcPhaseProgress(phase, wf);
+      return `
+        <div class="phase-section">
+          <div class="phase-header" style="background:${phase.color};">
+            <span>${escapeHtml(phase.label)}</span>
+            <span class="phase-badge" id="phase-badge-${phase.id}">${done}/${total}</span>
+          </div>
+          ${phase.etapes.map(e => renderEtapeCard(phase, e, wf)).join('')}
+        </div>`;
+    }
+
+    function renderPage() {
+      const s = STATUTS[chantier.statut] || STATUTS.planifie;
+      const wf = chantier.suivi.workflow;
+      const { total, done } = calcProgress(wf);
+      const pct = total > 0 ? Math.round(done / total * 100) : 0;
+      const backUrl = chantier.societe === 'maconnerie' ? 'chantiers-maconnerie.html' : 'chantiers-charpente.html';
+      const societeLabel = chantier.societe === 'maconnerie' ? '🧱 Maçonnerie' : '🪵 Charpente';
+
+      document.getElementById('main-content').innerHTML = `
+        <a href="${backUrl}" class="back-link">← Retour à la liste</a>
+
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+          <div>
+            <div style="font-size:12px;color:var(--text-muted-dark);margin-bottom:4px;">${societeLabel} · CT : ${escapeHtml(chantier.createdBy||'—')}</div>
+            <h1 class="mb-0" style="font-size:22px;">${escapeHtml(chantier.nom)}</h1>
+            <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+              <span class="badge" style="background:${s.color};">${s.label}</span>
+              ${chantier.chef ? `<span style="font-size:13px;">👷 ${escapeHtml(chantier.chef)}</span>` : ''}
+              ${chantier.adresse ? `<span style="font-size:13px;color:var(--text-muted-dark);">📍 ${escapeHtml(chantier.adresse)}</span>` : ''}
+              ${chantier.montant ? `<span style="font-size:13px;">💶 ${Number(chantier.montant).toLocaleString('fr-FR')} € HT</span>` : ''}
+              ${chantier.dateDebut ? `<span style="font-size:13px;color:var(--text-muted-dark);">📅 ${fmtDate(chantier.dateDebut)} → ${fmtDate(chantier.dateFin)}</span>` : ''}
+            </div>
+          </div>
+        </div>
+
+        ${!isMine ? '<div class="readonly-banner">👁️ Lecture seule — seul le conducteur de travaux responsable peut modifier cette fiche.</div>' : ''}
+
+        <div class="global-progress">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-weight:700;font-size:14px;color:var(--dark);">Avancement du chantier</span>
+            <span id="global-progress-text" style="font-weight:600;color:#1e8449;font-size:13px;">${done} / ${total} étapes terminées — ${pct}%</span>
+          </div>
+          <div class="progress-bar-outer">
+            <div class="progress-bar-inner" id="global-progress-bar" style="width:${pct}%;"></div>
+          </div>
+        </div>
+
+        ${WORKFLOW_DEF.map(phase => renderPhase(phase, wf)).join('')}
+
+        <div class="save-bar">
+          ${isMine ? `<button onclick="save()" class="btn btn-primary" id="btn-save">💾 Enregistrer</button>` : ''}
+          <span class="save-status" id="save-status"></span>
+        </div>
+      `;
+
+      bindAutoSave(document.getElementById('main-content'));
+    }
+
+    // ===== INIT =====
+    async function init() {
+      document.getElementById('sidebar').innerHTML = getSidebar();
+      injectChantiersSecondaryBar();
+      currentUser = Auth.getSession()?.username || '';
+
+      const id = getParam('id');
+      if (!id) { document.getElementById('main-content').innerHTML = '<div class="loading-full">❌ Aucun identifiant de chantier fourni.</div>'; return; }
+
+      const data = await apiGet('/chantiers/' + id);
+      if (!data) { document.getElementById('main-content').innerHTML = '<div class="loading-full">❌ Chantier introuvable.</div>'; return; }
+
+      chantier = data;
+      if (!chantier.suivi) chantier.suivi = {};
+      chantier.suivi.workflow = chantier.suivi.workflow
+        ? deepMerge(defaultWorkflow(), chantier.suivi.workflow)
+        : defaultWorkflow();
+
+      isMine = chantier.createdBy === currentUser;
+      renderPage();
+    }
+
+    window.onServerReady(init);
+  </script>
+
+  <footer class="site-footer"></footer>
+</body>
+</html>

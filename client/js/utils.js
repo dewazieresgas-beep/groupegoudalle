@@ -149,6 +149,11 @@ function isRHPage() {
   return page === 'rh-indicateurs.html' || page === 'rh-saisie.html';
 }
 
+function isChantierPage() {
+  const page = getCurrentPage();
+  return page === 'chantiers.html' || page === 'chantiers-charpente.html' || page === 'chantiers-maconnerie.html' || page === 'chantiers-fiche.html' || page === 'chantiers-vue-globale.html';
+}
+
 // ============ WEEK UTILS ============
 /**
  * Calcule le numéro de semaine ISO 8601 d'une date
@@ -312,8 +317,8 @@ function getSidebar() {
 
   // ===== CHANTIERS =====
   if (Auth.hasAccess('chantiers')) {
-    const chantiersActive = currentPage === 'chantiers.html' ? ' active' : '';
-    items += `<a href="${base}pages/chantiers.html" class="sidebar-item${chantiersActive}">🚧 Chantiers</a>`;
+    const chantiersActive = isChantierPage() ? ' active' : '';
+    items += `<a href="${base}pages/chantiers-charpente.html" class="sidebar-item${chantiersActive}">🚧 Chantiers</a>`;
   }
 
   // ===== PRODUCTION =====
@@ -610,6 +615,47 @@ function injectCommerceSecondaryBar() {
   }
 }
 
+function injectChantiersSecondaryBar() {
+  const session = Auth.getSession();
+  if (!session) return;
+  if (document.getElementById('chantiersSidebar')) return;
+
+  const base = getBasePath();
+  const currentPage = getCurrentPage();
+  const charpActive = currentPage === 'chantiers-charpente.html' ? ' active' : '';
+  const macActive = currentPage === 'chantiers-maconnerie.html' ? ' active' : '';
+
+  const globaleActive = currentPage === 'chantiers-vue-globale.html' ? ' active' : '';
+
+  const secondaryItems = `
+    <a href="${base}pages/chantiers-charpente.html" class="sidebar-item${charpActive}">🪵 Goudalle Charpente</a>
+    <a href="${base}pages/chantiers-maconnerie.html" class="sidebar-item${macActive}">🧱 Goudalle Maçonnerie</a>
+    <a href="${base}pages/chantiers-vue-globale.html" class="sidebar-item${globaleActive}">🌍 Vue globale</a>
+  `;
+
+  const barHTML = `
+    <aside class="sidebar-secondary" id="chantiersSidebar">
+      <div class="sidebar-secondary-content">
+        <div class="sidebar-secondary-title">🚧 Chantiers</div>
+        <button class="sidebar-secondary-close" onclick="toggleChantiersSidebar();">✕</button>
+        <nav class="sidebar-secondary-nav">
+          ${secondaryItems}
+        </nav>
+      </div>
+    </aside>
+  `;
+
+  const sidebar = document.querySelector('.sidebar');
+  if (sidebar) {
+    sidebar.insertAdjacentHTML('afterend', barHTML);
+  }
+
+  const chantiersSidebar = document.getElementById('chantiersSidebar');
+  if (chantiersSidebar) {
+    chantiersSidebar.classList.add('open');
+  }
+}
+
 /**
  * Génère et injecte la barre de navigation secondaire Achats
  * À appeler sur les pages Achat (achat-indicateurs.html, achat-saisie.html, achat-controle.html)
@@ -837,6 +883,17 @@ function toggleUsersSidebar(event) {
   localStorage.setItem('users_sidebar_state', isOpen ? 'open' : 'closed');
 }
 
+function toggleChantiersSidebar(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  const chantiersSidebar = document.getElementById('chantiersSidebar');
+  if (!chantiersSidebar) return;
+  const isOpen = chantiersSidebar.classList.toggle('open');
+  localStorage.setItem('chantiers_sidebar_state', isOpen ? 'open' : 'closed');
+}
+
 /**
  * Toggle la barre de navigation secondaire Achats
  */
@@ -900,6 +957,15 @@ function restoreSubMenuStates() {
     const achatSidebar = document.getElementById('achatSidebar');
     if (achatSidebar) {
       achatSidebar.classList.add('open');
+    }
+  }
+
+  // Restaurer l'état du sidebar secondaire Chantiers
+  const chantiersState = localStorage.getItem('chantiers_sidebar_state');
+  if (chantiersState === 'open') {
+    const chantiersSidebar = document.getElementById('chantiersSidebar');
+    if (chantiersSidebar) {
+      chantiersSidebar.classList.add('open');
     }
   }
 }

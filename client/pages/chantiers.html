@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Indicateurs Chantiers - Intranet Goudalle</title>
+  <title>Chantiers - Intranet Goudalle</title>
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
@@ -19,17 +19,8 @@
     <div id="sidebar"></div>
 
     <main class="main-content">
-      <div class="d-flex justify-between items-center mb-3" style="gap: 12px; flex-wrap: wrap;">
-        <h1 class="mb-0">Indicateurs Chantiers</h1>
-      </div>
-
-      <div class="card">
-        <div class="card-title">
-          <h2>En cours de développement</h2>
-        </div>
-        <div class="card-body">
-          <p style="color:var(--text-muted-dark);">Cette section est en cours de développement. Le contenu sera ajouté prochainement.</p>
-        </div>
+      <div style="display:flex;align-items:center;justify-content:center;height:60vh;">
+        <p style="color:var(--text-muted-dark);font-size:14px;">Redirection en cours…</p>
       </div>
     </main>
   </div>
@@ -37,6 +28,7 @@
   <script>
     function init() {
       document.getElementById('sidebar').innerHTML = getSidebar();
+      window.location.replace('chantiers-charpente.html');
     }
 
     window.onServerReady(init);

@@ -331,14 +331,7 @@
 
     // ═══ INITIALISATION DU FORMULAIRE ═══
     function initForm() {
-      // Semaine en cours par défaut
-      const now = new Date();
-      const startOfYear = new Date(now.getFullYear(), 0, 1);
-      const days = Math.floor((now - startOfYear) / (24 * 60 * 60 * 1000));
-      const currentWeek = Math.ceil((days + startOfYear.getDay() + 1) / 7);
-      
-      document.getElementById('inputYear').value = now.getFullYear();
-      document.getElementById('inputWeek').value = currentWeek;
+      document.getElementById('inputYear').value = new Date().getFullYear();
       initObjectif(); // Charger l'objectif mémorisé
 
       // Écouter les changements pour le calcul temps réel
