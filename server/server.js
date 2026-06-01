@@ -3081,13 +3081,15 @@ function parseRHSaisieWorkbook(company, folderPath) {
 
 function parseRHSecurityExcels(cfg) {
   const allIncidents = [];
-  const folder = cfg?.folder || '';
   for (const company of RH_SECURITY_COMPANIES) {
-    if (!company.filename) continue;
+    const fileInfo = cfg?.files?.[company.id];
+    const folder = fileInfo?.folder || '';
+    const filename = fileInfo?.filename || '';
+    if (!folder || !filename) continue;
     try {
-      allIncidents.push(...parseRHSaisieWorkbook(company, folder));
+      allIncidents.push(...parseRHSaisieWorkbook({ ...company, filename }, folder));
     } catch (e) {
-      console.warn(`[RH-Securite] Erreur lecture ${company.id} (${company.filename}) : ${e.message}`);
+      console.warn(`[RH-Securite] Erreur lecture ${company.id} (${filename}) : ${e.message}`);
     }
   }
   allIncidents.sort((a, b) => String(b.accidentDate || '').localeCompare(String(a.accidentDate || '')));
@@ -3095,16 +3097,16 @@ function parseRHSecurityExcels(cfg) {
 }
 
 function getRHSecuritySourceFiles(cfg) {
-  const folder = cfg?.folder || '';
   const sources = [];
   for (const company of RH_SECURITY_COMPANIES) {
-    if (!company.filename) continue;
+    const fileInfo = cfg?.files?.[company.id];
+    const folder = fileInfo?.folder || '';
+    const filename = fileInfo?.filename || '';
+    if (!folder || !filename) continue;
     try {
-      const resolved = resolveExistingExcelPath(folder, company.filename);
+      const resolved = resolveExistingExcelPath(folder, filename);
       sources.push({ fullPath: resolved.fullPath, stat: fs.statSync(resolved.fullPath) });
-    } catch (_) {
-      // Les fichiers manquants sont déjà ignorés par parseRHSecurityExcels.
-    }
+    } catch (_) {}
   }
   return sources;
 }
@@ -3149,25 +3151,51 @@ function deleteExcelPathBackup(key) {
 
 const RH_FOLDER_BACKUP_PATH = path.join(__dirname, 'data', 'rh-folder.txt');
 
-function saveRHFolderBackup(folder) {
-  try { fs.writeFileSync(RH_FOLDER_BACKUP_PATH, folder, 'utf8'); } catch (_) {}
+function saveRHFilesBackup(files) {
+  saveExcelPathBackup('rh_security', files);
 }
 
-function deleteRHFolderBackup() {
-  try { if (fs.existsSync(RH_FOLDER_BACKUP_PATH)) fs.unlinkSync(RH_FOLDER_BACKUP_PATH); } catch (_) {}
+function deleteRHFilesBackup() {
+  deleteExcelPathBackup('rh_security');
 }
 
 function getRHSecurityConfig() {
   let cfg = dbGet('rh_security_excel_config', null);
+  // Migrate old format (dossier unique → par fichier)
+  if (cfg && cfg.active && cfg.folder && !cfg.files) {
+    const files = {};
+    for (const company of RH_SECURITY_COMPANIES) {
+      files[company.id] = { folder: cfg.folder, filename: company.filename };
+    }
+    cfg = { active: true, files };
+    dbSet('rh_security_excel_config', cfg);
+    saveRHFilesBackup(files);
+    console.log(`[RH Sécurité] Config migrée vers le nouveau format (par fichier)`);
+  }
   if (!cfg || !cfg.active) {
-    // Restauration automatique depuis le fichier de sauvegarde du chemin
+    try {
+      const backup = readExcelPathsBackup()['rh_security'] || null;
+      if (backup) {
+        cfg = { active: true, files: backup };
+        dbSet('rh_security_excel_config', cfg);
+        console.log(`[RH Sécurité] Config restaurée depuis excel-paths.json`);
+      }
+    } catch (_) {}
+  }
+  if (!cfg || !cfg.active) {
+    // Compatibilité legacy rh-folder.txt
     try {
       if (fs.existsSync(RH_FOLDER_BACKUP_PATH)) {
         const folder = fs.readFileSync(RH_FOLDER_BACKUP_PATH, 'utf8').trim();
         if (folder) {
-          cfg = { folder, active: true };
+          const files = {};
+          for (const company of RH_SECURITY_COMPANIES) {
+            files[company.id] = { folder, filename: company.filename };
+          }
+          cfg = { active: true, files };
           dbSet('rh_security_excel_config', cfg);
-          console.log(`[RH Sécurité] Config restaurée depuis rh-folder.txt : ${folder}`);
+          saveRHFilesBackup(files);
+          console.log(`[RH Sécurité] Config restaurée depuis rh-folder.txt (legacy) : ${folder}`);
         }
       }
     } catch (_) {}
@@ -3268,17 +3296,19 @@ function computeRHSecuritySummary(incidents = []) {
 
 let rhSecurityWatcher = null; // Conservé pour compatibilité avec les anciennes routes.
 
-async function writeAccidentToExcel(folderPath, companyId, data) {
+async function writeAccidentToExcel(cfg, companyId, data) {
   const company = RH_SECURITY_COMPANIES.find((c) => c.id === companyId);
   if (!company) throw new Error(`Entreprise inconnue : ${companyId}`);
 
-  const resolved = resolveExistingExcelPath(folderPath, company.filename);
+  const fileInfo = cfg?.files?.[companyId];
+  if (!fileInfo?.folder || !fileInfo?.filename) throw new Error(`Fichier non configuré pour ${companyId}.`);
+  const resolved = resolveExistingExcelPath(fileInfo.folder, fileInfo.filename);
   const excelPath = resolved.fullPath;
 
   // xlsx-populate préserve la mise en forme, les couleurs et les tableaux Excel
   const workbook = await XlsxPopulate.fromFileAsync(excelPath);
   const sheet = workbook.sheet('Saisie');
-  if (!sheet) throw new Error('Feuille "Saisie" introuvable dans ' + company.filename);
+  if (!sheet) throw new Error('Feuille "Saisie" introuvable dans ' + fileInfo.filename);
 
   // Trouver la prochaine ligne vide (col B = colonne 2) à partir de la ligne 4
   let nextRow = 4;
@@ -3335,16 +3365,18 @@ async function writeAccidentToExcel(folderPath, companyId, data) {
   return { row: nextRow, num: nextNum };
 }
 
-async function updateAccidentInExcel(folderPath, companyId, rowIndex, data) {
+async function updateAccidentInExcel(cfg, companyId, rowIndex, data) {
   const company = RH_SECURITY_COMPANIES.find((c) => c.id === companyId);
   if (!company) throw new Error(`Entreprise inconnue : ${companyId}`);
 
-  const resolved = resolveExistingExcelPath(folderPath, company.filename);
+  const fileInfo = cfg?.files?.[companyId];
+  if (!fileInfo?.folder || !fileInfo?.filename) throw new Error(`Fichier non configuré pour ${companyId}.`);
+  const resolved = resolveExistingExcelPath(fileInfo.folder, fileInfo.filename);
   const excelPath = resolved.fullPath;
 
   const workbook = await XlsxPopulate.fromFileAsync(excelPath);
   const sheet = workbook.sheet('Saisie');
-  if (!sheet) throw new Error('Feuille "Saisie" introuvable dans ' + company.filename);
+  if (!sheet) throw new Error('Feuille "Saisie" introuvable dans ' + fileInfo.filename);
 
   // Vérifier que la ligne cible n'est pas vide (sécurité)
   const nomCell = sheet.cell(rowIndex, 2).value();
@@ -3457,7 +3489,7 @@ app.put('/api/rh-security-update-accident', requireToken, requireWriteRateLimit,
   const rowIndex = parseInt(match[2], 10);
 
   try {
-    await updateAccidentInExcel(cfg.folder, companyId, rowIndex, data);
+    await updateAccidentInExcel(cfg, companyId, rowIndex, data);
     clearExcelReadCache('rh_security_incidents');
     const incidents = getRHSecurityIncidentsCached(cfg, { forceRefresh: true });
     res.json({ success: true, incidentCount: incidents.length });
@@ -3471,16 +3503,22 @@ app.get('/api/rh-security-excel-config', (req, res) => {
 });
 
 app.put('/api/rh-security-excel-config', requireToken, requireWriteRateLimit, (req, res) => {
-  const folder = String(req.body?.folder || '').trim();
-  if (!folder) {
-    return res.status(400).json({ success: false, error: 'Champ manquant : folder.' });
+  const filesInput = req.body?.files || {};
+  const files = {};
+  for (const company of RH_SECURITY_COMPANIES) {
+    const folder = String(filesInput[company.id]?.folder || '').trim();
+    const filename = String(filesInput[company.id]?.filename || '').trim();
+    if (folder && filename) files[company.id] = { folder, filename };
+  }
+  if (!Object.keys(files).length) {
+    return res.status(400).json({ success: false, error: 'Aucun fichier configuré. Veuillez renseigner au moins un chemin et un nom de fichier.' });
   }
   try {
-    const cfg = { folder, active: true };
+    const cfg = { active: true, files };
     const incidents = parseRHSecurityExcels(cfg);
     const result = buildRHSecurityReadResult(incidents);
     dbSet('rh_security_excel_config', cfg);
-    saveRHFolderBackup(folder);
+    saveRHFilesBackup(files);
     clearExcelReadCache('rh_security_incidents');
     res.json({ success: true, result, incidentCount: incidents.length });
   } catch (e) {
@@ -3498,7 +3536,7 @@ app.post('/api/rh-security-add-accident', requireToken, requireWriteRateLimit, a
     return res.status(400).json({ success: false, error: 'Champs obligatoires manquants : companyId, nom, dateAccident, gravite.' });
   }
   try {
-    const writeResult = await writeAccidentToExcel(cfg.folder, companyId, req.body);
+    const writeResult = await writeAccidentToExcel(cfg, companyId, req.body);
     clearExcelReadCache('rh_security_incidents');
     const incidents = getRHSecurityIncidentsCached(cfg, { forceRefresh: true });
     res.json({ success: true, ...writeResult, incidentCount: incidents.length });
@@ -3513,7 +3551,7 @@ app.delete('/api/rh-security-excel-config', requireToken, (req, res) => {
     rhSecurityWatcher = null;
   }
   dbSet('rh_security_excel_config', null);
-  deleteRHFolderBackup();
+  deleteRHFilesBackup();
   clearExcelReadCache('rh_security_incidents');
   res.json({ success: true });
 });
@@ -3747,14 +3785,16 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`⚠️  [Excel CBCO Prod] Aucun fichier Excel configuré`);
   }
   const rhCfg = dbGet('rh_security_excel_config', null);
-  if (rhCfg && rhCfg.active) {
-    console.log(`✅ [Excel RH Sécurité] Dossier : ${rhCfg.folder}`);
+  if (rhCfg && rhCfg.active && rhCfg.files) {
+    console.log(`✅ [Excel RH Sécurité] Configuration par fichier :`);
     for (const company of RH_SECURITY_COMPANIES) {
-      const fp = path.join(rhCfg.folder, company.filename);
-      console.log(fs.existsSync(fp) ? `   ✅ ${company.filename}` : `   ❌ ${company.filename} (introuvable)`);
+      const fi = rhCfg.files[company.id];
+      if (!fi) { console.log(`   ⚠️  ${company.label} : non configuré`); continue; }
+      const fp = path.join(fi.folder, fi.filename);
+      console.log(fs.existsSync(fp) ? `   ✅ ${fi.filename}` : `   ❌ ${fi.filename} (introuvable)`);
     }
   } else {
-    console.log(`⚠️  [Excel RH Sécurité] Aucun dossier configuré`);
+    console.log(`⚠️  [Excel RH Sécurité] Aucun fichier configuré`);
   }
   try {
     const commerceSource = detectLatestCommerceExcel();

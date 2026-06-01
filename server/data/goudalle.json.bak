@@ -1,7 +1,24 @@
 {
   "rh_security_excel_config": {
-    "folder": "W:\\RH paie\\ADMINISTRATIF PAIE\\Aministratif\\accident\\TABLEAU ACCIDENTS DU TRAVAIL toutes societes",
-    "active": true
+    "active": true,
+    "files": {
+      "cbco": {
+        "folder": "W:\\RH paie\\ADMINISTRATIF PAIE\\Aministratif\\accident\\TABLEAU ACCIDENTS DU TRAVAIL toutes societes",
+        "filename": "CBCO_Suivi_Accidents.xlsx"
+      },
+      "charpente": {
+        "folder": "Y:\\03-Affaires\\06-SECURITE\\02_ SUIVI ACCIDENT et presqu'AT",
+        "filename": "GoudalleCharpente_Suivi_Accidents.xlsx"
+      },
+      "macons": {
+        "folder": "W:\\RH paie\\ADMINISTRATIF PAIE\\Aministratif\\accident\\TABLEAU ACCIDENTS DU TRAVAIL toutes societes",
+        "filename": "GoudalleMacons_Suivi_Accidents.xlsx"
+      },
+      "sylve": {
+        "folder": "W:\\RH paie\\ADMINISTRATIF PAIE\\Aministratif\\accident\\TABLEAU ACCIDENTS DU TRAVAIL toutes societes",
+        "filename": "SylveData_Suivi_Accidents.xlsx"
+      }
+    }
   },
   "gm_excel_config": {
     "folder": "X:\\03-Affaires\\INDICATEUR",

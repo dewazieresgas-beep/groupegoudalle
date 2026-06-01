@@ -642,10 +642,12 @@
     }
 
     function computeAllTimeRecord(incidents) {
-      const periodStart = parseIsoDate('2019-10-01');
+      const fyStartYear = getCurrentExerciseStartYear();
+      const fyStartIso = `${fyStartYear}-10-01`;
+      const periodStart = parseIsoDate(fyStartIso);
       const today = new Date();
       const todayUtc = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-      const filtered = incidents.filter((item) => item.accidentDate && item.accidentDate >= '2019-10-01');
+      const filtered = incidents.filter((item) => item.accidentDate && item.accidentDate >= fyStartIso);
       if (!filtered.length) {
         return periodStart ? Math.max(0, Math.floor((todayUtc.getTime() - periodStart.getTime()) / (24 * 60 * 60 * 1000))) : null;
       }
@@ -751,7 +753,7 @@
                 <div class="rh-stat-sub" style="margin-top:8px;">${meterSub}</div>
                 ${!isClosedExercise && allTimeRecord != null ? `
                   <div style="margin-top:10px; padding-top:10px; border-top:1px solid rgba(0,0,0,0.08);">
-                    <span style="font-size:11px; text-transform:uppercase; letter-spacing:0.07em; font-weight:700; color:#56705c;">Record depuis oct. 2019</span>
+                    <span style="font-size:11px; text-transform:uppercase; letter-spacing:0.07em; font-weight:700; color:#56705c;">Record depuis oct. ${getCurrentExerciseStartYear()}</span>
                     <span style="display:block; font-size:22px; font-weight:800; color:${days != null && days >= allTimeRecord ? '#d4960a' : 'var(--rh-ink)'};">
                       ${days != null && days >= allTimeRecord ? '★ ' : ''}${allTimeRecord} jours
                     </span>
@@ -904,7 +906,7 @@
                 <div style="color:#8a6a37; margin-top:4px; line-height:1.5;">${bannerSub}</div>
                 ${groupAllTimeRecord != null ? `
                   <div style="margin-top:12px; padding-top:12px; border-top:1px solid rgba(200,160,80,0.3); display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;">
-                    <span style="font-size:11px; text-transform:uppercase; letter-spacing:0.08em; font-weight:700; color:#8a6a37;">Record groupe depuis oct. 2019</span>
+                    <span style="font-size:11px; text-transform:uppercase; letter-spacing:0.08em; font-weight:700; color:#8a6a37;">Record groupe depuis oct. ${getCurrentExerciseStartYear()}</span>
                     <span style="font-size:22px; font-weight:800; color:${group.joursSansAccident != null && group.joursSansAccident >= groupAllTimeRecord ? '#d4960a' : '#6b4e1a'};">
                       ${group.joursSansAccident != null && group.joursSansAccident >= groupAllTimeRecord ? '★ ' : ''}${groupAllTimeRecord} jours
                     </span>

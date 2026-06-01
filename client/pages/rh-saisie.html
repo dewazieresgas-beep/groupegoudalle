@@ -416,23 +416,49 @@
         </div>
       </div>
 
-      <!-- Section admin (config dossier) -->
+      <!-- Section admin (config fichiers Excel) -->
       <div id="adminSection" style="display:none;">
         <div class="admin-section">
-          <div class="admin-section-title">⚙️ Configuration administrateur — Dossier des fichiers Excel</div>
-          <form onsubmit="handleConnectFolder(event)" style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
-            <div class="form-group" style="flex:1; min-width:300px; margin-bottom:0;">
-              <label for="cfgFolder">Chemin du dossier</label>
-              <input type="text" id="cfgFolder"
-                placeholder="ex: W:\RH paie\ADMINISTRATIF PAIE\Aministratif\accident\TABLEAU ACCIDENTS DU TRAVAIL toutes societes">
-            </div>
-            <div style="display:flex; gap:8px; flex-wrap:wrap;">
-              <button type="submit" id="btnCfgConnect" class="btn btn-primary" style="white-space:nowrap;">🔗 Connecter</button>
-              <button type="button" id="btnCfgSync" class="btn btn-secondary" style="display:none; white-space:nowrap;" onclick="handleForceSync()">🔄 Relire</button>
-              <button type="button" id="btnCfgDesync" class="btn btn-danger" style="display:none; white-space:nowrap;" onclick="handleDesync()">🔌 Déconnecter</button>
-            </div>
-          </form>
-          <div id="cfgStatus" style="margin-top:10px; font-size:13px; color:var(--text-light);"></div>
+          <div class="admin-section-title">⚙️ Configuration administrateur — Fichiers Excel</div>
+          <div style="overflow-x:auto; margin-bottom:12px;">
+            <table style="width:100%; border-collapse:collapse; font-size:13px;">
+              <thead>
+                <tr>
+                  <th style="text-align:left; padding:6px 10px; border-bottom:1px solid var(--border); white-space:nowrap; font-weight:600;">Société</th>
+                  <th style="text-align:left; padding:6px 10px; border-bottom:1px solid var(--border); font-weight:600;">Chemin du dossier</th>
+                  <th style="text-align:left; padding:6px 10px; border-bottom:1px solid var(--border); font-weight:600;">Nom du document</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="padding:6px 10px; white-space:nowrap; font-weight:500;">Concept Bois Côte d'Opale</td>
+                  <td style="padding:6px 10px;"><input type="text" id="cfgFolder_cbco" class="form-control" style="width:100%;" placeholder="ex: W:\RH paie\..."></td>
+                  <td style="padding:6px 10px;"><input type="text" id="cfgFilename_cbco" class="form-control" style="width:100%;" placeholder="CBCO_Suivi_Accidents.xlsx"></td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 10px; white-space:nowrap; font-weight:500;">Goudalle Charpente</td>
+                  <td style="padding:6px 10px;"><input type="text" id="cfgFolder_charpente" class="form-control" style="width:100%;" placeholder="ex: W:\RH paie\..."></td>
+                  <td style="padding:6px 10px;"><input type="text" id="cfgFilename_charpente" class="form-control" style="width:100%;" placeholder="GoudalleCharpente_Suivi_Accidents.xlsx"></td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 10px; white-space:nowrap; font-weight:500;">Nouvelle Goudalle Maçonnerie</td>
+                  <td style="padding:6px 10px;"><input type="text" id="cfgFolder_macons" class="form-control" style="width:100%;" placeholder="ex: W:\RH paie\..."></td>
+                  <td style="padding:6px 10px;"><input type="text" id="cfgFilename_macons" class="form-control" style="width:100%;" placeholder="GoudalleMacons_Suivi_Accidents.xlsx"></td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 10px; white-space:nowrap; font-weight:500;">Sylve Data</td>
+                  <td style="padding:6px 10px;"><input type="text" id="cfgFolder_sylve" class="form-control" style="width:100%;" placeholder="ex: W:\RH paie\..."></td>
+                  <td style="padding:6px 10px;"><input type="text" id="cfgFilename_sylve" class="form-control" style="width:100%;" placeholder="SylveData_Suivi_Accidents.xlsx"></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+            <button type="button" id="btnCfgConnect" class="btn btn-primary" style="white-space:nowrap;" onclick="handleConnectFolder()">🔗 Connecter</button>
+            <button type="button" id="btnCfgSync" class="btn btn-secondary" style="display:none; white-space:nowrap;" onclick="handleForceSync()">🔄 Relire</button>
+            <button type="button" id="btnCfgDesync" class="btn btn-danger" style="display:none; white-space:nowrap;" onclick="handleDesync()">🔌 Déconnecter</button>
+          </div>
+          <div id="cfgStatus" style="font-size:13px; color:var(--text-light);"></div>
         </div>
       </div>
 
@@ -540,30 +566,48 @@
       }
     }
 
-    /* ─── Admin : config dossier ───────────────────────────────────── */
+    /* ─── Admin : config fichiers ───────────────────────────────────── */
+
+    const CFG_COMPANIES = ['cbco', 'charpente', 'macons', 'sylve'];
 
     async function loadConfig() {
       try {
         const res = await fetch(SERVER_URL + '/rh-security-excel-config', { cache: 'no-store' });
         const cfg = await res.json();
-        if (cfg && cfg.active) {
-          document.getElementById('cfgFolder').value = cfg.folder || '';
-          document.getElementById('cfgStatus').innerHTML =
-            `<span style="color:green;">✅ Connecté</span> — Dossier&nbsp;: <code>${escapeHtml(cfg.folder)}</code>`;
-          document.getElementById('cfgFolder').disabled = true;
-          document.getElementById('btnCfgConnect').style.display = 'none';
+        if (cfg && cfg.active && cfg.files) {
+          for (const id of CFG_COMPANIES) {
+            const f = cfg.files[id] || {};
+            const folderEl = document.getElementById(`cfgFolder_${id}`);
+            const filenameEl = document.getElementById(`cfgFilename_${id}`);
+            if (folderEl) folderEl.value = f.folder || '';
+            if (filenameEl) filenameEl.value = f.filename || '';
+          }
+          document.getElementById('cfgStatus').innerHTML = `<span style="color:green;">✅ Connecté</span>`;
+          document.getElementById('btnCfgConnect').textContent = '🔗 Mettre à jour';
+          document.getElementById('btnCfgConnect').style.display = 'inline-flex';
           document.getElementById('btnCfgSync').style.display = 'inline-flex';
           document.getElementById('btnCfgDesync').style.display = 'inline-flex';
         } else {
-          document.getElementById('cfgStatus').textContent = '⚠️ Aucun dossier connecté.';
+          document.getElementById('cfgStatus').textContent = '⚠️ Aucun fichier connecté.';
+          document.getElementById('btnCfgConnect').textContent = '🔗 Connecter';
+          document.getElementById('btnCfgConnect').style.display = 'inline-flex';
+          document.getElementById('btnCfgSync').style.display = 'none';
+          document.getElementById('btnCfgDesync').style.display = 'none';
         }
       } catch { /* ignore */ }
     }
 
-    async function handleConnectFolder(event) {
-      event.preventDefault();
-      const folder = document.getElementById('cfgFolder').value.trim();
-      if (!folder) return;
+    async function handleConnectFolder() {
+      const files = {};
+      for (const id of CFG_COMPANIES) {
+        const folder = (document.getElementById(`cfgFolder_${id}`)?.value || '').trim();
+        const filename = (document.getElementById(`cfgFilename_${id}`)?.value || '').trim();
+        if (folder && filename) files[id] = { folder, filename };
+      }
+      if (!Object.keys(files).length) {
+        showMessage('Veuillez renseigner au moins un chemin de dossier et un nom de fichier.', 'danger');
+        return;
+      }
       const btn = document.getElementById('btnCfgConnect');
       btn.disabled = true; btn.textContent = '⏳...';
       try {
@@ -571,19 +615,19 @@
         const res = await fetch(SERVER_URL + '/rh-security-excel-config', {
           method: 'PUT',
           headers,
-          body: JSON.stringify({ folder })
+          body: JSON.stringify({ files })
         });
         const result = await res.json();
         if (!result.success) {
           document.getElementById('cfgStatus').innerHTML = `<span style="color:red;">❌ ${escapeHtml(result.error)}</span>`;
           return;
         }
-        showMessage(`✅ Dossier connecté — ${result.incidentCount} accident(s) lu(s) dans Excel.`, 'success');
+        showMessage(`✅ Fichiers connectés — ${result.incidentCount} accident(s) lu(s) dans Excel.`, 'success');
         loadConfig();
       } catch (e) {
         document.getElementById('cfgStatus').innerHTML = `<span style="color:red;">❌ ${escapeHtml(e.message)}</span>`;
       } finally {
-        btn.disabled = false; btn.textContent = '🔗 Connecter';
+        btn.disabled = false;
       }
     }
 
@@ -603,14 +647,18 @@
     }
 
     async function handleDesync() {
-      if (!confirm('Déconnecter le dossier Excel ?')) return;
+      if (!confirm('Déconnecter tous les fichiers Excel ?')) return;
       await fetch(SERVER_URL + '/rh-security-excel-config', { method: 'DELETE' });
-      document.getElementById('cfgFolder').disabled = false;
-      document.getElementById('cfgFolder').value = '';
+      for (const id of CFG_COMPANIES) {
+        const folderEl = document.getElementById(`cfgFolder_${id}`);
+        const filenameEl = document.getElementById(`cfgFilename_${id}`);
+        if (folderEl) { folderEl.value = ''; folderEl.disabled = false; }
+        if (filenameEl) { filenameEl.value = ''; filenameEl.disabled = false; }
+      }
       document.getElementById('btnCfgConnect').style.display = 'inline-flex';
       document.getElementById('btnCfgSync').style.display = 'none';
       document.getElementById('btnCfgDesync').style.display = 'none';
-      document.getElementById('cfgStatus').textContent = 'Dossier déconnecté.';
+      document.getElementById('cfgStatus').textContent = '⚠️ Aucun fichier connecté.';
     }
 
     function init() {
