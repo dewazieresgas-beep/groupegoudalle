@@ -602,6 +602,8 @@ app.use(cors({
   origin(origin, callback) {
     // Pas d'origin = même origine (appels directs depuis le serveur, curl, etc.)
     if (!origin) return callback(null, true);
+    // Pages file:// (dossiers chantier locaux) envoient origin "null" en string
+    if (origin === 'null') return callback(null, true);
     // Autoriser localhost / 127.0.0.1 sur n'importe quel port
     if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
       return callback(null, true);

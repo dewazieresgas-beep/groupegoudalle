@@ -35,7 +35,8 @@
       "Bash(Format-Table -AutoSize)",
       "Bash(node -e \"const fs=require\\('fs'\\); const db=JSON.parse\\(fs.readFileSync\\('c:/Users/gdewazieres/Desktop/groupegoudalle/server/data/goudalle.json','utf8'\\)\\); console.log\\('clés:', Object.keys\\(db\\)\\); console.log\\('chantiers:', JSON.stringify\\(db.chantiers||[], null,2\\).substring\\(0,500\\)\\)\")",
       "Bash(Copy-Item \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\\\\chantier-template\\\\index.html\" \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\\\\chantier-template\\\\Suivi-Chantier.html\")",
-      "PowerShell(Copy-Item \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\\\\chantier-template\\\\index.html\" \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\\\\chantier-template\\\\Suivi-Chantier.html\")"
+      "PowerShell(Copy-Item \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\\\\chantier-template\\\\index.html\" \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\\\\chantier-template\\\\Suivi-Chantier.html\")",
+      "Bash(node -e \"const fs=require\\('fs'\\); const db=JSON.parse\\(fs.readFileSync\\('c:/Users/gdewazieres/Desktop/groupegoudalle/server/data/goudalle.json','utf8'\\)\\); console.log\\(JSON.stringify\\(db.chantiers||[], null,2\\)\\)\")"
     ],
     "additionalDirectories": [
       "\\tmp",
