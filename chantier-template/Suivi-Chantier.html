@@ -648,6 +648,50 @@ async function ensureEtapeFolder(e) {
   } catch {}
 }
 
+// Retourne true si un dossier contient au moins un fichier (récursivement).
+// Utilisé pour ne pas supprimer un dossier où l'utilisateur aurait mis des
+// fichiers manuellement.
+async function hasFiles(dirHandle) {
+  try {
+    for await (const entry of dirHandle.values()) {
+      if (entry.kind === 'file') return true;
+      if (entry.kind === 'directory' && await hasFiles(entry)) return true;
+    }
+  } catch {}
+  return false;
+}
+
+// Supprime les dossiers des étapes qui n'ont pas de données workflow
+// ET sont vides sur le disque (aucun fichier). Nettoie les dossiers
+// créés à tort par l'ancienne version "tout-créer-d'un-coup".
+// Retourne true si au moins un dossier a été supprimé.
+// IMPORTANT : après removeEntry(), Chrome invalide les handles du parent,
+// ce qui rendrait les écritures suivantes impossibles. On recharge donc
+// la page juste après pour obtenir des handles frais.
+async function pruneUnusedFolders() {
+  if (!rootHandle) return false;
+  let pruned = false;
+  for (const ph of PHASES)
+    for (const e of ph.etapes) {
+      const wf = appData?.workflow?.[e.id];
+      if (!wf) continue;
+      const hasData = wf.done
+        || (wf.docs && wf.docs.length > 0)
+        || wf.notes
+        || Object.values(wf.checks || {}).some(v => v);
+      if (!hasData) {
+        try {
+          const dir = await rootHandle.getDirectoryHandle(e.folder);
+          if (!await hasFiles(dir)) {
+            await rootHandle.removeEntry(e.folder, { recursive: true });
+            pruned = true;
+          }
+        } catch {} // dossier inexistant ou non supprimable : on ignore
+      }
+    }
+  return pruned;
+}
+
 // Au démarrage : recrée uniquement les dossiers des étapes qui ont déjà
 // du contenu (doc, note, check coché, ou étape marquée terminée).
 async function buildFolders() {
@@ -1319,7 +1363,9 @@ async function browserSync() {
 
 async function start() {
   await loadData();
-  await buildFolders(); // après loadData : on sait quelles étapes ont du contenu
+  const pruned = await pruneUnusedFolders(); // supprime les dossiers vides
+  if (pruned) { window.location.reload(); return; } // handles invalidés → reload silencieux
+  await buildFolders(); // recrée les dossiers des étapes avec du contenu
   document.getElementById('overlay').style.display = 'none';
   document.getElementById('app').style.display = '';
   syncInfosUI(); bindInfosEvents(); renderPhases(); setSave('saved');

@@ -15369,6 +15369,346 @@
       "createdBy": "sync-agent",
       "createdAt": "2026-06-01T09:31:37.324Z",
       "updatedAt": "2026-06-01T09:31:37.324Z"
+    },
+    {
+      "nom": "Wimereux 5",
+      "adresse": "22 bis rue jean moulin Wimereux 62930",
+      "societe": "charpente",
+      "chef": "Gaspard de Wazières",
+      "dateDebut": "2025-09-01",
+      "dateFin": "2026-09-01",
+      "montant": "500000",
+      "statut": "en_cours",
+      "lat": 50.7754566,
+      "lng": 1.6141639,
+      "suivi": {
+        "workflow": {
+          "obtention_marche": {
+            "done": false,
+            "notes": "",
+            "docs": [],
+            "checks": {}
+          },
+          "reunion_transfert": {
+            "done": false,
+            "notes": "",
+            "docs": [],
+            "checks": {}
+          },
+          "signature_marche": {
+            "done": false,
+            "notes": "",
+            "docs": [],
+            "checks": {
+              "signature_dossier": false,
+              "planning_contractuel": false
+            }
+          },
+          "comprendre_dossier": {
+            "done": false,
+            "notes": "",
+            "docs": [],
+            "checks": {
+              "reunion_chantier_1": false
+            }
+          },
+          "planning_previsionnel": {
+            "done": false,
+            "notes": "",
+            "docs": [],
+            "checks": {
+              "planning_doc": false
+            }
+          },
+          "pic": {
+            "done": false,
+            "notes": "",
+            "docs": [],
+            "checks": {
+              "pic_doc": false
+            }
+          },
+          "liste_besoins": {
+            "done": false,
+            "notes": "",
+            "docs": [],
+            "checks": {
+              "liste_besoins_doc": false,
+              "jalons_doc": false,
+              "reunion_chantier_2": false
+            }
+          },
+          "suivi_etudes": {
+            "done": false,
+            "notes": "",
+            "docs": [],
+            "checks": {
+              "ddc": false,
+              "delais_types": false,
+              "dossier_technique": false,
+              "plan_charpente": false,
+              "carnet_detail": false,
+              "note_calcul": false,
+              "calcul_specifiques": false,
+              "bordereaux_envoi": false,
+              "suivi_visas": false,
+              "faire_relances": false
+            }
+          },
+          "validation_etudes": {
+            "done": false,
+            "notes": "",
+            "docs": [],
+            "checks": {
+              "visa_obtenu": false
+            }
+          },
+          "preparation_chantier": {
+            "done": false,
+            "notes": "",
+            "docs": [],
+            "checks": {
+              "mode_operatoire": false,
+              "hygiene_securite": false,
+              "delais": false,
+              "budget_previsionnel": false,
+              "convention_prorata": false,
+              "ppsps": false,
+              "verification_assemblages": false
+            }
+          },
+          "reunion_passation": {
+            "done": false,
+            "notes": "",
+            "docs": [],
+            "checks": {
+              "cr_passation": false
+            }
+          },
+          "lancement_commandes": {
+            "done": false,
+            "notes": "",
+            "docs": [],
+            "checks": {
+              "compatibilite_pose": false,
+              "actualisation_planning": false
+            }
+          },
+          "reception_supports": {
+            "done": false,
+            "notes": "",
+            "docs": [],
+            "checks": {
+              "qualite_reception": false,
+              "actualisation_planning_2": false
+            }
+          },
+          "suivi_chantier_ops": {
+            "done": false,
+            "notes": "",
+            "docs": [],
+            "checks": {
+              "respect_delais": false,
+              "qualite_nc": false,
+              "securite": false
+            }
+          },
+          "fin_chantier": {
+            "done": false,
+            "notes": "",
+            "docs": [],
+            "checks": {
+              "doe": false,
+              "pv_reception": false
+            }
+          },
+          "rex": {
+            "done": false,
+            "notes": "",
+            "docs": [],
+            "checks": {
+              "retour_info": false,
+              "resultats": false
+            }
+          }
+        },
+        "lastModified": "2026-06-01T11:04:30.111Z"
+      },
+      "syncedAt": "2026-06-01T11:04:55.129Z",
+      "id": "1e87ff94d8714d31",
+      "createdBy": "sync-agent",
+      "createdAt": "2026-06-01T10:03:47.836Z",
+      "updatedAt": "2026-06-01T11:04:55.129Z"
+    },
+    {
+      "nom": "",
+      "adresse": "",
+      "societe": "charpente",
+      "chef": "",
+      "dateDebut": "",
+      "dateFin": "",
+      "montant": "",
+      "statut": "planifie",
+      "lat": null,
+      "lng": null,
+      "suivi": {
+        "workflow": {
+          "obtention_marche": {
+            "done": false,
+            "notes": "",
+            "docs": [],
+            "checks": {}
+          },
+          "reunion_transfert": {
+            "done": false,
+            "notes": "",
+            "docs": [],
+            "checks": {}
+          },
+          "signature_marche": {
+            "done": false,
+            "notes": "",
+            "docs": [],
+            "checks": {
+              "signature_dossier": false,
+              "planning_contractuel": false
+            }
+          },
+          "comprendre_dossier": {
+            "done": false,
+            "notes": "",
+            "docs": [],
+            "checks": {
+              "reunion_chantier_1": false
+            }
+          },
+          "planning_previsionnel": {
+            "done": false,
+            "notes": "",
+            "docs": [],
+            "checks": {
+              "planning_doc": false
+            }
+          },
+          "pic": {
+            "done": false,
+            "notes": "",
+            "docs": [],
+            "checks": {
+              "pic_doc": false
+            }
+          },
+          "liste_besoins": {
+            "done": false,
+            "notes": "",
+            "docs": [],
+            "checks": {
+              "liste_besoins_doc": false,
+              "jalons_doc": false,
+              "reunion_chantier_2": false
+            }
+          },
+          "suivi_etudes": {
+            "done": false,
+            "notes": "",
+            "docs": [],
+            "checks": {
+              "ddc": false,
+              "delais_types": false,
+              "dossier_technique": false,
+              "plan_charpente": false,
+              "carnet_detail": false,
+              "note_calcul": false,
+              "calcul_specifiques": false,
+              "bordereaux_envoi": false,
+              "suivi_visas": false,
+              "faire_relances": false
+            }
+          },
+          "validation_etudes": {
+            "done": false,
+            "notes": "",
+            "docs": [],
+            "checks": {
+              "visa_obtenu": false
+            }
+          },
+          "preparation_chantier": {
+            "done": false,
+            "notes": "",
+            "docs": [],
+            "checks": {
+              "mode_operatoire": false,
+              "hygiene_securite": false,
+              "delais": false,
+              "budget_previsionnel": false,
+              "convention_prorata": false,
+              "ppsps": false,
+              "verification_assemblages": false
+            }
+          },
+          "reunion_passation": {
+            "done": false,
+            "notes": "",
+            "docs": [],
+            "checks": {
+              "cr_passation": false
+            }
+          },
+          "lancement_commandes": {
+            "done": false,
+            "notes": "",
+            "docs": [],
+            "checks": {
+              "compatibilite_pose": false,
+              "actualisation_planning": false
+            }
+          },
+          "reception_supports": {
+            "done": false,
+            "notes": "",
+            "docs": [],
+            "checks": {
+              "qualite_reception": false,
+              "actualisation_planning_2": false
+            }
+          },
+          "suivi_chantier_ops": {
+            "done": false,
+            "notes": "",
+            "docs": [],
+            "checks": {
+              "respect_delais": false,
+              "qualite_nc": false,
+              "securite": false
+            }
+          },
+          "fin_chantier": {
+            "done": false,
+            "notes": "",
+            "docs": [],
+            "checks": {
+              "doe": false,
+              "pv_reception": false
+            }
+          },
+          "rex": {
+            "done": false,
+            "notes": "",
+            "docs": [],
+            "checks": {
+              "retour_info": false,
+              "resultats": false
+            }
+          }
+        },
+        "lastModified": "2026-06-01T11:05:22.606Z"
+      },
+      "syncedAt": "2026-06-01T11:05:25.103Z",
+      "id": "160d3b674255e8f7",
+      "createdBy": "sync-agent",
+      "createdAt": "2026-06-01T11:05:25.103Z",
+      "updatedAt": "2026-06-01T11:05:25.103Z"
     }
   ]
 }
