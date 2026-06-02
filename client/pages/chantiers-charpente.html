@@ -3,77 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chantiers Goudalle Charpente - Intranet Goudalle</title>
+  <title>Carte des chantiers - Intranet Goudalle</title>
   <link rel="stylesheet" href="../css/style.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
-    #map { height: 460px; width: 100%; z-index: 1; }
-
-    .filter-btn {
-      padding: 6px 14px; border: 1.5px solid var(--border); border-radius: 20px;
-      background: var(--lighter); color: var(--dark); cursor: pointer;
-      font-size: 13px; font-weight: 500; transition: all 0.2s;
-    }
-    .filter-btn:hover { border-color: var(--accent); background: var(--light); }
-    .filter-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
-
-    .toggle-view-btn {
-      padding: 7px 16px; border-radius: 20px; border: 1.5px solid var(--border);
-      background: var(--lighter); cursor: pointer; font-size: 13px; font-weight: 500;
-      transition: all 0.2s; color: var(--dark);
-    }
-    .toggle-view-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
-
-    .kpi-stat {
-      background: white; border-radius: 10px; padding: 14px 16px;
-      border: 1px solid var(--border); text-align: center; flex: 1; min-width: 90px;
-    }
-    .kpi-stat-value { font-size: 24px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
-    .kpi-stat-label { font-size: 11px; color: var(--text-muted-dark); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
-
-    .chantier-card {
-      background: white; border-radius: 10px; border: 1px solid var(--border);
-      padding: 16px; transition: box-shadow 0.2s;
-    }
-    .chantier-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
-
-    .badge-statut { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; color: white; }
-    .badge-mine { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; background: var(--light); color: var(--text-muted-dark); border: 1px solid var(--border); }
-
-    .btn-sm { padding: 5px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--lighter); cursor: pointer; font-size: 12px; transition: all 0.2s; white-space: nowrap; }
-    .btn-sm:hover { background: var(--light); border-color: var(--accent); }
-    .btn-danger-sm { border-color: #f5ecec; background: #f5ecec; color: var(--danger); }
-    .btn-danger-sm:hover { background: var(--danger); color: white; border-color: var(--danger); }
-    .btn-fiche { background: var(--primary); color: white; border-color: var(--primary); }
-    .btn-fiche:hover { background: var(--secondary); border-color: var(--secondary); color: white; }
-
-    /* Modal */
-    #modal-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px; }
-    #modal-box { background:white; border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,0.3); width:100%; max-width:560px; max-height:92vh; overflow-y:auto; }
-    .modal-header { padding:20px 24px 16px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); position:sticky; top:0; background:white; z-index:1; }
-    .modal-title { font-size:18px; font-weight:700; color:var(--dark); margin:0; }
-    .modal-close { background:none; border:none; font-size:22px; cursor:pointer; color:var(--text-muted-dark); padding:0; line-height:1; }
-    .modal-close:hover { color:var(--danger); }
-    .modal-body { padding:20px 24px; }
-    .modal-footer { padding:16px 24px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:flex-end; position:sticky; bottom:0; background:white; }
-    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-    .form-group { margin-bottom:14px; }
-    .form-group label { display:block; font-size:13px; font-weight:600; margin-bottom:5px; color:var(--dark); }
-    .form-group input, .form-group select, .form-group textarea { width:100%; padding:8px 10px; border:1.5px solid var(--border); border-radius:6px; font-size:13px; box-sizing:border-box; background:var(--lighter); color:var(--dark); font-family:inherit; transition:border-color 0.2s; }
-    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline:none; border-color:var(--accent); background:white; }
-    .form-group textarea { resize:vertical; }
-    .btn-geocode { padding:8px 12px; background:var(--accent); color:white; border:none; border-radius:6px; cursor:pointer; font-size:12px; white-space:nowrap; transition:background 0.2s; flex-shrink:0; }
-    .btn-geocode:hover { background:var(--accent-dark); }
-    .btn-geocode:disabled { opacity:0.6; cursor:not-allowed; }
-    .geocode-row { display:flex; gap:8px; align-items:center; }
-    .geocode-row input { flex:1; }
-    #geocode-feedback { font-size:12px; margin-top:4px; padding:4px 8px; border-radius:4px; display:none; }
-    #geocode-feedback.success { background:#edf4ec; color:var(--success); }
-    #geocode-feedback.error { background:#f5ecec; color:var(--danger); }
-    .map-click-hint { background:var(--light); border:1px solid var(--border); border-radius:6px; padding:8px 12px; font-size:12px; color:var(--text-muted-dark); margin-top:6px; }
-    .empty-state { text-align:center; padding:48px 24px; color:var(--text-muted-dark); }
-    .empty-state p:first-child { font-size:40px; margin-bottom:8px; }
-    .loading-overlay { display:flex; align-items:center; justify-content:center; height:200px; color:var(--text-muted-dark); font-size:14px; gap:8px; }
+    #map { height: 560px; width: 100%; z-index: 1; }
+    .kpi-stat { background:white; border-radius:8px; padding:14px 16px; border:1px solid var(--border); text-align:center; flex:1; min-width:110px; }
+    .kpi-stat-value { font-size:24px; font-weight:700; line-height:1; margin-bottom:4px; color:var(--primary); }
+    .kpi-stat-label { font-size:11px; color:var(--text-muted-dark); font-weight:600; text-transform:uppercase; letter-spacing:.4px; }
+    .chantier-card { background:white; border-radius:8px; border:1px solid var(--border); padding:14px; transition:box-shadow .2s,border-color .2s; }
+    .chantier-card:hover { box-shadow:0 4px 16px rgba(0,0,0,.08); border-color:var(--accent); }
+    .btn-sm { padding:5px 10px; border:1px solid var(--border); border-radius:6px; background:var(--lighter); cursor:pointer; font-size:12px; transition:all .2s; white-space:nowrap; }
+    .btn-sm:hover { background:var(--light); border-color:var(--accent); }
+    .loading-overlay { display:flex; align-items:center; justify-content:center; height:180px; color:var(--text-muted-dark); font-size:14px; }
+    .empty-state { text-align:center; padding:46px 24px; color:var(--text-muted-dark); }
   </style>
 </head>
 <body>
@@ -85,321 +28,129 @@
   <div class="app-container">
     <div id="sidebar"></div>
     <main class="main-content">
-
       <div class="d-flex justify-between items-center mb-3" style="gap:12px;flex-wrap:wrap;">
         <div>
-          <h1 class="mb-0">🪵 Goudalle Charpente</h1>
-          <p style="color:var(--text-muted-dark);margin:4px 0 0;font-size:14px;">Géolocalisation et suivi des chantiers</p>
-        </div>
-        <div style="background:#edf7ed;border:1.5px solid #7bad75;border-radius:8px;padding:8px 14px;font-size:13px;color:#1a5c30;font-weight:500;">
-          🔄 Mis à jour automatiquement depuis les dossiers conducteurs
-        </div>
-      </div>
-
-      <!-- KPI -->
-      <div style="margin-bottom:16px;">
-        <div id="stats-row" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
-      </div>
-
-      <!-- Filtres statut -->
-      <div class="card" style="padding:14px 18px;margin-bottom:16px;">
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-          <span style="font-size:13px;font-weight:600;color:var(--text-muted-dark);margin-right:4px;">Filtrer :</span>
-          <button onclick="setFilter('tous')" id="filter-tous" class="filter-btn active">Tous</button>
-          <button onclick="setFilter('planifie')" id="filter-planifie" class="filter-btn">🔵 Planifié</button>
-          <button onclick="setFilter('en_cours')" id="filter-en_cours" class="filter-btn">🟠 En cours</button>
-          <button onclick="setFilter('termine')" id="filter-termine" class="filter-btn">🟢 Terminé</button>
-          <button onclick="setFilter('probleme')" id="filter-probleme" class="filter-btn">🔴 Problème</button>
+          <h1 class="mb-0">🗺️ Carte des chantiers</h1>
+          <p style="color:var(--text-muted-dark);margin:4px 0 0;font-size:14px;">
+            Tous les dossiers chantier avec une adresse renseignée dans 00_ Infos général chantier.xlsx.
+          </p>
         </div>
       </div>
 
-      <!-- Carte -->
-      <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;border-radius:10px;">
+      <div id="stats-row" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;"></div>
+
+      <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;border-radius:8px;">
         <div id="map"></div>
-        <div style="padding:10px 14px;border-top:1px solid var(--border);background:var(--lighter);display:flex;gap:18px;flex-wrap:wrap;">
-          <span style="font-size:12px;color:var(--text-muted-dark);"><span style="display:inline-block;width:12px;height:12px;background:#6b8e9f;border-radius:50%;margin-right:5px;vertical-align:middle;"></span>Planifié</span>
-          <span style="font-size:12px;color:var(--text-muted-dark);"><span style="display:inline-block;width:12px;height:12px;background:#d4a574;border-radius:50%;margin-right:5px;vertical-align:middle;"></span>En cours</span>
-          <span style="font-size:12px;color:var(--text-muted-dark);"><span style="display:inline-block;width:12px;height:12px;background:#7bad75;border-radius:50%;margin-right:5px;vertical-align:middle;"></span>Terminé</span>
-          <span style="font-size:12px;color:var(--text-muted-dark);"><span style="display:inline-block;width:12px;height:12px;background:#b85c5c;border-radius:50%;margin-right:5px;vertical-align:middle;"></span>Problème</span>
+        <div id="map-note" style="padding:10px 14px;border-top:1px solid var(--border);background:var(--lighter);font-size:12px;color:var(--text-muted-dark);">
+          Aucun filtre : tous les chantiers géocodés sont affichés.
         </div>
       </div>
 
-      <!-- Liste -->
-      <div id="chantiers-list"></div>
+      <div id="chantiers-list"><div class="loading-overlay">⏳ Chargement de la carte…</div></div>
     </main>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    const SOCIETE = 'charpente';
-    const STATUTS = {
-      planifie: { label: 'Planifié',  color: '#6b8e9f' },
-      en_cours: { label: 'En cours',  color: '#d4a574' },
-      termine:  { label: 'Terminé',   color: '#7bad75' },
-      probleme: { label: 'Problème',  color: '#b85c5c' },
-    };
+    let map;
+    let markers = {};
+    let allChantiers = [];
+    let totalWithAddress = 0;
+    const PIN_COLOR = '#5a4a3a';
 
-    // Ordre des étapes du workflow (même ordre que la fiche)
-    const ETAPES_ORDER = [
-      ["S'approprier", 'obtention_marche',      'Obtention du marché'],
-      ["S'approprier", 'reunion_transfert',      'Réunion de transfert'],
-      ["S'approprier", 'signature_marche',       'Signature du marché'],
-      ["S'approprier", 'comprendre_dossier',     'Comprendre le dossier'],
-      ['Lancement',    'planning_previsionnel',  'Planning Prévisionnel'],
-      ['Lancement',    'pic',                    'PIC'],
-      ['Lancement',    'liste_besoins',          "Besoins d'étude + Jalons"],
-      ['Études',       'suivi_etudes',           'Diffusion EXE'],
-      ['Études',       'bordereaux_envoi',       "Bordereaux d'envoi"],
-      ['Études',       'suivi_visas_etape',      'Suivi des visas'],
-      ['Études',       'faire_relances',         'Relances'],
-      ['Études',       'validation_etudes',      'Validation des études'],
-      ['Méthodes',     'preparation_chantier',   'Préparation chantier'],
-      ['Méthodes',     'reunion_passation',      'Réunion de passation'],
-      ['Suivi',        'lancement_commandes',    'Lancement des commandes'],
-      ['Suivi',        'reception_supports',     'Réception des supports'],
-      ['Suivi',        'suivi_chantier_ops',     'Suivi chantier'],
-      ['Suivi',        'fin_chantier',           'Fin de chantier'],
-      ['Suivi',        'rex',                    'REX'],
-    ];
-
-    function getChantierProgress(c) {
-      const wf = c.suivi?.workflow || {};
-      const total = ETAPES_ORDER.length;
-      const done = ETAPES_ORDER.filter(([, id]) => wf[id]?.done).length;
-      const current = ETAPES_ORDER.find(([, id]) => !wf[id]?.done);
-      const pct = Math.round(done / total * 100);
-      return { total, done, pct, phase: current?.[0] || null, label: current?.[2] || null };
-    }
-
-    let map, markers = {}, allChantiers = [];
-    let currentFilter = 'tous';
-
-    // ===== API =====
     async function apiGet(path) {
       const res = await fetch(SERVER_URL + path);
-      return res.ok ? res.json() : null;
-    }
-    async function apiPost(path, body) {
-      const res = await fetch(SERVER_URL + path, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goudalle-token': window._serverToken },
-        body: JSON.stringify(body)
-      });
-      const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
-      return data;
-    }
-    async function apiPut(path, body) {
-      const res = await fetch(SERVER_URL + path, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'x-goudalle-token': window._serverToken },
-        body: JSON.stringify(body)
-      });
-      const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
-      return data;
-    }
-    async function apiDelete(path) {
-      const res = await fetch(SERVER_URL + path, {
-        method: 'DELETE',
-        headers: { 'x-goudalle-token': window._serverToken }
-      });
-      const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || `Erreur ${res.status}`);
-      return data;
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
     }
 
-    // ===== MÉTÉO =====
-    const weatherCache = {};
-    function wmoToEmoji(c) {
-      if (c === 0) return '☀️';
-      if (c <= 2) return '🌤️';
-      if (c <= 3) return '☁️';
-      if (c <= 48) return '🌫️';
-      if (c <= 57) return '🌦️';
-      if (c <= 67) return '🌧️';
-      if (c <= 77) return '❄️';
-      if (c <= 82) return '🌦️';
-      if (c <= 86) return '🌨️';
-      return '⛈️';
-    }
-    async function fetchWeather(lat, lng, containerId) {
-      const el = document.getElementById(containerId);
-      if (!el) return;
-      const key = `${lat},${lng}`;
-      if (weatherCache[key]) { el.innerHTML = weatherCache[key]; return; }
-      try {
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max&timezone=Europe%2FParis&forecast_days=5`;
-        const data = await (await fetch(url)).json();
-        const d = data.daily;
-        const noms = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
-        let html = '<div style="margin-top:10px;padding-top:8px;border-top:1px solid #e8e0d8;"><div style="font-size:11px;font-weight:700;color:#7a6a5a;margin-bottom:6px;letter-spacing:.5px;">PRÉVISIONS MÉTÉO</div><div style="display:flex;gap:5px;">';
-        for (let i = 0; i < 5; i++) {
-          const date = new Date(d.time[i]);
-          const jour = i === 0 ? 'Auj.' : noms[date.getDay()];
-          const precip = d.precipitation_sum[i];
-          const wind = Math.round(d.windspeed_10m_max[i]);
-          html += `<div style="flex:1;text-align:center;background:#f7f3ef;border-radius:7px;padding:5px 2px;">
-            <div style="font-size:10px;font-weight:600;color:#8a7a6a;">${jour}</div>
-            <div style="font-size:17px;line-height:1.3;">${wmoToEmoji(d.weathercode[i])}</div>
-            <div style="font-size:11px;color:#c0392b;font-weight:700;">${Math.round(d.temperature_2m_max[i])}°</div>
-            <div style="font-size:10px;color:#7f8c8d;">${Math.round(d.temperature_2m_min[i])}°</div>
-            ${precip > 0 ? `<div style="font-size:9px;color:#2980b9;">💧${precip}mm</div>` : ''}
-            <div style="font-size:9px;color:#95a5a6;">💨${wind}km/h</div>
-          </div>`;
-        }
-        html += '</div></div>';
-        weatherCache[key] = html;
-        if (document.getElementById(containerId)) el.innerHTML = html;
-      } catch { if (document.getElementById(containerId)) el.innerHTML = '<div style="font-size:11px;color:#aaa;margin-top:8px;">Météo indisponible</div>'; }
-    }
-
-    // ===== DONNÉES =====
-    async function loadChantiers() {
-      const all = await apiGet('/chantiers') || [];
-      allChantiers = all.filter(c => c.societe === SOCIETE);
-    }
-
-    function getFilteredList() {
-      let list = allChantiers;
-      if (currentFilter !== 'tous') list = list.filter(c => c.statut === currentFilter);
-      return list;
-    }
-
-    // ===== CARTE =====
-    function initMap() {
-      map = L.map('map').setView([46.5, 2.5], 6);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: 19
-      }).addTo(map);
-    }
-
-    function pinIcon(color) {
+    function pinIcon() {
       return L.divIcon({
-        html: `<div style="background:${color};width:22px;height:22px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.35);"></div>`,
-        iconSize: [22,22], iconAnchor: [11,22], popupAnchor: [0,-26], className: ''
+        html: `<div style="background:${PIN_COLOR};width:24px;height:24px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,.35);"></div>`,
+        iconSize: [24, 24],
+        iconAnchor: [12, 24],
+        popupAnchor: [0, -28],
+        className: '',
       });
-    }
-    function dotIcon(color) {
-      return L.divIcon({
-        html: `<div style="background:${color};width:16px;height:16px;border-radius:50%;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.4);"></div>`,
-        iconSize: [16,16], iconAnchor: [8,8], className: ''
-      });
-    }
-
-    function buildProgressHTML(c) {
-      const p = getChantierProgress(c);
-      const barColor = p.pct === 100 ? '#7bad75' : p.pct >= 50 ? '#d4a574' : '#6b8e9f';
-      return `<div style="margin:8px 0;padding:8px 0;border-top:1px solid #eee;border-bottom:1px solid #eee;">
-        <div style="display:flex;justify-content:space-between;font-size:10.5px;color:#777;margin-bottom:4px;">
-          <span style="font-weight:600;">Avancement</span>
-          <span>${p.done}/${p.total} étapes · ${p.pct}%</span>
-        </div>
-        <div style="background:#e8e3de;border-radius:4px;height:6px;overflow:hidden;margin-bottom:5px;">
-          <div style="background:${barColor};height:100%;width:${p.pct}%;border-radius:4px;"></div>
-        </div>
-        ${p.label
-          ? `<div style="font-size:11px;color:#7a6a5a;">📍 <strong>${escapeHtml(p.phase)}</strong> — ${escapeHtml(p.label)}</div>`
-          : `<div style="font-size:11px;color:#1e8449;font-weight:600;">✅ Toutes les étapes sont terminées</div>`
-        }
-      </div>`;
     }
 
     function buildPopupHTML(c) {
-      const s = STATUTS[c.statut] || STATUTS.planifie;
-      const montant = c.montant ? Number(c.montant).toLocaleString('fr-FR') + ' € HT' : '';
-      const dates = (c.dateDebut || c.dateFin) ? `📅 ${formatDate(c.dateDebut)} → ${formatDate(c.dateFin)}` : '';
-      return `
-        <div style="min-width:210px;font-family:Arial,sans-serif;font-size:13px;line-height:1.5;">
-          <div style="font-weight:700;font-size:15px;margin-bottom:4px;">${escapeHtml(c.nom)}</div>
-          ${c.adresse ? `<div style="color:#555;margin-bottom:4px;">📍 ${escapeHtml(c.adresse)}</div>` : ''}
-          <div style="margin-bottom:6px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-            <span style="background:${s.color};color:white;padding:2px 9px;border-radius:12px;font-size:12px;font-weight:600;">${s.label}</span>
-            ${c.chef ? `<span style="font-size:12px;">👷 ${escapeHtml(c.chef)}</span>` : ''}
-          </div>
-          ${dates ? `<div style="margin-bottom:3px;">${dates}</div>` : ''}
-          ${montant ? `<div style="margin-bottom:3px;">💶 ${montant}</div>` : ''}
-          ${buildProgressHTML(c)}
-          <div style="display:flex;gap:5px;margin-top:10px;">
-            <a href="chantiers-fiche.html?id=${c.id}" style="flex:1;text-align:center;padding:5px 8px;background:var(--primary,#5a4a3a);color:white;border:none;border-radius:5px;cursor:pointer;font-size:12px;text-decoration:none;">📋 Fiche</a>
-          </div>
-          ${c.lat && c.lng ? `<div id="meteo-${c.id}" style="font-size:11px;color:#aaa;margin-top:8px;">⏳ Chargement météo…</div>` : ''}
-        </div>`;
+      return `<div style="min-width:220px;font-family:Arial,sans-serif;font-size:13px;line-height:1.5;">
+        <div style="font-weight:700;font-size:15px;margin-bottom:4px;">${escapeHtml(c.nom)}</div>
+        <div style="color:#555;margin-bottom:4px;">📍 ${escapeHtml(c.adresse)}</div>
+        ${c.conducteur ? `<div style="margin-bottom:2px;">👷 ${escapeHtml(c.conducteur)}</div>` : ''}
+        ${c.dessinateur ? `<div style="margin-bottom:2px;">✏️ ${escapeHtml(c.dessinateur)}</div>` : ''}
+        ${c.dateOS || c.dateFin ? `<div style="margin-bottom:2px;">📅 ${escapeHtml(c.dateOS || '—')} → ${escapeHtml(c.dateFin || '—')}</div>` : ''}
+        ${c.montantHT ? `<div style="margin-bottom:2px;">💶 ${escapeHtml(c.montantHT)} € HT</div>` : ''}
+        <div style="margin-top:10px;">
+          <a href="chantiers-dossiers.html?rel=${encodeURIComponent(c.dossier)}" style="display:block;text-align:center;padding:6px 8px;background:#5a4a3a;color:white;border-radius:5px;font-size:12px;text-decoration:none;">📁 Ouvrir le dossier</a>
+        </div>
+      </div>`;
     }
 
     function renderMarkers() {
-      Object.values(markers).forEach(m => map.removeLayer(m));
+      Object.values(markers).forEach(marker => map.removeLayer(marker));
       markers = {};
-      getFilteredList().forEach(c => {
+      const bounds = [];
+      allChantiers.forEach(c => {
         if (!c.lat || !c.lng) return;
-        const s = STATUTS[c.statut] || STATUTS.planifie;
-        const m = L.marker([c.lat, c.lng], { icon: pinIcon(s.color) })
-          .addTo(map).bindPopup(buildPopupHTML(c), { maxWidth: 320 });
-        m.on('popupopen', () => fetchWeather(c.lat, c.lng, `meteo-${c.id}`));
-        markers[c.id] = m;
+        markers[c.id] = L.marker([c.lat, c.lng], { icon: pinIcon() })
+          .addTo(map)
+          .bindPopup(buildPopupHTML(c), { maxWidth: 290 });
+        bounds.push([c.lat, c.lng]);
       });
+      if (bounds.length) map.fitBounds(bounds, { padding: [35, 35], maxZoom: 12 });
     }
 
-    // ===== STATS =====
     function renderStats() {
-      const base = allChantiers;
-      const counts = { planifie:0, en_cours:0, termine:0, probleme:0 };
-      base.forEach(c => { if (counts[c.statut] !== undefined) counts[c.statut]++; });
+      const conducteurs = new Set(allChantiers.map(c => c.conducteur).filter(Boolean)).size;
       document.getElementById('stats-row').innerHTML = `
-        <div class="kpi-stat"><div class="kpi-stat-value" style="color:var(--primary);">${base.length}</div><div class="kpi-stat-label">Total</div></div>
-        <div class="kpi-stat"><div class="kpi-stat-value" style="color:#6b8e9f;">${counts.planifie}</div><div class="kpi-stat-label">Planifiés</div></div>
-        <div class="kpi-stat"><div class="kpi-stat-value" style="color:#d4a574;">${counts.en_cours}</div><div class="kpi-stat-label">En cours</div></div>
-        <div class="kpi-stat"><div class="kpi-stat-value" style="color:#7bad75;">${counts.termine}</div><div class="kpi-stat-label">Terminés</div></div>
-        <div class="kpi-stat"><div class="kpi-stat-value" style="color:#b85c5c;">${counts.probleme}</div><div class="kpi-stat-label">Problèmes</div></div>`;
+        <div class="kpi-stat"><div class="kpi-stat-value">${allChantiers.length}</div><div class="kpi-stat-label">Sur la carte</div></div>
+        <div class="kpi-stat"><div class="kpi-stat-value">${totalWithAddress}</div><div class="kpi-stat-label">Avec adresse</div></div>
+        <div class="kpi-stat"><div class="kpi-stat-value">${conducteurs}</div><div class="kpi-stat-label">Conducteurs</div></div>`;
     }
 
-    // ===== LISTE =====
     function buildCardHTML(c) {
-      const s = STATUTS[c.statut] || STATUTS.planifie;
-      const montant = c.montant ? Number(c.montant).toLocaleString('fr-FR') + ' € HT' : '';
-      const dates = (c.dateDebut || c.dateFin) ? `📅 ${formatDate(c.dateDebut)} → ${formatDate(c.dateFin)}` : '';
-      return `
-        <div class="chantier-card" style="border-left:4px solid ${s.color};">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;gap:8px;">
-            <div style="font-weight:700;font-size:15px;color:var(--dark);">${escapeHtml(c.nom)}</div>
-            <span class="badge-statut" style="background:${s.color};flex-shrink:0;">${s.label}</span>
-          </div>
-          ${c.adresse ? `<div style="font-size:13px;color:var(--text-muted-dark);margin-bottom:3px;">📍 ${escapeHtml(c.adresse)}</div>` : ''}
-          ${c.chef ? `<div style="font-size:13px;margin-bottom:3px;">👷 ${escapeHtml(c.chef)}</div>` : ''}
-          ${dates ? `<div style="font-size:13px;margin-bottom:3px;">${dates}</div>` : ''}
-          ${montant ? `<div style="font-size:13px;margin-bottom:3px;">💶 ${montant}</div>` : ''}
-          ${buildProgressHTML(c)}
-          <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
-            <a href="chantiers-fiche.html?id=${c.id}" class="btn-sm btn-fiche">📋 Fiche suivi</a>
-            <a href="chantiers-dossiers.html?chantier=${encodeURIComponent(c.nom)}" class="btn-sm" style="background:#edf7ed;border-color:#7bad75;color:#1a5c30;">📁 Dossier</a>
-            ${c.lat && c.lng ? `<button onclick="centerOnMarker('${c.id}')" class="btn-sm">🗺️ Carte</button>` : ''}
-          </div>
-        </div>`;
+      return `<div class="chantier-card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;gap:8px;">
+          <div style="font-weight:700;font-size:14px;color:var(--dark);">${escapeHtml(c.nom)}</div>
+          <button onclick="centerOn('${c.id}')" class="btn-sm">🗺️ Carte</button>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted-dark);margin-bottom:4px;">📍 ${escapeHtml(c.adresse)}</div>
+        ${c.conducteur ? `<div style="font-size:12px;margin-bottom:2px;">👷 ${escapeHtml(c.conducteur)}</div>` : ''}
+        ${c.dessinateur ? `<div style="font-size:12px;margin-bottom:2px;">✏️ ${escapeHtml(c.dessinateur)}</div>` : ''}
+        ${c.dateOS || c.dateFin ? `<div style="font-size:12px;margin-bottom:2px;">📅 ${escapeHtml(c.dateOS || '—')} → ${escapeHtml(c.dateFin || '—')}</div>` : ''}
+        ${c.montantHT ? `<div style="font-size:12px;margin-bottom:2px;">💶 ${escapeHtml(c.montantHT)} € HT</div>` : ''}
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+          <a href="chantiers-dossiers.html?rel=${encodeURIComponent(c.dossier)}" class="btn-sm" style="text-decoration:none;">📁 Dossier</a>
+        </div>
+      </div>`;
     }
 
     function renderList() {
-      const list = getFilteredList();
       const container = document.getElementById('chantiers-list');
-      if (list.length === 0) {
-        container.innerHTML = `<div class="card empty-state"><p>🗺️</p><p style="font-size:15px;">Aucun chantier${currentFilter !== 'tous' ? ' dans cette catégorie' : ' synchronisé pour le moment'}.</p><p style="font-size:13px;">Les chantiers apparaissent ici automatiquement lorsque les conducteurs lancent la synchronisation depuis leur dossier local.</p></div>`;
+      if (!allChantiers.length) {
+        container.innerHTML = `<div class="card empty-state">
+          <p style="font-size:28px;margin:0 0 8px;">🗺️</p>
+          <p style="font-size:15px;margin:0;">Aucun chantier avec adresse géocodée pour le moment.</p>
+          <p style="font-size:12px;margin:8px 0 0;">Remplis l'adresse dans l'Excel 00_ Infos général chantier.xlsx ou depuis la fiche du site.</p>
+        </div>`;
         return;
       }
-      container.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;">${list.map(buildCardHTML).join('')}</div>`;
+      container.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;">${allChantiers.map(buildCardHTML).join('')}</div>`;
     }
 
-    function render() { renderStats(); renderMarkers(); renderList(); }
-
-    // ===== FILTRES =====
-    function setFilter(f) {
-      currentFilter = f;
-      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-      document.getElementById('filter-' + f).classList.add('active');
-      renderMarkers(); renderList();
+    function render() {
+      renderStats();
+      renderMarkers();
+      renderList();
+      const waiting = Math.max(totalWithAddress - allChantiers.length, 0);
+      document.getElementById('map-note').textContent = waiting
+        ? `${allChantiers.length} chantier(s) affiché(s). ${waiting} adresse(s) encore en attente de géocodage. Recharge la page dans quelques secondes.`
+        : `${allChantiers.length} chantier(s) affiché(s), sans filtre ni couleur d'étape.`;
     }
 
-    // ===== CENTRER =====
-    function centerOnMarker(id) {
+    function centerOn(id) {
       const c = allChantiers.find(x => x.id === id);
       if (!c || !c.lat || !c.lng) return;
       map.setView([c.lat, c.lng], 14);
@@ -407,18 +158,28 @@
       window.scrollTo({ top: document.getElementById('map').getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
     }
 
-
-    // ===== UTILS =====
-    function formatDate(d) { if (!d) return '—'; const [y,m,j] = d.split('-'); return `${j}/${m}/${y}`; }
-
-    // ===== INIT =====
     async function init() {
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectChantiersSecondaryBar();
-      initMap();
-      document.getElementById('chantiers-list').innerHTML = '<div class="loading-overlay">⏳ Chargement des chantiers…</div>';
-      await loadChantiers();
-      render();
+
+      map = L.map('map').setView([46.5, 2.5], 6);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19,
+      }).addTo(map);
+
+      try {
+        const data = await apiGet('/dossiers/carte');
+        allChantiers = data?.chantiers || [];
+        totalWithAddress = data?.totalWithAddress || allChantiers.length;
+        render();
+      } catch (e) {
+        document.getElementById('chantiers-list').innerHTML = `<div class="card empty-state">
+          <p style="font-size:28px;margin:0 0 8px;">⚠️</p>
+          <p style="font-size:15px;margin:0;">Impossible de charger les dossiers chantier.</p>
+          <p style="font-size:12px;margin:8px 0 0;">${escapeHtml(e.message || 'Erreur inconnue')}</p>
+        </div>`;
+      }
     }
 
     window.onServerReady(init);
