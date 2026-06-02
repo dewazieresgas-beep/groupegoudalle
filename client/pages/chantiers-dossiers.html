@@ -674,9 +674,11 @@
         </div>
         <div class="info-grid" id="info-form">`;
         fields.forEach(f => {
+          const isDate = f.key === 'Date OS' || f.key === 'Date fin contractuelle';
+          const value = isDate ? toInputDate(info[f.key] || '') : (info[f.key] || '');
           html += `<div class="info-field">
             <label>${escHtml(f.label)}</label>
-            <input type="text" id="inf_${f.key.replace(/\s/g,'_').replace(/'/g,'')}" value="${escHtml(info[f.key] || '')}" placeholder="${escHtml(f.label)}">
+            <input type="${isDate ? 'date' : 'text'}" id="inf_${f.key.replace(/\s/g,'_').replace(/'/g,'')}" value="${escHtml(value)}" placeholder="${escHtml(f.label)}">
           </div>`;
         });
         html += '</div>';
@@ -701,6 +703,18 @@
       }
 
       panel.style.display = 'block';
+    }
+
+    function toInputDate(value) {
+      if (!value) return '';
+      const s = String(value).trim();
+      let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (m) return s;
+      m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+      m = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+      if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+      return '';
     }
 
     async function saveInfoChantier() {

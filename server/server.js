@@ -4086,6 +4086,19 @@ async function geocodeAndStoreChantier(nomDossier, info) {
 }
 
 // Écriture des infos dans l'Excel du dossier (best-effort, préserve la mise en forme)
+function parseInfoDate(value) {
+  if (!value) return '';
+  if (value instanceof Date) return value;
+  const s = String(value).trim();
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+  m = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (m) return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+  return s;
+}
+
 async function writeInfoToExcel(nomDossier, fields) {
   const xlsxPath = path.join(DOSSIERS_BASE, nomDossier, EXCEL_INFO_FILENAME);
   if (!fs.existsSync(xlsxPath)) return;
@@ -4097,7 +4110,29 @@ async function writeInfoToExcel(nomDossier, fields) {
       const label = ws.cell(r, 1).value();
       if (!label) continue;
       const key = EXCEL_LABEL_TO_KEY[String(label).trim()];
-      if (key !== undefined) ws.cell(r, 2).value(fields[key] || '');
+      if (key !== undefined) {
+        const cell = ws.cell(r, 2);
+        const value = key === 'Date OS' || key === 'Date fin contractuelle'
+          ? parseInfoDate(fields[key])
+          : (fields[key] || '');
+        cell.value(value);
+        if (key === 'Date OS' || key === 'Date fin contractuelle') {
+          cell.style('numberFormat', 'dd/mm/yyyy');
+          cell.dataValidation({
+            type: 'date',
+            allowBlank: true,
+            showInputMessage: true,
+            promptTitle: 'Date',
+            prompt: 'Choisir ou saisir une date au format jj/mm/aaaa',
+            showErrorMessage: true,
+            errorTitle: 'Date invalide',
+            error: 'Veuillez saisir une date valide.',
+            operator: 'between',
+            formula1: 'DATE(2000,1,1)',
+            formula2: 'DATE(2100,12,31)',
+          });
+        }
+      }
     }
     await wb.toFileAsync(xlsxPath);
   } catch (e) {
