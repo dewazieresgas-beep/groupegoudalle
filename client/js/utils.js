@@ -151,7 +151,7 @@ function isRHPage() {
 
 function isChantierPage() {
   const page = getCurrentPage();
-  return page === 'chantiers.html' || page === 'chantiers-charpente.html' || page === 'chantiers-maconnerie.html' || page === 'chantiers-fiche.html' || page === 'chantiers-vue-globale.html';
+  return page === 'chantiers-charpente.html' || page === 'chantiers-maconnerie.html' || page === 'chantiers-vue-globale.html';
 }
 
 // ============ WEEK UTILS ============

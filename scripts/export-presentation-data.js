@@ -208,7 +208,7 @@ const excelLinks = {
     files: [
       { id: 'cbco', label: "Concept Bois Cote d'Opale", filename: 'CBCO_Suivi_Accidents.xlsx' },
       { id: 'charpente', label: 'Goudalle Charpente', filename: 'GoudalleCharpente_Suivi_Accidents.xlsx' },
-      { id: 'macons', label: 'Nouvelle Goudalle Maconnerie', filename: 'GoudalleMacons_Suivi_Accidents.xlsx' },
+      { id: 'macons', label: 'Goudalle Maçonnerie', filename: 'GoudalleMacons_Suivi_Accidents.xlsx' },
       { id: 'sylve', label: 'Sylve Data', filename: 'SylveData_Suivi_Accidents.xlsx' }
     ],
     sheet: 'Saisie',

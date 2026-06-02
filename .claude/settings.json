@@ -38,7 +38,11 @@
       "PowerShell(Copy-Item \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\\\\chantier-template\\\\index.html\" \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\\\\chantier-template\\\\Suivi-Chantier.html\")",
       "Bash(node -e \"const fs=require\\('fs'\\); const db=JSON.parse\\(fs.readFileSync\\('c:/Users/gdewazieres/Desktop/groupegoudalle/server/data/goudalle.json','utf8'\\)\\); console.log\\(JSON.stringify\\(db.chantiers||[], null,2\\)\\)\")",
       "Bash(Select-String -Path \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\\\\server\\\\data\\\\goudalle.json\" -Pattern '\"chantiers\"')",
-      "Bash(Select-Object LineNumber, Line)"
+      "Bash(Select-Object LineNumber, Line)",
+      "Bash(git show *)",
+      "Bash(grep -n \"leaflet\\\\|map\\\\|meteo\\\\|weather\\\\|forecast\\\\|openweather\\\\|météo\\\\|Leaflet\\\\|L\\\\.map\\\\|L\\\\.tileLayer\" /tmp/charpente_old.html | head -30)",
+      "Read(//tmp/**)",
+      "Bash(git checkout *)"
     ],
     "additionalDirectories": [
       "\\tmp",
