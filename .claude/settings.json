@@ -63,7 +63,12 @@
       "Bash(node tests/test_auth.js)",
       "Bash(node create_accounts_excel.js)",
       "Bash(del \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\\\\create_accounts_excel.js\")",
-      "Bash(node read_excel_tmp.js)"
+      "Bash(node read_excel_tmp.js)",
+      "Bash(node inspect_excel.js)",
+      "Bash(Remove-Item \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\\\\server\\\\inspect_excel.js\")",
+      "Bash(node test_read.js)",
+      "PowerShell(Stop-Process -Force)",
+      "PowerShell(Start-Process node -ArgumentList \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\\\\server\\\\server.js\" -WindowStyle Hidden)"
     ],
     "additionalDirectories": [
       "\\tmp",

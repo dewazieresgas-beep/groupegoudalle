@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Serveur API pour l'intranet Groupe Goudalle
  * 
  * Stockage : SQLite (fichier unique goudalle.db)
@@ -129,6 +129,22 @@ function saveStore() {
 
 // ─── GESTION DES COMPTES DEPUIS L'EXCEL (multi-feuilles par entreprise) ──────────
 
+function normalizeId(str) {
+  return (str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+function generateUserId(prenom, nom, existing) {
+  const p = normalizeId(prenom);
+  const n = normalizeId(nom);
+  let base = (p && n) ? `${p}.${n}` : (p || n || null);
+  if (!base) return null;
+  let id = base;
+  let i = 2;
+  while (existing.has(id)) { id = `${base}-${i++}`; }
+  return id;
+}
+
 function readAccountsExcel() {
   try {
     if (!fs.existsSync(ACCOUNTS_EXCEL_PATH)) return {};
@@ -139,6 +155,25 @@ function readAccountsExcel() {
 
     const wb = XLSX.readFile(ACCOUNTS_EXCEL_PATH);
     const users = {};
+
+    // Première passe : collecter les identifiants existants (pour éviter les doublons générés)
+    const existingIds = new Set();
+    COMPANY_SHEETS.forEach(company => {
+      if (!wb.SheetNames.includes(company)) return;
+      const ws = wb.Sheets[company];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      if (rows.length < 2) return;
+      const headers = rows[0].map(h => String(h || '').trim());
+      const idIdx = headers.indexOf('Identifiant');
+      if (idIdx === -1) return;
+      for (let i = 1; i < rows.length; i++) {
+        const v = String(rows[i][idIdx] || '').trim();
+        if (v) existingIds.add(v.toLowerCase());
+      }
+    });
+
+    // Identifiants à réécrire dans l'Excel (colonne Identifiant vide → auto-générée)
+    const toFillBack = []; // { company, rowIndex, id }
 
     COMPANY_SHEETS.forEach(company => {
       if (!wb.SheetNames.includes(company)) return;
@@ -156,8 +191,18 @@ function readAccountsExcel() {
 
       for (let i = 1; i < rows.length; i++) {
         const r = rows[i];
-        const id = String(r[col('Identifiant')] || '').trim();
-        if (!id) continue;
+        const prenom = String(r[col('Prénom')] || '').trim();
+        const nom    = String(r[col('Nom')]    || '').trim();
+        if (!prenom && !nom) continue; // ligne vide
+
+        let id = String(r[col('Identifiant')] || '').trim();
+        if (!id) {
+          // Générer prenom.nom normalisé (sans accents)
+          id = generateUserId(prenom, nom, existingIds);
+          if (!id) continue;
+          existingIds.add(id.toLowerCase());
+          toFillBack.push({ company, rowIndex: i + 1, colIndex: col('Identifiant') + 1, id });
+        }
 
         const permsSet = new Set();
         permCols.forEach(({ idx, file }) => {
@@ -166,9 +211,6 @@ function readAccountsExcel() {
             if (p) permsSet.add(p);
           }
         });
-
-        const prenom = String(r[col('Prénom')] || '').trim();
-        const nom    = String(r[col('Nom')]    || '').trim();
 
         users[id] = {
           username: id,
@@ -187,6 +229,21 @@ function readAccountsExcel() {
         };
       }
     });
+
+    // Remplir les identifiants manquants dans l'Excel (une seule fois au démarrage)
+    if (toFillBack.length > 0) {
+      console.log(`[Comptes] ${toFillBack.length} identifiant(s) auto-généré(s), écriture dans l'Excel…`);
+      XlsxPopulate.fromFileAsync(ACCOUNTS_EXCEL_PATH).then(wbPop => {
+        toFillBack.forEach(({ company, rowIndex, colIndex, id }) => {
+          const sheet = wbPop.sheet(company);
+          if (sheet) sheet.cell(rowIndex, colIndex).value(id);
+        });
+        return wbPop.toFileAsync(ACCOUNTS_EXCEL_PATH);
+      }).then(() => {
+        _accountsExcelCache = { users, mtimeMs: 0 }; // forcer re-lecture au prochain appel
+        console.log(`[Comptes] Identifiants écrits dans l'Excel.`);
+      }).catch(e => console.error('[Comptes] Erreur écriture identifiants:', e.message));
+    }
 
     _accountsExcelCache = { users, mtimeMs: stat.mtimeMs };
     return users;
@@ -3870,6 +3927,19 @@ app.use('/server/uploads', (req, res, next) => {
 // Chemin de base : Y:\03-Affaires\02-Affaires en cours
 
 const DOSSIERS_BASE = path.join('Y:', '03-Affaires', '02-Affaires en cours');
+const EXCEL_INFO_FILENAME = '00_ Infos général chantier.xlsx';
+
+// Mapping label Excel → clé DB
+const EXCEL_LABEL_TO_KEY = {
+  'Nom du chantier':                    'Chantier',
+  'Adresse (n° rue, ville, code postal)': 'Adresse',
+  'Conducteur de travaux':              'Conducteur de travaux',
+  'Dessinateur BE':                     'Dessinateur BE',
+  "Date d'OS":                          'Date OS',
+  'Date fin contractuelle':             'Date fin contractuelle',
+  'Montant marché HT':                  'Montant marché HT',
+};
+const EXCEL_KEY_TO_LABEL = Object.fromEntries(Object.entries(EXCEL_LABEL_TO_KEY).map(([l, k]) => [k, l]));
 
 // Cache liste des chantiers (TTL 5 min)
 let _dossiersListCache = { data: null, cachedAt: 0 };
@@ -3880,7 +3950,7 @@ const _dossiersUpload = multer({ storage: multer.memoryStorage(), limits: { file
 
 function normalizeNameForMatch(str) {
   return String(str || '').toLowerCase()
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/\s+/g, ' ').trim();
 }
 
@@ -3904,14 +3974,33 @@ function setDbInfoChantier(nomDossier, fields) {
 }
 
 function readInfoChantier(nomDossier) {
-  // Priorité : base de données locale (modifiable) puis info-chantier.xlsx sur le réseau (lecture seule, legacy)
+  // 1. Priorité : base de données locale (modifiable depuis le site)
   const dbInfo = getDbInfoChantier(nomDossier);
   if (dbInfo && Object.values(dbInfo).some(v => v)) return dbInfo;
 
-  const xlsxPath = path.join(DOSSIERS_BASE, nomDossier, 'info-chantier.xlsx');
-  if (!fs.existsSync(xlsxPath)) return null;
+  // 2. Nouveau format : 00_ Infos général chantier.xlsx (remplissable manuellement ou via le site)
+  const xlsxPath = path.join(DOSSIERS_BASE, nomDossier, EXCEL_INFO_FILENAME);
+  if (fs.existsSync(xlsxPath)) {
+    try {
+      const wb = XLSX.readFile(xlsxPath, { cellDates: true });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      const info = {};
+      rows.forEach(([label, value]) => {
+        const key = EXCEL_LABEL_TO_KEY[String(label || '').trim()];
+        if (key && value !== undefined && String(value).trim()) {
+          info[key] = value instanceof Date ? value.toLocaleDateString('fr-FR') : String(value).trim();
+        }
+      });
+      if (Object.values(info).some(v => v)) return info;
+    } catch {}
+  }
+
+  // 3. Legacy : info-chantier.xlsx
+  const legacyPath = path.join(DOSSIERS_BASE, nomDossier, 'info-chantier.xlsx');
+  if (!fs.existsSync(legacyPath)) return null;
   try {
-    const wb = XLSX.readFile(xlsxPath, { cellDates: true });
+    const wb = XLSX.readFile(legacyPath, { cellDates: true });
     const ws = wb.Sheets[wb.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
     const info = {};
@@ -3920,6 +4009,26 @@ function readInfoChantier(nomDossier) {
     });
     return Object.values(info).some(v => v) ? info : null;
   } catch { return null; }
+}
+
+// Écriture des infos dans l'Excel du dossier (best-effort, préserve la mise en forme)
+async function writeInfoToExcel(nomDossier, fields) {
+  const xlsxPath = path.join(DOSSIERS_BASE, nomDossier, EXCEL_INFO_FILENAME);
+  if (!fs.existsSync(xlsxPath)) return;
+  try {
+    const wb = await XlsxPopulate.fromFileAsync(xlsxPath);
+    const ws = wb.sheet(0);
+    // Parcourir les lignes, trouver les labels colonne A et mettre la valeur en colonne B
+    for (let r = 1; r <= 15; r++) {
+      const label = ws.cell(r, 1).value();
+      if (!label) continue;
+      const key = EXCEL_LABEL_TO_KEY[String(label).trim()];
+      if (key !== undefined) ws.cell(r, 2).value(fields[key] || '');
+    }
+    await wb.toFileAsync(xlsxPath);
+  } catch (e) {
+    console.warn(`[Info Excel] Écriture impossible (${nomDossier}): ${e.message}`);
+  }
 }
 
 function getExtIcon(ext) {
@@ -3968,7 +4077,6 @@ app.get('/api/dossiers/liste', async (req, res) => {
         dessinateur: info['Dessinateur BE'] || '',
         dateOS: info['Date OS'] || '',
         dateFin: info['Date fin contractuelle'] || '',
-        maitreOuvrage: info["Maître d'ouvrage"] || '',
         montantHT: info['Montant marché HT'] || '',
         hasInfo: !!info['Chantier'],
       });
@@ -4113,6 +4221,8 @@ app.put('/api/dossiers/info', requireToken, requireWriteRateLimit, (req, res) =>
     setDbInfoChantier(rel, fields);
     _dossiersListCache.cachedAt = 0;
     res.json({ success: true });
+    // Écriture dans l'Excel du dossier en arrière-plan (non bloquant)
+    writeInfoToExcel(rel, fields).catch(() => {});
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
