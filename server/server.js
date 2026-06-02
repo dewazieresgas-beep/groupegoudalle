@@ -16,6 +16,7 @@ const fs = require('fs');
 const XLSX = require('xlsx');
 const XlsxPopulate = require('xlsx-populate');
 const { PDFParse } = require('pdf-parse');
+const multer = require('multer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -66,6 +67,38 @@ setInterval(() => {
 const DB_PATH = path.join(__dirname, 'data', 'goudalle.json');
 const DB_BACKUP_PATH = path.join(__dirname, 'data', 'goudalle.json.bak');
 
+// ─── EXCEL DES COMPTES UTILISATEURS ─────────────────────────────────────────────
+const ACCOUNTS_EXCEL_PATH = 'W:\\BCHDF\\Site Intranet Groupe Goudalle\\Compte site intranet.xlsx';
+const COMPANY_SHEETS = ['SYLVE', 'CHARPENTE', 'CBCO', 'SNGM'];
+
+// Correspondance nom de fichier HTML → clé de permission (1 page = 1 permission)
+const FILE_TO_PERM = {
+  'chantiers-charpente.html':                  'chantiers_charpente',
+  'chantiers-maconnerie.html':                 'chantiers_maconnerie',
+  'chantiers-vue-globale.html':                'chantiers_vue_globale',
+  'commerce-indicateurs.html':                 'commerce_indicateurs',
+  'commerce-liaison.html':                     'commerce_liaison',
+  'compta-indicateurs.html':                   'compta_indicateurs',
+  'compta-saisie.html':                        'compta_saisie',
+  'compta-paiements-charpente.html':           'compta_paiements_charpente',
+  'compta-paiements-maconnerie.html':          'compta_paiements_maconnerie',
+  'compta-paiements-cbco.html':                'compta_paiements_cbco',
+  'production-indicateurs-generaux.html':      'production_indicateurs_generaux',
+  'production-indicateurs-maconnerie.html':    'production_indicateurs_maconnerie',
+  'production-indicateurs-usine-cbco.html':    'production_indicateurs_usine',
+  'production-saisie-maconnerie.html':         'production_saisie_maconnerie',
+  'production-saisie-productivite-usine.html': 'production_saisie_productivite',
+  'achat-indicateurs.html':                    'achat_indicateurs',
+  'achat-saisie.html':                         'achat_saisie',
+  'achat-controle.html':                       'achat_controle',
+  'rh-indicateurs.html':                       'rh_indicateurs',
+  'rh-saisie.html':                            'rh_saisie',
+  'utilisateurs.html':                         'users_admin',
+  'utilisateurs-code-admin.html':              'users_admin',
+};
+
+let _accountsExcelCache = { users: null, mtimeMs: 0 };
+
 // ─── INITIALISATION DU STOCKAGE ──────────────────────────────────────────────────
 
 let store = {};
@@ -92,6 +125,133 @@ function saveStore() {
   fs.writeFileSync(tmp, json, 'utf8');
   fs.renameSync(tmp, DB_PATH); // écriture atomique : évite la corruption si crash pendant l'écriture
   try { fs.writeFileSync(DB_BACKUP_PATH, json, 'utf8'); } catch (_) {}
+}
+
+// ─── GESTION DES COMPTES DEPUIS L'EXCEL (multi-feuilles par entreprise) ──────────
+
+function readAccountsExcel() {
+  try {
+    if (!fs.existsSync(ACCOUNTS_EXCEL_PATH)) return {};
+    const stat = fs.statSync(ACCOUNTS_EXCEL_PATH);
+    if (_accountsExcelCache.users && _accountsExcelCache.mtimeMs === stat.mtimeMs) {
+      return _accountsExcelCache.users;
+    }
+
+    const wb = XLSX.readFile(ACCOUNTS_EXCEL_PATH);
+    const users = {};
+
+    COMPANY_SHEETS.forEach(company => {
+      if (!wb.SheetNames.includes(company)) return;
+      const ws = wb.Sheets[company];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      if (rows.length < 2) return;
+
+      const headers = rows[0].map(h => String(h || '').trim());
+      const col = n => headers.indexOf(n);
+
+      // Colonnes p_xxx : chaque colonne = 1 page
+      const permCols = headers
+        .map((h, i) => h.startsWith('p_') ? { idx: i, file: h.slice(2) + '.html' } : null)
+        .filter(Boolean);
+
+      for (let i = 1; i < rows.length; i++) {
+        const r = rows[i];
+        const id = String(r[col('Identifiant')] || '').trim();
+        if (!id) continue;
+
+        const permsSet = new Set();
+        permCols.forEach(({ idx, file }) => {
+          if (String(r[idx] || '').trim().toLowerCase() === 'oui') {
+            const p = FILE_TO_PERM[file];
+            if (p) permsSet.add(p);
+          }
+        });
+
+        const prenom = String(r[col('Prénom')] || '').trim();
+        const nom    = String(r[col('Nom')]    || '').trim();
+
+        users[id] = {
+          username: id,
+          password: String(r[col('Mot_de_passe')] || '').trim(),
+          displayName: [prenom, nom].filter(Boolean).join(' ') || id,
+          prenom,
+          nom,
+          email:      String(r[col('Email')]  || '').trim(),
+          role:       (String(r[col('Role')]   || 'lecture').trim() || 'lecture'),
+          poste:      String(r[col('Poste')]   || '').trim(),
+          entreprise: company,
+          isActive:   String(r[col('Actif')]   || 'oui').trim().toLowerCase() !== 'non',
+          customPermissions: [...permsSet],
+          createdBy: 'EXCEL',
+          createdAt: new Date().toISOString(),
+        };
+      }
+    });
+
+    _accountsExcelCache = { users, mtimeMs: stat.mtimeMs };
+    return users;
+  } catch (e) {
+    console.error('[Comptes] Erreur lecture Excel:', e.message);
+    return _accountsExcelCache.users || {};
+  }
+}
+
+// Écrit les mises à jour (mot de passe, actif, permissions) dans les feuilles entreprise
+// en préservant la mise en forme via XlsxPopulate.
+async function writeAccountsExcel(users) {
+  try {
+    const wb = await XlsxPopulate.fromFileAsync(ACCOUNTS_EXCEL_PATH);
+
+    for (const company of COMPANY_SHEETS) {
+      const ws = wb.sheet(company);
+      if (!ws) continue;
+
+      const usedRange = ws.usedRange();
+      if (!usedRange) continue;
+      const lastCol = usedRange.endCell().columnNumber();
+      const lastRow = usedRange.endCell().rowNumber();
+
+      // Lire l'en-tête (ligne 1) → map nom → numéro de colonne (1-indexed)
+      const headers = {};
+      for (let c = 1; c <= lastCol; c++) {
+        const h = String(ws.cell(1, c).value() || '').trim();
+        if (h) headers[h] = c;
+      }
+
+      const idCol   = headers['Identifiant'];
+      const mdpCol  = headers['Mot_de_passe'];
+      const actifCol = headers['Actif'];
+      if (!idCol || !mdpCol) continue;
+
+      for (let row = 2; row <= lastRow; row++) {
+        const id = String(ws.cell(row, idCol).value() || '').trim();
+        if (!id) continue;
+        const u = users[id];
+        if (!u) continue;
+
+        ws.cell(row, mdpCol).value(String(u.password || ''));
+        if (actifCol) ws.cell(row, actifCol).value(u.isActive !== false ? 'oui' : 'non');
+
+        // Mettre à jour les colonnes p_xxx (oui/non par page)
+        Object.entries(headers).forEach(([h, c]) => {
+          if (!h.startsWith('p_')) return;
+          const file = h.slice(2) + '.html';
+          const perm = FILE_TO_PERM[file];
+          if (!perm) return;
+          const hasPerm = u.role === 'direction' ||
+            (Array.isArray(u.customPermissions) && u.customPermissions.includes(perm));
+          ws.cell(row, c).value(hasPerm ? 'oui' : 'non');
+        });
+      }
+    }
+
+    await wb.toFileAsync(ACCOUNTS_EXCEL_PATH);
+    _accountsExcelCache = { users, mtimeMs: 0 };
+    return true;
+  } catch (e) {
+    console.error('[Comptes] Erreur écriture Excel:', e.message);
+    return false;
+  }
 }
 
 // ─── UTILITAIRES ────────────────────────────────────────────────────────────────
@@ -643,15 +803,44 @@ function requireWriteRateLimit(req, res, next) {
 // Sert les fichiers statiques du site (HTML, CSS, JS, images)
 app.use(express.static(path.join(__dirname, '../client')));
 
-// ─── ROUTES : UTILISATEURS ──────────────────────────────────────────────────────
+// ─── ROUTES : UTILISATEURS (source de vérité = Excel W:\BCHDF\...) ─────────────
 
 app.get('/api/users', (req, res) => {
-  res.json(dbGet('users', {}));
+  res.json(readAccountsExcel());
 });
 
-app.put('/api/users', requireToken, requireWriteRateLimit, (req, res) => {
-  dbSet('users', req.body);
-  res.json({ success: true });
+app.put('/api/users', requireToken, requireWriteRateLimit, async (req, res) => {
+  const ok = await writeAccountsExcel(req.body);
+  if (ok) res.json({ success: true });
+  else res.status(500).json({ success: false, error: 'Impossible d\'écrire dans le fichier Excel des comptes.' });
+});
+
+// ─── ROUTE : CONNEXION (validation serveur via Excel) ────────────────────────────
+
+app.post('/api/login', (req, res) => {
+  const { username, password } = req.body || {};
+  if (!username || !password) {
+    return res.status(400).json({ success: false, message: '❌ Identifiants manquants.' });
+  }
+  const users = readAccountsExcel();
+  const keys = Object.keys(users);
+  console.log(`[Login] tentative: "${username}" | ${keys.length} comptes chargés | clés: [${keys.slice(0, 10).join(', ')}]`);
+  const matchedKey = keys.find(k => k.toLowerCase() === String(username).toLowerCase());
+  const user = matchedKey ? users[matchedKey] : null;
+  if (!user) {
+    console.log(`[Login] ÉCHEC — identifiant "${username}" non trouvé`);
+    return res.json({ success: false, message: '❌ Identifiants incorrects.' });
+  }
+  if (!user.isActive) {
+    return res.json({ success: false, message: '❌ Compte désactivé. Contactez un administrateur.' });
+  }
+  if (user.password !== String(password)) {
+    console.log(`[Login] ÉCHEC — mot de passe incorrect pour "${username}"`);
+    return res.json({ success: false, message: '❌ Mot de passe incorrect.' });
+  }
+  console.log(`[Login] OK — "${username}" connecté`);
+  const { password: _pw, ...userPublic } = user;
+  res.json({ success: true, message: '✅ Connexion réussie', user: userPublic });
 });
 
 // ─── ROUTES : CODE ADMIN ────────────────────────────────────────────────────────
@@ -3676,6 +3865,268 @@ app.use('/server/uploads', (req, res, next) => {
   }
 }));
 
+// ─── ROUTES : DOSSIERS CHANTIERS RÉSEAU ────────────────────────────────────────
+// Explorateur de fichiers pour les dossiers chantiers sur le partage réseau.
+// Chemin de base : Y:\03-Affaires\02-Affaires en cours
+
+const DOSSIERS_BASE = path.join('Y:', '03-Affaires', '02-Affaires en cours');
+
+// Cache liste des chantiers (TTL 5 min)
+let _dossiersListCache = { data: null, cachedAt: 0 };
+const DOSSIERS_CACHE_TTL = 5 * 60 * 1000;
+
+// Upload en mémoire → écriture à la destination
+const _dossiersUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
+
+function normalizeNameForMatch(str) {
+  return String(str || '').toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/\s+/g, ' ').trim();
+}
+
+function safeResolveDossier(rel) {
+  const resolved = path.resolve(DOSSIERS_BASE, rel || '');
+  if (!resolved.startsWith(path.resolve(DOSSIERS_BASE))) return null;
+  return resolved;
+}
+
+// Stockage des infos chantier dans goudalle.json (clé: dossiers_info).
+// Le partage réseau Y: est en lecture seule → on ne peut pas écrire dessus.
+function getDbInfoChantier(nomDossier) {
+  const all = dbGet('dossiers_info', {});
+  return all[nomDossier] || null;
+}
+
+function setDbInfoChantier(nomDossier, fields) {
+  const all = dbGet('dossiers_info', {});
+  all[nomDossier] = fields;
+  dbSet('dossiers_info', all);
+}
+
+function readInfoChantier(nomDossier) {
+  // Priorité : base de données locale (modifiable) puis info-chantier.xlsx sur le réseau (lecture seule, legacy)
+  const dbInfo = getDbInfoChantier(nomDossier);
+  if (dbInfo && Object.values(dbInfo).some(v => v)) return dbInfo;
+
+  const xlsxPath = path.join(DOSSIERS_BASE, nomDossier, 'info-chantier.xlsx');
+  if (!fs.existsSync(xlsxPath)) return null;
+  try {
+    const wb = XLSX.readFile(xlsxPath, { cellDates: true });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+    const info = {};
+    rows.forEach(([label, value]) => {
+      if (label) info[String(label).trim()] = value !== undefined ? String(value).trim() : '';
+    });
+    return Object.values(info).some(v => v) ? info : null;
+  } catch { return null; }
+}
+
+function getExtIcon(ext) {
+  const e = String(ext).toLowerCase().replace('.', '');
+  if (['pdf'].includes(e)) return 'pdf';
+  if (['jpg','jpeg','png','gif','bmp','webp','svg'].includes(e)) return 'image';
+  if (['docx','doc'].includes(e)) return 'word';
+  if (['xlsx','xlsm','xls'].includes(e)) return 'excel';
+  if (['pptx','ppt'].includes(e)) return 'powerpoint';
+  if (['dwg','dxf'].includes(e)) return 'cad';
+  if (['mp4','avi','mov','mkv'].includes(e)) return 'video';
+  if (['zip','rar','7z'].includes(e)) return 'archive';
+  if (['msg','eml'].includes(e)) return 'email';
+  return 'file';
+}
+
+// GET /api/dossiers/liste — liste tous les dossiers chantier avec leurs infos de base
+// Query: ?conducteur=Tony+Morant (facultatif, filtre par conducteur)
+app.get('/api/dossiers/liste', async (req, res) => {
+  const now = Date.now();
+  const forceRefresh = req.query.refresh === '1';
+  const conducteurFilter = req.query.conducteur ? normalizeNameForMatch(req.query.conducteur) : null;
+
+  if (!forceRefresh && _dossiersListCache.data && (now - _dossiersListCache.cachedAt) < DOSSIERS_CACHE_TTL) {
+    const data = conducteurFilter
+      ? _dossiersListCache.data.filter(c => normalizeNameForMatch(c.conducteur) === conducteurFilter)
+      : _dossiersListCache.data;
+    return res.json({ success: true, chantiers: data, cached: true });
+  }
+
+  try {
+    // fs.promises.readdir est async → ne bloque pas l'event loop Node.js
+    const entries = await fs.promises.readdir(DOSSIERS_BASE, { withFileTypes: true });
+    const chantiers = [];
+
+    const allDbInfo = dbGet('dossiers_info', {});
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      if (entry.name.startsWith('0 ') || entry.name.startsWith('1 ')) continue;
+      const info = allDbInfo[entry.name] || {};
+      chantiers.push({
+        nom: entry.name,
+        chantier: info['Chantier'] || entry.name,
+        adresse: info['Adresse'] || '',
+        conducteur: info['Conducteur de travaux'] || '',
+        dessinateur: info['Dessinateur BE'] || '',
+        dateOS: info['Date OS'] || '',
+        dateFin: info['Date fin contractuelle'] || '',
+        maitreOuvrage: info["Maître d'ouvrage"] || '',
+        montantHT: info['Montant marché HT'] || '',
+        hasInfo: !!info['Chantier'],
+      });
+    }
+
+    chantiers.sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+    _dossiersListCache = { data: chantiers, cachedAt: now };
+
+    const filtered = conducteurFilter
+      ? chantiers.filter(c => normalizeNameForMatch(c.conducteur) === conducteurFilter)
+      : chantiers;
+
+    res.json({ success: true, chantiers: filtered });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// GET /api/dossiers/contenu?rel=BOURBOURG%2F03_Travaux... — liste le contenu d'un dossier
+app.get('/api/dossiers/contenu', async (req, res) => {
+  const rel = req.query.rel || '';
+  const target = safeResolveDossier(rel);
+  if (!target) return res.status(400).json({ success: false, error: 'Chemin invalide' });
+
+  try {
+    const entries = await fs.promises.readdir(target, { withFileTypes: true });
+    const items = await Promise.all(
+      entries
+        .filter(e => !e.name.startsWith('~$') && e.name !== 'Thumbs.db' && e.name !== 'desktop.ini')
+        .map(async e => {
+          const fullPath = path.join(target, e.name);
+          const isDir = e.isDirectory();
+          let size = 0, modified = '';
+          try {
+            const stat = await fs.promises.stat(fullPath);
+            size = stat.size;
+            modified = stat.mtime.toISOString();
+          } catch {}
+          const ext = isDir ? '' : path.extname(e.name);
+          return { name: e.name, isDir, size, modified, ext, type: isDir ? 'folder' : getExtIcon(ext) };
+        })
+    );
+    items.sort((a, b) => {
+      if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
+      return a.name.localeCompare(b.name, 'fr');
+    });
+
+    res.json({ success: true, items });
+  } catch (e) {
+    if (e.code === 'ENOENT') return res.status(404).json({ success: false, error: 'Dossier introuvable' });
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// GET /api/dossiers/fichier?rel=... — sert un fichier (pour visualisation ou téléchargement)
+app.get('/api/dossiers/fichier', (req, res) => {
+  const rel = req.query.rel || '';
+  const target = safeResolveDossier(rel);
+  if (!target) return res.status(400).json({ error: 'Chemin invalide' });
+  if (!fs.existsSync(target) || fs.statSync(target).isDirectory()) {
+    return res.status(404).json({ error: 'Fichier introuvable' });
+  }
+
+  const ext = path.extname(target).toLowerCase();
+  const inline = ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp'].includes(ext);
+
+  const mimeMap = {
+    '.pdf': 'application/pdf', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+    '.png': 'image/png', '.gif': 'image/gif', '.webp': 'image/webp',
+    '.svg': 'image/svg+xml', '.bmp': 'image/bmp',
+  };
+  const contentType = mimeMap[ext] || 'application/octet-stream';
+  const filename = encodeURIComponent(path.basename(target));
+
+  res.setHeader('Content-Type', contentType);
+  res.setHeader('Content-Disposition', `${inline ? 'inline' : 'attachment'}; filename*=UTF-8''${filename}`);
+  res.setHeader('Cache-Control', 'private, max-age=60');
+
+  const stream = fs.createReadStream(target);
+  stream.on('error', () => res.status(500).end());
+  stream.pipe(res);
+});
+
+// POST /api/dossiers/upload?rel=... — upload un ou plusieurs fichiers dans un dossier
+app.post('/api/dossiers/upload', requireToken, requireWriteRateLimit, _dossiersUpload.array('fichiers', 20), (req, res) => {
+  const rel = req.query.rel || '';
+  const target = safeResolveDossier(rel);
+  if (!target) return res.status(400).json({ success: false, error: 'Chemin invalide' });
+  if (!fs.existsSync(target)) return res.status(404).json({ success: false, error: 'Dossier cible introuvable' });
+
+  if (!req.files || req.files.length === 0) {
+    return res.status(400).json({ success: false, error: 'Aucun fichier reçu' });
+  }
+
+  const saved = [];
+  const errors = [];
+
+  for (const file of req.files) {
+    const safeName = path.basename(file.originalname);
+    const dest = path.join(target, safeName);
+    try {
+      fs.writeFileSync(dest, file.buffer);
+      saved.push(safeName);
+    } catch (e) {
+      const isPermError = e.code === 'EPERM' || e.code === 'EACCES';
+      errors.push({
+        name: safeName,
+        error: isPermError
+          ? 'Accès refusé — le partage réseau Y: est en lecture seule depuis le serveur. Déposez le fichier directement dans le dossier Windows.'
+          : e.message,
+        readonly: isPermError,
+      });
+    }
+  }
+
+  _dossiersListCache.cachedAt = 0;
+
+  const allReadonly = errors.length > 0 && errors.every(e => e.readonly) && saved.length === 0;
+  if (allReadonly) {
+    return res.status(403).json({
+      success: false,
+      error: 'Le partage réseau Y: est en lecture seule depuis le serveur. Pour importer des fichiers, déposez-les directement dans le dossier Windows via l\'Explorateur.',
+      readonly: true,
+      errors,
+    });
+  }
+
+  res.json({ success: saved.length > 0, saved, errors });
+});
+
+// PUT /api/dossiers/info?rel=BOURBOURG — enregistre les infos dans goudalle.json
+app.put('/api/dossiers/info', requireToken, requireWriteRateLimit, (req, res) => {
+  const rel = (req.query.rel || '').split('/')[0]; // Nom du dossier racine uniquement
+  if (!rel) return res.status(400).json({ success: false, error: 'Nom de chantier manquant' });
+
+  const fields = req.body;
+  if (!fields || typeof fields !== 'object') {
+    return res.status(400).json({ success: false, error: 'Données manquantes' });
+  }
+
+  try {
+    setDbInfoChantier(rel, fields);
+    _dossiersListCache.cachedAt = 0;
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// GET /api/dossiers/info?rel=BOURBOURG — lit les infos du chantier (db puis xlsx)
+app.get('/api/dossiers/info', (req, res) => {
+  const rel = (req.query.rel || '').split('/')[0];
+  if (!rel) return res.status(400).json({ success: false, error: 'Nom de chantier manquant' });
+
+  const info = readInfoChantier(rel);
+  res.json({ success: true, info: info || null });
+});
+
 // /api/health expose le token de sécurité uniquement aux clients du réseau local.
 // Ce token doit être inclus dans toutes les requêtes d'écriture.
 app.get('/api/health', (req, res) => {
@@ -3701,6 +4152,20 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log('╚════════════════════════════════════════════╝');
   console.log('');
   console.log(`🗄️  Base de données : ${DB_PATH}`);
+
+  // Initialisation / vérification du fichier Excel des comptes
+  try {
+    const users = readAccountsExcel();
+    const count = Object.keys(users).length;
+    if (fs.existsSync(ACCOUNTS_EXCEL_PATH)) {
+      console.log(`✅ [Comptes] Excel chargé : ${ACCOUNTS_EXCEL_PATH} (${count} compte(s))`);
+    } else {
+      console.log(`✅ [Comptes] Excel créé avec compte par défaut : ${ACCOUNTS_EXCEL_PATH}`);
+    }
+  } catch (e) {
+    console.error(`❌ [Comptes] Erreur accès Excel : ${e.message}`);
+  }
+
   console.log('✅ Serveur prêt - accessible depuis le réseau');
   console.log('');
 

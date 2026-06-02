@@ -15172,5 +15172,15 @@
     "gc": 1200000,
     "gm": 300000,
     "bilanDate": "2025-09-30"
+  },
+  "dossiers_info": {
+    "BOURBOURG": {
+      "Date fin contractuelle": "31/03/2026",
+      "Date OS": "01/07/2024",
+      "Dessinateur BE": "Valentin",
+      "Conducteur de travaux": "Tony Morant",
+      "Adresse": "110 Avenue Anthony Caro, 59630 Bourbourg",
+      "Chantier": "Lycée C. Brasseur - Classes et Atelier Mécanique"
+    }
   }
 }

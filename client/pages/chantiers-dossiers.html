@@ -1,0 +1,834 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dossiers Chantiers - Intranet Goudalle</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    /* ── Layout explorateur ── */
+    .explorer-layout {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+    @media (max-width: 900px) {
+      .explorer-layout { grid-template-columns: 1fr; }
+      .panel-chantiers { max-height: 260px; }
+    }
+
+    /* ── Panel liste chantiers ── */
+    .panel-chantiers {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      position: sticky;
+      top: 16px;
+      max-height: calc(100vh - 100px);
+      display: flex;
+      flex-direction: column;
+    }
+    .panel-chantiers-header {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      background: var(--lighter);
+    }
+    .panel-chantiers-header input {
+      width: 100%; box-sizing: border-box;
+      padding: 7px 10px; border: 1.5px solid var(--border);
+      border-radius: 6px; font-size: 13px; background: white;
+      color: var(--dark); font-family: inherit;
+    }
+    .panel-chantiers-header input:focus { outline: none; border-color: var(--accent); }
+    .chantiers-count {
+      font-size: 11px; color: var(--text-muted-dark);
+      margin-top: 6px;
+    }
+    .chantiers-scroll { overflow-y: auto; flex: 1; }
+    .chantier-item {
+      padding: 10px 14px; cursor: pointer;
+      border-bottom: 1px solid var(--border-light);
+      transition: background 0.15s;
+    }
+    .chantier-item:hover { background: var(--light); }
+    .chantier-item.active { background: var(--accent); color: white; }
+    .chantier-item.active .chantier-item-sub { color: rgba(255,255,255,0.8); }
+    .chantier-item-name { font-size: 13px; font-weight: 600; line-height: 1.3; }
+    .chantier-item-sub { font-size: 11px; color: var(--text-muted-dark); margin-top: 2px; }
+    .badge-noinfo { display: inline-block; font-size: 10px; padding: 1px 5px; border-radius: 4px; background: #fff3cd; color: #856404; border: 1px solid #ffc107; margin-left: 4px; vertical-align: middle; }
+
+    /* ── Panel explorateur ── */
+    .panel-explorer {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      min-height: 500px;
+    }
+    .explorer-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--lighter);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .breadcrumb { display: flex; align-items: center; gap: 4px; flex: 1; flex-wrap: wrap; min-width: 0; }
+    .breadcrumb-sep { color: var(--text-muted); font-size: 13px; }
+    .breadcrumb-part {
+      font-size: 13px; color: var(--accent-dark); cursor: pointer;
+      font-weight: 500; white-space: nowrap;
+      max-width: 180px; overflow: hidden; text-overflow: ellipsis;
+    }
+    .breadcrumb-part:hover { text-decoration: underline; }
+    .breadcrumb-part.current { color: var(--dark); font-weight: 600; cursor: default; }
+    .breadcrumb-part.current:hover { text-decoration: none; }
+    .btn-upload {
+      padding: 6px 12px; background: var(--accent); color: white;
+      border: none; border-radius: 6px; font-size: 12px; cursor: pointer;
+      font-weight: 600; white-space: nowrap; transition: background 0.2s;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .btn-upload:hover { background: var(--accent-dark); }
+    .btn-upload:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Toggle vue ── */
+    .view-toggle {
+      display: flex; gap: 2px;
+      background: var(--light); border: 1px solid var(--border);
+      border-radius: 6px; padding: 2px; flex-shrink: 0;
+    }
+    .view-btn {
+      padding: 3px 8px; border: none; border-radius: 4px;
+      cursor: pointer; font-size: 15px; background: transparent;
+      color: var(--text-muted-dark); transition: all 0.15s; line-height: 1;
+    }
+    .view-btn.active { background: white; color: var(--dark); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+    .view-btn:hover:not(.active) { color: var(--dark); }
+
+    /* ── Vue grille ── */
+    .files-grid {
+      padding: 12px 16px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 10px;
+    }
+    .file-card {
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: center;
+      position: relative;
+      background: white;
+    }
+    .file-card:hover { border-color: var(--accent); box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .file-card.folder { background: var(--lighter); }
+    .file-card.folder:hover { background: var(--light); border-color: var(--primary); }
+    .file-icon { font-size: 32px; margin-bottom: 6px; line-height: 1; }
+    .file-name { font-size: 11px; font-weight: 600; color: var(--dark); word-break: break-word; line-height: 1.3; }
+    .file-meta { font-size: 10px; color: var(--text-muted-dark); margin-top: 3px; }
+
+    /* ── Vue liste ── */
+    .files-list { padding: 4px 0; }
+    .file-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 16px; cursor: pointer;
+      border-bottom: 1px solid var(--border); transition: background 0.1s;
+    }
+    .file-row:last-child { border-bottom: none; }
+    .file-row:hover { background: var(--lighter); }
+    .file-row .row-icon { font-size: 18px; flex-shrink: 0; width: 22px; text-align: center; }
+    .file-row .row-name { flex: 1; font-size: 13px; color: var(--dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+    .file-row.folder .row-name { font-weight: 600; }
+    .file-row .row-size { font-size: 11px; color: var(--text-muted-dark); white-space: nowrap; min-width: 55px; text-align: right; }
+    .file-row .row-date { font-size: 11px; color: var(--text-muted-dark); white-space: nowrap; min-width: 65px; text-align: right; }
+
+    /* ── Drop zone ── */
+    .drop-overlay {
+      position: absolute; inset: 0;
+      background: rgba(139, 168, 138, 0.15);
+      border: 3px dashed var(--accent);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 10; pointer-events: none;
+    }
+    .drop-overlay-text { font-size: 18px; font-weight: 700; color: var(--accent-dark); }
+
+    /* ── Visionneuse ── */
+    #viewer-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 9999;
+      display: flex; align-items: center; justify-content: center;
+      padding: 16px;
+    }
+    #viewer-box {
+      background: white; border-radius: 12px;
+      width: 100%; max-width: 1100px;
+      height: 90vh;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+    .viewer-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px;
+      background: var(--lighter);
+    }
+    .viewer-title { flex: 1; font-size: 14px; font-weight: 600; color: var(--dark); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .viewer-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--text-muted-dark); padding: 0; line-height: 1; }
+    .viewer-close:hover { color: var(--danger); }
+    .viewer-body { flex: 1; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #f0f0f0; position: relative; }
+    .viewer-body iframe { width: 100%; height: 100%; border: none; }
+    .viewer-body img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .viewer-download {
+      padding: 6px 14px; background: var(--primary); color: white;
+      border: none; border-radius: 6px; font-size: 13px; cursor: pointer;
+      font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;
+    }
+    .viewer-download:hover { background: var(--secondary); }
+
+    /* ── Fiche info chantier ── */
+    #info-panel {
+      border-top: 1px solid var(--border);
+      padding: 16px;
+      background: var(--lighter);
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .info-field label { display: block; font-size: 11px; font-weight: 700; color: var(--text-muted-dark); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 3px; }
+    .info-field .info-value { font-size: 13px; color: var(--dark); font-weight: 500; }
+    .info-field input {
+      width: 100%; box-sizing: border-box;
+      padding: 6px 9px; border: 1.5px solid var(--border);
+      border-radius: 5px; font-size: 13px; background: white;
+      color: var(--dark); font-family: inherit;
+    }
+    .info-field input:focus { outline: none; border-color: var(--accent); }
+
+    /* ── Empty / loading states ── */
+    .empty-state { text-align: center; padding: 60px 24px; color: var(--text-muted-dark); }
+    .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+    .loading-state { display: flex; align-items: center; justify-content: center; height: 200px; gap: 8px; color: var(--text-muted-dark); font-size: 14px; }
+
+    /* ── Upload progress ── */
+    #upload-toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: var(--dark); color: white;
+      padding: 12px 18px; border-radius: 8px;
+      font-size: 13px; z-index: 9998;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <script src="../js/api.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+  <script>Auth.requireAuth();</script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Sidebar
+      try {
+        document.getElementById('sidebar').innerHTML = getSidebar();
+        injectChantiersSecondaryBar();
+      } catch(e) {
+        document.getElementById('sidebar').innerHTML = '<div style="padding:16px;color:red;font-size:12px;">Erreur sidebar: ' + e.message + '</div>';
+      }
+      // Chargement des chantiers
+      if (typeof loadChantiers === 'function') {
+        loadChantiers();
+      } else {
+        document.getElementById('initial-loading').textContent = '❌ Erreur JS: loadChantiers non défini — le script principal a une erreur de syntaxe';
+      }
+    });
+  </script>
+
+  <div class="app-container">
+    <div id="sidebar"></div>
+    <main class="main-content">
+
+      <div class="d-flex justify-between items-center mb-3" style="gap:12px;flex-wrap:wrap;">
+        <div>
+          <h1 class="mb-0">📁 Dossiers Chantiers</h1>
+          <p style="color:var(--text-muted-dark);margin:4px 0 0;font-size:14px;">Parcourir, visualiser et importer des documents</p>
+        </div>
+        <div id="header-badges"></div>
+      </div>
+
+      <div class="explorer-layout" id="explorer-layout" style="display:none;">
+
+        <!-- Panel liste chantiers -->
+        <div class="panel-chantiers">
+          <div class="panel-chantiers-header">
+            <input type="text" id="search-chantier" placeholder="Rechercher un chantier…" oninput="filterChantiers(this.value)">
+            <div class="chantiers-count" id="chantiers-count"></div>
+          </div>
+          <div class="chantiers-scroll" id="chantiers-list"></div>
+        </div>
+
+        <!-- Panel explorateur -->
+        <div class="panel-explorer" id="panel-explorer" style="position:relative;">
+          <div id="explorer-empty" class="empty-state">
+            <div class="icon">👈</div>
+            <p style="font-weight:600;">Sélectionnez un chantier</p>
+            <p style="font-size:13px;margin-top:4px;">Cliquez sur un chantier dans la liste pour parcourir ses dossiers</p>
+          </div>
+          <div id="explorer-content" style="display:none;">
+
+            <!-- Header avec breadcrumb + upload -->
+            <div class="explorer-header">
+              <div class="breadcrumb" id="breadcrumb"></div>
+              <div class="view-toggle">
+                <button class="view-btn" id="btn-view-grid" onclick="setViewMode('grid')" title="Vue grille">⊞</button>
+                <button class="view-btn" id="btn-view-list" onclick="setViewMode('list')" title="Vue liste">☰</button>
+              </div>
+              <button class="btn-upload" id="btn-upload" onclick="triggerUpload()" style="display:none;">
+                ⬆ Importer
+              </button>
+              <input type="file" id="file-input" multiple style="display:none;" onchange="handleFileSelect(this.files)">
+            </div>
+
+            <!-- Grille des fichiers -->
+            <div style="position:relative;" id="files-wrapper">
+              <div id="files-grid" class="files-grid"></div>
+              <div id="drop-overlay" class="drop-overlay" style="display:none;">
+                <div class="drop-overlay-text">📂 Déposez ici pour importer</div>
+              </div>
+            </div>
+
+            <!-- Fiche info chantier -->
+            <div id="info-panel" style="display:none;"></div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading initial -->
+      <div id="initial-loading" class="loading-state">⏳ Chargement des chantiers…</div>
+      <!-- Erreur réseau -->
+      <div id="network-error" style="display:none;" class="empty-state">
+        <div class="icon">🔌</div>
+        <p style="font-weight:600;color:var(--danger);">Partage réseau inaccessible</p>
+        <p style="font-size:13px;margin-top:4px;">Le dossier Y:\03-Affaires ne répond pas. Vérifiez la connexion au réseau Goudalle.</p>
+        <button onclick="loadChantiers()" style="margin-top:16px;padding:8px 16px;background:var(--accent);color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">Réessayer</button>
+      </div>
+    </main>
+  </div>
+
+  <!-- Visionneuse -->
+  <div id="viewer-overlay" style="display:none;" onclick="closeViewer(event)">
+    <div id="viewer-box">
+      <div class="viewer-header">
+        <span class="viewer-title" id="viewer-title"></span>
+        <a id="viewer-download-btn" class="viewer-download" download>⬇ Télécharger</a>
+        <button class="viewer-close" onclick="closeViewerDirect()">✕</button>
+      </div>
+      <div class="viewer-body" id="viewer-body"></div>
+    </div>
+  </div>
+
+  <!-- Toast upload -->
+  <div id="upload-toast"></div>
+
+  <script>
+    let _token = null;
+
+    // ── Récupérer le token serveur (déjà chargé par api.js via onServerReady) ──
+    async function getToken() {
+      if (_token) return _token;
+      _token = window._serverToken;
+      return _token;
+    }
+
+    // ── Données globales ──
+    let allChantiers = [];
+    let filteredChantiers = [];
+    let currentChantier = null;   // nom du dossier (ex: "BOURBOURG")
+    let currentRel = '';          // chemin relatif courant (ex: "BOURBOURG/03_Travaux...")
+    let currentInfo = null;       // info-chantier.xlsx du chantier sélectionné
+    let isDragging = false;
+    let viewMode = localStorage.getItem('dossiers_view') || 'grid';
+
+    // ── Helpers ──
+    const session = Auth.getSession();
+    const isDirection = session?.role === 'direction';
+    const canEdit = isDirection || Auth.hasAccess('gc_dossiers');
+
+    function normName(s) {
+      return String(s || '').toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, ' ').trim();
+    }
+
+    function isMyCdT(conducteur) {
+      if (!conducteur || !session?.displayName) return false;
+      return normName(conducteur) === normName(session.displayName);
+    }
+
+    function isMyChantier(c) {
+      if (isDirection || Auth.hasAccess('gc_dossiers_all')) return true;
+      return isMyCdT(c.conducteur);
+    }
+
+    function formatSize(bytes) {
+      if (bytes < 1024) return bytes + ' o';
+      if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' Ko';
+      return (bytes / 1024 / 1024).toFixed(1) + ' Mo';
+    }
+
+    function formatDate(iso) {
+      if (!iso) return '';
+      const d = new Date(iso);
+      return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+    }
+
+    const FILE_ICONS = {
+      folder: '📁', pdf: '📄', image: '🖼️', word: '📝',
+      excel: '📊', powerpoint: '📊', cad: '📐',
+      video: '🎬', archive: '🗜️', email: '📧', file: '📎',
+    };
+
+    // ── Chargement initial ──
+    async function loadChantiers() {
+      document.getElementById('initial-loading').style.display = 'flex';
+      document.getElementById('network-error').style.display = 'none';
+      document.getElementById('explorer-layout').style.display = 'none';
+
+      // Si direction → tout, sinon filtrer par displayName
+      const params = (!isDirection && session?.displayName)
+        ? `?conducteur=${encodeURIComponent(session.displayName)}`
+        : '';
+
+      try {
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), 20000);
+        const res = await fetch(SERVER_URL + '/dossiers/liste' + params, { signal: ctrl.signal });
+        clearTimeout(tid);
+        const data = await res.json();
+
+        if (!data.success) throw new Error(data.error || 'Erreur serveur');
+
+        allChantiers = data.chantiers || [];
+        filteredChantiers = [...allChantiers];
+
+        document.getElementById('initial-loading').style.display = 'none';
+        document.getElementById('explorer-layout').style.display = 'grid';
+
+        // Initialiser le toggle vue
+        setViewMode(viewMode);
+        renderChantiersList();
+
+        // Pré-sélectionner depuis l'URL si ?chantier=NOM
+        const params2 = new URLSearchParams(window.location.search);
+        const nomParam = params2.get('chantier');
+        if (nomParam) {
+          const found = allChantiers.find(c => c.nom === nomParam || normName(c.nom) === normName(nomParam));
+          if (found) selectChantier(found);
+        }
+
+        // Header badges
+        renderHeaderBadges();
+
+      } catch (e) {
+        document.getElementById('initial-loading').style.display = 'none';
+        const errDiv = document.getElementById('network-error');
+        const msg = e.name === 'AbortError' ? 'Timeout : le serveur ne répond pas après 20s.' : (e.message || String(e));
+        errDiv.querySelector('p:last-of-type').textContent = msg;
+        errDiv.style.display = 'block';
+      }
+    }
+
+    function renderHeaderBadges() {
+      const total = allChantiers.length;
+      const avecInfo = allChantiers.filter(c => c.hasInfo).length;
+      const sansInfo = total - avecInfo;
+      let html = `<div style="display:flex;gap:8px;flex-wrap:wrap;">`;
+      html += `<span style="background:#edf7ed;border:1.5px solid #7bad75;border-radius:8px;padding:6px 12px;font-size:12px;color:#1a5c30;font-weight:600;">${total} chantier${total > 1 ? 's' : ''}</span>`;
+      if (sansInfo > 0 && isDirection) {
+        html += `<span style="background:#fff3cd;border:1.5px solid #ffc107;border-radius:8px;padding:6px 12px;font-size:12px;color:#856404;font-weight:600;" title="${sansInfo} dossier(s) sans fiche info-chantier.xlsx">⚠ ${sansInfo} sans fiche</span>`;
+      }
+      html += '</div>';
+      document.getElementById('header-badges').innerHTML = html;
+    }
+
+    // ── Liste chantiers ──
+    function filterChantiers(query) {
+      const q = normName(query);
+      filteredChantiers = q
+        ? allChantiers.filter(c => normName(c.nom).includes(q) || normName(c.chantier).includes(q) || normName(c.conducteur).includes(q) || normName(c.adresse).includes(q))
+        : [...allChantiers];
+      renderChantiersList();
+    }
+
+    function renderChantiersList() {
+      const list = document.getElementById('chantiers-list');
+      const count = document.getElementById('chantiers-count');
+      count.textContent = `${filteredChantiers.length} / ${allChantiers.length} chantier${allChantiers.length > 1 ? 's' : ''}`;
+
+      if (!filteredChantiers.length) {
+        list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted-dark);font-size:13px;">Aucun résultat</div>';
+        return;
+      }
+
+      list.innerHTML = filteredChantiers.map(c => {
+        const active = currentChantier === c.nom ? ' active' : '';
+        const noInfo = !c.hasInfo ? '<span class="badge-noinfo">!</span>' : '';
+        const sub = c.conducteur ? c.conducteur : (c.adresse ? c.adresse.substring(0, 40) : '');
+        return `<div class="chantier-item${active}" onclick="selectChantier(${JSON.stringify(c).replace(/"/g, '&quot;')})">
+          <div class="chantier-item-name">${c.nom}${noInfo}</div>
+          ${sub ? `<div class="chantier-item-sub">${sub}</div>` : ''}
+        </div>`;
+      }).join('');
+    }
+
+    // ── Sélection d'un chantier ──
+    async function selectChantier(chantier) {
+      currentChantier = chantier.nom;
+      currentRel = chantier.nom;
+      currentInfo = null;
+
+      renderChantiersList();
+
+      document.getElementById('explorer-empty').style.display = 'none';
+      document.getElementById('explorer-content').style.display = 'block';
+      document.getElementById('info-panel').style.display = 'none';
+
+      // Mettre à jour l'URL sans recharger
+      const url = new URL(window.location);
+      url.searchParams.set('chantier', chantier.nom);
+      window.history.replaceState({}, '', url);
+
+      await browseFolder(chantier.nom);
+      await loadInfoPanel(chantier);
+    }
+
+    // ── Parcourir un dossier ──
+    async function browseFolder(rel) {
+      currentRel = rel;
+      document.getElementById('btn-upload').style.display = canEdit ? 'flex' : 'none';
+      renderBreadcrumb(rel);
+
+      const grid = document.getElementById('files-grid');
+      grid.innerHTML = '<div class="loading-state">⏳ Chargement…</div>';
+
+      try {
+        const res = await fetch(`${SERVER_URL}/dossiers/contenu?rel=${encodeURIComponent(rel)}`);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+        renderFilesGrid(data.items);
+      } catch (e) {
+        grid.innerHTML = `<div class="empty-state"><div class="icon">⚠</div><p>${e.message}</p></div>`;
+      }
+    }
+
+    function setViewMode(mode) {
+      viewMode = mode;
+      localStorage.setItem('dossiers_view', mode);
+      document.getElementById('btn-view-grid').classList.toggle('active', mode === 'grid');
+      document.getElementById('btn-view-list').classList.toggle('active', mode === 'list');
+      // Re-render si des items sont déjà affichés
+      const container = document.getElementById('files-grid');
+      if (container && container._items) renderFilesGrid(container._items);
+    }
+
+    function renderFilesGrid(items) {
+      const container = document.getElementById('files-grid');
+      container._items = items;
+
+      if (!items.length) {
+        container.className = 'files-grid';
+        container.innerHTML = '<div class="empty-state" style="padding:40px;"><div class="icon">📭</div><p>Dossier vide</p></div>';
+        return;
+      }
+
+      if (viewMode === 'list') {
+        container.className = 'files-list';
+        container.innerHTML = items.map(item => {
+          const icon = FILE_ICONS[item.type] || '📎';
+          const size = item.isDir ? '' : formatSize(item.size);
+          const dateStr = item.modified ? formatDate(item.modified) : '';
+          const onclick = item.isDir
+            ? `browseFolder('${escRel(currentRel + '/' + item.name)}')`
+            : `openFile('${escRel(currentRel + '/' + item.name)}', '${escStr(item.name)}', '${item.type}')`;
+          return `<div class="file-row${item.isDir ? ' folder' : ''}" onclick="${onclick}" title="${escStr(item.name)}">
+            <span class="row-icon">${icon}</span>
+            <span class="row-name">${escHtml(item.name)}</span>
+            <span class="row-size">${size}</span>
+            <span class="row-date">${dateStr}</span>
+          </div>`;
+        }).join('');
+      } else {
+        container.className = 'files-grid';
+        container.innerHTML = items.map(item => {
+          const icon = FILE_ICONS[item.type] || '📎';
+          const meta = item.isDir ? '' : formatSize(item.size);
+          const dateStr = item.modified ? formatDate(item.modified) : '';
+          const onclick = item.isDir
+            ? `browseFolder('${escRel(currentRel + '/' + item.name)}')`
+            : `openFile('${escRel(currentRel + '/' + item.name)}', '${escStr(item.name)}', '${item.type}')`;
+          return `<div class="file-card${item.isDir ? ' folder' : ''}" onclick="${onclick}" title="${escStr(item.name)}">
+            <div class="file-icon">${icon}</div>
+            <div class="file-name">${escHtml(item.name)}</div>
+            ${meta || dateStr ? `<div class="file-meta">${[meta, dateStr].filter(Boolean).join(' · ')}</div>` : ''}
+          </div>`;
+        }).join('');
+      }
+    }
+
+    function escHtml(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    function escStr(s) { return String(s || '').replace(/'/g,"\\'").replace(/\\/g,'\\\\'); }
+    function escRel(s) { return String(s || '').replace(/'/g,"\\'"); }
+
+    // ── Breadcrumb ──
+    function renderBreadcrumb(rel) {
+      const parts = rel.split('/').filter(Boolean);
+      let html = '';
+      let acc = '';
+      parts.forEach((p, i) => {
+        acc += (acc ? '/' : '') + p;
+        const captured = acc;
+        if (i > 0) html += `<span class="breadcrumb-sep">›</span>`;
+        const isCurrent = i === parts.length - 1;
+        const shortName = p.length > 20 ? p.substring(0, 18) + '…' : p;
+        html += `<span class="breadcrumb-part${isCurrent ? ' current' : ''}" ${isCurrent ? '' : `onclick="browseFolder('${escRel(captured)}')" title="${escStr(p)}"`}>${escHtml(shortName)}</span>`;
+      });
+      document.getElementById('breadcrumb').innerHTML = html;
+    }
+
+    // ── Visionneuse ──
+    function openFile(rel, name, type) {
+      const url = `${SERVER_URL}/dossiers/fichier?rel=${encodeURIComponent(rel)}`;
+      const body = document.getElementById('viewer-body');
+      body.innerHTML = '';
+
+      if (type === 'pdf') {
+        body.innerHTML = `<iframe src="${url}#toolbar=1&navpanes=0" style="width:100%;height:100%;border:none;"></iframe>`;
+      } else if (type === 'image') {
+        body.innerHTML = `<img src="${url}" alt="${escHtml(name)}" style="max-width:100%;max-height:100%;object-fit:contain;padding:16px;">`;
+      } else {
+        body.innerHTML = `<div style="text-align:center;padding:40px;">
+          <div style="font-size:64px;margin-bottom:16px;">${FILE_ICONS[type] || '📎'}</div>
+          <p style="font-size:15px;font-weight:600;color:var(--dark);margin-bottom:8px;">${escHtml(name)}</p>
+          <p style="font-size:13px;color:var(--text-muted-dark);margin-bottom:20px;">Ce type de fichier ne peut pas être visualisé dans le navigateur.</p>
+          <a href="${url}" download="${escHtml(name)}" class="viewer-download">⬇ Télécharger</a>
+        </div>`;
+      }
+
+      document.getElementById('viewer-title').textContent = name;
+      const dlBtn = document.getElementById('viewer-download-btn');
+      dlBtn.href = url;
+      dlBtn.download = name;
+      document.getElementById('viewer-overlay').style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeViewer(e) {
+      if (e.target === document.getElementById('viewer-overlay')) closeViewerDirect();
+    }
+    function closeViewerDirect() {
+      document.getElementById('viewer-overlay').style.display = 'none';
+      document.getElementById('viewer-body').innerHTML = '';
+      document.body.style.overflow = '';
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeViewerDirect(); });
+
+    // ── Fiche info chantier ──
+    async function loadInfoPanel(chantier) {
+      const panel = document.getElementById('info-panel');
+
+      const res = await fetch(`${SERVER_URL}/dossiers/info?rel=${encodeURIComponent(chantier.nom)}`);
+      const data = await res.json();
+      currentInfo = data.info;
+
+      const fields = [
+        { key: 'Chantier', label: 'Nom du chantier' },
+        { key: 'Adresse', label: 'Adresse' },
+        { key: 'Conducteur de travaux', label: 'Conducteur de travaux' },
+        { key: 'Dessinateur BE', label: 'Dessinateur BE' },
+        { key: "Date OS", label: "Date d'OS" },
+        { key: 'Date fin contractuelle', label: 'Date fin contractuelle' },
+        { key: "Maître d'ouvrage", label: "Maître d'ouvrage" },
+        { key: 'Montant marché HT', label: 'Montant marché HT' },
+      ];
+
+      const info = currentInfo || {};
+      const hasData = Object.values(info).some(v => v);
+
+      if (canEdit) {
+        let html = `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+          <span style="font-size:13px;font-weight:700;color:var(--dark);">📋 Fiche chantier${!hasData ? ' <span style=\'color:#856404;font-size:12px;\'>— à renseigner</span>' : ''}</span>
+          <div style="display:flex;gap:8px;">
+            <button onclick="saveInfoChantier()" style="padding:5px 12px;background:var(--accent);color:white;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">💾 Enregistrer</button>
+          </div>
+        </div>
+        <div class="info-grid" id="info-form">`;
+        fields.forEach(f => {
+          html += `<div class="info-field">
+            <label>${escHtml(f.label)}</label>
+            <input type="text" id="inf_${f.key.replace(/\s/g,'_').replace(/'/g,'')}" value="${escHtml(info[f.key] || '')}" placeholder="${escHtml(f.label)}">
+          </div>`;
+        });
+        html += '</div>';
+        panel.innerHTML = html;
+      } else if (hasData) {
+        let html = `<div style="font-size:13px;font-weight:700;color:var(--dark);margin-bottom:10px;">📋 Fiche chantier</div>
+        <div class="info-grid">`;
+        fields.forEach(f => {
+          const val = info[f.key];
+          if (!val) return;
+          html += `<div class="info-field">
+            <label>${escHtml(f.label)}</label>
+            <div class="info-value">${escHtml(val)}</div>
+          </div>`;
+        });
+        html += '</div>';
+        panel.innerHTML = html;
+      } else {
+        panel.innerHTML = '';
+        panel.style.display = 'none';
+        return;
+      }
+
+      panel.style.display = 'block';
+    }
+
+    async function saveInfoChantier() {
+      const fields = {
+        'Chantier': document.getElementById('inf_Chantier')?.value || '',
+        'Adresse': document.getElementById('inf_Adresse')?.value || '',
+        'Conducteur de travaux': document.getElementById('inf_Conducteur_de_travaux')?.value || '',
+        'Dessinateur BE': document.getElementById('inf_Dessinateur_BE')?.value || '',
+        'Date OS': document.getElementById('inf_Date_OS')?.value || '',
+        'Date fin contractuelle': document.getElementById('inf_Date_fin_contractuelle')?.value || '',
+        "Maître d'ouvrage": document.getElementById('inf_Maîtredouvrage')?.value || '',
+        'Montant marché HT': document.getElementById('inf_Montant_marché_HT')?.value || '',
+      };
+
+      const token = await getToken();
+      try {
+        const res = await fetch(`${SERVER_URL}/dossiers/info?rel=${encodeURIComponent(currentChantier)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'x-goudalle-token': token },
+          body: JSON.stringify(fields),
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+        showToast('✅ Fiche enregistrée');
+        // Invalider le cache liste
+        _dossiersListCache_invalidated = true;
+        // Mettre à jour le chantier dans la liste locale
+        const idx = allChantiers.findIndex(c => c.nom === currentChantier);
+        if (idx >= 0) {
+          allChantiers[idx] = { ...allChantiers[idx], ...fields, chantier: fields['Chantier'] || allChantiers[idx].nom, conducteur: fields['Conducteur de travaux'], adresse: fields['Adresse'], hasInfo: true };
+          filteredChantiers = [...allChantiers];
+          renderChantiersList();
+        }
+      } catch (e) {
+        showToast('❌ Erreur : ' + e.message, true);
+      }
+    }
+
+    // ── Upload ──
+    function triggerUpload() {
+      document.getElementById('file-input').click();
+    }
+
+    function handleFileSelect(files) {
+      if (!files || !files.length) return;
+      uploadFiles(Array.from(files));
+      document.getElementById('file-input').value = '';
+    }
+
+    // Drag & drop
+    const wrapper = document.getElementById('files-wrapper');
+    if (wrapper) {
+      wrapper.addEventListener('dragover', e => {
+        e.preventDefault();
+        if (!currentChantier || !canEdit) return;
+        if (!isDragging) {
+          isDragging = true;
+          document.getElementById('drop-overlay').style.display = 'flex';
+        }
+      });
+      wrapper.addEventListener('dragleave', e => {
+        if (!wrapper.contains(e.relatedTarget)) {
+          isDragging = false;
+          document.getElementById('drop-overlay').style.display = 'none';
+        }
+      });
+      wrapper.addEventListener('drop', e => {
+        e.preventDefault();
+        isDragging = false;
+        document.getElementById('drop-overlay').style.display = 'none';
+        if (!currentChantier || !canEdit) return;
+        const files = Array.from(e.dataTransfer.files);
+        if (files.length) uploadFiles(files);
+      });
+    }
+
+    async function uploadFiles(files) {
+      const token = await getToken();
+      showToast(`⬆ Envoi de ${files.length} fichier(s)…`);
+
+      const formData = new FormData();
+      files.forEach(f => formData.append('fichiers', f));
+
+      try {
+        const res = await fetch(`${SERVER_URL}/dossiers/upload?rel=${encodeURIComponent(currentRel)}`, {
+          method: 'POST',
+          headers: { 'x-goudalle-token': token },
+          body: formData,
+        });
+        const data = await res.json();
+
+        if (data.readonly) {
+          showToastLong('⚠️ Le partage réseau est en lecture seule depuis le serveur. Déposez vos fichiers directement dans le dossier Windows via l\'Explorateur de fichiers.');
+          return;
+        }
+
+        if (!data.success) throw new Error(data.error);
+
+        const n = data.saved?.length || 0;
+        showToast(`✅ ${n} fichier(s) importé(s)`);
+        await browseFolder(currentRel);
+      } catch (e) {
+        showToast('❌ ' + e.message, true);
+      }
+    }
+
+    function showToastLong(msg) {
+      const t = document.getElementById('upload-toast');
+      t.textContent = msg;
+      t.style.background = '#856404';
+      t.style.maxWidth = '400px';
+      t.style.display = 'block';
+      clearTimeout(t._timer);
+      t._timer = setTimeout(() => { t.style.display = 'none'; }, 6000);
+    }
+
+    // ── Toast ──
+    function showToast(msg, isError = false) {
+      const t = document.getElementById('upload-toast');
+      t.textContent = msg;
+      t.style.background = isError ? 'var(--danger)' : 'var(--dark)';
+      t.style.display = 'block';
+      clearTimeout(t._timer);
+      t._timer = setTimeout(() => { t.style.display = 'none'; }, 3500);
+    }
+
+    // ── Init géré dans le script séparé au-dessus ──
+  </script>
+</body>
+</html>

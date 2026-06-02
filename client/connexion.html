@@ -50,38 +50,31 @@
       position: relative;
       z-index: 1;
     }
-    
+
     .login-container {
       width: 100%;
-      max-width: 480px;
+      max-width: 460px;
       background: white;
       padding: 50px 45px;
       border-radius: 16px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 0 40px rgba(139, 168, 138, 0.1);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12), 0 0 40px rgba(139, 168, 138, 0.08);
       border: 1px solid rgba(139, 168, 138, 0.2);
-      backdrop-filter: blur(10px);
-      animation: slideUp 0.6s ease;
+      animation: slideUp 0.5s ease;
     }
 
     @keyframes slideUp {
-      from {
-        opacity: 0;
-        transform: translateY(30px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
 
     .login-header {
       text-align: center;
-      margin-bottom: 40px;
+      margin-bottom: 36px;
     }
 
     .login-header h1 {
-      font-size: 36px;
-      margin: 0 0 8px 0;
+      font-size: 34px;
+      margin: 0 0 6px 0;
       background: linear-gradient(135deg, #5a4a3a 0%, #6b8e6f 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
@@ -94,66 +87,146 @@
       color: #8ba88a;
       margin: 0;
       font-size: 14px;
-      letter-spacing: 0.6px;
+      letter-spacing: 0.5px;
       font-weight: 500;
     }
 
     .form-group {
-      margin-bottom: 24px;
+      margin-bottom: 22px;
     }
 
     .form-group label {
       display: block;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
       color: #5a4a3a;
       font-weight: 600;
       font-size: 13px;
-      letter-spacing: 0.4px;
+      letter-spacing: 0.3px;
     }
 
-    .form-group input {
+    .form-group select,
+    .form-group input[type="password"] {
       width: 100%;
-      padding: 14px 16px;
+      padding: 13px 16px;
       border: 2px solid #e8e2db;
       border-radius: 10px;
       font-size: 14px;
-      transition: all 0.3s ease;
-      box-sizing: border-box;
-      background: #faf8f5;
       font-family: inherit;
+      color: #5a4a3a;
+      background: #faf8f5;
+      box-sizing: border-box;
+      transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
+      appearance: none;
+      -webkit-appearance: none;
     }
 
-    .form-group input::placeholder {
-      color: #c9bdb1;
+    .select-wrapper {
+      position: relative;
     }
 
-    .form-group input:hover {
-      border-color: #d4ccc3;
-      background: #fcfaf7;
+    .select-wrapper::after {
+      content: '▾';
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #8ba88a;
+      font-size: 16px;
+      pointer-events: none;
     }
 
-    .form-group input:focus {
+    .form-group select:focus,
+    .form-group input[type="password"]:focus {
       outline: none;
       border-color: #8ba88a;
       background: white;
-      box-shadow: 0 0 0 4px rgba(139, 168, 138, 0.1);
+      box-shadow: 0 0 0 4px rgba(139, 168, 138, 0.12);
+    }
+
+    .form-group select option[disabled] {
+      color: #a89b90;
+    }
+
+    /* Carte utilisateur sélectionné */
+    .selected-user {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 16px;
+      background: linear-gradient(135deg, #faf8f5, #f5f1ed);
+      border: 2px solid #e8e2db;
+      border-radius: 10px;
+      margin-bottom: 22px;
+    }
+
+    .selected-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #8ba88a 0%, #6b8e6f 100%);
+      color: white;
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      letter-spacing: 0.5px;
+    }
+
+    .selected-info {
+      flex: 1;
+    }
+
+    .selected-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: #5a4a3a;
+    }
+
+    .selected-meta {
+      font-size: 12px;
+      color: #8ba88a;
+      margin-top: 2px;
+      font-weight: 500;
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 14px 20px;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.4px;
+      background: linear-gradient(135deg, #8ba88a 0%, #6b8e6f 100%);
+      color: white;
+      transition: transform 0.25s, box-shadow 0.25s;
+      margin-top: 6px;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(107, 142, 111, 0.4);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
 
     .message {
-      padding: 16px;
-      margin-bottom: 24px;
+      padding: 14px 16px;
+      margin-bottom: 20px;
       border-radius: 10px;
       font-size: 13px;
       display: none;
-      border-left: 5px solid;
-      animation: slideUp 0.4s ease;
-    }
-
-    .message.success {
-      background: #f0f9f6;
-      color: #2d5f4f;
-      border-left-color: #7bad75;
-      display: block;
+      border-left: 4px solid;
     }
 
     .message.error {
@@ -163,153 +236,26 @@
       display: block;
     }
 
-    .message.info {
-      background: #f5f7f8;
-      color: #385a6b;
-      border-left-color: #6b8e9f;
+    .message.success {
+      background: #f0f9f6;
+      color: #2d5f4f;
+      border-left-color: #7bad75;
       display: block;
-    }
-
-    .form-actions {
-      display: flex;
-      gap: 12px;
-      margin-top: 28px;
-    }
-
-    .btn {
-      flex: 1;
-      padding: 14px 20px;
-      border: none;
-      border-radius: 10px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      letter-spacing: 0.4px;
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, #8ba88a 0%, #6b8e6f 100%);
-      color: white;
-      border: 2px solid transparent;
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 25px rgba(107, 142, 111, 0.4);
-    }
-
-    .btn-primary:active {
-      transform: translateY(0);
-    }
-
-    .btn-secondary {
-      background: #f0ece6;
-      color: #5a4a3a;
-      border: 2px solid #e8e2db;
-      font-weight: 600;
-    }
-
-    .btn-secondary:hover {
-      background: #e8e2db;
-      border-color: #d4ccc3;
-      transform: translateY(-2px);
-      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
-    }
-
-    .demo-accounts {
-      background: linear-gradient(135deg, #faf8f5 0%, #f5f1ed 100%);
-      padding: 24px;
-      border-radius: 12px;
-      margin-top: 28px;
-      border: 2px solid #e8e2db;
-      border-left: 5px solid #8ba88a;
-    }
-
-    .demo-accounts h3 {
-      margin: 0 0 16px 0;
-      color: #5a4a3a;
-      font-size: 13px;
-      letter-spacing: 0.6px;
-      font-weight: 700;
-    }
-
-    .demo-account {
-      background: white;
-      padding: 14px;
-      margin-bottom: 10px;
-      border-radius: 10px;
-      border: 2px solid #e8e2db;
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
-
-    .demo-account:last-child {
-      margin-bottom: 0;
-    }
-
-    .demo-account:hover {
-      background: #faf8f5;
-      border-color: #8ba88a;
-      box-shadow: 0 4px 12px rgba(139, 168, 138, 0.25);
-      transform: translateY(-2px);
-    }
-
-    .demo-account-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 6px;
-    }
-
-    .demo-account-user {
-      font-weight: 700;
-      color: #5a4a3a;
-      font-size: 13px;
-    }
-
-    .demo-account-role {
-      font-size: 11px;
-      padding: 4px 10px;
-      background: linear-gradient(135deg, #8ba88a 0%, #6b8e6f 100%);
-      color: white;
-      border-radius: 6px;
-      font-weight: 600;
-    }
-
-    .demo-account-pwd {
-      font-size: 12px;
-      color: #7a6a5a;
-      font-family: 'Courier New', monospace;
-      font-weight: 500;
-    }
-
-    .demo-account-desc {
-      font-size: 11px;
-      color: #a89b90;
-      margin-top: 5px;
-    }
-
-    .loading {
-      display: none;
-      text-align: center;
-      color: #8ba88a;
     }
 
     .spinner {
       display: inline-block;
-      width: 20px;
-      height: 20px;
-      border: 3px solid #f3f3f3;
-      border-top: 3px solid #8ba88a;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: white;
       border-radius: 50%;
-      animation: spin 1s linear infinite;
+      animation: spin 0.8s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
     }
 
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
@@ -330,10 +276,6 @@
           <div class="brand-subtitle">Groupe - Intranet</div>
         </div>
       </div>
-      <nav class="sidebar-nav">
-        <a href="./connexion.html" class="sidebar-item">Connexion</a>
-        <a href="./inscription.html" class="sidebar-item">Créer un compte</a>
-      </nav>
     </div>
   </header>
 
@@ -341,166 +283,171 @@
     <div class="login-container">
       <div class="login-header">
         <h1>Connexion</h1>
-        <p>Accès sécurisé - Intranet Groupe</p>
+        <p>Intranet Groupe Goudalle</p>
       </div>
 
-    <div id="message" class="message"></div>
+      <div id="message" class="message"></div>
 
-    <form id="loginForm" onsubmit="handleLogin(event)">
-      <div class="form-group">
-        <label for="username">Identifiant</label>
-        <input 
-          type="text" 
-          id="username" 
-          name="username" 
-          placeholder="Ex: acgoudalle"
-          autocomplete="username"
-          required
-        >
-      </div>
+      <form id="loginForm" onsubmit="handleLogin(event)">
 
-      <div class="form-group">
-        <label for="password">Mot de passe</label>
-        <input 
-          type="password" 
-          id="password" 
-          name="password" 
-          placeholder="Votre mot de passe"
-          autocomplete="password"
-          required
-        >
-      </div>
+        <!-- Étape 1 : sélection du compte -->
+        <div class="form-group" id="accountGroup">
+          <label for="accountSelect">Qui êtes-vous ?</label>
+          <div class="select-wrapper">
+            <select id="accountSelect" onchange="onAccountChange()" required>
+              <option value="" disabled selected>Chargement des comptes…</option>
+            </select>
+          </div>
+        </div>
 
-      <div class="form-actions">
-        <button type="submit" class="btn btn-primary">
-          <span id="btnText">Connexion</span>
-          <span id="loading" class="loading"><div class="spinner"></div></span>
+        <!-- Carte utilisateur sélectionné (masquée au départ) -->
+        <div class="selected-user" id="selectedCard" style="display:none;">
+          <div class="selected-avatar" id="selectedAvatar">?</div>
+          <div class="selected-info">
+            <div class="selected-name" id="selectedName"></div>
+            <div class="selected-meta" id="selectedMeta"></div>
+          </div>
+        </div>
+
+        <!-- Étape 2 : mot de passe (masqué au départ) -->
+        <div class="form-group" id="passwordGroup" style="display:none;">
+          <label for="password">Mot de passe</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            placeholder="Votre mot de passe"
+            autocomplete="current-password"
+          >
+        </div>
+
+        <button type="submit" id="submitBtn" class="btn-primary" disabled>
+          Se connecter
         </button>
-        <button type="button" class="btn btn-secondary" onclick="goRegister()">Créer un compte</button>
-      </div>
-    </form>
-
-    <div class="demo-accounts">
-      <h3>👤 Comptes disponibles</h3>
-      <div id="accountsList">
-        <p style="color:var(--text-muted); font-size:13px; margin:0;">Chargement...</p>
-      </div>
+      </form>
     </div>
-  </div>
   </div>
 
   <script>
-    /**
-     * Remplit automatiquement le formulaire avec l'identifiant d'un compte
-     * @param {string} username - Nom d'utilisateur à préremplir
-     */
-    function autofill(username) {
-      document.getElementById('username').value = username;
-      document.getElementById('password').value = '';
-      document.getElementById('password').focus();
+    const COMPANY_LABELS = {
+      'SYLVE':     'Sylve',
+      'CHARPENTE': 'Charpente',
+      'CBCO':      'CBCO',
+      'SNGM':      'SNGM'
+    };
+    const COMPANY_ORDER = ['SYLVE', 'CHARPENTE', 'CBCO', 'SNGM'];
+
+    // Map username → user object, pour retrouver les infos rapidement
+    let _userMap = {};
+
+    function getInitials(u) {
+      const p = (u.prenom || '').trim().charAt(0).toUpperCase();
+      const n = (u.nom || '').trim().charAt(0).toUpperCase();
+      if (p || n) return p + n;
+      return (u.displayName || u.username || '?').charAt(0).toUpperCase();
     }
 
-    function getRoleLabel(u) {
-      if (u.role === 'direction') return 'Direction';
-      const perms = Array.isArray(u.customPermissions) ? u.customPermissions : [];
-      const sections = [];
-      const production = ['production_indicateurs_generaux', 'production_indicateurs_maconnerie', 'production_indicateurs_usine', 'production_saisie_maconnerie', 'production_saisie_productivite'];
-      const commerce = ['commerce_indicateurs'];
-      const compta = ['compta_indicateurs', 'compta_saisie', 'compta_paiements_charpente', 'compta_paiements_maconnerie', 'compta_paiements_cbco'];
-      const achat = ['achat_indicateurs', 'achat_saisie', 'achat_controle'];
-      const rh = ['rh_indicateurs', 'rh_saisie', 'rh_security_admin'];
-      if (production.some(k => perms.includes(k))) sections.push('Production');
-      if (commerce.some(k => perms.includes(k))) sections.push('Commerce');
-      if (compta.some(k => perms.includes(k))) sections.push('Comptabilité');
-      if (achat.some(k => perms.includes(k))) sections.push('Achat');
-      if (perms.includes('chantiers')) sections.push('Chantiers');
-      if (rh.some(k => perms.includes(k))) sections.push('RH');
-      if (perms.includes('users_admin')) sections.push('Admin');
-      if (sections.length > 0) return sections.join(', ');
-      return 'Accès limité';
+    function buildSelect(users) {
+      const select = document.getElementById('accountSelect');
+      select.innerHTML = '<option value="" disabled selected>Sélectionnez votre nom…</option>';
+
+      // Seulement les utilisateurs actifs avec une entreprise connue, triés par nom puis prénom
+      const active = users
+        .filter(u => u.isActive !== false && COMPANY_ORDER.includes(u.entreprise))
+        .sort((a, b) => {
+          const na = ((a.nom || '') + (a.prenom || '')).toLowerCase();
+          const nb = ((b.nom || '') + (b.prenom || '')).toLowerCase();
+          return na.localeCompare(nb, 'fr');
+        });
+
+      _userMap = {};
+      active.forEach(u => { _userMap[u.username] = u; });
+
+      for (const company of COMPANY_ORDER) {
+        const members = active.filter(u => u.entreprise === company);
+        if (members.length === 0) continue;
+
+        const group = document.createElement('optgroup');
+        group.label = COMPANY_LABELS[company] || company;
+
+        members.forEach(u => {
+          const fullName = [u.prenom, u.nom].filter(Boolean).join(' ') || u.displayName || u.username;
+          const opt = document.createElement('option');
+          opt.value = u.username;
+          opt.textContent = u.poste ? `${fullName} — ${u.poste}` : fullName;
+          group.appendChild(opt);
+        });
+
+        select.appendChild(group);
+      }
+
+      if (select.options.length === 1) {
+        select.options[0].textContent = 'Aucun compte disponible';
+      }
     }
 
-    function renderAccountsList() {
-      const users = Auth.getUserList().filter(u => u.isActive);
-      const container = document.getElementById('accountsList');
+    function onAccountChange() {
+      const select = document.getElementById('accountSelect');
+      const username = select.value;
+      const u = _userMap[username];
 
-      // Avertir si le serveur est inaccessible (liste potentiellement incomplète)
-      const serverOk = window._serverAvailable === true;
-      const warningHtml = !serverOk
-        ? '<p style="color:#b85c5c; font-size:12px; margin:0 0 10px 0; padding:8px; background:#fdf5f5; border-radius:4px; border-left:3px solid #b85c5c;">Serveur inaccessible — liste potentiellement incomplète. Vérifiez la connexion réseau.</p>'
-        : '';
-
-      if (!users || users.length === 0) {
-        container.innerHTML = warningHtml + '<p style="color:var(--text-muted); font-size:13px; margin:0;">Aucun compte disponible</p>';
+      if (!u) {
+        document.getElementById('selectedCard').style.display = 'none';
+        document.getElementById('passwordGroup').style.display = 'none';
+        document.getElementById('submitBtn').disabled = true;
         return;
       }
-      container.innerHTML = warningHtml + users.map(u => `
-        <div class="demo-account" onclick="autofill('${escapeHtml(u.username)}')">
-          <div class="demo-account-header">
-            <span class="demo-account-user">${escapeHtml(u.username)}</span>
-            <span class="demo-account-role">${getRoleLabel(u)}</span>
-          </div>
-          <div class="demo-account-desc">${escapeHtml(u.displayName || '')}</div>
-        </div>
-      `).join('');
+
+      const fullName = [u.prenom, u.nom].filter(Boolean).join(' ') || u.displayName || username;
+      const meta = [COMPANY_LABELS[u.entreprise] || u.entreprise, u.poste].filter(Boolean).join(' · ');
+
+      document.getElementById('selectedAvatar').textContent = getInitials(u);
+      document.getElementById('selectedName').textContent = fullName;
+      document.getElementById('selectedMeta').textContent = meta;
+      document.getElementById('selectedCard').style.display = 'flex';
+      document.getElementById('passwordGroup').style.display = 'block';
+      document.getElementById('submitBtn').disabled = false;
+
+      setTimeout(() => document.getElementById('password').focus(), 50);
     }
 
-    window.onServerReady(renderAccountsList);
-
-    /**
-     * Affiche un message de feedback à l'utilisateur
-     * @param {string} message - Texte du message à afficher
-     * @param {string} type - Type : 'success' (vert) ou 'error' (rouge)
-     */
-    function showMessage(message, type) {
-      const msgDiv = document.getElementById('message');
-      msgDiv.textContent = message;
-      msgDiv.className = `message ${type}`;
-      msgDiv.style.display = 'block';
+    function showMessage(msg, type) {
+      const el = document.getElementById('message');
+      el.textContent = msg;
+      el.className = `message ${type}`;
     }
 
-    /**
-     * Gestion de la soumission du formulaire de connexion
-     * @param {Event} event - Événement de soumission du formulaire
-     */
-    function handleLogin(event) {
+    async function handleLogin(event) {
       event.preventDefault();
 
-      const username = document.getElementById('username').value.trim();
+      const select = document.getElementById('accountSelect');
+      const username = select.value;
       const password = document.getElementById('password').value;
 
-      if (!username || !password) {
-        showMessage('❌ Veuillez remplir tous les champs', 'error');
-        return;
+      if (!username) { showMessage('Veuillez sélectionner votre compte.', 'error'); return; }
+      if (!password) { showMessage('Veuillez entrer votre mot de passe.', 'error'); return; }
+
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>Connexion…';
+
+      const result = await Auth.login(username, password);
+
+      if (result.success) {
+        showMessage('✅ Connexion réussie…', 'success');
+        setTimeout(() => { window.location.href = './index.html'; }, 400);
+      } else {
+        showMessage(result.message, 'error');
+        btn.disabled = false;
+        btn.textContent = 'Se connecter';
+        document.getElementById('password').focus();
       }
-
-      document.getElementById('btnText').style.display = 'none';
-      document.getElementById('loading').style.display = 'block';
-
-      setTimeout(() => {
-        const result = Auth.login(username, password);
-
-        if (result.success) {
-          showMessage(result.message, 'success');
-          setTimeout(() => {
-            window.location.href = './index.html';
-          }, 500);
-        } else {
-          showMessage(result.message, 'error');
-          document.getElementById('btnText').style.display = 'block';
-          document.getElementById('loading').style.display = 'none';
-        }
-      }, 300);
     }
 
-    /**
-     * Redirige vers la page d'inscription
-     */
-    function goRegister() {
-      window.location.href = './inscription.html';
-    }
+    window.onServerReady(() => {
+      buildSelect(Auth.getUserList());
+    });
 
-    // Si l'utilisateur est déjà connecté, rediriger vers l'accueil
     if (Auth.isConnected()) {
       window.location.href = './index.html';
     }

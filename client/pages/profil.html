@@ -113,6 +113,14 @@
               <div class="profile-value" id="roleDisplay">—</div>
             </div>
             <div class="profile-card">
+              <div class="profile-label">Poste</div>
+              <div class="profile-value" id="posteDisplay">—</div>
+            </div>
+            <div class="profile-card">
+              <div class="profile-label">Entreprise</div>
+              <div class="profile-value" id="entrepriseDisplay">—</div>
+            </div>
+            <div class="profile-card">
               <div class="profile-label">Connecté depuis</div>
               <div class="profile-value" id="loginAt">—</div>
             </div>
@@ -267,6 +275,8 @@
       document.getElementById('username').textContent = session.username;
       document.getElementById('displayName').textContent = session.displayName || '—';
       document.getElementById('email').textContent = session.email || '—';
+      document.getElementById('posteDisplay').textContent = session.poste || user.poste || '—';
+      document.getElementById('entrepriseDisplay').textContent = session.entreprise || user.entreprise || '—';
 
       // ===== AFFICHAGE DU RÔLE AVEC BADGE =====
       const roleNames = {
@@ -321,44 +331,43 @@
       window.scrollTo(0, 0);  // Remonter en haut pour voir le message
     }
 
-    /**
-     * Gestion du changement de mot de passe
-     * @param {Event} event - Événement de soumission du formulaire
-     */
-    function handleChangePassword(event) {
+    async function handleChangePassword(event) {
       event.preventDefault();
 
-      // Récupérer les données
       const session = Auth.getSession();
-      const user = Auth.getCurrentUser();
       const oldPassword = document.getElementById('oldPassword').value;
       const newPassword = document.getElementById('newPassword').value;
       const confirmNewPassword = document.getElementById('confirmNewPassword').value;
 
-      // ===== VALIDATIONS =====
-      // Vérifier que l'ancien mot de passe est correct
-      if (oldPassword !== user.password) {
-        showMessage('❌ Mot de passe actuel incorrect', 'error');
-        return;
-      }
-
-      // Vérifier que les nouveaux mots de passe correspondent
       if (newPassword !== confirmNewPassword) {
         showMessage('❌ Les nouveaux mots de passe ne correspondent pas', 'error');
         return;
       }
 
-      // Vérifier la longueur du nouveau mot de passe
       if (newPassword.length < 3) {
         showMessage('❌ Le mot de passe doit faire au moins 3 caractères', 'error');
         return;
       }
 
-      // ===== CHANGEMENT DU MOT DE PASSE =====
+      // Vérifier l'ancien mot de passe via le serveur
+      let verif = { success: false };
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: session.username, password: oldPassword })
+        });
+        verif = await res.json();
+      } catch (_) {}
+
+      if (!verif.success) {
+        showMessage('❌ Mot de passe actuel incorrect', 'error');
+        return;
+      }
+
       const result = Auth.changePassword(session.username, newPassword);
       if (result.success) {
-        showMessage(result.message, 'success');
-        // Réinitialiser le formulaire
+        showMessage('✅ Mot de passe changé avec succès', 'success');
         document.getElementById('oldPassword').value = '';
         document.getElementById('newPassword').value = '';
         document.getElementById('confirmNewPassword').value = '';

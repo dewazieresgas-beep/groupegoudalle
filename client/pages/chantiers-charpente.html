@@ -80,7 +80,7 @@
   <script src="../js/api.js"></script>
   <script src="../js/auth.js"></script>
   <script src="../js/utils.js"></script>
-  <script>Auth.requirePermission('chantiers');</script>
+  <script>Auth.requirePermission('chantiers_charpente');</script>
 
   <div class="app-container">
     <div id="sidebar"></div>
@@ -372,6 +372,7 @@
           ${buildProgressHTML(c)}
           <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
             <a href="chantiers-fiche.html?id=${c.id}" class="btn-sm btn-fiche">📋 Fiche suivi</a>
+            <a href="chantiers-dossiers.html?chantier=${encodeURIComponent(c.nom)}" class="btn-sm" style="background:#edf7ed;border-color:#7bad75;color:#1a5c30;">📁 Dossier</a>
             ${c.lat && c.lng ? `<button onclick="centerOnMarker('${c.id}')" class="btn-sm">🗺️ Carte</button>` : ''}
           </div>
         </div>`;

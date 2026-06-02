@@ -22,100 +22,15 @@ const Auth = {
   DEPRECATED_PERMISSIONS: ['production_export_maconnerie', 'commerce_saisie_ca', 'commerce_saisie_indicateurs'],
 
   // ============ INITIALIZATION ============
-  /**
-   * Initialise le système au chargement de la page
-   * - Crée la base de données par défaut si première utilisation
-   * - Définit le code admin initial (0000) si absent
-   */
   init() {
-    // Créer la base de données initiale si elle n'existe pas
-    if (!localStorage.getItem(this.STORAGE_KEY_USERS)) {
-      this.createDefaultDatabase();
-    }
-    // Migration douce : si la base existe déjà, ajouter les comptes démo manquants
-    this.ensureDefaultUsers();
-    this.cleanupDeprecatedPermissions();
-
-    // Initialiser le code d'admin par défaut si absent
     if (!localStorage.getItem(this.STORAGE_KEY_ADMIN_CODE)) {
       localStorage.setItem(this.STORAGE_KEY_ADMIN_CODE, '0000');
-    }
-  },
-
-  /**
-   * Ajoute les comptes de démonstration manquants sans écraser les comptes existants
-   * Utile quand de nouveaux comptes par défaut sont ajoutés après une première exécution
-   */
-  ensureDefaultUsers() {
-    const users = this.getAllUsers();
-    let updated = false;
-
-    const defaultUsers = {
-      'acgoudalle': {
-        username: 'acgoudalle',
-        password: '123',
-        role: this.ROLES.DIRECTION,
-        displayName: 'Anne-Cécile Goudalle',
-        createdAt: new Date().toISOString(),
-        createdBy: 'SYSTEM',
-        isActive: true
-      },
-    };
-
-    Object.keys(defaultUsers).forEach((username) => {
-      if (!users[username]) {
-        users[username] = defaultUsers[username];
-        updated = true;
-      }
-    });
-
-    if (updated) {
-      localStorage.setItem(this.STORAGE_KEY_USERS, JSON.stringify(users));
     }
   },
 
   sanitizePermissions(permissions) {
     if (!Array.isArray(permissions)) return permissions;
     return permissions.filter((permission) => !this.DEPRECATED_PERMISSIONS.includes(permission));
-  },
-
-  cleanupDeprecatedPermissions() {
-    const users = this.getAllUsers();
-    let updated = false;
-
-    Object.keys(users).forEach((username) => {
-      const user = users[username];
-      if (!Array.isArray(user.customPermissions)) return;
-      const sanitized = this.sanitizePermissions(user.customPermissions);
-      if (sanitized.length !== user.customPermissions.length) {
-        users[username].customPermissions = sanitized;
-        updated = true;
-      }
-    });
-
-    if (updated) {
-      localStorage.setItem(this.STORAGE_KEY_USERS, JSON.stringify(users));
-    }
-  },
-
-  /**
-   * Crée la base de données initiale avec uniquement le compte direction
-   * Appelée uniquement lors de la première utilisation de l'application
-   */
-  createDefaultDatabase() {
-    const users = {
-      // Compte direction - Accès complet à toutes les fonctionnalités
-      'acgoudalle': {
-        username: 'acgoudalle',
-        password: '123',
-        role: this.ROLES.DIRECTION,
-        displayName: 'Anne-Cécile Goudalle',
-        createdAt: new Date().toISOString(),
-        createdBy: 'SYSTEM',
-        isActive: true
-      },
-    };
-    localStorage.setItem(this.STORAGE_KEY_USERS, JSON.stringify(users));
   },
 
   // ============ RATE LIMITING ============
@@ -162,74 +77,51 @@ const Auth = {
 
   // ============ LOGIN / LOGOUT ============
   /**
-   * Authentifie un utilisateur avec ses identifiants
+   * Authentifie un utilisateur via le serveur (lecture du fichier Excel des comptes).
    * @param {string} username - Nom d'utilisateur
    * @param {string} password - Mot de passe
-   * @returns {Object} - { success: boolean, message: string, user?: object }
+   * @returns {Promise<{success: boolean, message: string, user?: object}>}
    */
-  login(username, password) {
-    // ── RATE LIMITING : bloquer le brute-force ──────────────────────────
+  async login(username, password) {
     const rate = this._checkRateLimit(username);
     if (rate.blocked) {
-      return {
-        success: false,
-        message: `⏳ Trop de tentatives échouées. Réessayez dans ${rate.mins} min.`
-      };
+      return { success: false, message: `⏳ Trop de tentatives échouées. Réessayez dans ${rate.mins} min.` };
     }
 
-    const users = this.getAllUsers();
-    // Recherche insensible à la casse
-    const matchedKey = Object.keys(users).find(k => k.toLowerCase() === username.toLowerCase());
-    const user = matchedKey ? users[matchedKey] : null;
+    try {
+      const apiBase = window.location.origin + '/api';
+      const res = await fetch(apiBase + '/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const result = await res.json();
 
-    // Vérification 1 : L'utilisateur existe-t-il ?
-    if (!user) {
-      this._recordFailedAttempt(username);
-      return {
-        success: false,
-        message: '❌ Identifiants incorrects'
-      };
+      if (result.success) {
+        this._clearRateLimit(username);
+        const session = {
+          username: result.user.username,
+          displayName: result.user.displayName,
+          email: result.user.email,
+          role: result.user.role,
+          poste: result.user.poste || '',
+          entreprise: result.user.entreprise || '',
+          customPermissions: result.user.customPermissions || [],
+          loginAt: new Date().toISOString(),
+          lastActivity: new Date().toISOString()
+        };
+        localStorage.setItem(this.STORAGE_KEY_SESSION, JSON.stringify(session));
+      } else {
+        this._recordFailedAttempt(username);
+        const remaining = this._checkRateLimit(username);
+        if (remaining.blocked) {
+          result.message += ` Compte temporairement bloqué (${remaining.mins} min).`;
+        }
+      }
+      return result;
+    } catch {
+      return { success: false, message: '❌ Serveur inaccessible. Vérifiez votre connexion réseau.' };
     }
-
-    // Vérification 2 : Le compte est-il actif ?
-    if (!user.isActive) {
-      return {
-        success: false,
-        message: '❌ Compte désactivé. Contactez un administrateur.'
-      };
-    }
-
-    // Vérification 3 : Le mot de passe est-il correct ?
-    if (user.password !== password) {
-      this._recordFailedAttempt(username);
-      const remaining = this._checkRateLimit(username);
-      const hint = remaining.blocked
-        ? ` Compte temporairement bloqué (${remaining.mins} min).`
-        : ` (${Math.max(0, this.RATE_LIMIT_MAX - (this.RATE_LIMIT_MAX - (remaining.remaining || 0)))} tentative(s) restante(s) avant blocage)`;
-      return {
-        success: false,
-        message: '❌ Mot de passe incorrect' + hint
-      };
-    }
-
-    // Tout est OK : réinitialiser le compteur et créer la session
-    this._clearRateLimit(username);
-    const session = {
-      username: user.username,
-      displayName: user.displayName,
-      email: user.email,
-      role: user.role,
-      loginAt: new Date().toISOString(),
-      lastActivity: new Date().toISOString()
-    };
-
-    // Sauvegarder la session dans localStorage
-    localStorage.setItem(this.STORAGE_KEY_SESSION, JSON.stringify(session));
-    return {
-      success: true,
-      message: '✅ Connexion réussie',
-      user: session
-    };
   },
 
   /**
@@ -330,14 +222,17 @@ const Auth = {
 
     const aliasMap = {};
 
-    // Si l'utilisateur a des permissions personnalisées, les utiliser
-    if (currentUser && Array.isArray(currentUser.customPermissions)) {
-      if (currentUser.customPermissions.includes(permission)) return true;
+    // Utiliser les permissions du compte (depuis server/Excel) ou de la session en fallback
+    const effectivePerms = (currentUser && Array.isArray(currentUser.customPermissions))
+      ? currentUser.customPermissions
+      : (Array.isArray(session.customPermissions) ? session.customPermissions : null);
+
+    if (effectivePerms) {
+      if (effectivePerms.includes(permission)) return true;
       const aliases = aliasMap[permission] || [];
-      return aliases.some(a => currentUser.customPermissions.includes(a));
+      return aliases.some(a => effectivePerms.includes(a));
     }
 
-    // Récupérer la liste des permissions pour ce rôle
     const userPermissions = this.PERMISSIONS[effectiveRole] || [];
     if (userPermissions.includes(permission)) return true;
     const aliases = aliasMap[permission] || [];
@@ -699,6 +594,7 @@ const Auth = {
 };
 
 // ============ INITIALISATION AUTOMATIQUE ============
-// L'objet Auth s'initialise automatiquement au chargement de ce fichier
-// Cela garantit que la base de données et le code admin existent toujours
 Auth.init();
+
+// Exposer Auth globalement en environnement Node.js (tests unitaires)
+if (typeof module !== 'undefined') global.Auth = Auth;

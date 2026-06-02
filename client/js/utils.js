@@ -151,7 +151,7 @@ function isRHPage() {
 
 function isChantierPage() {
   const page = getCurrentPage();
-  return page === 'chantiers-charpente.html' || page === 'chantiers-maconnerie.html' || page === 'chantiers-vue-globale.html';
+  return page === 'chantiers-charpente.html' || page === 'chantiers-maconnerie.html' || page === 'chantiers-vue-globale.html' || page === 'chantiers-dossiers.html';
 }
 
 // ============ WEEK UTILS ============
@@ -316,9 +316,10 @@ function getSidebar() {
   `;
 
   // ===== CHANTIERS =====
-  if (Auth.hasAccess('chantiers')) {
+  if (Auth.hasAccess('chantiers') || Auth.hasAccess('gc_dossiers')) {
     const chantiersActive = isChantierPage() ? ' active' : '';
-    items += `<a href="${base}pages/chantiers-charpente.html" class="sidebar-item${chantiersActive}">🚧 Chantiers</a>`;
+    const firstPage = Auth.hasAccess('chantiers') ? 'chantiers-charpente.html' : 'chantiers-dossiers.html';
+    items += `<a href="${base}pages/${firstPage}" class="sidebar-item${chantiersActive}">🚧 Chantiers</a>`;
   }
 
   // ===== PRODUCTION =====
@@ -624,14 +625,20 @@ function injectChantiersSecondaryBar() {
   const currentPage = getCurrentPage();
   const charpActive = currentPage === 'chantiers-charpente.html' ? ' active' : '';
   const macActive = currentPage === 'chantiers-maconnerie.html' ? ' active' : '';
-
   const globaleActive = currentPage === 'chantiers-vue-globale.html' ? ' active' : '';
+  const dossiersActive = currentPage === 'chantiers-dossiers.html' ? ' active' : '';
 
-  const secondaryItems = `
+  let secondaryItems = '';
+  if (Auth.hasAccess('chantiers')) {
+    secondaryItems += `
     <a href="${base}pages/chantiers-charpente.html" class="sidebar-item${charpActive}">🪵 Goudalle Charpente</a>
     <a href="${base}pages/chantiers-maconnerie.html" class="sidebar-item${macActive}">🧱 Goudalle Maçonnerie</a>
-    <a href="${base}pages/chantiers-vue-globale.html" class="sidebar-item${globaleActive}">🌍 Vue globale</a>
-  `;
+    <a href="${base}pages/chantiers-vue-globale.html" class="sidebar-item${globaleActive}">🌍 Vue globale</a>`;
+  }
+  if (Auth.hasAccess('chantiers') || Auth.hasAccess('gc_dossiers')) {
+    secondaryItems += `
+    <a href="${base}pages/chantiers-dossiers.html" class="sidebar-item${dossiersActive}">📁 Dossiers chantiers</a>`;
+  }
 
   const barHTML = `
     <aside class="sidebar-secondary" id="chantiersSidebar">
