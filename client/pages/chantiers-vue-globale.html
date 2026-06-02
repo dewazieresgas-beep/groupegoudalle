@@ -3,27 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vue globale Chantiers - Intranet Goudalle</title>
+  <title>Carte des chantiers - Intranet Goudalle</title>
   <link rel="stylesheet" href="../css/style.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
-    #map { height: 540px; width: 100%; z-index: 1; }
-    .filter-btn { padding:6px 14px; border:1.5px solid var(--border); border-radius:20px; background:var(--lighter); color:var(--dark); cursor:pointer; font-size:13px; font-weight:500; transition:all 0.2s; }
-    .filter-btn:hover { border-color:var(--accent); background:var(--light); }
-    .filter-btn.active { background:var(--primary); color:white; border-color:var(--primary); }
-    .kpi-stat { background:white; border-radius:10px; padding:14px 16px; border:1px solid var(--border); text-align:center; flex:1; min-width:90px; }
-    .kpi-stat-value { font-size:24px; font-weight:700; line-height:1; margin-bottom:4px; }
-    .kpi-stat-label { font-size:11px; color:var(--text-muted-dark); font-weight:500; text-transform:uppercase; letter-spacing:0.5px; }
-    .chantier-card { background:white; border-radius:10px; border:1px solid var(--border); padding:14px; transition:box-shadow 0.2s; }
-    .chantier-card:hover { box-shadow:0 4px 16px rgba(0,0,0,0.1); }
-    .badge { display:inline-block; padding:2px 9px; border-radius:12px; font-size:12px; font-weight:600; color:white; }
-    .badge-societe { display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; background:var(--light); color:var(--text-muted-dark); border:1px solid var(--border); }
-    .btn-sm { padding:5px 10px; border:1px solid var(--border); border-radius:6px; background:var(--lighter); cursor:pointer; font-size:12px; transition:all 0.2s; white-space:nowrap; }
+    #map { height: 560px; width: 100%; z-index: 1; }
+    .kpi-stat { background:white; border-radius:8px; padding:14px 16px; border:1px solid var(--border); text-align:center; flex:1; min-width:110px; }
+    .kpi-stat-value { font-size:24px; font-weight:700; line-height:1; margin-bottom:4px; color:var(--primary); }
+    .kpi-stat-label { font-size:11px; color:var(--text-muted-dark); font-weight:600; text-transform:uppercase; letter-spacing:.4px; }
+    .chantier-card { background:white; border-radius:8px; border:1px solid var(--border); padding:14px; transition:box-shadow .2s,border-color .2s; }
+    .chantier-card:hover { box-shadow:0 4px 16px rgba(0,0,0,.08); border-color:var(--accent); }
+    .btn-sm { padding:5px 10px; border:1px solid var(--border); border-radius:6px; background:var(--lighter); cursor:pointer; font-size:12px; transition:all .2s; white-space:nowrap; }
     .btn-sm:hover { background:var(--light); border-color:var(--accent); }
-    .btn-fiche { background:var(--primary); color:white; border-color:var(--primary); }
-    .btn-fiche:hover { background:var(--secondary); border-color:var(--secondary); color:white; }
-    .loading-overlay { display:flex; align-items:center; justify-content:center; height:200px; color:var(--text-muted-dark); font-size:14px; }
-    .empty-state { text-align:center; padding:48px 24px; color:var(--text-muted-dark); }
+    .loading-overlay { display:flex; align-items:center; justify-content:center; height:180px; color:var(--text-muted-dark); font-size:14px; }
+    .empty-state { text-align:center; padding:46px 24px; color:var(--text-muted-dark); }
   </style>
 </head>
 <body>
@@ -35,199 +28,166 @@
   <div class="app-container">
     <div id="sidebar"></div>
     <main class="main-content">
-
       <div class="d-flex justify-between items-center mb-3" style="gap:12px;flex-wrap:wrap;">
         <div>
-          <h1 class="mb-0">🌍 Vue globale — Tous les chantiers</h1>
-          <p style="color:var(--text-muted-dark);margin:4px 0 0;font-size:14px;">Goudalle Charpente + Goudalle Maçonnerie · Tous conducteurs de travaux</p>
+          <h1 class="mb-0">🌍 Carte des chantiers</h1>
+          <p style="color:var(--text-muted-dark);margin:4px 0 0;font-size:14px;">
+            Affichage automatique des dossiers chantier dont l'adresse est renseignée dans les infos générales.
+          </p>
         </div>
       </div>
 
-      <!-- KPI -->
       <div id="stats-row" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;"></div>
 
-      <!-- Filtres -->
-      <div class="card" style="padding:14px 18px;margin-bottom:16px;">
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-          <span style="font-size:13px;font-weight:600;color:var(--text-muted-dark);margin-right:4px;">Statut :</span>
-          <button onclick="setFilter('statut','tous')" id="filt-statut-tous" class="filter-btn active">Tous</button>
-          <button onclick="setFilter('statut','planifie')" id="filt-statut-planifie" class="filter-btn">🔵 Planifié</button>
-          <button onclick="setFilter('statut','en_cours')" id="filt-statut-en_cours" class="filter-btn">🟠 En cours</button>
-          <button onclick="setFilter('statut','termine')" id="filt-statut-termine" class="filter-btn">🟢 Terminé</button>
-          <button onclick="setFilter('statut','probleme')" id="filt-statut-probleme" class="filter-btn">🔴 Problème</button>
-          <span style="font-size:13px;font-weight:600;color:var(--text-muted-dark);margin-left:16px;margin-right:4px;">Société :</span>
-          <button onclick="setFilter('societe','tous')" id="filt-societe-tous" class="filter-btn active">Toutes</button>
-          <button onclick="setFilter('societe','charpente')" id="filt-societe-charpente" class="filter-btn">🪵 Charpente</button>
-          <button onclick="setFilter('societe','maconnerie')" id="filt-societe-maconnerie" class="filter-btn">🧱 Maçonnerie</button>
-        </div>
-      </div>
-
-      <!-- Carte -->
-      <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;border-radius:10px;">
+      <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px;border-radius:8px;">
         <div id="map"></div>
-        <div style="padding:10px 14px;border-top:1px solid var(--border);background:var(--lighter);display:flex;gap:18px;flex-wrap:wrap;">
-          <span style="font-size:12px;color:var(--text-muted-dark);"><span style="display:inline-block;width:12px;height:12px;background:#6b8e9f;border-radius:50%;margin-right:5px;vertical-align:middle;"></span>Planifié</span>
-          <span style="font-size:12px;color:var(--text-muted-dark);"><span style="display:inline-block;width:12px;height:12px;background:#d4a574;border-radius:50%;margin-right:5px;vertical-align:middle;"></span>En cours</span>
-          <span style="font-size:12px;color:var(--text-muted-dark);"><span style="display:inline-block;width:12px;height:12px;background:#7bad75;border-radius:50%;margin-right:5px;vertical-align:middle;"></span>Terminé</span>
-          <span style="font-size:12px;color:var(--text-muted-dark);"><span style="display:inline-block;width:12px;height:12px;background:#b85c5c;border-radius:50%;margin-right:5px;vertical-align:middle;"></span>Problème</span>
-          <span style="font-size:12px;color:var(--text-muted-dark);margin-left:8px;">● Charpente &nbsp;&nbsp; ◆ Maçonnerie</span>
+        <div id="map-note" style="padding:10px 14px;border-top:1px solid var(--border);background:var(--lighter);font-size:12px;color:var(--text-muted-dark);">
+          Les points apparaissent dès qu'une adresse est renseignée et géocodée.
         </div>
       </div>
 
-      <!-- Liste -->
-      <div id="chantiers-list"><div class="loading-overlay">⏳ Chargement…</div></div>
+      <div id="chantiers-list"><div class="loading-overlay">⏳ Chargement de la carte…</div></div>
     </main>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    const STATUTS = {
-      planifie: { label:'Planifié',  color:'#6b8e9f' },
-      en_cours: { label:'En cours',  color:'#d4a574' },
-      termine:  { label:'Terminé',   color:'#7bad75' },
-      probleme: { label:'Problème',  color:'#b85c5c' },
-    };
+    let map;
+    let markers = {};
+    let allChantiers = [];
+    let totalWithAddress = 0;
+    const PIN_COLOR = '#5a4a3a';
 
-    let map, markers = {}, allChantiers = [];
-    let filterStatut = 'tous', filterSociete = 'tous';
-
-    async function apiGet(path) { const r=await fetch(SERVER_URL+path); return r.ok?r.json():null; }
-
-    function pinIcon(color, societe) {
-      const shape = societe==='maconnerie'
-        ? `<div style="background:${color};width:20px;height:20px;transform:rotate(45deg);border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.35);"></div>`
-        : `<div style="background:${color};width:22px;height:22px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.35);"></div>`;
-      return L.divIcon({ html:shape, iconSize:[22,22], iconAnchor:[11,22], popupAnchor:[0,-26], className:'' });
+    async function apiGet(path) {
+      const r = await fetch(SERVER_URL + path);
+      return r.ok ? r.json() : null;
     }
 
-    function getFiltered() {
-      return allChantiers.filter(c =>
-        (filterStatut==='tous' || c.statut===filterStatut) &&
-        (filterSociete==='tous' || c.societe===filterSociete)
-      );
-    }
-
-    function buildPopupHTML(c) {
-      const s = STATUTS[c.statut] || STATUTS.planifie;
-      const societeLabel = c.societe==='maconnerie' ? '🧱 Maçonnerie' : '🪵 Charpente';
-      const montant = c.montant ? Number(c.montant).toLocaleString('fr-FR') + ' € HT' : '';
-      const dates = (c.dateDebut||c.dateFin) ? `📅 ${fmtDate(c.dateDebut)} → ${fmtDate(c.dateFin)}` : '';
-      return `<div style="min-width:220px;font-family:Arial,sans-serif;font-size:13px;line-height:1.5;">
-        <div style="font-weight:700;font-size:15px;margin-bottom:4px;">${escapeHtml(c.nom)}</div>
-        ${c.adresse ? `<div style="color:#555;margin-bottom:4px;">📍 ${escapeHtml(c.adresse)}</div>` : ''}
-        <div style="margin-bottom:5px;display:flex;gap:6px;flex-wrap:wrap;">
-          <span style="background:${s.color};color:white;padding:2px 9px;border-radius:12px;font-size:12px;font-weight:600;">${s.label}</span>
-          <span style="background:var(--lighter,#f5f1ed);color:#666;padding:2px 8px;border-radius:10px;font-size:11px;border:1px solid #ddd;">${societeLabel}</span>
-        </div>
-        ${c.chef ? `<div style="margin-bottom:2px;">👷 ${escapeHtml(c.chef)}</div>` : ''}
-        <div style="margin-bottom:2px;font-size:11px;color:#888;">CT : ${escapeHtml(c.createdBy||'—')}</div>
-        ${dates ? `<div style="margin-bottom:2px;">${dates}</div>` : ''}
-        ${montant ? `<div style="margin-bottom:2px;">💶 ${montant}</div>` : ''}
-        <div style="margin-top:10px;">
-          <a href="chantiers-fiche.html?id=${c.id}" style="display:block;text-align:center;padding:6px 8px;background:#5a4a3a;color:white;border-radius:5px;cursor:pointer;font-size:12px;text-decoration:none;">📋 Ouvrir la fiche</a>
-        </div></div>`;
-    }
-
-    function renderMarkers() {
-      Object.values(markers).forEach(m => map.removeLayer(m)); markers = {};
-      getFiltered().forEach(c => {
-        if (!c.lat || !c.lng) return;
-        const s = STATUTS[c.statut] || STATUTS.planifie;
-        markers[c.id] = L.marker([c.lat, c.lng], { icon: pinIcon(s.color, c.societe) })
-          .addTo(map).bindPopup(buildPopupHTML(c), { maxWidth:280 });
+    function pinIcon() {
+      return L.divIcon({
+        html: `<div style="background:${PIN_COLOR};width:24px;height:24px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,.35);"></div>`,
+        iconSize: [24, 24],
+        iconAnchor: [12, 24],
+        popupAnchor: [0, -28],
+        className: '',
       });
     }
 
+    function buildPopupHTML(c) {
+      return `<div style="min-width:220px;font-family:Arial,sans-serif;font-size:13px;line-height:1.5;">
+        <div style="font-weight:700;font-size:15px;margin-bottom:4px;">${escapeHtml(c.nom)}</div>
+        <div style="color:#555;margin-bottom:4px;">📍 ${escapeHtml(c.adresse)}</div>
+        ${c.conducteur ? `<div style="margin-bottom:2px;">👷 ${escapeHtml(c.conducteur)}</div>` : ''}
+        ${c.dessinateur ? `<div style="margin-bottom:2px;">✏️ ${escapeHtml(c.dessinateur)}</div>` : ''}
+        ${c.dateOS || c.dateFin ? `<div style="margin-bottom:2px;">📅 ${escapeHtml(c.dateOS || '—')} → ${escapeHtml(c.dateFin || '—')}</div>` : ''}
+        ${c.montantHT ? `<div style="margin-bottom:2px;">💶 ${escapeHtml(c.montantHT)} € HT</div>` : ''}
+        <div style="margin-top:10px;">
+          <a href="chantiers-dossiers.html?rel=${encodeURIComponent(c.dossier)}" style="display:block;text-align:center;padding:6px 8px;background:#5a4a3a;color:white;border-radius:5px;cursor:pointer;font-size:12px;text-decoration:none;">📁 Ouvrir le dossier</a>
+        </div>
+      </div>`;
+    }
+
+    function renderMarkers() {
+      Object.values(markers).forEach(m => map.removeLayer(m));
+      markers = {};
+      const bounds = [];
+      allChantiers.forEach(c => {
+        if (!c.lat || !c.lng) return;
+        markers[c.id] = L.marker([c.lat, c.lng], { icon: pinIcon() })
+          .addTo(map)
+          .bindPopup(buildPopupHTML(c), { maxWidth: 290 });
+        bounds.push([c.lat, c.lng]);
+      });
+      if (bounds.length) map.fitBounds(bounds, { padding: [35, 35], maxZoom: 12 });
+    }
+
     function renderStats() {
-      const counts = { planifie:0, en_cours:0, termine:0, probleme:0 };
-      allChantiers.forEach(c => { if(counts[c.statut]!==undefined) counts[c.statut]++; });
-      const charp = allChantiers.filter(c=>c.societe==='charpente').length;
-      const mac = allChantiers.filter(c=>c.societe==='maconnerie').length;
       document.getElementById('stats-row').innerHTML = `
-        <div class="kpi-stat"><div class="kpi-stat-value" style="color:var(--primary);">${allChantiers.length}</div><div class="kpi-stat-label">Total</div></div>
-        <div class="kpi-stat"><div class="kpi-stat-value" style="color:#7bad75;">${charp}</div><div class="kpi-stat-label">🪵 Charpente</div></div>
-        <div class="kpi-stat"><div class="kpi-stat-value" style="color:#6b8e9f;">${mac}</div><div class="kpi-stat-label">🧱 Maçonnerie</div></div>
-        <div class="kpi-stat"><div class="kpi-stat-value" style="color:#d4a574;">${counts.en_cours}</div><div class="kpi-stat-label">En cours</div></div>
-        <div class="kpi-stat"><div class="kpi-stat-value" style="color:#b85c5c;">${counts.probleme}</div><div class="kpi-stat-label">Problèmes</div></div>`;
+        <div class="kpi-stat"><div class="kpi-stat-value">${allChantiers.length}</div><div class="kpi-stat-label">Sur la carte</div></div>
+        <div class="kpi-stat"><div class="kpi-stat-value">${totalWithAddress}</div><div class="kpi-stat-label">Avec adresse</div></div>
+        <div class="kpi-stat"><div class="kpi-stat-value">${new Set(allChantiers.map(c => c.conducteur).filter(Boolean)).size}</div><div class="kpi-stat-label">Conducteurs</div></div>`;
     }
 
     function buildCardHTML(c) {
-      const s = STATUTS[c.statut] || STATUTS.planifie;
-      const societeLabel = c.societe==='maconnerie' ? '🧱 Maçonnerie' : '🪵 Charpente';
-      const montant = c.montant ? Number(c.montant).toLocaleString('fr-FR') + ' € HT' : '';
-      const dates = (c.dateDebut||c.dateFin) ? `📅 ${fmtDate(c.dateDebut)} → ${fmtDate(c.dateFin)}` : '';
-      return `<div class="chantier-card" style="border-left:4px solid ${s.color};">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;gap:6px;">
+      return `<div class="chantier-card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;gap:8px;">
           <div style="font-weight:700;font-size:14px;color:var(--dark);">${escapeHtml(c.nom)}</div>
-          <div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">
-            <span class="badge-societe">${societeLabel}</span>
-            <span class="badge" style="background:${s.color};">${s.label}</span>
-          </div>
+          <button onclick="centerOn('${c.id}')" class="btn-sm">🗺️ Carte</button>
         </div>
-        ${c.adresse ? `<div style="font-size:12px;color:var(--text-muted-dark);margin-bottom:2px;">📍 ${escapeHtml(c.adresse)}</div>` : ''}
-        ${c.chef ? `<div style="font-size:12px;margin-bottom:2px;">👷 ${escapeHtml(c.chef)}</div>` : ''}
-        <div style="font-size:11px;color:var(--text-muted-dark);margin-bottom:2px;">CT : ${escapeHtml(c.createdBy||'—')}</div>
-        ${dates ? `<div style="font-size:12px;margin-bottom:2px;">${dates}</div>` : ''}
-        ${montant ? `<div style="font-size:12px;margin-bottom:2px;">💶 ${montant}</div>` : ''}
+        <div style="font-size:12px;color:var(--text-muted-dark);margin-bottom:4px;">📍 ${escapeHtml(c.adresse)}</div>
+        ${c.conducteur ? `<div style="font-size:12px;margin-bottom:2px;">👷 ${escapeHtml(c.conducteur)}</div>` : ''}
+        ${c.dessinateur ? `<div style="font-size:12px;margin-bottom:2px;">✏️ ${escapeHtml(c.dessinateur)}</div>` : ''}
+        ${c.dateOS || c.dateFin ? `<div style="font-size:12px;margin-bottom:2px;">📅 ${escapeHtml(c.dateOS || '—')} → ${escapeHtml(c.dateFin || '—')}</div>` : ''}
+        ${c.montantHT ? `<div style="font-size:12px;margin-bottom:2px;">💶 ${escapeHtml(c.montantHT)} € HT</div>` : ''}
         <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
-          <a href="chantiers-fiche.html?id=${c.id}" class="btn-sm btn-fiche">📋 Fiche</a>
-          ${c.lat && c.lng ? `<button onclick="centerOn('${c.id}')" class="btn-sm">🗺️ Carte</button>` : ''}
-        </div></div>`;
+          <a href="chantiers-dossiers.html?rel=${encodeURIComponent(c.dossier)}" class="btn-sm" style="text-decoration:none;">📁 Dossier</a>
+        </div>
+      </div>`;
     }
 
     function renderList() {
-      const list = getFiltered();
       const container = document.getElementById('chantiers-list');
-      if (!list.length) { container.innerHTML = `<div class="card empty-state"><p>🗺️</p><p style="font-size:15px;">Aucun chantier avec ces filtres.</p></div>`; return; }
-      // Grouper par CT
-      const byCT = {};
-      list.forEach(c => { const ct=c.createdBy||'Inconnu'; if(!byCT[ct])byCT[ct]=[]; byCT[ct].push(c); });
+      if (!allChantiers.length) {
+        container.innerHTML = `<div class="card empty-state">
+          <p style="font-size:28px;margin:0 0 8px;">🗺️</p>
+          <p style="font-size:15px;margin:0;">Aucun chantier avec adresse géocodée pour le moment.</p>
+          <p style="font-size:12px;margin:8px 0 0;">Remplis l'adresse dans 00_ Infos général chantier.xlsx ou depuis la fiche du site.</p>
+        </div>`;
+        return;
+      }
+
+      const byConducteur = {};
+      allChantiers.forEach(c => {
+        const conducteur = c.conducteur || 'Conducteur non renseigné';
+        if (!byConducteur[conducteur]) byConducteur[conducteur] = [];
+        byConducteur[conducteur].push(c);
+      });
+
       let html = '';
-      for (const [ct, chantiers] of Object.entries(byCT)) {
+      for (const [conducteur, chantiers] of Object.entries(byConducteur)) {
         html += `<div style="margin-bottom:20px;">
           <div style="font-size:14px;font-weight:700;color:var(--dark);margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--border);">
-            👤 ${escapeHtml(ct)} <span style="font-weight:400;color:var(--text-muted-dark);">(${chantiers.length} chantier${chantiers.length>1?'s':''})</span>
+            👤 ${escapeHtml(conducteur)} <span style="font-weight:400;color:var(--text-muted-dark);">(${chantiers.length} chantier${chantiers.length > 1 ? 's' : ''})</span>
           </div>
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;">
             ${chantiers.map(buildCardHTML).join('')}
-          </div></div>`;
+          </div>
+        </div>`;
       }
       container.innerHTML = html;
     }
 
-    function render() { renderStats(); renderMarkers(); renderList(); }
-
-    function setFilter(type, val) {
-      if (type==='statut') {
-        filterStatut = val;
-        document.querySelectorAll('[id^="filt-statut-"]').forEach(b=>b.classList.remove('active'));
-        document.getElementById('filt-statut-'+val).classList.add('active');
-      } else {
-        filterSociete = val;
-        document.querySelectorAll('[id^="filt-societe-"]').forEach(b=>b.classList.remove('active'));
-        document.getElementById('filt-societe-'+val).classList.add('active');
-      }
-      renderMarkers(); renderList();
+    function render() {
+      renderStats();
+      renderMarkers();
+      renderList();
+      const waiting = Math.max(totalWithAddress - allChantiers.length, 0);
+      document.getElementById('map-note').textContent = waiting
+        ? `${allChantiers.length} chantier(s) affiché(s). ${waiting} adresse(s) encore en attente de géocodage. Recharge la page dans quelques secondes si besoin.`
+        : `${allChantiers.length} chantier(s) affiché(s), sans filtre ni couleur d'étape.`;
     }
 
     function centerOn(id) {
-      const c = allChantiers.find(x=>x.id===id);
-      if (!c||!c.lat||!c.lng) return;
-      map.setView([c.lat,c.lng],14);
+      const c = allChantiers.find(x => x.id === id);
+      if (!c || !c.lat || !c.lng) return;
+      map.setView([c.lat, c.lng], 14);
       if (markers[id]) markers[id].openPopup();
-      window.scrollTo({top:document.getElementById('map').getBoundingClientRect().top+window.scrollY-80,behavior:'smooth'});
+      window.scrollTo({ top: document.getElementById('map').getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
     }
-
-    function fmtDate(d) { if(!d)return'—'; const[y,m,j]=d.split('-'); return`${j}/${m}/${y}`; }
 
     async function init() {
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectChantiersSecondaryBar();
+
       map = L.map('map').setView([46.5, 2.5], 6);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors', maxZoom:19
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19,
       }).addTo(map);
-      allChantiers = await apiGet('/chantiers') || [];
+
+      const data = await apiGet('/dossiers/carte');
+      allChantiers = data?.chantiers || [];
+      totalWithAddress = data?.totalWithAddress || allChantiers.length;
       render();
     }
 

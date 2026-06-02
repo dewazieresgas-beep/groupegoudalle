@@ -3926,7 +3926,7 @@ app.use('/server/uploads', (req, res, next) => {
 // Explorateur de fichiers pour les dossiers chantiers sur le partage réseau.
 // Chemin de base : Y:\03-Affaires\02-Affaires en cours
 
-const DOSSIERS_BASE = path.join('Y:', '03-Affaires', '02-Affaires en cours');
+const DOSSIERS_BASE = process.env.DOSSIERS_BASE || path.join('Y:', '03-Affaires', '02-Affaires en cours');
 const EXCEL_INFO_FILENAME = '00_ Infos général chantier.xlsx';
 
 // Mapping label Excel → clé DB
@@ -3973,30 +3973,40 @@ function setDbInfoChantier(nomDossier, fields) {
   dbSet('dossiers_info', all);
 }
 
-function readInfoChantier(nomDossier) {
-  // 1. Priorité : base de données locale (modifiable depuis le site)
-  const dbInfo = getDbInfoChantier(nomDossier);
-  if (dbInfo && Object.values(dbInfo).some(v => v)) return dbInfo;
+function hasAnyInfo(info) {
+  return !!info && Object.values(info).some(v => v !== undefined && v !== null && String(v).trim());
+}
 
-  // 2. Nouveau format : 00_ Infos général chantier.xlsx (remplissable manuellement ou via le site)
-  const xlsxPath = path.join(DOSSIERS_BASE, nomDossier, EXCEL_INFO_FILENAME);
-  if (fs.existsSync(xlsxPath)) {
-    try {
-      const wb = XLSX.readFile(xlsxPath, { cellDates: true });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-      const info = {};
-      rows.forEach(([label, value]) => {
-        const key = EXCEL_LABEL_TO_KEY[String(label || '').trim()];
-        if (key && value !== undefined && String(value).trim()) {
-          info[key] = value instanceof Date ? value.toLocaleDateString('fr-FR') : String(value).trim();
-        }
-      });
-      if (Object.values(info).some(v => v)) return info;
-    } catch {}
+function mergeInfo(...sources) {
+  const out = {};
+  for (const source of sources) {
+    if (!source) continue;
+    for (const [key, value] of Object.entries(source)) {
+      if (value !== undefined && value !== null && String(value).trim()) out[key] = value;
+    }
   }
+  return out;
+}
 
-  // 3. Legacy : info-chantier.xlsx
+function readExcelInfoChantier(nomDossier) {
+  const xlsxPath = path.join(DOSSIERS_BASE, nomDossier, EXCEL_INFO_FILENAME);
+  if (!fs.existsSync(xlsxPath)) return null;
+  try {
+    const wb = XLSX.readFile(xlsxPath, { cellDates: true });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+    const info = {};
+    rows.forEach(([label, value]) => {
+      const key = EXCEL_LABEL_TO_KEY[String(label || '').trim()];
+      if (key && value !== undefined && String(value).trim()) {
+        info[key] = value instanceof Date ? value.toLocaleDateString('fr-FR') : String(value).trim();
+      }
+    });
+    return hasAnyInfo(info) ? info : null;
+  } catch { return null; }
+}
+
+function readLegacyInfoChantier(nomDossier) {
   const legacyPath = path.join(DOSSIERS_BASE, nomDossier, 'info-chantier.xlsx');
   if (!fs.existsSync(legacyPath)) return null;
   try {
@@ -4007,8 +4017,72 @@ function readInfoChantier(nomDossier) {
     rows.forEach(([label, value]) => {
       if (label) info[String(label).trim()] = value !== undefined ? String(value).trim() : '';
     });
-    return Object.values(info).some(v => v) ? info : null;
+    return hasAnyInfo(info) ? info : null;
   } catch { return null; }
+}
+
+function readInfoChantier(nomDossier) {
+  // Legacy < DB site < Excel manuel, champ par champ.
+  // Important : la DB contient désormais souvent seulement "Chantier" pré-rempli.
+  // Une adresse ajoutée ensuite dans l'Excel doit donc prendre le dessus.
+  const legacyInfo = readLegacyInfoChantier(nomDossier);
+  const excelInfo = readExcelInfoChantier(nomDossier);
+  const dbInfo = getDbInfoChantier(nomDossier);
+  const merged = mergeInfo(legacyInfo, dbInfo, excelInfo);
+  return hasAnyInfo(merged) ? merged : null;
+}
+
+function parseCoordinate(value) {
+  if (value === undefined || value === null || value === '') return null;
+  const n = Number(String(value).replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function geocodeAddress(address) {
+  if (!address || typeof fetch !== 'function') return null;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  try {
+    const url = 'https://nominatim.openstreetmap.org/search'
+      + `?format=json&limit=1&countrycodes=fr&q=${encodeURIComponent(address + ', France')}`;
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: { 'User-Agent': 'GroupeGoudalle-Intranet/1.0' },
+    });
+    if (!response.ok) return null;
+    const results = await response.json();
+    const first = Array.isArray(results) ? results[0] : null;
+    if (!first) return null;
+    return { lat: Number(first.lat), lng: Number(first.lon) };
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function geocodeAndStoreChantier(nomDossier, info) {
+  const lat = parseCoordinate(info?.Latitude);
+  const lng = parseCoordinate(info?.Longitude);
+  if (lat !== null && lng !== null) return { lat, lng };
+  const address = info?.Adresse;
+  if (!address) return null;
+
+  const found = await geocodeAddress(address);
+  if (!found) return null;
+
+  const dbInfo = getDbInfoChantier(nomDossier) || {};
+  setDbInfoChantier(nomDossier, {
+    ...dbInfo,
+    Latitude: String(found.lat),
+    Longitude: String(found.lng),
+  });
+  _dossiersListCache.cachedAt = 0;
+  return found;
 }
 
 // Écriture des infos dans l'Excel du dossier (best-effort, préserve la mise en forme)
@@ -4090,6 +4164,61 @@ app.get('/api/dossiers/liste', async (req, res) => {
       : chantiers;
 
     res.json({ success: true, chantiers: filtered });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// GET /api/dossiers/carte — chantiers avec adresse et coordonnées pour la vue globale
+app.get('/api/dossiers/carte', async (req, res) => {
+  try {
+    const entries = await fs.promises.readdir(DOSSIERS_BASE, { withFileTypes: true });
+    const chantiers = [];
+    let totalWithAddress = 0;
+    let geocodedThisRequest = 0;
+
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      if (entry.name.startsWith('0 ') || entry.name.startsWith('1 ')) continue;
+
+      let info = readInfoChantier(entry.name) || {};
+      if (!info['Adresse']) continue;
+      totalWithAddress++;
+
+      let lat = parseCoordinate(info.Latitude);
+      let lng = parseCoordinate(info.Longitude);
+
+      // Géocoder progressivement pour éviter de marteler OpenStreetMap.
+      if ((lat === null || lng === null) && geocodedThisRequest < 8) {
+        const found = await geocodeAndStoreChantier(entry.name, info);
+        if (found) {
+          lat = found.lat;
+          lng = found.lng;
+          geocodedThisRequest++;
+          info = readInfoChantier(entry.name) || info;
+          await sleep(1100);
+        }
+      }
+
+      if (lat === null || lng === null) continue;
+
+      chantiers.push({
+        id: encodeURIComponent(entry.name),
+        dossier: entry.name,
+        nom: info['Chantier'] || entry.name,
+        adresse: info['Adresse'] || '',
+        conducteur: info['Conducteur de travaux'] || '',
+        dessinateur: info['Dessinateur BE'] || '',
+        dateOS: info['Date OS'] || '',
+        dateFin: info['Date fin contractuelle'] || '',
+        montantHT: info['Montant marché HT'] || '',
+        lat,
+        lng,
+      });
+    }
+
+    chantiers.sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+    res.json({ success: true, chantiers, totalWithAddress, geocodedThisRequest });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
@@ -4223,6 +4352,7 @@ app.put('/api/dossiers/info', requireToken, requireWriteRateLimit, (req, res) =>
     res.json({ success: true });
     // Écriture dans l'Excel du dossier en arrière-plan (non bloquant)
     writeInfoToExcel(rel, fields).catch(() => {});
+    geocodeAndStoreChantier(rel, fields).catch(() => {});
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
