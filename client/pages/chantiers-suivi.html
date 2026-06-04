@@ -409,7 +409,7 @@
 
   const session = Auth.getSession();
   const isDirection = session?.role === 'direction';
-  const canEdit = isDirection || Auth.hasAccess('gc_dossiers');
+  const canEdit = isDirection || Auth.hasAccess('conducteur_charpente');
 
   const FILE_ICONS = { folder:'📁', pdf:'📄', image:'🖼️', word:'📝', excel:'📊', powerpoint:'📊', cad:'📐', video:'🎬', archive:'🗜️', email:'📧', file:'📎' };
 

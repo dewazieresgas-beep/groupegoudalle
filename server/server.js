@@ -77,7 +77,7 @@ const FILE_TO_PERM = {
   'chantiers-charpente.html':                  'chantiers_charpente',
   'chantiers-maconnerie.html':                 'chantiers_maconnerie',
   'chantiers-vue-globale.html':                'chantiers_vue_globale',
-  'chantiers-suivi.html':                      'gc_dossiers',
+  'chantiers-suivi.html':                      'conducteur_charpente',
   'chantiers-conducteurne.html':               'conducteur_charpente',
   'commerce-indicateurs.html':                 'commerce_indicateurs',
   'commerce-liaison.html':                     'commerce_liaison',

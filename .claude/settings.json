@@ -78,7 +78,8 @@
       "PowerShell(Get-NetTCPConnection -State Listen | Where-Object { $_.LocalPort -in @\\(3000,3001,3002,8080,8000,5000\\) } | Select-Object LocalPort, OwningProcess | ForEach-Object { $proc = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue; [PSCustomObject]@{ Port=$_.LocalPort; PID=$_.OwningProcess; Name=$proc.Name; Command=\\($proc.CommandLine\\) } })",
       "PowerShell(Get-ChildItem \"$env:APPDATA\\\\Microsoft\\\\Windows\\\\Start Menu\\\\Programs\\\\Startup\" 2>&1; Get-ChildItem \"C:\\\\ProgramData\\\\Microsoft\\\\Windows\\\\Start Menu\\\\Programs\\\\Startup\" 2>&1)",
       "PowerShell(Get-Process | Where-Object { $_.Name -in @\\(\"node\",\"nodemon\",\"powershell\",\"pwsh\"\\) } | Select-Object Id, Name, CPU, StartTime, @{N='Command';E={$_.CommandLine}} | Format-Table -AutoSize -Wrap)",
-      "PowerShell(Get-ChildItem \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\" -Depth 1 -File | Where-Object { $_.Extension -in @\\(\".js\",\".ps1\",\".bat\",\".cmd\",\".vbs\"\\) } | Select-Object Name, LastWriteTime)"
+      "PowerShell(Get-ChildItem \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\" -Depth 1 -File | Where-Object { $_.Extension -in @\\(\".js\",\".ps1\",\".bat\",\".cmd\",\".vbs\"\\) } | Select-Object Name, LastWriteTime)",
+      "Bash(powershell -Command \"if \\(Test-Path 'W:\\\\\\\\BCHDF\\\\\\\\Site Intranet Groupe Goudalle\\\\\\\\Compte site intranet.xlsx'\\) { Write-Output 'File exists' } else { Write-Output 'File not found' }\")"
     ],
     "additionalDirectories": [
       "\\tmp",

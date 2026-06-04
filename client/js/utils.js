@@ -648,7 +648,7 @@ function injectChantiersSecondaryBar() {
     secondaryItems += `
     <a href="${base}pages/chantiers-maconnerie.html" class="sidebar-item${maconnerieActive}">🧱 Carte maçonnerie</a>`;
   }
-  if (Auth.hasAccess('gc_dossiers')) {
+  if (Auth.hasAccess('gc_dossiers') || Auth.hasAccess('conducteur_charpente')) {
     secondaryItems += `
     <a href="${base}pages/chantiers-suivi.html" class="sidebar-item${suiviActive}">🚧 Suivi chantier</a>`;
   }
