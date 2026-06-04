@@ -74,12 +74,17 @@
       "PowerShell(node -e $script)",
       "Bash(grep -v \"^function\\\\|^//\")",
       "Bash(xargs grep -l \"allocateInvoiceLinesByBL\")",
-      "Bash(grep -n \"\\\\/\\\\* TODO\\\\|\\\\/\\\\* FIXME\\\\|\\\\/\\\\* DEAD\\\\|COMMENTED OUT\\\\|LEGACY\" \"c:/Users/gdewazieres/Desktop/groupegoudalle/server/server.js\")"
+      "Bash(grep -n \"\\\\/\\\\* TODO\\\\|\\\\/\\\\* FIXME\\\\|\\\\/\\\\* DEAD\\\\|COMMENTED OUT\\\\|LEGACY\" \"c:/Users/gdewazieres/Desktop/groupegoudalle/server/server.js\")",
+      "PowerShell(Get-NetTCPConnection -State Listen | Where-Object { $_.LocalPort -in @\\(3000,3001,3002,8080,8000,5000\\) } | Select-Object LocalPort, OwningProcess | ForEach-Object { $proc = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue; [PSCustomObject]@{ Port=$_.LocalPort; PID=$_.OwningProcess; Name=$proc.Name; Command=\\($proc.CommandLine\\) } })",
+      "PowerShell(Get-ChildItem \"$env:APPDATA\\\\Microsoft\\\\Windows\\\\Start Menu\\\\Programs\\\\Startup\" 2>&1; Get-ChildItem \"C:\\\\ProgramData\\\\Microsoft\\\\Windows\\\\Start Menu\\\\Programs\\\\Startup\" 2>&1)",
+      "PowerShell(Get-Process | Where-Object { $_.Name -in @\\(\"node\",\"nodemon\",\"powershell\",\"pwsh\"\\) } | Select-Object Id, Name, CPU, StartTime, @{N='Command';E={$_.CommandLine}} | Format-Table -AutoSize -Wrap)",
+      "PowerShell(Get-ChildItem \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\" -Depth 1 -File | Where-Object { $_.Extension -in @\\(\".js\",\".ps1\",\".bat\",\".cmd\",\".vbs\"\\) } | Select-Object Name, LastWriteTime)"
     ],
     "additionalDirectories": [
       "\\tmp",
       "C:\\Users\\gdewazieres\\Desktop",
-      "c:\\Users\\gdewazieres\\.claude\\projects\\c--Users-gdewazieres-Desktop-groupegoudalle\\memory"
+      "c:\\Users\\gdewazieres\\.claude\\projects\\c--Users-gdewazieres-Desktop-groupegoudalle\\memory",
+      "c:\\Users\\gdewazieres\\Desktop\\groupegoudalle"
     ]
   }
 }

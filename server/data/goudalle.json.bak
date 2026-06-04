@@ -15413,7 +15413,17 @@
       "Chantier": "AMIENS SINISTRE"
     },
     "Aventim Oikos": {
-      "Chantier": "Aventim Oikos"
+      "Chantier": "Aventim Oikos",
+      "Numéro et rue": "35A avenue de la Marne",
+      "Ville": "WASQUEHAL",
+      "Code postal": "59290",
+      "Conducteur de travaux": "Arnaud Masset",
+      "Dessinateur BE": "",
+      "Date OS": "",
+      "Date fin contractuelle": "",
+      "Montant marché HT": "817 115.95",
+      "Latitude": "50.6809264",
+      "Longitude": "3.1157183"
     },
     "AVESNES Salle de Sport": {
       "Chantier": "AVESNES Salle de Sport"

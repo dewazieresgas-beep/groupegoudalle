@@ -15,6 +15,7 @@ const path = require('path');
 const fs = require('fs');
 const XLSX = require('xlsx');
 const XlsxPopulate = require('xlsx-populate');
+const mammoth = require('mammoth');
 const { PDFParse } = require('pdf-parse');
 const multer = require('multer');
 
@@ -77,6 +78,7 @@ const FILE_TO_PERM = {
   'chantiers-maconnerie.html':                 'chantiers_maconnerie',
   'chantiers-vue-globale.html':                'chantiers_vue_globale',
   'chantiers-suivi.html':                      'gc_dossiers',
+  'chantiers-conducteurne.html':               'conducteur_charpente',
   'commerce-indicateurs.html':                 'commerce_indicateurs',
   'commerce-liaison.html':                     'commerce_liaison',
   'compta-indicateurs.html':                   'compta_indicateurs',
@@ -4303,6 +4305,51 @@ app.get('/api/dossiers/fichier', (req, res) => {
   const stream = fs.createReadStream(target);
   stream.on('error', () => res.status(500).end());
   stream.pipe(res);
+});
+
+// GET /api/dossiers/preview?rel=... — rendu HTML inline pour Word et Excel
+app.get('/api/dossiers/preview', async (req, res) => {
+  const rel = req.query.rel || '';
+  const target = safeResolveDossier(rel);
+  if (!target) return res.status(400).send('Chemin invalide');
+  if (!fs.existsSync(target) || fs.statSync(target).isDirectory()) return res.status(404).send('Fichier introuvable');
+
+  const ext = path.extname(target).toLowerCase();
+  const base = `<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>
+  body{font-family:Arial,sans-serif;font-size:13px;margin:0;padding:16px;color:#222;background:#fff;}
+  table{border-collapse:collapse;width:100%;font-size:12px;}
+  td,th{border:1px solid #d0d0d0;padding:4px 8px;white-space:pre-wrap;vertical-align:top;}
+  th{background:#f0f0f0;font-weight:600;}
+  tr:nth-child(even) td{background:#f9f9f9;}
+  .sheet-title{font-weight:700;font-size:13px;margin:18px 0 6px;color:#555;border-bottom:2px solid #ddd;padding-bottom:4px;}
+  img{max-width:100%;}
+  h1{font-size:1.4em;}h2{font-size:1.2em;}h3{font-size:1.05em;}
+</style></head><body>`;
+
+  try {
+    if (['.xlsx', '.xls', '.xlsm'].includes(ext)) {
+      const wb = XLSX.readFile(target);
+      let html = '';
+      for (const sheetName of wb.SheetNames) {
+        const ws = wb.Sheets[sheetName];
+        const table = XLSX.utils.sheet_to_html(ws, { editable: false });
+        html += `<div class="sheet-title">${sheetName}</div>${table}`;
+      }
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      return res.send(base + html + '</body></html>');
+    }
+
+    if (['.docx', '.doc'].includes(ext)) {
+      const result = await mammoth.convertToHtml({ path: target });
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      return res.send(base + result.value + '</body></html>');
+    }
+
+    res.status(400).send('Type de fichier non supporté pour la prévisualisation');
+  } catch (e) {
+    res.status(500).send(`Erreur lors de la lecture du fichier : ${e.message}`);
+  }
 });
 
 // POST /api/dossiers/upload?rel=... — upload un ou plusieurs fichiers dans un dossier

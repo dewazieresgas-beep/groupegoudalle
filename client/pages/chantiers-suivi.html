@@ -436,9 +436,15 @@
   // ══════════════════════════════════════════════════════════════
   //  LISTE DES CHANTIERS
   // ══════════════════════════════════════════════════════════════
+  // Conducteur sans accès global : filtre sur son nom uniquement
+  const isConducteurOnly = Auth.hasAccess('conducteur_charpente') && !Auth.hasAccess('gc_dossiers') && !isDirection;
+
   async function loadChantiersList() {
     try {
-      const res = await fetch(SERVER_URL + '/dossiers/liste');
+      const params = isConducteurOnly && session?.displayName
+        ? `?conducteur=${encodeURIComponent(session.displayName)}`
+        : '';
+      const res = await fetch(SERVER_URL + '/dossiers/liste' + params);
       const data = await res.json();
       allChantiers = data.chantiers || [];
       filteredChantiers = [...allChantiers];
@@ -453,9 +459,10 @@
   function renderBadges() {
     const total = allChantiers.length;
     const sans = allChantiers.filter(c => !c.hasInfo).length;
+    const label = isConducteurOnly ? `Mes chantiers (${total})` : `${total} chantiers`;
     let html = `<div style="display:flex;gap:8px;align-items:center;">
-      <span style="background:#edf7ed;border:1.5px solid #7bad75;border-radius:8px;padding:6px 12px;font-size:12px;color:#1a5c30;font-weight:600;">${total} chantiers</span>`;
-    if (sans) html += `<span style="background:#fef2f2;border:1.5px solid #dc3545;border-radius:8px;padding:6px 12px;font-size:12px;color:#b91c1c;font-weight:600;cursor:pointer;" onclick="filterChantiers('__noinfo__')">⚠ ${sans} sans fiche</span>`;
+      <span style="background:#edf7ed;border:1.5px solid #7bad75;border-radius:8px;padding:6px 12px;font-size:12px;color:#1a5c30;font-weight:600;">${label}</span>`;
+    if (sans && !isConducteurOnly) html += `<span style="background:#fef2f2;border:1.5px solid #dc3545;border-radius:8px;padding:6px 12px;font-size:12px;color:#b91c1c;font-weight:600;cursor:pointer;" onclick="filterChantiers('__noinfo__')">⚠ ${sans} sans fiche</span>`;
     html += '</div>';
     document.getElementById('header-badges').innerHTML = html;
   }
@@ -705,8 +712,10 @@
   function openFile(rel, name, type) {
     const url = `${SERVER_URL}/dossiers/fichier?rel=${encodeURIComponent(rel)}`;
     const body = document.getElementById('viewer-body');
+    const previewUrl = `${SERVER_URL}/dossiers/preview?rel=${encodeURIComponent(rel)}`;
     body.innerHTML = type==='pdf' ? `<iframe src="${url}#toolbar=1" style="width:100%;height:100%;border:none;"></iframe>`
       : type==='image' ? `<img src="${url}" style="max-width:100%;max-height:100%;object-fit:contain;padding:16px;">`
+      : (type==='word'||type==='excel') ? `<iframe src="${previewUrl}" style="width:100%;height:100%;border:none;"></iframe>`
       : `<div style="text-align:center;padding:40px;"><div style="font-size:64px;margin-bottom:16px;">${FILE_ICONS[type]||'📎'}</div><p>${escHtml(name)}</p><a href="${url}" download="${escHtml(name)}" class="viewer-download">⬇ Télécharger</a></div>`;
     document.getElementById('viewer-title').textContent = name;
     document.getElementById('viewer-download-btn').href = url;

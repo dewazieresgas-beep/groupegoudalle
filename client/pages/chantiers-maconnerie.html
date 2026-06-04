@@ -133,13 +133,13 @@
       const key = `${lat},${lng}`;
       if (weatherCache[key]) { el.innerHTML = weatherCache[key]; return; }
       try {
-        const data = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max&timezone=Europe%2FParis&forecast_days=5`)).json();
+        const data = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max&timezone=Europe%2FParis&forecast_days=5`)).json();
         const d = data.daily; const noms = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
         let html = '<div style="margin-top:10px;padding-top:8px;border-top:1px solid #e8e0d8;"><div style="font-size:11px;font-weight:700;color:#7a6a5a;margin-bottom:6px;letter-spacing:.5px;">PRÉVISIONS MÉTÉO</div><div style="display:flex;gap:5px;">';
         for (let i=0;i<5;i++) {
           const date=new Date(d.time[i]); const jour=i===0?'Auj.':noms[date.getDay()];
-          const precip=d.precipitation_sum[i]; const wind=Math.round(d.windspeed_10m_max[i]);
-          html+=`<div style="flex:1;text-align:center;background:#f7f3ef;border-radius:7px;padding:5px 2px;"><div style="font-size:10px;font-weight:600;color:#8a7a6a;">${jour}</div><div style="font-size:17px;line-height:1.3;">${wmoToEmoji(d.weathercode[i])}</div><div style="font-size:11px;color:#c0392b;font-weight:700;">${Math.round(d.temperature_2m_max[i])}°</div><div style="font-size:10px;color:#7f8c8d;">${Math.round(d.temperature_2m_min[i])}°</div>${precip>0?`<div style="font-size:9px;color:#2980b9;">💧${precip}mm</div>`:''}<div style="font-size:9px;color:#95a5a6;">💨${wind}km/h</div></div>`;
+          const precip=d.precipitation_sum[i]; const wind=Math.round(d.wind_speed_10m_max[i]);
+          html+=`<div style="flex:1;text-align:center;background:#f7f3ef;border-radius:7px;padding:5px 2px;"><div style="font-size:10px;font-weight:600;color:#8a7a6a;">${jour}</div><div style="font-size:17px;line-height:1.3;">${wmoToEmoji(d.weather_code[i])}</div><div style="font-size:11px;color:#c0392b;font-weight:700;">${Math.round(d.temperature_2m_max[i])}°</div><div style="font-size:10px;color:#7f8c8d;">${Math.round(d.temperature_2m_min[i])}°</div>${precip>0?`<div style="font-size:9px;color:#2980b9;">💧${precip}mm</div>`:''}<div style="font-size:9px;color:#95a5a6;">💨${wind}km/h</div></div>`;
         }
         html += '</div></div>'; weatherCache[key] = html;
         if (document.getElementById(containerId)) el.innerHTML = html;

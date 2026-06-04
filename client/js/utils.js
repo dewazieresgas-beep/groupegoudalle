@@ -151,7 +151,7 @@ function isRHPage() {
 
 function isChantierPage() {
   const page = getCurrentPage();
-  return page === 'chantiers-charpente.html' || page === 'chantiers-maconnerie.html' || page === 'chantiers-vue-globale.html' || page === 'chantiers-dossiers.html' || page === 'chantiers-suivi.html';
+  return page === 'chantiers-charpente.html' || page === 'chantiers-maconnerie.html' || page === 'chantiers-vue-globale.html' || page === 'chantiers-dossiers.html' || page === 'chantiers-suivi.html' || page === 'chantiers-conducteur.html';
 }
 
 // ============ WEEK UTILS ============
@@ -316,9 +316,14 @@ function getSidebar() {
   `;
 
   // ===== CHANTIERS =====
-  if (Auth.hasAccess('chantiers') || Auth.hasAccess('gc_dossiers')) {
+  const _hasChantier = Auth.hasAccess('chantiers_vue_globale') || Auth.hasAccess('chantiers_charpente') || Auth.hasAccess('chantiers_maconnerie') || Auth.hasAccess('gc_dossiers') || Auth.hasAccess('conducteur_charpente');
+  if (_hasChantier) {
     const chantiersActive = isChantierPage() ? ' active' : '';
-    const firstPage = Auth.hasAccess('chantiers') ? 'chantiers-vue-globale.html' : 'chantiers-dossiers.html';
+    const firstPage = Auth.hasAccess('chantiers_vue_globale') ? 'chantiers-vue-globale.html'
+      : Auth.hasAccess('chantiers_charpente') ? 'chantiers-charpente.html'
+      : Auth.hasAccess('chantiers_maconnerie') ? 'chantiers-maconnerie.html'
+      : Auth.hasAccess('gc_dossiers') ? 'chantiers-dossiers.html'
+      : 'chantiers-conducteur.html';
     items += `<a href="${base}pages/${firstPage}" class="sidebar-item${chantiersActive}">🚧 Chantiers</a>`;
   }
 
@@ -625,13 +630,25 @@ function injectChantiersSecondaryBar() {
   const currentPage = getCurrentPage();
   const globaleActive = currentPage === 'chantiers-vue-globale.html' ? ' active' : '';
   const suiviActive = (currentPage === 'chantiers-suivi.html' || currentPage === 'chantiers-dossiers.html') ? ' active' : '';
+  const conducteurActive = currentPage === 'chantiers-conducteur.html' ? ' active' : '';
+
+  const charpenteActive = currentPage === 'chantiers-charpente.html' ? ' active' : '';
+  const maconnerieActive = currentPage === 'chantiers-maconnerie.html' ? ' active' : '';
 
   let secondaryItems = '';
-  if (Auth.hasAccess('chantiers')) {
+  if (Auth.hasAccess('chantiers_vue_globale')) {
     secondaryItems += `
     <a href="${base}pages/chantiers-vue-globale.html" class="sidebar-item${globaleActive}">🌍 Vue globale</a>`;
   }
-  if (Auth.hasAccess('chantiers') || Auth.hasAccess('gc_dossiers')) {
+  if (Auth.hasAccess('chantiers_charpente')) {
+    secondaryItems += `
+    <a href="${base}pages/chantiers-charpente.html" class="sidebar-item${charpenteActive}">🪵 Carte charpente</a>`;
+  }
+  if (Auth.hasAccess('chantiers_maconnerie')) {
+    secondaryItems += `
+    <a href="${base}pages/chantiers-maconnerie.html" class="sidebar-item${maconnerieActive}">🧱 Carte maçonnerie</a>`;
+  }
+  if (Auth.hasAccess('gc_dossiers')) {
     secondaryItems += `
     <a href="${base}pages/chantiers-suivi.html" class="sidebar-item${suiviActive}">🚧 Suivi chantier</a>`;
   }
@@ -641,7 +658,7 @@ function injectChantiersSecondaryBar() {
       <div class="sidebar-secondary-content">
         <div class="sidebar-secondary-title">🚧 Chantiers</div>
         <button class="sidebar-secondary-close" onclick="toggleChantiersSidebar();">✕</button>
-        <nav class="sidebar-secondary-nav">
+        <nav class="sidebar-secondary-nav" id="chantiersSidebarNav">
           ${secondaryItems}
         </nav>
       </div>
@@ -657,6 +674,36 @@ function injectChantiersSecondaryBar() {
   if (chantiersSidebar) {
     chantiersSidebar.classList.add('open');
   }
+
+  // Ajout dynamique du lien conducteur selon le nom de l'utilisateur connecté
+  const displayName = session.displayName || '';
+  if (displayName === 'Arnaud Masset') {
+    // Arnaud voit toujours la vue conducteurs (sans vérification de données)
+    _appendConducteurNavLink(base, conducteurActive, '👷 Vue conducteurs');
+  } else if (displayName) {
+    // Autres utilisateurs : vérifier s'ils sont conducteurs dans les données
+    _checkAndAppendConducteurLink(displayName, base, conducteurActive);
+  }
+}
+
+function _appendConducteurNavLink(base, activeClass, label) {
+  const nav = document.getElementById('chantiersSidebarNav');
+  if (!nav) return;
+  nav.insertAdjacentHTML('beforeend',
+    `<a href="${base}pages/chantiers-conducteur.html" class="sidebar-item${activeClass}">${label}</a>`
+  );
+}
+
+async function _checkAndAppendConducteurLink(displayName, base, activeClass) {
+  try {
+    const data = await fetch(window.location.origin + '/api/dossiers/carte').then(r => r.json());
+    const chantiers = data?.chantiers || [];
+    const normStr = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+    const isConducteur = chantiers.some(c => normStr(c.conducteur) === normStr(displayName));
+    if (isConducteur) {
+      _appendConducteurNavLink(base, activeClass, '👷 Mes chantiers');
+    }
+  } catch {}
 }
 
 /**

@@ -45,16 +45,10 @@ echo  Pour acceder depuis le reseau : http://[IP]:3000
 echo.
 echo  Pour connaitre l IP du serveur : cmd puis "ipconfig"
 echo.
-echo  NE PAS FERMER CETTE FENETRE
+echo  NE PAS FERMER CETTE FENETRE (croix rouge = serveur arrete)
 echo.
-:RESTART
-echo [%date% %time%] Demarrage du serveur...
 node server.js
-set EXITCODE=%ERRORLEVEL%
-echo.
-echo [%date% %time%] Serveur arrete (code %EXITCODE%).
-echo Redemarrage dans 5 secondes...
-timeout /t 5 /nobreak >nul
-goto RESTART
 
+echo.
+echo [%date% %time%] Serveur arrete.
 pause
