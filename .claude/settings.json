@@ -68,7 +68,13 @@
       "Bash(Remove-Item \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\\\\server\\\\inspect_excel.js\")",
       "Bash(node test_read.js)",
       "PowerShell(Stop-Process -Force)",
-      "PowerShell(Start-Process node -ArgumentList \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\\\\server\\\\server.js\" -WindowStyle Hidden)"
+      "PowerShell(Start-Process node -ArgumentList \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\\\\server\\\\server.js\" -WindowStyle Hidden)",
+      "PowerShell(node \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\\\\__update_excel_adresse.js\")",
+      "PowerShell(node \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\\\\__fix_dates.js\")",
+      "PowerShell(node -e $script)",
+      "Bash(grep -v \"^function\\\\|^//\")",
+      "Bash(xargs grep -l \"allocateInvoiceLinesByBL\")",
+      "Bash(grep -n \"\\\\/\\\\* TODO\\\\|\\\\/\\\\* FIXME\\\\|\\\\/\\\\* DEAD\\\\|COMMENTED OUT\\\\|LEGACY\" \"c:/Users/gdewazieres/Desktop/groupegoudalle/server/server.js\")"
     ],
     "additionalDirectories": [
       "\\tmp",

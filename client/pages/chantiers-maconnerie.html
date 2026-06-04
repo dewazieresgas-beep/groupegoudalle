@@ -178,7 +178,6 @@
         ${montant ? `<div style="margin-bottom:3px;">💶 ${montant}</div>` : ''}
         ${buildProgressHTML(c)}
         <div style="display:flex;gap:5px;margin-top:10px;">
-          <a href="chantiers-fiche.html?id=${c.id}" style="flex:1;text-align:center;padding:5px 8px;background:#5a4a3a;color:white;border:none;border-radius:5px;cursor:pointer;font-size:12px;text-decoration:none;">📋 Fiche</a>
         </div>
         ${c.lat && c.lng ? `<div id="meteo-${c.id}" style="font-size:11px;color:#aaa;margin-top:8px;">⏳ Chargement météo…</div>` : ''}
         </div>`;
@@ -222,7 +221,6 @@
         ${montant ? `<div style="font-size:13px;margin-bottom:3px;">💶 ${montant}</div>` : ''}
         ${buildProgressHTML(c)}
         <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
-          <a href="chantiers-fiche.html?id=${c.id}" class="btn-sm btn-fiche">📋 Fiche suivi</a>
           ${c.lat && c.lng ? `<button onclick="centerOnMarker('${c.id}')" class="btn-sm">🗺️ Carte</button>` : ''}
         </div></div>`;
     }

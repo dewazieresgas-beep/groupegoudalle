@@ -151,7 +151,7 @@ function isRHPage() {
 
 function isChantierPage() {
   const page = getCurrentPage();
-  return page === 'chantiers-charpente.html' || page === 'chantiers-maconnerie.html' || page === 'chantiers-vue-globale.html' || page === 'chantiers-dossiers.html';
+  return page === 'chantiers-charpente.html' || page === 'chantiers-maconnerie.html' || page === 'chantiers-vue-globale.html' || page === 'chantiers-dossiers.html' || page === 'chantiers-suivi.html';
 }
 
 // ============ WEEK UTILS ============
@@ -624,7 +624,7 @@ function injectChantiersSecondaryBar() {
   const base = getBasePath();
   const currentPage = getCurrentPage();
   const globaleActive = currentPage === 'chantiers-vue-globale.html' ? ' active' : '';
-  const dossiersActive = currentPage === 'chantiers-dossiers.html' ? ' active' : '';
+  const suiviActive = (currentPage === 'chantiers-suivi.html' || currentPage === 'chantiers-dossiers.html') ? ' active' : '';
 
   let secondaryItems = '';
   if (Auth.hasAccess('chantiers')) {
@@ -633,7 +633,7 @@ function injectChantiersSecondaryBar() {
   }
   if (Auth.hasAccess('chantiers') || Auth.hasAccess('gc_dossiers')) {
     secondaryItems += `
-    <a href="${base}pages/chantiers-dossiers.html" class="sidebar-item${dossiersActive}">📁 Dossiers chantiers</a>`;
+    <a href="${base}pages/chantiers-suivi.html" class="sidebar-item${suiviActive}">🚧 Suivi chantier</a>`;
   }
 
   const barHTML = `

@@ -48,16 +48,19 @@
     }
     .chantiers-scroll { overflow-y: auto; flex: 1; }
     .chantier-item {
+      border-left: 3px solid transparent;
       padding: 10px 14px; cursor: pointer;
       border-bottom: 1px solid var(--border-light);
       transition: background 0.15s;
     }
     .chantier-item:hover { background: var(--light); }
-    .chantier-item.active { background: var(--accent); color: white; }
+    .chantier-item.active { background: var(--accent); color: white; border-left-color: transparent !important; }
     .chantier-item.active .chantier-item-sub { color: rgba(255,255,255,0.8); }
+    .chantier-item.active .chantier-missing { color: rgba(255,255,255,0.75) !important; }
+    .chantier-item.no-info { border-left-color: #dc3545; }
     .chantier-item-name { font-size: 13px; font-weight: 600; line-height: 1.3; }
     .chantier-item-sub { font-size: 11px; color: var(--text-muted-dark); margin-top: 2px; }
-    .badge-noinfo { display: inline-block; font-size: 10px; padding: 1px 5px; border-radius: 4px; background: #fff3cd; color: #856404; border: 1px solid #ffc107; margin-left: 4px; vertical-align: middle; }
+    .chantier-missing { font-size: 11px; color: #dc3545; margin-top: 2px; font-weight: 500; }
 
     /* ── Panel explorateur ── */
     .panel-explorer {
@@ -86,6 +89,13 @@
     .breadcrumb-part:hover { text-decoration: underline; }
     .breadcrumb-part.current { color: var(--dark); font-weight: 600; cursor: default; }
     .breadcrumb-part.current:hover { text-decoration: none; }
+    .btn-back {
+      padding: 5px 10px; background: white; color: var(--dark);
+      border: 1.5px solid var(--border); border-radius: 6px; font-size: 13px;
+      cursor: pointer; transition: all 0.15s; display: flex; align-items: center;
+      gap: 5px; flex-shrink: 0; font-weight: 500;
+    }
+    .btn-back:hover { background: var(--light); border-color: var(--primary); }
     .btn-upload {
       padding: 6px 12px; background: var(--accent); color: white;
       border: none; border-radius: 6px; font-size: 12px; cursor: pointer;
@@ -94,6 +104,43 @@
     }
     .btn-upload:hover { background: var(--accent-dark); }
     .btn-upload:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Bouton fiche ── */
+    .btn-fiche-info {
+      padding: 5px 11px; border-radius: 6px; font-size: 12px; font-weight: 600;
+      cursor: pointer; white-space: nowrap; transition: all 0.2s;
+      display: flex; align-items: center; gap: 5px; border: none;
+    }
+    .btn-fiche-info.no-info { background: #dc3545; color: white; }
+    .btn-fiche-info.no-info:hover { background: #b02a37; }
+    .btn-fiche-info.has-info { background: var(--lighter); color: var(--dark); border: 1.5px solid var(--border); }
+    .btn-fiche-info.has-info:hover { border-color: var(--accent); background: var(--light); }
+
+    /* ── Modal fiche ── */
+    .info-modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+      z-index: 10000; display: flex; align-items: center; justify-content: center;
+      padding: 16px;
+    }
+    .info-modal {
+      background: white; border-radius: 12px; width: 100%; max-width: 700px;
+      max-height: 90vh; overflow-y: auto;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.25);
+      display: flex; flex-direction: column;
+    }
+    .info-modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; border-bottom: 1px solid var(--border);
+      background: var(--lighter); border-radius: 12px 12px 0 0;
+      flex-shrink: 0;
+    }
+    .info-modal-header h2 { margin: 0; font-size: 15px; font-weight: 700; color: var(--dark); }
+    .info-modal-close {
+      background: none; border: none; font-size: 18px; cursor: pointer;
+      color: var(--text-muted-dark); line-height: 1; padding: 2px 6px; border-radius: 4px;
+    }
+    .info-modal-close:hover { background: var(--light); color: var(--dark); }
+    .info-modal-body { padding: 20px; }
 
     /* ── Toggle vue ── */
     .view-toggle {
@@ -194,12 +241,6 @@
     }
     .viewer-download:hover { background: var(--secondary); }
 
-    /* ── Fiche info chantier ── */
-    #info-panel {
-      border-top: 1px solid var(--border);
-      padding: 16px;
-      background: var(--lighter);
-    }
     .info-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -287,13 +328,17 @@
           </div>
           <div id="explorer-content" style="display:none;">
 
-            <!-- Header avec breadcrumb + upload -->
+            <!-- Header avec breadcrumb + toggle + fiche + upload -->
             <div class="explorer-header">
+              <button class="btn-back" id="btn-back" onclick="goBack()" style="display:none;" title="Dossier parent">← Retour</button>
               <div class="breadcrumb" id="breadcrumb"></div>
               <div class="view-toggle">
                 <button class="view-btn" id="btn-view-grid" onclick="setViewMode('grid')" title="Vue grille">⊞</button>
                 <button class="view-btn" id="btn-view-list" onclick="setViewMode('list')" title="Vue liste">☰</button>
               </div>
+              <button class="btn-fiche-info no-info" id="btn-fiche" onclick="openInfoModal()" style="display:none;" title="Ouvrir la fiche chantier">
+                📋 Fiche
+              </button>
               <button class="btn-upload" id="btn-upload" onclick="triggerUpload()" style="display:none;">
                 ⬆ Importer
               </button>
@@ -307,9 +352,6 @@
                 <div class="drop-overlay-text">📂 Déposez ici pour importer</div>
               </div>
             </div>
-
-            <!-- Fiche info chantier -->
-            <div id="info-panel" style="display:none;"></div>
 
           </div>
         </div>
@@ -339,17 +381,24 @@
     </div>
   </div>
 
+  <!-- Modal fiche chantier -->
+  <div id="info-modal-overlay" class="info-modal-overlay" style="display:none;" onclick="closeInfoModal(event)">
+    <div class="info-modal" id="info-modal">
+      <div class="info-modal-header">
+        <h2 id="info-modal-title">📋 Fiche chantier</h2>
+        <button class="info-modal-close" onclick="closeInfoModal()">✕</button>
+      </div>
+      <div class="info-modal-body" id="info-modal-body"></div>
+    </div>
+  </div>
+
   <!-- Toast upload -->
   <div id="upload-toast"></div>
 
   <script>
-    let _token = null;
-
-    // ── Récupérer le token serveur (déjà chargé par api.js via onServerReady) ──
     async function getToken() {
-      if (_token) return _token;
-      _token = window._serverToken;
-      return _token;
+      if (window.serverReady) await window.serverReady;
+      return window._serverToken;
     }
 
     // ── Données globales ──
@@ -454,10 +503,10 @@
       const total = allChantiers.length;
       const avecInfo = allChantiers.filter(c => c.hasInfo).length;
       const sansInfo = total - avecInfo;
-      let html = `<div style="display:flex;gap:8px;flex-wrap:wrap;">`;
+      let html = `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">`;
       html += `<span style="background:#edf7ed;border:1.5px solid #7bad75;border-radius:8px;padding:6px 12px;font-size:12px;color:#1a5c30;font-weight:600;">${total} chantier${total > 1 ? 's' : ''}</span>`;
-      if (sansInfo > 0 && isDirection) {
-        html += `<span style="background:#fff3cd;border:1.5px solid #ffc107;border-radius:8px;padding:6px 12px;font-size:12px;color:#856404;font-weight:600;" title="${sansInfo} dossier(s) sans fiche info-chantier.xlsx">⚠ ${sansInfo} sans fiche</span>`;
+      if (sansInfo > 0) {
+        html += `<span style="background:#fef2f2;border:1.5px solid #dc3545;border-radius:8px;padding:6px 12px;font-size:12px;color:#b91c1c;font-weight:600;cursor:pointer;" title="Filtrer les chantiers sans fiche" onclick="filterChantiers('__noinfo__')">⚠ ${sansInfo} sans fiche</span>`;
       }
       html += '</div>';
       document.getElementById('header-badges').innerHTML = html;
@@ -465,17 +514,23 @@
 
     // ── Liste chantiers ──
     function filterChantiers(query) {
-      const q = normName(query);
-      filteredChantiers = q
-        ? allChantiers.filter(c => normName(c.nom).includes(q) || normName(c.chantier).includes(q) || normName(c.conducteur).includes(q) || normName(c.adresse).includes(q))
-        : [...allChantiers];
+      if (query === '__noinfo__') {
+        filteredChantiers = allChantiers.filter(c => !c.hasInfo);
+        document.getElementById('search-chantier').value = '';
+      } else {
+        const q = normName(query);
+        filteredChantiers = q
+          ? allChantiers.filter(c => normName(c.nom).includes(q) || normName(c.chantier).includes(q) || normName(c.conducteur).includes(q))
+          : [...allChantiers];
+      }
       renderChantiersList();
     }
 
     function renderChantiersList() {
       const list = document.getElementById('chantiers-list');
       const count = document.getElementById('chantiers-count');
-      count.textContent = `${filteredChantiers.length} / ${allChantiers.length} chantier${allChantiers.length > 1 ? 's' : ''}`;
+      const sansInfo = filteredChantiers.filter(c => !c.hasInfo).length;
+      count.innerHTML = `${filteredChantiers.length} / ${allChantiers.length} chantier${allChantiers.length > 1 ? 's' : ''}${sansInfo ? ` · <span style="color:#dc3545;font-weight:600;">${sansInfo} sans fiche</span>` : ''}`;
 
       if (!filteredChantiers.length) {
         list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted-dark);font-size:13px;">Aucun résultat</div>';
@@ -484,11 +539,12 @@
 
       list.innerHTML = filteredChantiers.map(c => {
         const active = currentChantier === c.nom ? ' active' : '';
-        const noInfo = !c.hasInfo ? '<span class="badge-noinfo">!</span>' : '';
-        const sub = c.conducteur ? c.conducteur : (c.adresse ? c.adresse.substring(0, 40) : '');
-        return `<div class="chantier-item${active}" onclick="selectChantier(${JSON.stringify(c).replace(/"/g, '&quot;')})">
-          <div class="chantier-item-name">${c.nom}${noInfo}</div>
-          ${sub ? `<div class="chantier-item-sub">${sub}</div>` : ''}
+        const noInfo = !c.hasInfo;
+        const sub = c.conducteur || '';
+        return `<div class="chantier-item${active}${noInfo ? ' no-info' : ''}" onclick="selectChantier(${JSON.stringify(c).replace(/"/g, '&quot;')})">
+          <div class="chantier-item-name">${escHtml(c.nom)}</div>
+          ${sub ? `<div class="chantier-item-sub">${escHtml(sub)}</div>` : ''}
+          ${noInfo ? `<div class="chantier-missing">⚠ Fiche à renseigner</div>` : ''}
         </div>`;
       }).join('');
     }
@@ -503,7 +559,7 @@
 
       document.getElementById('explorer-empty').style.display = 'none';
       document.getElementById('explorer-content').style.display = 'block';
-      document.getElementById('info-panel').style.display = 'none';
+      document.getElementById('btn-fiche').style.display = 'none';
 
       // Mettre à jour l'URL sans recharger
       const url = new URL(window.location);
@@ -594,6 +650,10 @@
     // ── Breadcrumb ──
     function renderBreadcrumb(rel) {
       const parts = rel.split('/').filter(Boolean);
+      // Bouton retour : visible dès qu'on est dans un sous-dossier
+      const btnBack = document.getElementById('btn-back');
+      btnBack.style.display = parts.length > 1 ? 'flex' : 'none';
+
       let html = '';
       let acc = '';
       parts.forEach((p, i) => {
@@ -601,10 +661,17 @@
         const captured = acc;
         if (i > 0) html += `<span class="breadcrumb-sep">›</span>`;
         const isCurrent = i === parts.length - 1;
-        const shortName = p.length > 20 ? p.substring(0, 18) + '…' : p;
+        const shortName = p.length > 22 ? p.substring(0, 20) + '…' : p;
         html += `<span class="breadcrumb-part${isCurrent ? ' current' : ''}" ${isCurrent ? '' : `onclick="browseFolder('${escRel(captured)}')" title="${escStr(p)}"`}>${escHtml(shortName)}</span>`;
       });
       document.getElementById('breadcrumb').innerHTML = html;
+    }
+
+    function goBack() {
+      const parts = currentRel.split('/').filter(Boolean);
+      if (parts.length <= 1) return;
+      const parent = parts.slice(0, -1).join('/');
+      browseFolder(parent);
     }
 
     // ── Visionneuse ──
@@ -642,51 +709,67 @@
       document.getElementById('viewer-body').innerHTML = '';
       document.body.style.overflow = '';
     }
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeViewerDirect(); });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        if (document.getElementById('info-modal-overlay').style.display !== 'none') {
+          document.getElementById('info-modal-overlay').style.display = 'none';
+          document.body.style.overflow = '';
+        } else {
+          closeViewerDirect();
+        }
+      }
+    });
 
     // ── Fiche info chantier ──
-    async function loadInfoPanel(chantier) {
-      const panel = document.getElementById('info-panel');
+    const INFO_FIELDS = [
+      { key: 'Chantier',               label: 'Nom du chantier' },
+      { key: 'Numéro et rue',          label: 'Numéro et rue' },
+      { key: 'Ville',                  label: 'Ville' },
+      { key: 'Code postal',            label: 'Code postal' },
+      { key: 'Conducteur de travaux',  label: 'Conducteur de travaux' },
+      { key: 'Dessinateur BE',         label: 'Dessinateur BE' },
+      { key: 'Date OS',                label: "Date d'OS" },
+      { key: 'Date fin contractuelle', label: 'Date fin contractuelle' },
+      { key: 'Montant marché HT',      label: 'Montant marché HT' },
+    ];
 
+    async function loadInfoPanel(chantier) {
       const res = await fetch(`${SERVER_URL}/dossiers/info?rel=${encodeURIComponent(chantier.nom)}`);
       const data = await res.json();
       currentInfo = data.info;
 
-      const fields = [
-        { key: 'Chantier', label: 'Nom du chantier' },
-        { key: 'Adresse', label: 'Adresse' },
-        { key: 'Conducteur de travaux', label: 'Conducteur de travaux' },
-        { key: 'Dessinateur BE', label: 'Dessinateur BE' },
-        { key: "Date OS", label: "Date d'OS" },
-        { key: 'Date fin contractuelle', label: 'Date fin contractuelle' },
-        { key: 'Montant marché HT', label: 'Montant marché HT' },
-      ];
-
       const info = currentInfo || {};
-      const hasData = Object.values(info).some(v => v);
+      const hasData = INFO_FIELDS.some(f => info[f.key]);
+
+      // Mettre à jour le bouton fiche
+      const btn = document.getElementById('btn-fiche');
+      btn.style.display = 'flex';
+      btn.className = 'btn-fiche-info ' + (hasData ? 'has-info' : 'no-info');
+      btn.innerHTML = hasData ? '📋 Fiche' : '📋 Fiche — à renseigner';
+    }
+
+    function buildInfoModalContent() {
+      const info = currentInfo || {};
+      const hasData = INFO_FIELDS.some(f => info[f.key]);
 
       if (canEdit) {
-        let html = `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
-          <span style="font-size:13px;font-weight:700;color:var(--dark);">📋 Fiche chantier${!hasData ? ' <span style=\'color:#856404;font-size:12px;\'>— à renseigner</span>' : ''}</span>
-          <div style="display:flex;gap:8px;">
-            <button onclick="saveInfoChantier()" style="padding:5px 12px;background:var(--accent);color:white;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">💾 Enregistrer</button>
-          </div>
-        </div>
-        <div class="info-grid" id="info-form">`;
-        fields.forEach(f => {
+        let html = `<div class="info-grid" id="info-form">`;
+        INFO_FIELDS.forEach(f => {
           const isDate = f.key === 'Date OS' || f.key === 'Date fin contractuelle';
-          const value = isDate ? toInputDate(info[f.key] || '') : (info[f.key] || '');
+          const val = isDate ? toInputDate(info[f.key] || '') : (info[f.key] || '');
           html += `<div class="info-field">
             <label>${escHtml(f.label)}</label>
-            <input type="${isDate ? 'date' : 'text'}" id="inf_${f.key.replace(/\s/g,'_').replace(/'/g,'')}" value="${escHtml(value)}" placeholder="${escHtml(f.label)}">
+            <input type="${isDate ? 'date' : 'text'}" id="inf_${f.key.replace(/\s/g,'_').replace(/'/g,'')}" value="${escHtml(val)}" placeholder="${escHtml(f.label)}">
           </div>`;
         });
-        html += '</div>';
-        panel.innerHTML = html;
+        html += `</div>
+        <div style="margin-top:16px;display:flex;justify-content:flex-end;">
+          <button onclick="saveInfoChantier()" style="padding:7px 18px;background:var(--accent);color:white;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;">💾 Enregistrer</button>
+        </div>`;
+        return html;
       } else if (hasData) {
-        let html = `<div style="font-size:13px;font-weight:700;color:var(--dark);margin-bottom:10px;">📋 Fiche chantier</div>
-        <div class="info-grid">`;
-        fields.forEach(f => {
+        let html = `<div class="info-grid">`;
+        INFO_FIELDS.forEach(f => {
           const val = info[f.key];
           if (!val) return;
           html += `<div class="info-field">
@@ -694,15 +777,22 @@
             <div class="info-value">${escHtml(val)}</div>
           </div>`;
         });
-        html += '</div>';
-        panel.innerHTML = html;
-      } else {
-        panel.innerHTML = '';
-        panel.style.display = 'none';
-        return;
+        return html + '</div>';
       }
+      return `<p style="color:var(--text-muted-dark);font-size:13px;">Aucune information renseignée pour ce chantier.</p>`;
+    }
 
-      panel.style.display = 'block';
+    function openInfoModal() {
+      document.getElementById('info-modal-title').textContent = `📋 ${currentChantier || 'Fiche chantier'}`;
+      document.getElementById('info-modal-body').innerHTML = buildInfoModalContent();
+      document.getElementById('info-modal-overlay').style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeInfoModal(e) {
+      if (e && e.target !== document.getElementById('info-modal-overlay')) return;
+      document.getElementById('info-modal-overlay').style.display = 'none';
+      document.body.style.overflow = '';
     }
 
     function toInputDate(value) {
@@ -719,13 +809,15 @@
 
     async function saveInfoChantier() {
       const fields = {
-        'Chantier': document.getElementById('inf_Chantier')?.value || '',
-        'Adresse': document.getElementById('inf_Adresse')?.value || '',
-        'Conducteur de travaux': document.getElementById('inf_Conducteur_de_travaux')?.value || '',
-        'Dessinateur BE': document.getElementById('inf_Dessinateur_BE')?.value || '',
-        'Date OS': document.getElementById('inf_Date_OS')?.value || '',
+        'Chantier':               document.getElementById('inf_Chantier')?.value || '',
+        'Numéro et rue':          document.getElementById('inf_Numéro_et_rue')?.value || '',
+        'Ville':                  document.getElementById('inf_Ville')?.value || '',
+        'Code postal':            document.getElementById('inf_Code_postal')?.value || '',
+        'Conducteur de travaux':  document.getElementById('inf_Conducteur_de_travaux')?.value || '',
+        'Dessinateur BE':         document.getElementById('inf_Dessinateur_BE')?.value || '',
+        'Date OS':                document.getElementById('inf_Date_OS')?.value || '',
         'Date fin contractuelle': document.getElementById('inf_Date_fin_contractuelle')?.value || '',
-        'Montant marché HT': document.getElementById('inf_Montant_marché_HT')?.value || '',
+        'Montant marché HT':      document.getElementById('inf_Montant_marché_HT')?.value || '',
       };
 
       const token = await getToken();
@@ -738,12 +830,19 @@
         const data = await res.json();
         if (!data.success) throw new Error(data.error);
         showToast('✅ Fiche enregistrée');
-        // Invalider le cache liste
-        _dossiersListCache_invalidated = true;
+        currentInfo = { ...fields };
+        // Fermer la modal
+        document.getElementById('info-modal-overlay').style.display = 'none';
+        document.body.style.overflow = '';
+        // Mettre à jour le bouton fiche
+        const btn = document.getElementById('btn-fiche');
+        btn.className = 'btn-fiche-info has-info';
+        btn.innerHTML = '📋 Fiche';
         // Mettre à jour le chantier dans la liste locale
         const idx = allChantiers.findIndex(c => c.nom === currentChantier);
         if (idx >= 0) {
-          allChantiers[idx] = { ...allChantiers[idx], ...fields, chantier: fields['Chantier'] || allChantiers[idx].nom, conducteur: fields['Conducteur de travaux'], adresse: fields['Adresse'], hasInfo: true };
+          const ficheComplete = !!(fields['Conducteur de travaux'] && fields['Date OS'] && fields['Date fin contractuelle'] && (fields['Numéro et rue'] || fields['Ville']));
+          allChantiers[idx] = { ...allChantiers[idx], ...fields, chantier: fields['Chantier'] || allChantiers[idx].nom, conducteur: fields['Conducteur de travaux'], rue: fields['Numéro et rue'], ville: fields['Ville'], codePostal: fields['Code postal'], hasInfo: ficheComplete };
           filteredChantiers = [...allChantiers];
           renderChantiersList();
         }

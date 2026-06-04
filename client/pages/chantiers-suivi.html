@@ -1,0 +1,892 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Suivi Chantier - Intranet Goudalle</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    /* ── Layout général ── */
+    .suivi-layout { display:grid; grid-template-columns:300px 1fr; gap:16px; align-items:start; }
+    @media (max-width:900px) { .suivi-layout { grid-template-columns:1fr; } }
+
+    /* ── Liste chantiers (gauche) ── */
+    .panel-chantiers { background:white; border:1px solid var(--border); border-radius:10px; overflow:hidden; position:sticky; top:16px; max-height:calc(100vh - 100px); display:flex; flex-direction:column; }
+    .panel-chantiers-header { padding:12px 14px; border-bottom:1px solid var(--border); background:var(--lighter); }
+    .panel-chantiers-header input { width:100%; box-sizing:border-box; padding:7px 10px; border:1.5px solid var(--border); border-radius:6px; font-size:13px; background:white; color:var(--dark); font-family:inherit; }
+    .panel-chantiers-header input:focus { outline:none; border-color:var(--accent); }
+    .chantiers-count { font-size:11px; color:var(--text-muted-dark); margin-top:6px; }
+    .chantiers-scroll { overflow-y:auto; flex:1; }
+    .chantier-item { padding:10px 14px; border-bottom:1px solid var(--border); cursor:pointer; transition:background .15s; border-left:3px solid transparent; }
+    .chantier-item:hover { background:var(--light); }
+    .chantier-item.active { background:var(--accent); color:white; border-left-color:transparent !important; }
+    .chantier-item.active .chantier-item-sub, .chantier-item.active .chantier-missing { color:rgba(255,255,255,.75) !important; }
+    .chantier-item.no-info { border-left-color:#dc3545; }
+    .chantier-item-name { font-size:13px; font-weight:600; line-height:1.3; }
+    .chantier-item-sub { font-size:11px; color:var(--text-muted-dark); margin-top:2px; }
+    .chantier-missing { font-size:11px; color:#dc3545; margin-top:2px; font-weight:500; }
+
+    /* ── Panneau droit ── */
+    .panel-right { background:white; border:1px solid var(--border); border-radius:10px; overflow:hidden; min-height:400px; }
+
+    /* ── Header chantier sélectionné ── */
+    .chantier-header { padding:14px 18px 0; border-bottom:1px solid var(--border); background:var(--lighter); }
+    .chantier-header-top { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
+    .chantier-header-name { font-size:16px; font-weight:700; color:var(--dark); }
+    .chantier-header-sub { font-size:12px; color:var(--text-muted-dark); margin-top:2px; }
+
+    /* ── Onglets ── */
+    .tabs { display:flex; gap:0; }
+    .tab-btn { padding:9px 18px; border:none; background:none; font-size:13px; font-weight:600; cursor:pointer; color:var(--text-muted-dark); border-bottom:3px solid transparent; transition:all .15s; white-space:nowrap; }
+    .tab-btn:hover { color:var(--dark); }
+    .tab-btn.active { color:var(--accent-dark); border-bottom-color:var(--accent); }
+    .tab-content { display:none; }
+    .tab-content.active { display:block; }
+
+    /* ══════════════════════════════════════
+       ONGLET DOSSIER CHANTIER
+    ══════════════════════════════════════ */
+    /* Explorer header */
+    .explorer-header { padding:10px 14px; border-bottom:1px solid var(--border); background:var(--lighter); display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .breadcrumb { display:flex; align-items:center; gap:4px; flex:1; flex-wrap:wrap; min-width:0; }
+    .breadcrumb-sep { color:var(--text-muted); font-size:13px; }
+    .breadcrumb-part { font-size:13px; color:var(--accent-dark); cursor:pointer; font-weight:500; white-space:nowrap; max-width:180px; overflow:hidden; text-overflow:ellipsis; }
+    .breadcrumb-part:hover { text-decoration:underline; }
+    .breadcrumb-part.current { color:var(--dark); font-weight:600; cursor:default; }
+    .breadcrumb-part.current:hover { text-decoration:none; }
+    .btn-back { padding:5px 10px; background:white; color:var(--dark); border:1.5px solid var(--border); border-radius:6px; font-size:13px; cursor:pointer; transition:all .15s; display:flex; align-items:center; gap:5px; flex-shrink:0; font-weight:500; }
+    .btn-back:hover { background:var(--light); border-color:var(--primary); }
+    .view-toggle { display:flex; gap:2px; background:var(--light); border:1px solid var(--border); border-radius:6px; padding:2px; flex-shrink:0; }
+    .view-btn { padding:3px 8px; border:none; border-radius:4px; cursor:pointer; font-size:15px; background:transparent; color:var(--text-muted-dark); transition:all .15s; line-height:1; }
+    .view-btn.active { background:white; color:var(--dark); box-shadow:0 1px 3px rgba(0,0,0,.12); }
+    .btn-fiche-info { padding:5px 11px; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; transition:all .2s; display:flex; align-items:center; gap:5px; border:none; }
+    .btn-fiche-info.no-info { background:#dc3545; color:white; }
+    .btn-fiche-info.no-info:hover { background:#b02a37; }
+    .btn-fiche-info.has-info { background:var(--lighter); color:var(--dark); border:1.5px solid var(--border); }
+    .btn-fiche-info.has-info:hover { border-color:var(--accent); background:var(--light); }
+    .btn-upload { padding:6px 12px; background:var(--accent); color:white; border:none; border-radius:6px; font-size:12px; cursor:pointer; font-weight:600; white-space:nowrap; transition:background .2s; display:flex; align-items:center; gap:5px; }
+    .btn-upload:hover { background:var(--accent-dark); }
+
+    /* Grille / liste fichiers */
+    .files-grid { padding:12px 14px; display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; }
+    .file-card { border:1.5px solid var(--border); border-radius:8px; padding:12px 10px; cursor:pointer; transition:all .15s; text-align:center; background:white; }
+    .file-card:hover { border-color:var(--accent); box-shadow:0 2px 8px rgba(0,0,0,.08); }
+    .file-card.folder { background:var(--lighter); }
+    .file-card.folder:hover { background:var(--light); border-color:var(--primary); }
+    .file-icon { font-size:30px; margin-bottom:6px; line-height:1; }
+    .file-name { font-size:11px; font-weight:600; color:var(--dark); word-break:break-word; line-height:1.3; }
+    .file-meta { font-size:10px; color:var(--text-muted-dark); margin-top:3px; }
+    .files-list { padding:4px 0; }
+    .file-row { display:flex; align-items:center; gap:10px; padding:8px 14px; cursor:pointer; border-bottom:1px solid var(--border); transition:background .1s; }
+    .file-row:last-child { border-bottom:none; }
+    .file-row:hover { background:var(--lighter); }
+    .file-row .row-icon { font-size:18px; flex-shrink:0; width:22px; text-align:center; }
+    .file-row .row-name { flex:1; font-size:13px; color:var(--dark); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+    .file-row.folder .row-name { font-weight:600; }
+    .file-row .row-size { font-size:11px; color:var(--text-muted-dark); white-space:nowrap; min-width:55px; text-align:right; }
+    .file-row .row-date { font-size:11px; color:var(--text-muted-dark); white-space:nowrap; min-width:65px; text-align:right; }
+    .drop-overlay { position:absolute; inset:0; background:rgba(90,74,58,.08); border:2.5px dashed var(--primary); border-radius:8px; display:flex; align-items:center; justify-content:center; z-index:10; }
+    .drop-overlay-text { font-size:16px; font-weight:700; color:var(--primary); }
+
+    /* ══════════════════════════════════════
+       ONGLET SUIVI D'OPÉRATION
+    ══════════════════════════════════════ */
+    .phase { border-bottom:2px solid var(--border); }
+    .phase-header {
+      padding:14px 18px; display:flex; align-items:center; gap:12px;
+      cursor:pointer; user-select:none; border-left:5px solid transparent;
+      transition:background .15s;
+    }
+    .phase-header:hover { filter:brightness(.97); }
+    .phase-label { font-size:14px; font-weight:700; flex:1; letter-spacing:.1px; }
+    .phase-count { font-size:11px; font-weight:600; opacity:.7; background:rgba(0,0,0,.08); padding:2px 8px; border-radius:10px; }
+    .phase-arrow { font-size:12px; opacity:.6; transition:transform .2s; }
+    .phase-arrow.open { transform:rotate(90deg); }
+    .phase-body { display:none; }
+    .phase-body.open { display:block; }
+
+    /* Étape parent (avec sous-étapes) */
+    .step-group { border-bottom:1px solid var(--border); }
+    .step-group:last-child { border-bottom:none; }
+    .step-group-header {
+      padding:11px 18px 11px 24px; display:flex; align-items:flex-start; gap:10px;
+      background:rgba(0,0,0,.02);
+    }
+    .step-group-bullet {
+      width:8px; height:8px; border-radius:2px; flex-shrink:0; margin-top:4px;
+    }
+    .step-group-label { font-size:13px; font-weight:700; color:var(--dark); line-height:1.4; flex:1; }
+    .step-group-sublabel { font-size:11px; color:var(--text-muted-dark); margin-top:2px; }
+
+    /* Conteneur sous-étapes */
+    .step-children {
+      padding:4px 0 8px 40px;
+      border-left:3px solid transparent;
+      margin-left:24px;
+    }
+
+    /* Étape simple (feuille) */
+    .step { padding:9px 18px 9px 24px; border-bottom:1px solid #f0ece8; display:flex; align-items:flex-start; gap:10px; }
+    .step:last-child { border-bottom:none; }
+    .step.child { padding:7px 18px 7px 12px; border-bottom:1px solid #f5f2ef; }
+    .step.child:last-child { border-bottom:none; }
+    .step-bullet { width:7px; height:7px; border-radius:50%; flex-shrink:0; margin-top:5px; }
+    .step-content { flex:1; min-width:0; }
+    .step-label { font-size:13px; color:var(--dark); font-weight:500; line-height:1.4; }
+    .step-sublabel { font-size:11px; color:var(--text-muted-dark); margin-top:2px; }
+    .step-docs { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+
+    /* Étape simple sans enfants dans phase body */
+    .step-solo { padding:10px 18px 10px 24px; border-bottom:1px solid #f0ece8; display:flex; align-items:flex-start; gap:10px; }
+    .step-solo:last-child { border-bottom:none; }
+
+    /* Boutons d'import */
+    .btn-doc {
+      display:inline-flex; align-items:center; gap:5px;
+      padding:5px 12px; border-radius:20px; font-size:11px; font-weight:600;
+      cursor:pointer; transition:all .15s; white-space:nowrap; border:1.5px solid;
+    }
+    .btn-doc:hover { opacity:.85; }
+    .btn-doc.unknown {
+      border-style:dashed; background:white;
+      color:#856404; border-color:#f0ad4e;
+    }
+    .btn-doc.unknown:hover { background:#fff8e1; }
+
+    /* ── Fiche chantier modal ── */
+    .info-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:10000; display:flex; align-items:center; justify-content:center; padding:16px; }
+    .info-modal { background:white; border-radius:12px; width:100%; max-width:700px; max-height:90vh; overflow-y:auto; box-shadow:0 8px 40px rgba(0,0,0,.25); }
+    .info-modal-header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--border); background:var(--lighter); border-radius:12px 12px 0 0; flex-shrink:0; }
+    .info-modal-header h2 { margin:0; font-size:15px; font-weight:700; color:var(--dark); }
+    .info-modal-close { background:none; border:none; font-size:18px; cursor:pointer; color:var(--text-muted-dark); padding:2px 6px; border-radius:4px; }
+    .info-modal-close:hover { background:var(--light); }
+    .info-modal-body { padding:20px; }
+    .info-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:10px; margin-top:10px; }
+    .info-field label { display:block; font-size:11px; font-weight:700; color:var(--text-muted-dark); text-transform:uppercase; letter-spacing:.4px; margin-bottom:3px; }
+    .info-field .info-value { font-size:13px; color:var(--dark); font-weight:500; }
+    .info-field input { width:100%; box-sizing:border-box; padding:6px 9px; border:1.5px solid var(--border); border-radius:5px; font-size:13px; background:white; color:var(--dark); font-family:inherit; }
+    .info-field input:focus { outline:none; border-color:var(--accent); }
+    .info-field input[type=date] { color:var(--dark); }
+
+    /* ── Upload modal (pour suivi) ── */
+    .upload-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:10001; display:flex; align-items:center; justify-content:center; padding:16px; }
+    .upload-modal { background:white; border-radius:12px; width:100%; max-width:480px; box-shadow:0 8px 40px rgba(0,0,0,.25); overflow:hidden; }
+    .upload-modal-header { padding:14px 18px; border-bottom:1px solid var(--border); background:var(--lighter); display:flex; align-items:center; justify-content:space-between; }
+    .upload-modal-header h3 { margin:0; font-size:14px; color:var(--dark); }
+    .upload-modal-body { padding:18px; }
+    .ufield { margin-bottom:12px; }
+    .ufield label { display:block; font-size:11px; font-weight:700; color:var(--text-muted-dark); text-transform:uppercase; letter-spacing:.4px; margin-bottom:5px; }
+    .ufield input { width:100%; box-sizing:border-box; padding:7px 10px; border:1.5px solid var(--border); border-radius:6px; font-size:13px; font-family:inherit; color:var(--dark); }
+    .ufield input:focus { outline:none; border-color:var(--accent); }
+    .unknown-msg { background:#fff8e1; border:1.5px dashed #f0ad4e; border-radius:7px; padding:9px 12px; font-size:12px; color:#856404; margin-bottom:12px; }
+    .modal-footer { display:flex; justify-content:flex-end; gap:8px; margin-top:6px; }
+    .btn-cancel { padding:7px 16px; border:1.5px solid var(--border); border-radius:6px; background:white; font-size:13px; cursor:pointer; }
+    .btn-primary { padding:7px 18px; background:var(--accent); color:white; border:none; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; }
+    .btn-primary:hover { background:var(--accent-dark); }
+    .btn-primary:disabled { opacity:.5; cursor:not-allowed; }
+
+    /* ── Visionneuse fichier ── */
+    #viewer-overlay { position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:9999; display:none; align-items:center; justify-content:center; }
+    #viewer-box { background:white; border-radius:10px; width:92vw; height:92vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 8px 40px rgba(0,0,0,.4); }
+    .viewer-header { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; border-bottom:1px solid var(--border); background:var(--lighter); flex-shrink:0; }
+    .viewer-title { font-size:14px; font-weight:600; color:var(--dark); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; }
+    .viewer-download { padding:5px 12px; background:var(--dark); color:white; border-radius:5px; font-size:12px; text-decoration:none; white-space:nowrap; }
+    .viewer-close { background:none; border:none; font-size:20px; cursor:pointer; color:var(--text-muted-dark); padding:2px 8px; }
+    .viewer-body { flex:1; overflow:auto; }
+
+    /* ── États ── */
+    .loading-state { text-align:center; padding:60px 20px; color:var(--text-muted-dark); font-size:14px; }
+    .empty-panel { text-align:center; padding:60px 20px; color:var(--text-muted-dark); }
+    .empty-state { text-align:center; padding:40px 20px; color:var(--text-muted-dark); }
+    .empty-state .icon { font-size:36px; margin-bottom:10px; }
+    #upload-toast { position:fixed; bottom:24px; right:24px; padding:11px 18px; background:var(--dark); color:white; border-radius:8px; font-size:13px; font-weight:500; display:none; z-index:9999; max-width:360px; box-shadow:0 4px 16px rgba(0,0,0,.2); }
+  </style>
+</head>
+<body>
+  <script src="../js/api.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+  <script>Auth.requireAuth();</script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      try {
+        document.getElementById('sidebar').innerHTML = getSidebar();
+        injectChantiersSecondaryBar();
+      } catch(e) {}
+      if (typeof loadChantiersList === 'function') loadChantiersList();
+    });
+  </script>
+
+  <div class="app-container">
+    <div id="sidebar"></div>
+    <main class="main-content">
+
+      <div class="d-flex justify-between items-center mb-3" style="gap:12px;flex-wrap:wrap;">
+        <div>
+          <h1 class="mb-0">🚧 Suivi Chantier</h1>
+          <p style="color:var(--text-muted-dark);margin:4px 0 0;font-size:14px;">Dossiers réseau · Suivi d'opération · Import documents</p>
+        </div>
+        <div id="header-badges"></div>
+      </div>
+
+      <div id="initial-loading" class="loading-state">⏳ Chargement des chantiers…</div>
+
+      <div class="suivi-layout" id="suivi-layout" style="display:none;">
+
+        <!-- ── Liste chantiers ── -->
+        <div class="panel-chantiers">
+          <div class="panel-chantiers-header">
+            <input type="text" id="search-chantier" placeholder="Rechercher un chantier…" oninput="filterChantiers(this.value)">
+            <div class="chantiers-count" id="chantiers-count"></div>
+          </div>
+          <div class="chantiers-scroll" id="chantiers-list"></div>
+        </div>
+
+        <!-- ── Panneau droit ── -->
+        <div class="panel-right" id="panel-right">
+          <div class="empty-panel">
+            <div style="font-size:48px;margin-bottom:12px;">👈</div>
+            <p style="font-weight:600;">Sélectionnez un chantier</p>
+            <p style="font-size:13px;color:var(--text-muted-dark);margin-top:4px;">Cliquez sur un chantier pour accéder au suivi et aux dossiers</p>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ── Visionneuse fichier ── -->
+  <div id="viewer-overlay" onclick="closeViewer(event)">
+    <div id="viewer-box">
+      <div class="viewer-header">
+        <span class="viewer-title" id="viewer-title"></span>
+        <a id="viewer-download-btn" class="viewer-download" download>⬇ Télécharger</a>
+        <button class="viewer-close" onclick="closeViewerDirect()">✕</button>
+      </div>
+      <div class="viewer-body" id="viewer-body"></div>
+    </div>
+  </div>
+
+  <!-- ── Modal fiche chantier ── -->
+  <div id="info-modal-overlay" class="info-modal-overlay" style="display:none;" onclick="closeInfoModal(event)">
+    <div class="info-modal" id="info-modal">
+      <div class="info-modal-header">
+        <h2 id="info-modal-title">📋 Fiche chantier</h2>
+        <button class="info-modal-close" onclick="closeInfoModal()">✕</button>
+      </div>
+      <div class="info-modal-body" id="info-modal-body"></div>
+    </div>
+  </div>
+
+  <!-- ── Modal upload suivi ── -->
+  <div id="sup-overlay" class="upload-modal-overlay" style="display:none;">
+    <div class="upload-modal">
+      <div class="upload-modal-header">
+        <h3 id="sup-title">⬆ Importer un document</h3>
+        <button onclick="closeSup()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-muted-dark);">✕</button>
+      </div>
+      <div class="upload-modal-body">
+        <div id="sup-unknown" class="unknown-msg" style="display:none;">
+          📍 Destination non configurée — rangé à la racine du dossier chantier en attendant.
+        </div>
+        <div class="ufield"><label>Nom du document</label><input type="text" id="sup-label"></div>
+        <div class="ufield"><label>Date de création</label><input type="date" id="sup-date"></div>
+        <div class="ufield"><label>Fichier</label><input type="file" id="sup-file" onchange="updateSupPreview()"></div>
+        <div id="sup-preview" style="font-size:12px;color:var(--text-muted-dark);margin-bottom:8px;display:none;">
+          📄 <strong id="sup-preview-name"></strong>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" onclick="closeSup()">Annuler</button>
+          <button class="btn-primary" id="sup-btn" onclick="submitSup()">⬆ Importer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="upload-toast"></div>
+
+  <script>
+  // ══════════════════════════════════════════════════════════════
+  //  DÉFINITION DES PHASES — SUIVI D'OPÉRATION
+  // ══════════════════════════════════════════════════════════════
+  const PHASES = [
+    { id:'p1', label:"S'approprier le chantier", color:'#c0392b', bg:'#fdf3f2',
+      steps:[
+        { id:'p1_obtention',   label:'Obtention du marché' },
+        { id:'p1_transfert',   label:'Réunion de transfert — Passation Commerce/Travaux' },
+        { id:'p1_signature',   label:'Réunion — Signature du marché', children:[
+          { id:'p1_sign_dos',  label:'Signature dossier marché',  folderKey:'00_marche_1', docLabel:'Dossier marché' },
+          { id:'p1_plan_cont', label:'Planning contractuel',       folderKey:'00_marche_1', docLabel:'Planning contractuel' },
+        ]},
+        { id:'p1_comprendre',  label:'Comprendre le dossier', sublabel:'CCTP, plans, thermique, sismique, stabilité au feu…',
+          docs:[
+            { label:'CCTP',              folderKey:'00_marche_1' },
+            { label:'Plans architecte',  folderKey:'02_be' },
+            { label:'Note thermique',    folderKey:'02_be' },
+            { label:'Note sismique',     folderKey:'02_be' },
+            { label:'Stabilité au feu',  folderKey:'02_be' },
+          ]
+        },
+      ]
+    },
+    { id:'p2', label:'Lancement du chantier', color:'#d35400', bg:'#fef6f0',
+      steps:[
+        { id:'p2_r1',       label:'1ère réunion de chantier',             docs:[{ label:'CR 1ère réunion',    folderKey:null }] },
+        { id:'p2_planning', label:'Planning prévisionnel',                 docs:[{ label:'Planning prévisionnel', folderKey:'03_travaux' }] },
+        { id:'p2_pic',      label:'PIC — Plan d\'Installation de Chantier', docs:[{ label:'PIC',               folderKey:null }] },
+        { id:'p2_besoins',  label:'Liste des besoins d\'étude + Jalons',   docs:[{ label:'Liste des besoins',  folderKey:null }] },
+        { id:'p2_r2',       label:'2ème réunion de chantier',              docs:[{ label:'CR 2ème réunion',    folderKey:null }] },
+      ]
+    },
+    { id:'p3', label:'Méthodes et organisation', color:'#1a5276', bg:'#f0f4f9',
+      steps:[
+        { id:'p3_etudes', label:'Suivi des études', sublabel:'Diffusion des EXE', children:[
+          { id:'p3_ddc',     label:'1_ DDC',                            folderKey:'02_be',    docLabel:'DDC' },
+          { id:'p3_delais',  label:'2_ Délais Types',                   folderKey:null,       docLabel:'Délais Types' },
+          { id:'p3_dt',      label:'3_ Dossier Technique',              folderKey:'02_be',    docLabel:'Dossier Technique' },
+          { id:'p3_plan',    label:'4_ Plan Charpente',                  folderKey:'02_be',    docLabel:'Plan Charpente' },
+          { id:'p3_carnet',  label:'5_ Carnet de détail',               folderKey:'02_be',    docLabel:'Carnet de détail' },
+          { id:'p3_calcul',  label:'6_ Note de calcul',                 folderKey:'02_be',    docLabel:'Note de calcul' },
+          { id:'p3_spec',    label:'7_ Calcul / Détails spécifiques',   folderKey:'02_be',    docLabel:'Calcul spécifique' },
+          { id:'p3_bord',    label:'Bordereaux d\'envoi',               folderKey:null,       docLabel:'Bordereau d\'envoi' },
+          { id:'p3_visas',   label:'Suivi des visas',                   folderKey:'02_be',    docLabel:'Tableau visas' },
+        ]},
+        { id:'p3_valid',   label:'Validation des études' },
+        { id:'p3_prep', label:'Préparation chantier', sublabel:'Checklist', children:[
+          { id:'p3_levage',  label:'Mode opératoire de levage',         folderKey:null,         docLabel:'Mode opératoire levage' },
+          { id:'p3_hse',     label:'Hygiène et sécurité',               folderKey:null,         docLabel:'Plan HSE' },
+          { id:'p3_planex',  label:'Délais / Planning d\'exécution',    folderKey:'03_travaux', docLabel:'Planning exécution' },
+          { id:'p3_budget',  label:'Budget prévisionnel',               folderKey:'11_financier', docLabel:'Budget prévisionnel' },
+          { id:'p3_prorata', label:'Convention compte prorata',          folderKey:'09_prorata', docLabel:'Convention prorata' },
+          { id:'p3_ppsps',   label:'PPSPS',                             folderKey:'03_travaux', docLabel:'PPSPS' },
+          { id:'p3_3d',      label:'Vérification assemblages et modèle 3D', folderKey:'02_be', docLabel:'Modèle 3D' },
+        ]},
+        { id:'p3_passation', label:'Réunion de passation' },
+      ]
+    },
+    { id:'p4', label:'Suivi de chantier', color:'#1e8449', bg:'#f1faf5',
+      steps:[
+        { id:'p4_cmd', label:'Lancement des commandes', children:[
+          { id:'p4_compat',  label:'Compatibilité avec démarrage de pose' },
+          { id:'p4_maj1',    label:'Actualisation du planning',    folderKey:'03_travaux', docLabel:'Planning MàJ' },
+        ]},
+        { id:'p4_recep', label:'Réception des supports', children:[
+          { id:'p4_qualite', label:'Qualité supports',             folderKey:null,         docLabel:'PV qualité supports' },
+          { id:'p4_maj2',    label:'Actualisation planning',       folderKey:'03_travaux', docLabel:'Planning MàJ' },
+        ]},
+        { id:'p4_suivi', label:'Suivi chantier', children:[
+          { id:'p4_delais',  label:'Respect des délais' },
+          { id:'p4_nc',      label:'Qualité — Non-conformités et incidences', folderKey:null, docLabel:'Fiche non-conformité' },
+          { id:'p4_secu',    label:'Sécurité — Fiche analyse et ¼h sécurité', folderKey:null, docLabel:'Fiche sécurité' },
+        ]},
+        { id:'p4_fin', label:'Fin de chantier', children:[
+          { id:'p4_doe',  label:'DOE',          folderKey:'10_doe',  docLabel:'DOE' },
+          { id:'p4_pv',   label:'PV réception', folderKey:null,      docLabel:'PV réception' },
+        ]},
+        { id:'p4_rex', label:'REX', children:[
+          { id:'p4_retour', label:'Retour d\'information' },
+          { id:'p4_bilan',  label:'Résultats / Bilan', folderKey:'13_rex', docLabel:'Fiche REX' },
+        ]},
+      ]
+    },
+  ];
+
+  // ══════════════════════════════════════════════════════════════
+  //  ÉTAT GLOBAL
+  // ══════════════════════════════════════════════════════════════
+  let allChantiers = [], filteredChantiers = [];
+  let currentChantier = null, currentInfo = null;
+  let currentRel = '', viewMode = localStorage.getItem('dossiers_view') || 'grid';
+  let isDragging = false, supContext = null;
+
+  const session = Auth.getSession();
+  const isDirection = session?.role === 'direction';
+  const canEdit = isDirection || Auth.hasAccess('gc_dossiers');
+
+  const FILE_ICONS = { folder:'📁', pdf:'📄', image:'🖼️', word:'📝', excel:'📊', powerpoint:'📊', cad:'📐', video:'🎬', archive:'🗜️', email:'📧', file:'📎' };
+
+  const INFO_FIELDS = [
+    { key:'Chantier',               label:'Nom du chantier' },
+    { key:'Numéro et rue',          label:'Numéro et rue' },
+    { key:'Ville',                  label:'Ville' },
+    { key:'Code postal',            label:'Code postal' },
+    { key:'Conducteur de travaux',  label:'Conducteur de travaux' },
+    { key:'Dessinateur BE',         label:'Dessinateur BE' },
+    { key:'Date OS',                label:"Date d'OS" },
+    { key:'Date fin contractuelle', label:'Date fin contractuelle' },
+    { key:'Montant marché HT',      label:'Montant marché HT' },
+  ];
+
+  async function getToken() { if (window.serverReady) await window.serverReady; return window._serverToken; }
+
+  function normName(s) { return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
+  function escHtml(s)  { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function escStr(s)   { return String(s||'').replace(/'/g,"\\'"); }
+  function escRel(s)   { return String(s||'').replace(/'/g,"\\'"); }
+  function formatSize(b) { if(b<1024) return b+' o'; if(b<1048576) return Math.round(b/1024)+' Ko'; return (b/1048576).toFixed(1)+' Mo'; }
+  function formatDate(iso) { if(!iso) return ''; const d=new Date(iso); return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit'}); }
+
+  function showToast(msg, isErr) {
+    const t = document.getElementById('upload-toast');
+    t.textContent = msg; t.style.background = isErr ? 'var(--danger)' : 'var(--dark)';
+    t.style.display = 'block'; clearTimeout(t._t);
+    t._t = setTimeout(() => t.style.display = 'none', 4000);
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  LISTE DES CHANTIERS
+  // ══════════════════════════════════════════════════════════════
+  async function loadChantiersList() {
+    try {
+      const res = await fetch(SERVER_URL + '/dossiers/liste');
+      const data = await res.json();
+      allChantiers = data.chantiers || [];
+      filteredChantiers = [...allChantiers];
+      document.getElementById('initial-loading').style.display = 'none';
+      document.getElementById('suivi-layout').style.display = 'grid';
+      renderBadges(); renderChantiersList();
+      const nom = new URLSearchParams(window.location.search).get('chantier');
+      if (nom) { const f = allChantiers.find(c => c.nom === nom); if(f) selectChantier(f); }
+    } catch(e) { document.getElementById('initial-loading').textContent = '❌ ' + e.message; }
+  }
+
+  function renderBadges() {
+    const total = allChantiers.length;
+    const sans = allChantiers.filter(c => !c.hasInfo).length;
+    let html = `<div style="display:flex;gap:8px;align-items:center;">
+      <span style="background:#edf7ed;border:1.5px solid #7bad75;border-radius:8px;padding:6px 12px;font-size:12px;color:#1a5c30;font-weight:600;">${total} chantiers</span>`;
+    if (sans) html += `<span style="background:#fef2f2;border:1.5px solid #dc3545;border-radius:8px;padding:6px 12px;font-size:12px;color:#b91c1c;font-weight:600;cursor:pointer;" onclick="filterChantiers('__noinfo__')">⚠ ${sans} sans fiche</span>`;
+    html += '</div>';
+    document.getElementById('header-badges').innerHTML = html;
+  }
+
+  function filterChantiers(q) {
+    if (q === '__noinfo__') { filteredChantiers = allChantiers.filter(c => !c.hasInfo); document.getElementById('search-chantier').value = ''; }
+    else { const n = normName(q); filteredChantiers = n ? allChantiers.filter(c => normName(c.nom).includes(n) || normName(c.conducteur).includes(n)) : [...allChantiers]; }
+    renderChantiersList();
+  }
+
+  function renderChantiersList() {
+    const list = document.getElementById('chantiers-list');
+    const cnt  = document.getElementById('chantiers-count');
+    const sans = filteredChantiers.filter(c => !c.hasInfo).length;
+    cnt.innerHTML = `${filteredChantiers.length} / ${allChantiers.length} chantiers${sans ? ` · <span style="color:#dc3545;font-weight:600;">${sans} sans fiche</span>` : ''}`;
+    list.innerHTML = filteredChantiers.map(c => {
+      const active = currentChantier === c.nom ? ' active' : '';
+      const noInfo = !c.hasInfo;
+      return `<div class="chantier-item${active}${noInfo?' no-info':''}" onclick="selectChantier(${JSON.stringify(c).replace(/"/g,'&quot;')})">
+        <div class="chantier-item-name">${escHtml(c.nom)}</div>
+        ${c.conducteur ? `<div class="chantier-item-sub">${escHtml(c.conducteur)}</div>` : ''}
+        ${noInfo ? `<div class="chantier-missing">⚠ Fiche à renseigner</div>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  SÉLECTION D'UN CHANTIER — affiche les deux onglets
+  // ══════════════════════════════════════════════════════════════
+  async function selectChantier(c) {
+    currentChantier = c.nom; currentRel = c.nom; currentInfo = null;
+    renderChantiersList();
+    const url = new URL(window.location); url.searchParams.set('chantier', c.nom);
+    window.history.replaceState({}, '', url);
+
+    // Construire le panneau droit avec les deux onglets
+    document.getElementById('panel-right').innerHTML = `
+      <div class="chantier-header">
+        <div class="chantier-header-top">
+          <div>
+            <div class="chantier-header-name">${escHtml(c.nom)}</div>
+            ${c.conducteur ? `<div class="chantier-header-sub">👷 ${escHtml(c.conducteur)}</div>` : ''}
+          </div>
+        </div>
+        <div class="tabs">
+          <button class="tab-btn active" id="tab-btn-suivi"  onclick="switchTab('suivi')">📋 Suivi d'opération</button>
+          <button class="tab-btn"        id="tab-btn-dossier" onclick="switchTab('dossier')">📁 Dossier chantier</button>
+        </div>
+      </div>
+
+      <!-- Onglet Suivi -->
+      <div class="tab-content active" id="tab-suivi">${renderSuiviHTML(c)}</div>
+
+      <!-- Onglet Dossier -->
+      <div class="tab-content" id="tab-dossier">
+        <div class="explorer-header">
+          <button class="btn-back" id="btn-back" onclick="goBack()" style="display:none;">← Retour</button>
+          <div class="breadcrumb" id="breadcrumb"></div>
+          <div class="view-toggle">
+            <button class="view-btn${viewMode==='grid'?' active':''}" id="btn-view-grid" onclick="setViewMode('grid')" title="Grille">⊞</button>
+            <button class="view-btn${viewMode==='list'?' active':''}" id="btn-view-list" onclick="setViewMode('list')" title="Liste">☰</button>
+          </div>
+          <button class="btn-fiche-info no-info" id="btn-fiche" onclick="openInfoModal()" style="display:none;">📋 Fiche</button>
+          <button class="btn-upload" id="btn-upload" onclick="triggerUpload()" style="display:none;">⬆ Importer</button>
+          <input type="file" id="file-input" multiple style="display:none;" onchange="handleFileSelect(this.files)">
+        </div>
+        <div style="position:relative;" id="files-wrapper">
+          <div id="files-grid" class="files-grid"></div>
+          <div id="drop-overlay" class="drop-overlay" style="display:none;"><div class="drop-overlay-text">📂 Déposez ici pour importer</div></div>
+        </div>
+      </div>`;
+
+    // Charger les fichiers + la fiche en parallèle
+    browseFolder(c.nom);
+    loadInfoPanel(c);
+  }
+
+  function switchTab(tab) {
+    ['suivi','dossier'].forEach(t => {
+      document.getElementById('tab-'+t)?.classList.toggle('active', t===tab);
+      document.getElementById('tab-btn-'+t)?.classList.toggle('active', t===tab);
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  ONGLET SUIVI
+  // ══════════════════════════════════════════════════════════════
+  function renderSuiviHTML(c) {
+    let html = '';
+    PHASES.forEach(phase => {
+      const stepCount = countLeafs(phase.steps);
+      html += `<div class="phase">
+        <div class="phase-header" onclick="togglePhase('${phase.id}')"
+             style="background:${phase.bg};border-left-color:${phase.color};">
+          <div class="phase-label" style="color:${phase.color}">${phase.label}</div>
+          <div class="phase-count" style="color:${phase.color}">${stepCount} étapes</div>
+          <div class="phase-arrow open" id="arrow-${phase.id}" style="color:${phase.color}">▼</div>
+        </div>
+        <div class="phase-body open" id="body-${phase.id}">`;
+      phase.steps.forEach(s => { html += renderStep(s, phase.color, phase.bg); });
+      html += `</div></div>`;
+    });
+    return html;
+  }
+
+  function countLeafs(steps) {
+    let n = 0;
+    steps.forEach(s => s.children ? n += s.children.length : n++);
+    return n;
+  }
+
+  function colorAlpha(hex, alpha) {
+    const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+
+  function renderStep(step, color, bg) {
+    if (step.children) {
+      let html = `<div class="step-group">
+        <div class="step-group-header">
+          <div class="step-group-bullet" style="background:${color}"></div>
+          <div>
+            <div class="step-group-label">${escHtml(step.label)}</div>
+            ${step.sublabel?`<div class="step-group-sublabel">${escHtml(step.sublabel)}</div>`:''}
+          </div>
+        </div>
+        <div class="step-children" style="border-left-color:${colorAlpha(color,.25)};">`;
+      step.children.forEach(child => { html += renderLeafStep(child, color, true); });
+      html += `</div></div>`;
+      return html;
+    }
+    // Étape solo sans enfants
+    return renderLeafStep(step, color, false);
+  }
+
+  function renderLeafStep(step, color, isChild) {
+    const allDocs = [];
+    if (step.docs) allDocs.push(...step.docs);
+    if (step.folderKey !== undefined) allDocs.push({ label: step.docLabel || step.label, folderKey: step.folderKey });
+
+    const docsHtml = allDocs.map(d => {
+      const isUnknown = d.folderKey === null;
+      const btnStyle = isUnknown ? '' : `background:${colorAlpha(color,.08)};color:${color};border-color:${colorAlpha(color,.35)};`;
+      return `<button class="btn-doc${isUnknown?' unknown':''}" style="${btnStyle}"
+        onclick="openSup('${escStr(step.id)}','${escStr(d.folderKey||'')}','${escStr(d.label)}',event)"
+        title="${isUnknown?'Destination non configurée — rangé à la racine en attendant':''}">
+        ${isUnknown?'📍':'⬆'} ${escHtml(d.label)}
+      </button>`;
+    }).join('');
+
+    const cls = isChild ? 'step child' : 'step';
+    return `<div class="${cls}">
+      <div class="step-bullet" style="background:${color};opacity:${isChild?.5:1};"></div>
+      <div class="step-content">
+        <div class="step-label">${escHtml(step.label)}</div>
+        ${step.sublabel?`<div class="step-sublabel">${escHtml(step.sublabel)}</div>`:''}
+        ${allDocs.length?`<div class="step-docs">${docsHtml}</div>`:''}
+      </div>
+    </div>`;
+  }
+
+  function togglePhase(id) {
+    document.getElementById('body-'+id)?.classList.toggle('open');
+    document.getElementById('arrow-'+id)?.classList.toggle('open');
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  ONGLET DOSSIER — Explorateur fichiers
+  // ══════════════════════════════════════════════════════════════
+  async function browseFolder(rel) {
+    currentRel = rel;
+    document.getElementById('btn-upload').style.display = canEdit ? 'flex' : 'none';
+    renderBreadcrumb(rel);
+    const grid = document.getElementById('files-grid');
+    grid.innerHTML = '<div class="loading-state" style="padding:30px;">⏳ Chargement…</div>';
+    try {
+      const res = await fetch(`${SERVER_URL}/dossiers/contenu?rel=${encodeURIComponent(rel)}`);
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+      renderFiles(data.items);
+    } catch(e) {
+      grid.innerHTML = `<div class="empty-state"><div class="icon">⚠</div><p>${e.message}</p></div>`;
+    }
+  }
+
+  function setViewMode(mode) {
+    viewMode = mode; localStorage.setItem('dossiers_view', mode);
+    document.getElementById('btn-view-grid')?.classList.toggle('active', mode==='grid');
+    document.getElementById('btn-view-list')?.classList.toggle('active', mode==='list');
+    const c = document.getElementById('files-grid');
+    if (c?._items) renderFiles(c._items);
+  }
+
+  function renderFiles(items) {
+    const c = document.getElementById('files-grid');
+    c._items = items;
+    if (!items.length) { c.className='files-grid'; c.innerHTML='<div class="empty-state" style="padding:40px;"><div class="icon">📭</div><p>Dossier vide</p></div>'; return; }
+    if (viewMode === 'list') {
+      c.className = 'files-list';
+      c.innerHTML = items.map(item => {
+        const icon = FILE_ICONS[item.type]||'📎';
+        const onclick = item.isDir ? `browseFolder('${escRel(currentRel+'/'+item.name)}')` : `openFile('${escRel(currentRel+'/'+item.name)}','${escStr(item.name)}','${item.type}')`;
+        return `<div class="file-row${item.isDir?' folder':''}" onclick="${onclick}" title="${escStr(item.name)}">
+          <span class="row-icon">${icon}</span>
+          <span class="row-name">${escHtml(item.name)}</span>
+          <span class="row-size">${item.isDir?'':formatSize(item.size)}</span>
+          <span class="row-date">${item.modified?formatDate(item.modified):''}</span>
+        </div>`;
+      }).join('');
+    } else {
+      c.className = 'files-grid';
+      c.innerHTML = items.map(item => {
+        const icon = FILE_ICONS[item.type]||'📎';
+        const meta = item.isDir ? '' : formatSize(item.size);
+        const dateStr = item.modified ? formatDate(item.modified) : '';
+        const onclick = item.isDir ? `browseFolder('${escRel(currentRel+'/'+item.name)}')` : `openFile('${escRel(currentRel+'/'+item.name)}','${escStr(item.name)}','${item.type}')`;
+        return `<div class="file-card${item.isDir?' folder':''}" onclick="${onclick}" title="${escStr(item.name)}">
+          <div class="file-icon">${icon}</div>
+          <div class="file-name">${escHtml(item.name)}</div>
+          ${meta||dateStr?`<div class="file-meta">${[meta,dateStr].filter(Boolean).join(' · ')}</div>`:''}
+        </div>`;
+      }).join('');
+    }
+  }
+
+  function renderBreadcrumb(rel) {
+    const parts = rel.split('/').filter(Boolean);
+    document.getElementById('btn-back').style.display = parts.length > 1 ? 'flex' : 'none';
+    let html = '', acc = '';
+    parts.forEach((p,i) => {
+      acc += (acc?'/':'') + p;
+      const captured = acc;
+      if (i>0) html += `<span class="breadcrumb-sep">›</span>`;
+      const isCur = i===parts.length-1;
+      const short = p.length>22 ? p.substring(0,20)+'…' : p;
+      html += `<span class="breadcrumb-part${isCur?' current':''}" ${isCur?'':` onclick="browseFolder('${escRel(captured)}')" title="${escStr(p)}"`}>${escHtml(short)}</span>`;
+    });
+    document.getElementById('breadcrumb').innerHTML = html;
+  }
+
+  function goBack() {
+    const parts = currentRel.split('/').filter(Boolean);
+    if (parts.length > 1) browseFolder(parts.slice(0,-1).join('/'));
+  }
+
+  // Visionneuse
+  function openFile(rel, name, type) {
+    const url = `${SERVER_URL}/dossiers/fichier?rel=${encodeURIComponent(rel)}`;
+    const body = document.getElementById('viewer-body');
+    body.innerHTML = type==='pdf' ? `<iframe src="${url}#toolbar=1" style="width:100%;height:100%;border:none;"></iframe>`
+      : type==='image' ? `<img src="${url}" style="max-width:100%;max-height:100%;object-fit:contain;padding:16px;">`
+      : `<div style="text-align:center;padding:40px;"><div style="font-size:64px;margin-bottom:16px;">${FILE_ICONS[type]||'📎'}</div><p>${escHtml(name)}</p><a href="${url}" download="${escHtml(name)}" class="viewer-download">⬇ Télécharger</a></div>`;
+    document.getElementById('viewer-title').textContent = name;
+    document.getElementById('viewer-download-btn').href = url;
+    document.getElementById('viewer-download-btn').download = name;
+    document.getElementById('viewer-overlay').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+  function closeViewer(e) { if(e.target===document.getElementById('viewer-overlay')) closeViewerDirect(); }
+  function closeViewerDirect() { document.getElementById('viewer-overlay').style.display='none'; document.getElementById('viewer-body').innerHTML=''; document.body.style.overflow=''; }
+
+  // Upload dossier
+  function triggerUpload() { document.getElementById('file-input').click(); }
+  function handleFileSelect(files) { if(!files?.length) return; uploadDossierFiles(Array.from(files)); document.getElementById('file-input').value=''; }
+  async function uploadDossierFiles(files) {
+    const token = await getToken();
+    showToast(`⬆ Envoi de ${files.length} fichier(s)…`);
+    const fd = new FormData();
+    files.forEach(f => fd.append('fichiers', f));
+    try {
+      const res = await fetch(`${SERVER_URL}/dossiers/upload?rel=${encodeURIComponent(currentRel)}`,{method:'POST',headers:{'x-goudalle-token':token},body:fd});
+      const data = await res.json();
+      if (data.readonly) { showToast('⚠️ Partage réseau en lecture seule — déposez via l\'Explorateur Windows.',true); return; }
+      if (!data.success) throw new Error(data.error);
+      showToast(`✅ ${data.saved?.length||0} fichier(s) importé(s)`);
+      browseFolder(currentRel);
+    } catch(e) { showToast('❌ '+e.message,true); }
+  }
+
+  // Drag & drop
+  document.addEventListener('dragover', e => {
+    const w = document.getElementById('files-wrapper');
+    if (!w || !w.contains(e.target) || !currentChantier || !canEdit) return;
+    e.preventDefault(); if (!isDragging) { isDragging=true; document.getElementById('drop-overlay').style.display='flex'; }
+  });
+  document.addEventListener('dragleave', e => {
+    const w = document.getElementById('files-wrapper');
+    if (!w || !w.contains(e.relatedTarget)) { isDragging=false; const d=document.getElementById('drop-overlay'); if(d) d.style.display='none'; }
+  });
+  document.addEventListener('drop', e => {
+    const w = document.getElementById('files-wrapper');
+    if (!w || !currentChantier || !canEdit) return;
+    e.preventDefault(); isDragging=false; const d=document.getElementById('drop-overlay'); if(d) d.style.display='none';
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length) uploadDossierFiles(files);
+  });
+
+  // ══════════════════════════════════════════════════════════════
+  //  FICHE CHANTIER (MODAL)
+  // ══════════════════════════════════════════════════════════════
+  async function loadInfoPanel(c) {
+    const res = await fetch(`${SERVER_URL}/dossiers/info?rel=${encodeURIComponent(c.nom)}`);
+    const data = await res.json();
+    currentInfo = data.info;
+    const hasData = INFO_FIELDS.some(f => currentInfo?.[f.key]);
+    const btn = document.getElementById('btn-fiche');
+    if (btn) {
+      btn.style.display = 'flex';
+      btn.className = 'btn-fiche-info ' + (hasData ? 'has-info' : 'no-info');
+      btn.innerHTML = hasData ? '📋 Fiche' : '📋 Fiche — à renseigner';
+    }
+  }
+
+  function openInfoModal() {
+    document.getElementById('info-modal-title').textContent = `📋 ${currentChantier||'Fiche chantier'}`;
+    document.getElementById('info-modal-body').innerHTML = buildInfoModalContent();
+    document.getElementById('info-modal-overlay').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+  function closeInfoModal(e) {
+    if (e && e.target !== document.getElementById('info-modal-overlay')) return;
+    document.getElementById('info-modal-overlay').style.display = 'none';
+    document.body.style.overflow = '';
+  }
+
+  function buildInfoModalContent() {
+    const info = currentInfo || {};
+    const hasData = INFO_FIELDS.some(f => info[f.key]);
+    if (canEdit) {
+      let html = `<div class="info-grid" id="info-form">`;
+      INFO_FIELDS.forEach(f => {
+        const isDate = f.key==='Date OS'||f.key==='Date fin contractuelle';
+        const val = isDate ? toInputDate(info[f.key]||'') : (info[f.key]||'');
+        html += `<div class="info-field"><label>${escHtml(f.label)}</label>
+          <input type="${isDate?'date':'text'}" id="inf_${f.key.replace(/\s/g,'_').replace(/'/g,'')}" value="${escHtml(val)}" placeholder="${escHtml(f.label)}">
+        </div>`;
+      });
+      html += `</div><div style="margin-top:16px;display:flex;justify-content:flex-end;">
+        <button onclick="saveInfoChantier()" style="padding:7px 18px;background:var(--accent);color:white;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;">💾 Enregistrer</button>
+      </div>`;
+      return html;
+    } else if (hasData) {
+      let html = `<div class="info-grid">`;
+      INFO_FIELDS.forEach(f => { if(info[f.key]) html += `<div class="info-field"><label>${escHtml(f.label)}</label><div class="info-value">${escHtml(info[f.key])}</div></div>`; });
+      return html + '</div>';
+    }
+    return `<p style="color:var(--text-muted-dark);font-size:13px;">Aucune information renseignée.</p>`;
+  }
+
+  function toInputDate(v) {
+    if (!v) return ''; const s=String(v).trim();
+    let m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/); if(m) return s;
+    m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); if(m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+    return '';
+  }
+
+  async function saveInfoChantier() {
+    const fields = {};
+    INFO_FIELDS.forEach(f => { const id='inf_'+f.key.replace(/\s/g,'_').replace(/'/g,''); fields[f.key]=document.getElementById(id)?.value||''; });
+    const token = await getToken();
+    try {
+      const res = await fetch(`${SERVER_URL}/dossiers/info?rel=${encodeURIComponent(currentChantier)}`,{method:'PUT',headers:{'Content-Type':'application/json','x-goudalle-token':token},body:JSON.stringify(fields)});
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+      currentInfo = {...fields};
+      document.getElementById('info-modal-overlay').style.display='none'; document.body.style.overflow='';
+      const btn=document.getElementById('btn-fiche'); if(btn){btn.className='btn-fiche-info has-info';btn.innerHTML='📋 Fiche';}
+      showToast('✅ Fiche enregistrée');
+      const ficheComplete = !!(fields['Conducteur de travaux']&&fields['Date OS']&&fields['Date fin contractuelle']&&(fields['Numéro et rue']||fields['Ville']));
+      const idx=allChantiers.findIndex(c=>c.nom===currentChantier);
+      if(idx>=0){allChantiers[idx]={...allChantiers[idx],...fields,conducteur:fields['Conducteur de travaux'],hasInfo:ficheComplete};filteredChantiers=[...allChantiers];renderChantiersList();}
+    } catch(e) { showToast('❌ '+e.message,true); }
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  UPLOAD SUIVI (modal)
+  // ══════════════════════════════════════════════════════════════
+  function openSup(stepId, folderKey, docLabel, e) {
+    e.stopPropagation();
+    supContext = { stepId, folderKey:folderKey||null, docLabel };
+    document.getElementById('sup-title').textContent = '⬆ Importer — ' + docLabel;
+    document.getElementById('sup-label').value = docLabel;
+    document.getElementById('sup-date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('sup-file').value = '';
+    document.getElementById('sup-preview').style.display = 'none';
+    document.getElementById('sup-unknown').style.display = !folderKey ? 'block' : 'none';
+    document.getElementById('sup-overlay').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+  function closeSup() { document.getElementById('sup-overlay').style.display='none'; document.body.style.overflow=''; supContext=null; }
+  function updateSupPreview() {
+    const label=document.getElementById('sup-label').value.trim();
+    const dateRaw=document.getElementById('sup-date').value;
+    const file=document.getElementById('sup-file').files[0];
+    if(!label||!dateRaw||!file){document.getElementById('sup-preview').style.display='none';return;}
+    const dateStr=dateRaw.split('-').reverse().join('-');
+    const ext=file.name.split('.').pop();
+    document.getElementById('sup-preview-name').textContent=`${label}_${currentChantier}_${dateStr}.${ext}`;
+    document.getElementById('sup-preview').style.display='block';
+  }
+  async function submitSup() {
+    const label=document.getElementById('sup-label').value.trim();
+    const dateRaw=document.getElementById('sup-date').value;
+    const file=document.getElementById('sup-file').files[0];
+    if(!label||!dateRaw||!file){showToast('⚠ Remplissez tous les champs',true);return;}
+    const btn=document.getElementById('sup-btn'); btn.disabled=true; btn.textContent='⏳…';
+    const dateStr=dateRaw.split('-').reverse().join('-');
+    const params=new URLSearchParams({rel:currentChantier,folderKey:supContext?.folderKey||'',label,date:dateStr});
+    const fd=new FormData(); fd.append('fichier',file);
+    try {
+      const token=await getToken();
+      const res=await fetch(`${SERVER_URL}/dossiers/suivi/upload?`+params,{method:'POST',headers:{'x-goudalle-token':token},body:fd});
+      const data=await res.json();
+      if(!data.success) throw new Error(data.error);
+      closeSup();
+      showToast(`✅ ${data.filename} → ${data.unknown?'racine du dossier':data.folder}`);
+    } catch(e){showToast('❌ '+e.message,true);}
+    finally{btn.disabled=false;btn.textContent='⬆ Importer';}
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  //  KEYBOARD
+  // ══════════════════════════════════════════════════════════════
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    if (document.getElementById('sup-overlay').style.display!=='none') { closeSup(); return; }
+    if (document.getElementById('info-modal-overlay').style.display!=='none') { closeInfoModal(); return; }
+    closeViewerDirect();
+  });
+  </script>
+
+  <footer class="site-footer"></footer>
+</body>
+</html>

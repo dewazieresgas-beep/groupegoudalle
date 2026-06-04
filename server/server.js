@@ -76,6 +76,7 @@ const FILE_TO_PERM = {
   'chantiers-charpente.html':                  'chantiers_charpente',
   'chantiers-maconnerie.html':                 'chantiers_maconnerie',
   'chantiers-vue-globale.html':                'chantiers_vue_globale',
+  'chantiers-suivi.html':                      'gc_dossiers',
   'commerce-indicateurs.html':                 'commerce_indicateurs',
   'commerce-liaison.html':                     'commerce_liaison',
   'compta-indicateurs.html':                   'compta_indicateurs',
@@ -3931,15 +3932,16 @@ const EXCEL_INFO_FILENAME = '00_ Infos général chantier.xlsx';
 
 // Mapping label Excel → clé DB
 const EXCEL_LABEL_TO_KEY = {
-  'Nom du chantier':                    'Chantier',
-  'Adresse (n° rue, ville, code postal)': 'Adresse',
-  'Conducteur de travaux':              'Conducteur de travaux',
-  'Dessinateur BE':                     'Dessinateur BE',
-  "Date d'OS":                          'Date OS',
-  'Date fin contractuelle':             'Date fin contractuelle',
-  'Montant marché HT':                  'Montant marché HT',
+  'Nom du chantier':         'Chantier',
+  'Numéro et rue':           'Numéro et rue',
+  'Ville':                   'Ville',
+  'Code postal':             'Code postal',
+  'Conducteur de travaux':   'Conducteur de travaux',
+  'Dessinateur BE':          'Dessinateur BE',
+  "Date d'OS":               'Date OS',
+  'Date fin contractuelle':  'Date fin contractuelle',
+  'Montant marché HT':       'Montant marché HT',
 };
-const EXCEL_KEY_TO_LABEL = Object.fromEntries(Object.entries(EXCEL_LABEL_TO_KEY).map(([l, k]) => [k, l]));
 
 // Cache liste des chantiers (TTL 5 min)
 let _dossiersListCache = { data: null, cachedAt: 0 };
@@ -4006,29 +4008,11 @@ function readExcelInfoChantier(nomDossier) {
   } catch { return null; }
 }
 
-function readLegacyInfoChantier(nomDossier) {
-  const legacyPath = path.join(DOSSIERS_BASE, nomDossier, 'info-chantier.xlsx');
-  if (!fs.existsSync(legacyPath)) return null;
-  try {
-    const wb = XLSX.readFile(legacyPath, { cellDates: true });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-    const info = {};
-    rows.forEach(([label, value]) => {
-      if (label) info[String(label).trim()] = value !== undefined ? String(value).trim() : '';
-    });
-    return hasAnyInfo(info) ? info : null;
-  } catch { return null; }
-}
-
 function readInfoChantier(nomDossier) {
-  // Legacy < DB site < Excel manuel, champ par champ.
-  // Important : la DB contient désormais souvent seulement "Chantier" pré-rempli.
-  // Une adresse ajoutée ensuite dans l'Excel doit donc prendre le dessus.
-  const legacyInfo = readLegacyInfoChantier(nomDossier);
+  // DB site < Excel manuel (l'Excel prend le dessus sur la DB pour les champs remplis manuellement)
   const excelInfo = readExcelInfoChantier(nomDossier);
   const dbInfo = getDbInfoChantier(nomDossier);
-  const merged = mergeInfo(legacyInfo, dbInfo, excelInfo);
+  const merged = mergeInfo(dbInfo, excelInfo);
   return hasAnyInfo(merged) ? merged : null;
 }
 
@@ -4069,10 +4053,20 @@ async function geocodeAndStoreChantier(nomDossier, info) {
   const lat = parseCoordinate(info?.Latitude);
   const lng = parseCoordinate(info?.Longitude);
   if (lat !== null && lng !== null) return { lat, lng };
-  const address = info?.Adresse;
-  if (!address) return null;
 
-  const found = await geocodeAddress(address);
+  const rue   = info?.['Numéro et rue'] || '';
+  const ville = info?.Ville || '';
+  const cp    = info?.['Code postal'] || '';
+  const adresseFull  = [rue, cp && ville ? `${cp} ${ville}` : ville || cp].filter(Boolean).join(', ');
+  const adresseVille = [cp && ville ? `${cp} ${ville}` : ville || cp].filter(Boolean).join(', ');
+  if (!adresseFull) return null;
+
+  // Essai 1 : adresse complète
+  let found = await geocodeAddress(adresseFull);
+  // Fallback : juste code postal + ville si la rue n'est pas reconnue
+  if (!found && adresseVille && adresseVille !== adresseFull) {
+    found = await geocodeAddress(adresseVille);
+  }
   if (!found) return null;
 
   const dbInfo = getDbInfoChantier(nomDossier) || {};
@@ -4085,17 +4079,19 @@ async function geocodeAndStoreChantier(nomDossier, info) {
   return found;
 }
 
-// Écriture des infos dans l'Excel du dossier (best-effort, préserve la mise en forme)
-function parseInfoDate(value) {
+function formatDateFR(value) {
   if (!value) return '';
-  if (value instanceof Date) return value;
   const s = String(value).trim();
-  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (m) return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
-  m = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
-  if (m) return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+  // Déjà dd/mm/yyyy
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
+  // ISO yyyy-mm-dd (format input[type=date])
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+  // Objet Date ou chaîne parseable
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) {
+    return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
+  }
   return s;
 }
 
@@ -4105,34 +4101,13 @@ async function writeInfoToExcel(nomDossier, fields) {
   try {
     const wb = await XlsxPopulate.fromFileAsync(xlsxPath);
     const ws = wb.sheet(0);
-    // Parcourir les lignes, trouver les labels colonne A et mettre la valeur en colonne B
     for (let r = 1; r <= 15; r++) {
       const label = ws.cell(r, 1).value();
       if (!label) continue;
       const key = EXCEL_LABEL_TO_KEY[String(label).trim()];
-      if (key !== undefined) {
-        const cell = ws.cell(r, 2);
-        const value = key === 'Date OS' || key === 'Date fin contractuelle'
-          ? parseInfoDate(fields[key])
-          : (fields[key] || '');
-        cell.value(value);
-        if (key === 'Date OS' || key === 'Date fin contractuelle') {
-          cell.style('numberFormat', 'dd/mm/yyyy');
-          cell.dataValidation({
-            type: 'date',
-            allowBlank: true,
-            showInputMessage: true,
-            promptTitle: 'Date',
-            prompt: 'Choisir ou saisir une date au format jj/mm/aaaa',
-            showErrorMessage: true,
-            errorTitle: 'Date invalide',
-            error: 'Veuillez saisir une date valide.',
-            operator: 'between',
-            formula1: 'DATE(2000,1,1)',
-            formula2: 'DATE(2100,12,31)',
-          });
-        }
-      }
+      if (key === undefined) continue;
+      const isDate = key === 'Date OS' || key === 'Date fin contractuelle';
+      ws.cell(r, 2).value(isDate ? formatDateFR(fields[key]) : (fields[key] || ''));
     }
     await wb.toFileAsync(xlsxPath);
   } catch (e) {
@@ -4181,13 +4156,15 @@ app.get('/api/dossiers/liste', async (req, res) => {
       chantiers.push({
         nom: entry.name,
         chantier: info['Chantier'] || entry.name,
-        adresse: info['Adresse'] || '',
+        rue: info['Numéro et rue'] || '',
+        ville: info['Ville'] || '',
+        codePostal: info['Code postal'] || '',
         conducteur: info['Conducteur de travaux'] || '',
         dessinateur: info['Dessinateur BE'] || '',
         dateOS: info['Date OS'] || '',
         dateFin: info['Date fin contractuelle'] || '',
         montantHT: info['Montant marché HT'] || '',
-        hasInfo: !!info['Chantier'],
+        hasInfo: !!(info['Conducteur de travaux'] && info['Date OS'] && info['Date fin contractuelle'] && (info['Numéro et rue'] || info['Ville'])),
       });
     }
 
@@ -4217,7 +4194,11 @@ app.get('/api/dossiers/carte', async (req, res) => {
       if (entry.name.startsWith('0 ') || entry.name.startsWith('1 ')) continue;
 
       let info = readInfoChantier(entry.name) || {};
-      if (!info['Adresse']) continue;
+      const rue = info['Numéro et rue'] || '';
+      const ville = info['Ville'] || '';
+      const cp = info['Code postal'] || '';
+      const adresseComplete = [rue, [cp, ville].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+      if (!adresseComplete) continue;
       totalWithAddress++;
 
       let lat = parseCoordinate(info.Latitude);
@@ -4241,7 +4222,7 @@ app.get('/api/dossiers/carte', async (req, res) => {
         id: encodeURIComponent(entry.name),
         dossier: entry.name,
         nom: info['Chantier'] || entry.name,
-        adresse: info['Adresse'] || '',
+        adresse: adresseComplete,
         conducteur: info['Conducteur de travaux'] || '',
         dessinateur: info['Dessinateur BE'] || '',
         dateOS: info['Date OS'] || '',
@@ -4400,6 +4381,84 @@ app.get('/api/dossiers/info', (req, res) => {
 
   const info = readInfoChantier(rel);
   res.json({ success: true, info: info || null });
+});
+
+// ─── SUIVI D'OPÉRATION ──────────────────────────────────────────────────────
+
+// Résolution des dossiers de destination par préfixe
+const SUIVI_FOLDER_RESOLVERS = {
+  '00_marche_1':  (dir) => findSuiviFolder(dir, '00_', '1'),
+  '02_be':        (dir) => findSuiviFolder(dir, '02_'),
+  '03_travaux':   (dir) => findSuiviFolder(dir, '03_'),
+  '09_prorata':   (dir) => findSuiviFolder(dir, '09_'),
+  '10_doe':       (dir) => findSuiviFolder(dir, '10_'),
+  '11_financier': (dir) => findSuiviFolder(dir, '11_'),
+  '13_rex':       (dir) => findSuiviFolder(dir, '13_'),
+};
+
+async function findSuiviFolder(chantierDir, prefix, subPrefix) {
+  try {
+    const entries = await fs.promises.readdir(chantierDir, { withFileTypes: true });
+    const main = entries.find(e => e.isDirectory() && e.name.startsWith(prefix));
+    if (!main) return null;
+    if (!subPrefix) return path.join(chantierDir, main.name);
+    const mainPath = path.join(chantierDir, main.name);
+    const subs = await fs.promises.readdir(mainPath, { withFileTypes: true });
+    const sub = subs.find(e => e.isDirectory() && e.name.startsWith(subPrefix));
+    return sub ? path.join(mainPath, sub.name) : mainPath;
+  } catch { return null; }
+}
+
+// GET /api/dossiers/suivi?rel=BOURBOURG
+app.get('/api/dossiers/suivi', (req, res) => {
+  const rel = (req.query.rel || '').split('/')[0];
+  if (!rel) return res.status(400).json({ success: false, error: 'Nom manquant' });
+  const all = dbGet('dossiers_suivi', {});
+  res.json({ success: true, suivi: all[rel] || {} });
+});
+
+// PUT /api/dossiers/suivi?rel=BOURBOURG — sauvegarde l'état de la checklist
+app.put('/api/dossiers/suivi', requireToken, (req, res) => {
+  const rel = (req.query.rel || '').split('/')[0];
+  if (!rel) return res.status(400).json({ success: false, error: 'Nom manquant' });
+  const all = dbGet('dossiers_suivi', {});
+  all[rel] = req.body || {};
+  dbSet('dossiers_suivi', all);
+  res.json({ success: true });
+});
+
+// POST /api/dossiers/suivi/upload — import document + renommage + rangement
+app.post('/api/dossiers/suivi/upload', requireToken, _dossiersUpload.single('fichier'), async (req, res) => {
+  const rel       = (req.query.rel || '').split('/')[0];
+  const folderKey = req.query.folderKey || null;   // null = destination inconnue
+  const docLabel  = String(req.query.label || 'Document').replace(/[<>:"/\\|?*]/g, '').trim();
+  const dateStr   = String(req.query.date  || '').replace(/\//g, '-');
+
+  if (!rel || !req.file) return res.status(400).json({ success: false, error: 'Paramètres manquants' });
+
+  const chantierDir = path.join(DOSSIERS_BASE, rel);
+  const ext = path.extname(req.file.originalname);
+  const safeName = `${docLabel}_${rel}_${dateStr}${ext}`;
+
+  let destDir = chantierDir;
+  let unknown = false;
+
+  if (folderKey && SUIVI_FOLDER_RESOLVERS[folderKey]) {
+    const resolved = await SUIVI_FOLDER_RESOLVERS[folderKey](chantierDir);
+    if (resolved) destDir = resolved;
+    else { destDir = chantierDir; unknown = true; }
+  } else if (!folderKey) {
+    unknown = true;
+  }
+
+  try {
+    await fs.promises.writeFile(path.join(destDir, safeName), req.file.buffer);
+    const relDest = path.relative(chantierDir, destDir) || '.';
+    res.json({ success: true, filename: safeName, folder: relDest, unknown });
+  } catch (e) {
+    if (e.code === 'EPERM') return res.status(403).json({ success: false, error: 'Partage réseau en lecture seule' });
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 // /api/health expose le token de sécurité uniquement aux clients du réseau local.
