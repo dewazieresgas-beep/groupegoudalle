@@ -80,7 +80,8 @@
       "PowerShell(Get-Process | Where-Object { $_.Name -in @\\(\"node\",\"nodemon\",\"powershell\",\"pwsh\"\\) } | Select-Object Id, Name, CPU, StartTime, @{N='Command';E={$_.CommandLine}} | Format-Table -AutoSize -Wrap)",
       "PowerShell(Get-ChildItem \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\" -Depth 1 -File | Where-Object { $_.Extension -in @\\(\".js\",\".ps1\",\".bat\",\".cmd\",\".vbs\"\\) } | Select-Object Name, LastWriteTime)",
       "Bash(powershell -Command \"if \\(Test-Path 'W:\\\\\\\\BCHDF\\\\\\\\Site Intranet Groupe Goudalle\\\\\\\\Compte site intranet.xlsx'\\) { Write-Output 'File exists' } else { Write-Output 'File not found' }\")",
-      "Bash(grep -n \"Y:\\\\\\\\\\\\|W:\\\\\\\\\\\\|X:\\\\\\\\\\\\|Z:\\\\\\\\\\\\|readdir\\\\|statSync\" \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\\\\server\\\\server.js\")"
+      "Bash(grep -n \"Y:\\\\\\\\\\\\|W:\\\\\\\\\\\\|X:\\\\\\\\\\\\|Z:\\\\\\\\\\\\|readdir\\\\|statSync\" \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\\\\server\\\\server.js\")",
+      "WebSearch"
     ],
     "additionalDirectories": [
       "\\tmp",
