@@ -31,6 +31,7 @@
             Tous les dossiers chantier avec une adresse renseignée dans 00_ Infos général chantier.xlsx.
           </p>
         </div>
+        <button onclick="loadData(true)" title="Forcer le rechargement depuis le réseau" style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--lighter);cursor:pointer;font-size:12px;color:var(--text-muted-dark);">🔄 Actualiser</button>
       </div>
 
       <div id="stats-row" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;"></div>
@@ -122,6 +123,17 @@
       window.scrollTo({ top: document.getElementById('map').getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
     }
 
+    async function loadData(force = false) {
+      try {
+        const data = await apiGet('/dossiers/carte' + (force ? '?refresh=1' : ''));
+        allChantiers = data?.chantiers || [];
+        totalWithAddress = data?.totalWithAddress || allChantiers.length;
+        render();
+      } catch (e) {
+        document.getElementById('map-note').textContent = `Impossible de charger les dossiers chantier : ${e.message || 'Erreur inconnue'}`;
+      }
+    }
+
     async function init() {
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectChantiersSecondaryBar();
@@ -132,14 +144,7 @@
         maxZoom: 19,
       }).addTo(map);
 
-      try {
-        const data = await apiGet('/dossiers/carte');
-        allChantiers = data?.chantiers || [];
-        totalWithAddress = data?.totalWithAddress || allChantiers.length;
-        render();
-      } catch (e) {
-        document.getElementById('map-note').textContent = `Impossible de charger les dossiers chantier : ${e.message || 'Erreur inconnue'}`;
-      }
+      await loadData();
     }
 
     window.onServerReady(init);

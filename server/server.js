@@ -298,7 +298,7 @@ async function writeAccountsExcel(users) {
         hCell.value(colName);
         try { hCell.style({ bold: true, fill: { type: 'solid', color: 'DEEBF7' }, wrapText: true }); } catch {}
         for (let r = 2; r <= lastRow; r++) ws.cell(r, lastCol).value('non');
-        console.log(`[Comptes] Colonne ${colName} ajoutée dans ${company}`);
+        console.log(`[Comptes] ➕ Nouvelle colonne "${colName}" dans ${company}`);
       }
 
       // ── Mettre à jour les lignes existantes ──
@@ -351,7 +351,7 @@ async function writeAccountsExcel(users) {
         });
 
         seenIds.add(id.toLowerCase());
-        console.log(`[Comptes] Utilisateur ${id} ajouté dans ${company}`);
+        console.log(`[Comptes] ➕ Nouvel utilisateur "${id}" ajouté dans ${company}`);
       }
     }
 
@@ -949,21 +949,13 @@ app.post('/api/login', (req, res) => {
   }
   const users = readAccountsExcel();
   const keys = Object.keys(users);
-  console.log(`[Login] tentative: "${username}" | ${keys.length} comptes chargés | clés: [${keys.slice(0, 10).join(', ')}]`);
   const matchedKey = keys.find(k => k.toLowerCase() === String(username).toLowerCase());
   const user = matchedKey ? users[matchedKey] : null;
-  if (!user) {
-    console.log(`[Login] ÉCHEC — identifiant "${username}" non trouvé`);
+  if (!user || !user.isActive || user.password !== String(password)) {
+    console.warn(`[Login] ÉCHEC — "${username}"`);
     return res.json({ success: false, message: '❌ Identifiants incorrects.' });
   }
-  if (!user.isActive) {
-    return res.json({ success: false, message: '❌ Compte désactivé. Contactez un administrateur.' });
-  }
-  if (user.password !== String(password)) {
-    console.log(`[Login] ÉCHEC — mot de passe incorrect pour "${username}"`);
-    return res.json({ success: false, message: '❌ Mot de passe incorrect.' });
-  }
-  console.log(`[Login] OK — "${username}" connecté`);
+  console.log(`[Login] ✅ "${username}"`);
   const { password: _pw, ...userPublic } = user;
   res.json({ success: true, message: '✅ Connexion réussie', user: userPublic });
 });
@@ -1012,7 +1004,6 @@ function getCBCOProdConfig() {
       if (backup?.folder && backup?.filename) {
         cfg = { ...backup, active: true };
         dbSet('cbco_productivite_excel_config', cfg);
-        console.log(`[CBCO Productivité] Config restaurée depuis excel-paths.json : ${backup.folder}`);
       }
     } catch (_) {}
   }
@@ -2160,7 +2151,6 @@ function getGMConfig() {
       if (backup?.folder && backup?.filename) {
         cfg = { ...backup, active: true };
         dbSet('gm_excel_config', cfg);
-        console.log(`[GM] Config restaurée depuis excel-paths.json : ${backup.folder}`);
       }
     } catch (_) {}
   }
@@ -2986,7 +2976,6 @@ function getAOConfig() {
       if (backup?.folder && backup?.filename) {
         cfg = { ...backup, active: true };
         dbSet('ao_excel_config', cfg);
-        console.log(`[AO] Config restaurée depuis excel-paths.json : ${backup.folder}`);
       }
     } catch (_) {}
   }
@@ -3486,7 +3475,6 @@ function getRHSecurityConfig() {
     cfg = { active: true, files };
     dbSet('rh_security_excel_config', cfg);
     saveRHFilesBackup(files);
-    console.log(`[RH Sécurité] Config migrée vers le nouveau format (par fichier)`);
   }
   if (!cfg || !cfg.active) {
     try {
@@ -3511,7 +3499,6 @@ function getRHSecurityConfig() {
           cfg = { active: true, files };
           dbSet('rh_security_excel_config', cfg);
           saveRHFilesBackup(files);
-          console.log(`[RH Sécurité] Config restaurée depuis rh-folder.txt (legacy) : ${folder}`);
         }
       }
     } catch (_) {}
@@ -3976,16 +3963,12 @@ app.get('/api/ao-indicateurs', (req, res) => {
   }
 });
 
-// Servir les fichiers PDF du planning avec logging
-app.use('/server/uploads', (req, res, next) => {
-  console.log('[Planning PDF] Accès demandé:', req.path);
-  next();
-}, express.static(path.join(__dirname, 'uploads'), {
+// Servir les fichiers PDF du planning
+app.use('/server/uploads', express.static(path.join(__dirname, 'uploads'), {
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('.pdf')) {
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      console.log('[Planning PDF] Fichier servi:', filePath);
     }
   }
 }));
@@ -4010,9 +3993,21 @@ const EXCEL_LABEL_TO_KEY = {
   'Montant marché HT':       'Montant marché HT',
 };
 
-// Cache liste des chantiers (TTL 5 min)
+// Cache liste des chantiers (TTL 30 min — la liste ne change qu'à la synchro ou à l'upload)
 let _dossiersListCache = { data: null, cachedAt: 0 };
-const DOSSIERS_CACHE_TTL = 5 * 60 * 1000;
+const DOSSIERS_CACHE_TTL = 30 * 60 * 1000;
+
+// Cache carte des chantiers (TTL 30 min — lit tous les Excel Y:\ à chaque appel)
+let _dossiersCarteCache = { data: null, cachedAt: 0 };
+const CARTE_CACHE_TTL = 30 * 60 * 1000;
+
+// Cache contenu d'un dossier (TTL 15 sec par chemin — lecture répertoire Y:\)
+const _folderContentCache = new Map(); // path → { items, cachedAt }
+const FOLDER_CACHE_TTL = 15 * 1000;
+
+// Cache infos Excel par dossier (TTL 10 min — évite de re-parser le fichier à chaque sélection)
+const _excelInfoCache = new Map(); // xlsxPath → { info, cachedAt }
+const EXCEL_INFO_CACHE_TTL = 10 * 60 * 1000;
 
 // Upload en mémoire → écriture à la destination
 const _dossiersUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
@@ -4040,6 +4035,10 @@ function setDbInfoChantier(nomDossier, fields) {
   const all = dbGet('dossiers_info', {});
   all[nomDossier] = fields;
   dbSet('dossiers_info', all);
+  // Invalider les caches qui dépendent de ces infos
+  const xlsxPath = path.join(DOSSIERS_BASE, nomDossier, EXCEL_INFO_FILENAME);
+  _excelInfoCache.delete(xlsxPath);
+  _dossiersCarteCache.cachedAt = 0;
 }
 
 function hasAnyInfo(info) {
@@ -4060,6 +4059,11 @@ function mergeInfo(...sources) {
 function readExcelInfoChantier(nomDossier) {
   const xlsxPath = path.join(DOSSIERS_BASE, nomDossier, EXCEL_INFO_FILENAME);
   if (!fs.existsSync(xlsxPath)) return null;
+
+  // Vérifier le cache avant de lire l'Excel
+  const cached = _excelInfoCache.get(xlsxPath);
+  if (cached && (Date.now() - cached.cachedAt) < EXCEL_INFO_CACHE_TTL) return cached.info;
+
   try {
     const wb = XLSX.readFile(xlsxPath, { cellDates: true });
     const ws = wb.Sheets[wb.SheetNames[0]];
@@ -4071,7 +4075,9 @@ function readExcelInfoChantier(nomDossier) {
         info[key] = value instanceof Date ? value.toLocaleDateString('fr-FR') : String(value).trim();
       }
     });
-    return hasAnyInfo(info) ? info : null;
+    const result = hasAnyInfo(info) ? info : null;
+    _excelInfoCache.set(xlsxPath, { info: result, cachedAt: Date.now() });
+    return result;
   } catch { return null; }
 }
 
@@ -4142,7 +4148,7 @@ async function geocodeAndStoreChantier(nomDossier, info) {
     Latitude: String(found.lat),
     Longitude: String(found.lng),
   });
-  _dossiersListCache.cachedAt = 0;
+  _dossiersListCache.cachedAt = 0; _dossiersCarteCache.cachedAt = 0;
   return found;
 }
 
@@ -4220,17 +4226,11 @@ app.get('/api/dossiers/liste', async (req, res) => {
       if (!entry.isDirectory()) continue;
       if (entry.name.startsWith('0 ') || entry.name.startsWith('1 ')) continue;
       const info = allDbInfo[entry.name] || {};
+      // Payload minimal pour la liste — les détails sont chargés à la sélection via /api/dossiers/info
       chantiers.push({
         nom: entry.name,
         chantier: info['Chantier'] || entry.name,
-        rue: info['Numéro et rue'] || '',
-        ville: info['Ville'] || '',
-        codePostal: info['Code postal'] || '',
         conducteur: info['Conducteur de travaux'] || '',
-        dessinateur: info['Dessinateur BE'] || '',
-        dateOS: info['Date OS'] || '',
-        dateFin: info['Date fin contractuelle'] || '',
-        montantHT: info['Montant marché HT'] || '',
         hasInfo: !!(info['Conducteur de travaux'] && info['Date OS'] && info['Date fin contractuelle'] && (info['Numéro et rue'] || info['Ville'])),
       });
     }
@@ -4250,6 +4250,11 @@ app.get('/api/dossiers/liste', async (req, res) => {
 
 // GET /api/dossiers/carte — chantiers avec adresse et coordonnées pour la vue globale
 app.get('/api/dossiers/carte', async (req, res) => {
+  const forceRefresh = req.query.refresh === '1';
+  const now = Date.now();
+  if (!forceRefresh && _dossiersCarteCache.data && (now - _dossiersCarteCache.cachedAt) < CARTE_CACHE_TTL) {
+    return res.json({ ...(_dossiersCarteCache.data), cached: true });
+  }
   try {
     const entries = await fs.promises.readdir(DOSSIERS_BASE, { withFileTypes: true });
     const chantiers = [];
@@ -4301,7 +4306,9 @@ app.get('/api/dossiers/carte', async (req, res) => {
     }
 
     chantiers.sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
-    res.json({ success: true, chantiers, totalWithAddress, geocodedThisRequest });
+    const payload = { success: true, chantiers, totalWithAddress, geocodedThisRequest };
+    _dossiersCarteCache = { data: payload, cachedAt: now };
+    res.json(payload);
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
@@ -4312,6 +4319,12 @@ app.get('/api/dossiers/contenu', async (req, res) => {
   const rel = req.query.rel || '';
   const target = safeResolveDossier(rel);
   if (!target) return res.status(400).json({ success: false, error: 'Chemin invalide' });
+
+  // Cache court (15 s) pour éviter les re-lectures répétées lors de la navigation
+  const cached = _folderContentCache.get(target);
+  if (cached && (Date.now() - cached.cachedAt) < FOLDER_CACHE_TTL) {
+    return res.json({ success: true, items: cached.items, cached: true });
+  }
 
   try {
     const entries = await fs.promises.readdir(target, { withFileTypes: true });
@@ -4336,6 +4349,7 @@ app.get('/api/dossiers/contenu', async (req, res) => {
       return a.name.localeCompare(b.name, 'fr');
     });
 
+    _folderContentCache.set(target, { items, cachedAt: Date.now() });
     res.json({ success: true, items });
   } catch (e) {
     if (e.code === 'ENOENT') return res.status(404).json({ success: false, error: 'Dossier introuvable' });
@@ -4344,13 +4358,14 @@ app.get('/api/dossiers/contenu', async (req, res) => {
 });
 
 // GET /api/dossiers/fichier?rel=... — sert un fichier (pour visualisation ou téléchargement)
-app.get('/api/dossiers/fichier', (req, res) => {
+app.get('/api/dossiers/fichier', async (req, res) => {
   const rel = req.query.rel || '';
   const target = safeResolveDossier(rel);
   if (!target) return res.status(400).json({ error: 'Chemin invalide' });
-  if (!fs.existsSync(target) || fs.statSync(target).isDirectory()) {
-    return res.status(404).json({ error: 'Fichier introuvable' });
-  }
+  try {
+    const st = await fs.promises.stat(target);
+    if (st.isDirectory()) return res.status(404).json({ error: 'Fichier introuvable' });
+  } catch { return res.status(404).json({ error: 'Fichier introuvable' }); }
 
   const ext = path.extname(target).toLowerCase();
   const inline = ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp'].includes(ext);
@@ -4449,7 +4464,7 @@ app.post('/api/dossiers/upload', requireToken, requireWriteRateLimit, _dossiersU
     }
   }
 
-  _dossiersListCache.cachedAt = 0;
+  _dossiersListCache.cachedAt = 0; _dossiersCarteCache.cachedAt = 0;
 
   const allReadonly = errors.length > 0 && errors.every(e => e.readonly) && saved.length === 0;
   if (allReadonly) {
@@ -4476,7 +4491,7 @@ app.put('/api/dossiers/info', requireToken, requireWriteRateLimit, (req, res) =>
 
   try {
     setDbInfoChantier(rel, fields);
-    _dossiersListCache.cachedAt = 0;
+    _dossiersListCache.cachedAt = 0; _dossiersCarteCache.cachedAt = 0;
     res.json({ success: true });
     // Écriture dans l'Excel du dossier en arrière-plan (non bloquant)
     writeInfoToExcel(rel, fields).catch(() => {});

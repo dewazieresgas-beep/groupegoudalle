@@ -305,7 +305,10 @@
           <h1 class="mb-0">📁 Dossiers Chantiers</h1>
           <p style="color:var(--text-muted-dark);margin:4px 0 0;font-size:14px;">Parcourir, visualiser et importer des documents</p>
         </div>
-        <div id="header-badges"></div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div id="header-badges"></div>
+          <button onclick="loadChantiers(true)" title="Forcer le rechargement depuis le réseau" style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--lighter);cursor:pointer;font-size:12px;color:var(--text-muted-dark);">🔄 Actualiser</button>
+        </div>
       </div>
 
       <div class="explorer-layout" id="explorer-layout" style="display:none;">
@@ -450,15 +453,15 @@
     };
 
     // ── Chargement initial ──
-    async function loadChantiers() {
+    async function loadChantiers(force = false) {
       document.getElementById('initial-loading').style.display = 'flex';
       document.getElementById('network-error').style.display = 'none';
       document.getElementById('explorer-layout').style.display = 'none';
 
-      // Si direction → tout, sinon filtrer par displayName
-      const params = (!isDirection && session?.displayName)
+      let params = (!isDirection && session?.displayName)
         ? `?conducteur=${encodeURIComponent(session.displayName)}`
         : '';
+      if (force) params += (params ? '&' : '?') + 'refresh=1';
 
       try {
         const ctrl = new AbortController();

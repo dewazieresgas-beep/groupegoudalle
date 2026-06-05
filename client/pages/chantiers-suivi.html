@@ -234,6 +234,7 @@
             </select>
           </div>
           <div id="header-badges"></div>
+          <button onclick="loadChantiersList(true)" title="Forcer le rechargement depuis le réseau" style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--lighter);cursor:pointer;font-size:12px;color:var(--text-muted-dark);">🔄 Actualiser</button>
         </div>
       </div>
 
@@ -447,11 +448,12 @@
   // ══════════════════════════════════════════════════════════════
   //  LISTE DES CHANTIERS
   // ══════════════════════════════════════════════════════════════
-  async function loadChantiersList() {
+  async function loadChantiersList(force = false) {
     try {
-      const params = isConducteurOnly && session?.displayName
+      let params = isConducteurOnly && session?.displayName
         ? `?conducteur=${encodeURIComponent(session.displayName)}`
         : '';
+      if (force) params += (params ? '&' : '?') + 'refresh=1';
       const res = await fetch(SERVER_URL + '/dossiers/liste' + params);
       const data = await res.json();
       allChantiers = data.chantiers || [];

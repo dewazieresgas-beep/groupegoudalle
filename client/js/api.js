@@ -90,12 +90,12 @@ const PAGE_PRELOAD_KEYS = {
   'compta-paiements-maconnerie.html': ['goudalle_sylve_balance', 'goudalle_sylve_paiements_attente'],
   'compta-paiements-charpente.html': ['goudalle_sylve_balance', 'goudalle_sylve_paiements_attente'],
   'compta-paiements-cbco.html': ['goudalle_sylve_balance', 'goudalle_sylve_paiements_attente'],
-  'production-indicateurs-generaux.html': ['goudalle_cbco_productivite'],
+  'production-indicateurs-generaux.html': [], // cbco_productivite chargé à la demande
+  // index.html : ne précharger que les données légères (DB locale).
+  // goudalle_cbco_productivite lit un Excel réseau → chargé à la demande par la page.
   'index.html': [
     'goudalle_thresholds',
-    'goudalle_sylve_balance',
     'goudalle_rh_security_summary',
-    'goudalle_cbco_productivite',
   ],
   // Les pages achats manipulent de gros volumes historiques.
   // On évite leur préchargement global au démarrage et on laisse chaque page

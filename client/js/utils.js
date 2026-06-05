@@ -3,6 +3,13 @@
  * Fonctions partagées : indicateurs, semaines, sidebar, etc.
  */
 
+// Force la présentation couleur (emoji) en ajoutant U+FE0F après chaque emoji.
+// Évite l'affichage monochrome sur Windows/Chrome pour les emojis ambigus.
+const _VS16 = String.fromCodePoint(0xFE0F); // Variation Selector-16
+function fe0f(html) {
+  return html.replace(/\p{Emoji}/gu, m => /[\d#*]/.test(m) ? m : m + _VS16);
+}
+
 // ============ SÉCURITÉ ============
 /**
  * Échappe les caractères HTML pour prévenir les injections XSS
@@ -395,7 +402,7 @@ function getSidebar() {
     <a href="${base}pages/profil.html" class="sidebar-item${accountActive}">👤 Profil</a>
   `;
 
-  return `
+  return fe0f(`
     <aside class="sidebar">
       <div class="topbar">
         <div>Tel. +33 (0)3 21 90 98 98</div>
@@ -421,8 +428,9 @@ function getSidebar() {
         }
       }, 50);
     </script>
-  `;
+  `)
 }
+
 
 /**
  * Déconnecte l'utilisateur après confirmation
@@ -514,7 +522,7 @@ function injectProductionSecondaryBar() {
 
     const sidebar = document.querySelector('.sidebar');
     if (sidebar) {
-      sidebar.insertAdjacentHTML('afterend', barHTML);
+      sidebar.insertAdjacentHTML('afterend', fe0f(barHTML));
     }
 
     const productionSidebar = document.getElementById('productionSidebar');
@@ -573,7 +581,7 @@ function injectComptaSecondaryBar() {
 
     const sidebar = document.querySelector('.sidebar');
     if (sidebar) {
-      sidebar.insertAdjacentHTML('afterend', barHTML);
+      sidebar.insertAdjacentHTML('afterend', fe0f(barHTML));
     }
 
     const comptaSidebar = document.getElementById('comptaSidebar');
@@ -612,7 +620,7 @@ function injectCommerceSecondaryBar() {
 
   const sidebar = document.querySelector('.sidebar');
   if (sidebar) {
-    sidebar.insertAdjacentHTML('afterend', barHTML);
+    sidebar.insertAdjacentHTML('afterend', fe0f(barHTML));
   }
 
   const commerceSidebar = document.getElementById('commerceSidebar');
@@ -667,7 +675,7 @@ function injectChantiersSecondaryBar() {
 
   const sidebar = document.querySelector('.sidebar');
   if (sidebar) {
-    sidebar.insertAdjacentHTML('afterend', barHTML);
+    sidebar.insertAdjacentHTML('afterend', fe0f(barHTML));
   }
 
   const chantiersSidebar = document.getElementById('chantiersSidebar');
@@ -729,7 +737,7 @@ function injectAchatSecondaryBar() {
 
   const sidebar = document.querySelector('.sidebar');
   if (sidebar) {
-    sidebar.insertAdjacentHTML('afterend', barHTML);
+    sidebar.insertAdjacentHTML('afterend', fe0f(barHTML));
   }
 
   const achatSidebar = document.getElementById('achatSidebar');
@@ -770,7 +778,7 @@ function injectRHSecondaryBar() {
 
   const sidebar = document.querySelector('.sidebar');
   if (sidebar) {
-    sidebar.insertAdjacentHTML('afterend', barHTML);
+    sidebar.insertAdjacentHTML('afterend', fe0f(barHTML));
   }
 
   const rhSidebar = document.getElementById('rhSidebar');
@@ -895,7 +903,7 @@ function injectUsersSecondaryBar() {
 
   const sidebar = document.querySelector('.sidebar');
   if (sidebar) {
-    sidebar.insertAdjacentHTML('afterend', barHTML);
+    sidebar.insertAdjacentHTML('afterend', fe0f(barHTML));
   }
 
   const usersSidebar = document.getElementById('usersSidebar');
