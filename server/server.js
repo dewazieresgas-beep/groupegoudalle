@@ -72,33 +72,38 @@ const DB_BACKUP_PATH = path.join(__dirname, 'data', 'goudalle.json.bak');
 const ACCOUNTS_EXCEL_PATH = 'W:\\BCHDF\\Site Intranet Groupe Goudalle\\Compte site intranet.xlsx';
 const COMPANY_SHEETS = ['SYLVE', 'CHARPENTE', 'CBCO', 'SNGM'];
 
-// Correspondance nom de fichier HTML → clé de permission (1 page = 1 permission)
-const FILE_TO_PERM = {
-  'chantiers-charpente.html':                  'chantiers_charpente',
-  'chantiers-maconnerie.html':                 'chantiers_maconnerie',
-  'chantiers-vue-globale.html':                'chantiers_vue_globale',
-  'chantiers-suivi.html':                      'conducteur_charpente',
-  'chantiers-conducteurne.html':               'conducteur_charpente',
-  'commerce-indicateurs.html':                 'commerce_indicateurs',
-  'commerce-liaison.html':                     'commerce_liaison',
-  'compta-indicateurs.html':                   'compta_indicateurs',
-  'compta-saisie.html':                        'compta_saisie',
-  'compta-paiements-charpente.html':           'compta_paiements_charpente',
-  'compta-paiements-maconnerie.html':          'compta_paiements_maconnerie',
-  'compta-paiements-cbco.html':                'compta_paiements_cbco',
-  'production-indicateurs-generaux.html':      'production_indicateurs_generaux',
-  'production-indicateurs-maconnerie.html':    'production_indicateurs_maconnerie',
-  'production-indicateurs-usine-cbco.html':    'production_indicateurs_usine',
-  'production-saisie-maconnerie.html':         'production_saisie_maconnerie',
-  'production-saisie-productivite-usine.html': 'production_saisie_productivite',
-  'achat-indicateurs.html':                    'achat_indicateurs',
-  'achat-saisie.html':                         'achat_saisie',
-  'achat-controle.html':                       'achat_controle',
-  'rh-indicateurs.html':                       'rh_indicateurs',
-  'rh-saisie.html':                            'rh_saisie',
-  'utilisateurs.html':                         'users_admin',
-  'utilisateurs-code-admin.html':              'users_admin',
-};
+// Source unique de vérité : toutes les pages du site avec leur permission, libellé et groupe.
+// Ajouter une entrée ici suffit pour qu'elle apparaisse dans la gestion des utilisateurs
+// ET qu'une colonne soit créée automatiquement dans l'Excel.
+const PAGES_CONFIG = [
+  { file:'chantiers-vue-globale.html',                perm:'chantiers_vue_globale',            label:'🌍 Vue globale',                   group:'🚧 Chantiers' },
+  { file:'chantiers-charpente.html',                  perm:'chantiers_charpente',              label:'🪵 Carte charpente',               group:'🚧 Chantiers' },
+  { file:'chantiers-maconnerie.html',                 perm:'chantiers_maconnerie',             label:'🧱 Carte maçonnerie',              group:'🚧 Chantiers' },
+  { file:'chantiers-conducteurne.html',               perm:'conducteur_charpente',             label:'👷 Page conducteur',               group:'🚧 Chantiers' },
+  { file:'chantiers-suivi.html',                      perm:'gc_dossiers',                      label:'📁 Suivi chantier / dossiers',     group:'🚧 Chantiers' },
+  { file:'commerce-indicateurs.html',                 perm:'commerce_indicateurs',             label:'💼 Indicateurs commerce',          group:'💼 Commerce' },
+  { file:'commerce-liaison.html',                     perm:'commerce_liaison',                 label:'🔗 Liaison commerce',              group:'💼 Commerce' },
+  { file:'compta-indicateurs.html',                   perm:'compta_indicateurs',               label:'📊 Indicateurs comptabilité',      group:'📒 Comptabilité' },
+  { file:'compta-saisie.html',                        perm:'compta_saisie',                    label:'✏️ Saisie factures',               group:'📒 Comptabilité' },
+  { file:'compta-paiements-charpente.html',           perm:'compta_paiements_charpente',       label:'💳 Paiements charpente',           group:'📒 Comptabilité' },
+  { file:'compta-paiements-maconnerie.html',          perm:'compta_paiements_maconnerie',      label:'💳 Paiements maçonnerie',          group:'📒 Comptabilité' },
+  { file:'compta-paiements-cbco.html',                perm:'compta_paiements_cbco',            label:'💳 Paiements CBCO',                group:'📒 Comptabilité' },
+  { file:'production-indicateurs-generaux.html',      perm:'production_indicateurs_generaux',  label:'📈 Indicateurs généraux',          group:'🏭 Production' },
+  { file:'production-indicateurs-maconnerie.html',    perm:'production_indicateurs_maconnerie',label:'📊 Indicateurs maçonnerie',        group:'🏭 Production' },
+  { file:'production-indicateurs-usine-cbco.html',    perm:'production_indicateurs_usine',     label:'🏭 Indicateurs usine CBCO',        group:'🏭 Production' },
+  { file:'production-saisie-maconnerie.html',         perm:'production_saisie_maconnerie',     label:'✏️ Saisie maçonnerie',             group:'🏭 Production' },
+  { file:'production-saisie-productivite-usine.html', perm:'production_saisie_productivite',   label:'✏️ Saisie productivité usine',     group:'🏭 Production' },
+  { file:'achat-indicateurs.html',                    perm:'achat_indicateurs',                label:'📊 Indicateurs achat',             group:'🛒 Achat' },
+  { file:'achat-saisie.html',                         perm:'achat_saisie',                     label:'✏️ Saisie achats',                 group:'🛒 Achat' },
+  { file:'achat-controle.html',                       perm:'achat_controle',                   label:'🔍 Contrôle imports',              group:'🛒 Achat' },
+  { file:'rh-indicateurs.html',                       perm:'rh_indicateurs',                   label:'🦺 Indicateurs RH',                group:'👷 RH' },
+  { file:'rh-saisie.html',                            perm:'rh_saisie',                        label:'📝 Déclaration accident',          group:'👷 RH' },
+  { file:'utilisateurs.html',                         perm:'users_admin',                      label:'👥 Gestion utilisateurs',          group:'⚙️ Administration' },
+  { file:'utilisateurs-code-admin.html',              perm:'users_admin',                      label:'👥 Gestion utilisateurs',          group:'⚙️ Administration', hidden:true },
+];
+
+// Généré automatiquement depuis PAGES_CONFIG — ne pas modifier manuellement
+const FILE_TO_PERM = Object.fromEntries(PAGES_CONFIG.map(p => [p.file, p.perm]));
 
 let _accountsExcelCache = { users: null, mtimeMs: 0 };
 
@@ -256,8 +261,8 @@ function readAccountsExcel() {
   }
 }
 
-// Écrit les mises à jour (mot de passe, actif, permissions) dans les feuilles entreprise
-// en préservant la mise en forme via XlsxPopulate.
+// Écrit les mises à jour dans l'Excel : permissions, mot de passe, actif,
+// ajoute les colonnes manquantes (nouvelles pages) et les nouvelles lignes utilisateurs.
 async function writeAccountsExcel(users) {
   try {
     const wb = await XlsxPopulate.fromFileAsync(ACCOUNTS_EXCEL_PATH);
@@ -268,8 +273,8 @@ async function writeAccountsExcel(users) {
 
       const usedRange = ws.usedRange();
       if (!usedRange) continue;
-      const lastCol = usedRange.endCell().columnNumber();
-      const lastRow = usedRange.endCell().rowNumber();
+      let lastCol = usedRange.endCell().columnNumber();
+      let lastRow = usedRange.endCell().rowNumber();
 
       // Lire l'en-tête (ligne 1) → map nom → numéro de colonne (1-indexed)
       const headers = {};
@@ -278,21 +283,36 @@ async function writeAccountsExcel(users) {
         if (h) headers[h] = c;
       }
 
-      const idCol   = headers['Identifiant'];
-      const mdpCol  = headers['Mot_de_passe'];
+      const idCol    = headers['Identifiant'];
+      const mdpCol   = headers['Mot_de_passe'];
       const actifCol = headers['Actif'];
       if (!idCol || !mdpCol) continue;
 
+      // ── Ajouter les colonnes p_xxx manquantes (nouvelles pages) ──
+      for (const p of PAGES_CONFIG) {
+        const colName = 'p_' + p.file.replace('.html', '');
+        if (headers[colName]) continue;
+        lastCol++;
+        headers[colName] = lastCol;
+        const hCell = ws.cell(1, lastCol);
+        hCell.value(colName);
+        try { hCell.style({ bold: true, fill: { type: 'solid', color: 'DEEBF7' }, wrapText: true }); } catch {}
+        for (let r = 2; r <= lastRow; r++) ws.cell(r, lastCol).value('non');
+        console.log(`[Comptes] Colonne ${colName} ajoutée dans ${company}`);
+      }
+
+      // ── Mettre à jour les lignes existantes ──
+      const seenIds = new Set();
       for (let row = 2; row <= lastRow; row++) {
         const id = String(ws.cell(row, idCol).value() || '').trim();
         if (!id) continue;
-        const u = users[id];
+        seenIds.add(id.toLowerCase());
+        const u = users[id] || users[Object.keys(users).find(k => k.toLowerCase() === id.toLowerCase())];
         if (!u) continue;
 
         ws.cell(row, mdpCol).value(String(u.password || ''));
         if (actifCol) ws.cell(row, actifCol).value(u.isActive !== false ? 'oui' : 'non');
 
-        // Mettre à jour les colonnes p_xxx (oui/non par page)
         Object.entries(headers).forEach(([h, c]) => {
           if (!h.startsWith('p_')) return;
           const file = h.slice(2) + '.html';
@@ -303,10 +323,40 @@ async function writeAccountsExcel(users) {
           ws.cell(row, c).value(hasPerm ? 'oui' : 'non');
         });
       }
+
+      // ── Ajouter les nouveaux utilisateurs créés depuis le site ──
+      for (const [id, u] of Object.entries(users)) {
+        if ((u.entreprise || '').toUpperCase() !== company) continue;
+        if (seenIds.has(id.toLowerCase())) continue;
+        if (u.createdBy === 'EXCEL') continue;
+
+        lastRow++;
+        if (headers['Identifiant']) ws.cell(lastRow, headers['Identifiant']).value(id);
+        if (headers['Prénom'])      ws.cell(lastRow, headers['Prénom']).value(u.prenom || '');
+        if (headers['Nom'])         ws.cell(lastRow, headers['Nom']).value(u.nom || '');
+        if (headers['Email'])       ws.cell(lastRow, headers['Email']).value(u.email || '');
+        if (headers['Poste'])       ws.cell(lastRow, headers['Poste']).value(u.poste || '');
+        if (mdpCol)                 ws.cell(lastRow, mdpCol).value(String(u.password || ''));
+        if (actifCol)               ws.cell(lastRow, actifCol).value(u.isActive !== false ? 'oui' : 'non');
+        if (headers['Role'])        ws.cell(lastRow, headers['Role']).value(u.role || 'lecture');
+
+        Object.entries(headers).forEach(([h, c]) => {
+          if (!h.startsWith('p_')) return;
+          const file = h.slice(2) + '.html';
+          const perm = FILE_TO_PERM[file];
+          if (!perm) { ws.cell(lastRow, c).value('non'); return; }
+          const hasPerm = u.role === 'direction' ||
+            (Array.isArray(u.customPermissions) && u.customPermissions.includes(perm));
+          ws.cell(lastRow, c).value(hasPerm ? 'oui' : 'non');
+        });
+
+        seenIds.add(id.toLowerCase());
+        console.log(`[Comptes] Utilisateur ${id} ajouté dans ${company}`);
+      }
     }
 
     await wb.toFileAsync(ACCOUNTS_EXCEL_PATH);
-    _accountsExcelCache = { users, mtimeMs: 0 };
+    _accountsExcelCache = { users: null, mtimeMs: 0 };
     return true;
   } catch (e) {
     console.error('[Comptes] Erreur écriture Excel:', e.message);
@@ -867,6 +917,21 @@ app.use(express.static(path.join(__dirname, '../client')));
 
 app.get('/api/users', (req, res) => {
   res.json(readAccountsExcel());
+});
+
+// Retourne la liste des pages groupées pour la gestion des utilisateurs.
+// Généré depuis PAGES_CONFIG — se met à jour automatiquement quand on ajoute une page.
+app.get('/api/pages', (_req, res) => {
+  const seen = new Set();
+  const groups = {};
+  for (const p of PAGES_CONFIG) {
+    if (p.hidden) continue;
+    if (seen.has(p.perm)) continue;
+    seen.add(p.perm);
+    if (!groups[p.group]) groups[p.group] = [];
+    groups[p.group].push({ perm: p.perm, label: p.label });
+  }
+  res.json(Object.entries(groups).map(([group, pages]) => ({ group, pages })));
 });
 
 app.put('/api/users', requireToken, requireWriteRateLimit, async (req, res) => {

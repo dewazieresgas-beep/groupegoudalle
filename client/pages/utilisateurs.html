@@ -1,98 +1,111 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gestion Utilisateurs - Intranet Goudalle</title>
   <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .perm-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .perm-group-title { grid-column:1/-1; font-size:13px; font-weight:700; color:#555; border-bottom:2px solid #e8e8e8; padding-bottom:4px; margin-top:10px; }
+    .perm-label { display:flex; align-items:center; gap:8px; cursor:pointer; padding:7px 10px; border:1px solid #e0e0e0; border-radius:6px; font-size:13px; transition:background .15s; }
+    .perm-label:hover { background:#f5f5f5; }
+    .perm-label input { cursor:pointer; }
+    .badge-perm { display:inline-block; font-size:11px; padding:2px 7px; border-radius:10px; background:#eef2ff; color:#3730a3; font-weight:600; margin:2px; }
+    .user-row td { vertical-align:middle; }
+    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; overflow:auto; }
+    .modal-box { background:#fff; margin:4% auto; padding:28px; border-radius:10px; max-width:640px; position:relative; }
+    .modal-box h2 { margin-top:0; }
+    .modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:20px; flex-wrap:wrap; }
+    .company-badge { font-size:11px; padding:2px 7px; border-radius:8px; background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; font-weight:600; }
+  </style>
 </head>
 <body>
   <script src="../js/api.js"></script>
   <script src="../js/auth.js"></script>
   <script src="../js/utils.js"></script>
-  <script>
-    window.APP_LOGO = 'groupe';
-  </script>
-
-  <script>
-    Auth.requirePermission('users_admin');
-  </script>
+  <script>Auth.requirePermission('users_admin');</script>
 
   <div class="app-container">
     <div id="sidebar"></div>
-    
     <main class="main-content">
-      <h1>Gestion des Utilisateurs</h1>
+      <h1>👥 Gestion des Utilisateurs</h1>
+      <div id="message" class="alert" style="display:none;"></div>
 
-      <div class="card">
-        <div class="card-title">
-          <h2>Créer un nouvel utilisateur</h2>
-        </div>
+      <!-- ══ CRÉER UN UTILISATEUR ══ -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-title"><h2>➕ Créer un nouvel utilisateur</h2></div>
         <div class="card-body">
-          <div id="message" class="alert" style="display:none;"></div>
-
           <form onsubmit="handleCreateUser(event)">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:12px;">
               <div class="form-group">
-                <label for="firstName">Prénom *</label>
-                <input type="text" id="firstName" required>
+                <label>Prénom *</label>
+                <input type="text" id="c-prenom" required>
               </div>
               <div class="form-group">
-                <label for="lastName">Nom *</label>
-                <input type="text" id="lastName" required>
+                <label>Nom *</label>
+                <input type="text" id="c-nom" required>
+              </div>
+              <div class="form-group">
+                <label>Société *</label>
+                <select id="c-societe" required>
+                  <option value="">— Choisir —</option>
+                  <option value="SYLVE">SYLVE</option>
+                  <option value="CHARPENTE">CHARPENTE</option>
+                  <option value="CBCO">CBCO</option>
+                  <option value="SNGM">SNGM</option>
+                </select>
               </div>
             </div>
-
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:12px;">
+              <div class="form-group">
+                <label>Email *</label>
+                <input type="email" id="c-email" required>
+              </div>
+              <div class="form-group">
+                <label>Identifiant *</label>
+                <input type="text" id="c-username" minlength="3" required>
+              </div>
+              <div class="form-group">
+                <label>Mot de passe *</label>
+                <input type="password" id="c-password" minlength="3" required>
+              </div>
+            </div>
             <div class="form-group">
-              <label for="email">Email *</label>
-              <input type="email" id="email" required>
+              <label>Poste</label>
+              <input type="text" id="c-poste" placeholder="Ex : Conducteur de Travaux">
             </div>
-
-            <div class="form-group">
-              <label for="username">Identifiant *</label>
-              <input type="text" id="username" minlength="3" required>
-            </div>
-
-            <div style="display: grid; grid-template-columns: 1fr; gap: 20px;">
-              <div class="form-group">
-                <label for="password">Mot de passe *</label>
-                <input type="password" id="password" minlength="3" required>
-              </div>
-            </div>
-
-            <div class="form-group" style="margin-top: 20px;">
+            <div class="form-group" style="margin-top:14px;">
               <label>Accès aux pages</label>
-              <div id="createAccessCheckboxes" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"></div>
+              <div id="createAccessCheckboxes" class="perm-grid" style="margin-top:8px;"></div>
             </div>
-
-            <button type="submit" class="btn btn-primary" style="margin-top:20px;">➕ Créer utilisateur</button>
+            <button type="submit" class="btn btn-primary" style="margin-top:16px;">➕ Créer et enregistrer dans l'Excel</button>
           </form>
         </div>
       </div>
 
+      <!-- ══ LISTE ══ -->
       <div class="card">
         <div class="card-title">
           <h2>Liste des utilisateurs</h2>
+          <small id="users-source" style="color:var(--text-muted-dark);font-size:12px;"></small>
         </div>
         <div class="card-body">
           <div class="table-responsive">
-          <table id="usersTable">
-            <thead>
-              <tr>
-                <th>Identifiant</th>
-                <th>Nom</th>
-                <th>Email</th>
-                <th>Rôle</th>
-                <th>Créé le</th>
-                <th>Statut</th>
-                <th>Actions</th>
-                <th>Accès</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td colspan="7" style="text-align:center; padding: 20px;">Chargement...</td></tr>
-            </tbody>
-          </table>
+            <table id="usersTable">
+              <thead>
+                <tr>
+                  <th>Identifiant</th>
+                  <th>Nom</th>
+                  <th>Société</th>
+                  <th>Poste</th>
+                  <th>Statut</th>
+                  <th>Accès</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody><tr><td colspan="7" style="text-align:center;padding:20px;">Chargement…</td></tr></tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -100,143 +113,13 @@
     </main>
   </div>
 
-  <script>
-    function showMessage(message, type) {
-      const msgDiv = document.getElementById('message');
-      msgDiv.textContent = message;
-      msgDiv.className = `alert alert-${type}`;
-      msgDiv.style.display = 'block';
-      window.scrollTo(0, 0);
-    }
-
-    function handleCreateUser(event) {
-      event.preventDefault();
-
-      const firstName = document.getElementById('firstName').value.trim();
-      const lastName = document.getElementById('lastName').value.trim();
-      const email = document.getElementById('email').value.trim();
-      const username = document.getElementById('username').value.trim();
-      const password = document.getElementById('password').value;
-      const displayName = `${firstName} ${lastName}`;
-
-      const customPermissions = Array.from(document.querySelectorAll('#createAccessCheckboxes input[type=checkbox]:checked'))
-        .map(cb => cb.value);
-
-      const result = Auth.registerUser(username, password, displayName, email, 'lecture', null, customPermissions);
-
-      if (result.success) {
-        showMessage(result.message, 'success');
-        document.getElementById('firstName').value = '';
-        document.getElementById('lastName').value = '';
-        document.getElementById('email').value = '';
-        document.getElementById('username').value = '';
-        document.getElementById('password').value = '';
-        renderAccessCheckboxes('createAccessCheckboxes', []);
-        loadUsers();
-      } else {
-        showMessage(result.message, 'error');
-      }
-    }
-
-    function getRoleLabel(u) {
-      if (u.role === 'direction') return '🗝️ Direction';
-
-      const perms = Array.isArray(u.customPermissions) ? u.customPermissions : [];
-
-      const sections = [];
-      const production = ['production_indicateurs_generaux', 'production_indicateurs_maconnerie', 'production_indicateurs_usine', 'production_saisie_maconnerie', 'production_saisie_productivite'];
-      const commerce = ['commerce_indicateurs'];
-      const compta = ['compta_indicateurs', 'compta_saisie', 'compta_paiements_charpente', 'compta_paiements_maconnerie', 'compta_paiements_cbco'];
-      const achat = ['achat_indicateurs', 'achat_saisie', 'achat_controle'];
-      const rh = ['rh_indicateurs', 'rh_saisie', 'rh_security_admin'];
-
-      if (production.some(k => perms.includes(k))) sections.push('🏭 Production');
-      if (commerce.some(k => perms.includes(k))) sections.push('💼 Commerce');
-      if (compta.some(k => perms.includes(k))) sections.push('📒 Comptabilité');
-      if (achat.some(k => perms.includes(k))) sections.push('🛒 Achat');
-      if (perms.includes('chantiers')) sections.push('🚧 Chantiers');
-      if (rh.some(k => perms.includes(k))) sections.push('👷 RH');
-      if (perms.includes('users_admin')) sections.push('⚙️ Admin');
-      if (sections.length > 0) return sections.join(', ');
-      return '👁️ Accès limité';
-    }
-
-    function loadUsers() {
-      const users = Auth.getUserList();
-      const tbody = document.querySelector('#usersTable tbody');
-
-      tbody.innerHTML = users.map(u => {
-        const date = new Date(u.createdAt);
-        const safeUsername = escapeHtml(u.username);
-        const safeName = escapeHtml(u.displayName) || '—';
-        const safeEmail = escapeHtml(u.email) || '—';
-        return `
-          <tr>
-            <td><strong>${safeUsername}</strong></td>
-            <td>${safeName}</td>
-            <td>${safeEmail}</td>
-            <td><span class="badge badge-primary">${getRoleLabel(u)}</span></td>
-            <td><small>${date.toLocaleDateString('fr-FR')}</small></td>
-            <td>
-              <span class="badge ${u.isActive ? 'badge-success' : 'badge-danger'}">
-                ${u.isActive ? '✅ Actif' : '❌ Inactif'}
-              </span>
-            </td>
-            <td>
-              ${u.role !== 'direction' 
-                ? `<button class="btn btn-small btn-accent" onclick="openEditModal('${safeUsername}')">✏️ Modifier</button>
-                   <button class="btn btn-small btn-danger" onclick="deleteUser('${safeUsername}')">🗑️ Supprimer</button>` 
-                : ''}
-            </td>
-            <td>
-              ${u.role !== 'direction' 
-                ? `<button class="btn btn-small btn-secondary" onclick="openAccessModal('${safeUsername}')">Gérer les accès</button>` 
-                : ''}
-            </td>
-          </tr>
-        `;
-      }).join('');
-
-      if (users.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 20px;">Aucun utilisateur</td></tr>`;
-      }
-    }
-
-    function deleteUser(username) {
-      if (confirm(`⚠️ Supprimer définitivement l'utilisateur "${username}" ? Cette action est irréversible.`)) {
-        const result = Auth.deleteUser(username);
-        if (result.success) {
-          loadUsers();
-        } else {
-          alert(result.message);
-        }
-      }
-    }
-
-    function init() {
-      document.getElementById('sidebar').innerHTML = getSidebar();
-      injectUsersSecondaryBar();
-      loadUsers();
-      renderAccessCheckboxes('createAccessCheckboxes', []);
-    }
-
-    window.addEventListener('load', async () => {
-      await window.serverReady;
-      init();
-    });
-    // Sur refresh automatique : mettre à jour la liste uniquement, sans réinitialiser les sidebars ni les cases à cocher
-    window.addEventListener('serverDataRefreshed', () => loadUsers());
-  </script>
-
-  <!-- Modale Gérer les accès -->
-  <div id="accessModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; overflow:auto;">
-    <div style="background:#fff; margin:5% auto; padding:30px; border-radius:10px; max-width:600px; position:relative;">
-      <h2 style="margin-top:0;">🔐 Gérer les accès — <span id="accessModalUsername"></span></h2>
-      <p style="color:var(--text-muted-dark); margin-bottom:20px;">Sélectionnez les pages auxquelles cet utilisateur aura accès.</p>
-
-      <div id="accessCheckboxes" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;"></div>
-
-      <div style="display:flex; gap:10px; justify-content:flex-end; align-items:center;">
+  <!-- ══ MODALE ACCÈS ══ -->
+  <div id="accessModal" class="modal-overlay">
+    <div class="modal-box">
+      <h2>🔐 Accès — <span id="accessModalUsername"></span></h2>
+      <p style="color:var(--text-muted-dark);margin-bottom:16px;">Cochez les pages auxquelles cet utilisateur aura accès. La modification est sauvegardée dans l'Excel.</p>
+      <div id="accessCheckboxes" class="perm-grid"></div>
+      <div class="modal-actions">
         <button class="btn btn-secondary" onclick="resetAccessToEmpty()">🔄 Tout décocher</button>
         <button class="btn btn-secondary" onclick="selectAllAccess()">✅ Tout cocher</button>
         <button class="btn btn-secondary" onclick="closeAccessModal()">Annuler</button>
@@ -245,30 +128,32 @@
     </div>
   </div>
 
-  <!-- Modale Modifier un utilisateur -->
-  <div id="editModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; overflow:auto;">
-    <div style="background:#fff; margin:5% auto; padding:30px; border-radius:10px; max-width:500px; position:relative;">
-      <h2 style="margin-top:0;">✏️ Modifier — <span id="editModalUsername"></span></h2>
-      <div id="editModalMessage" class="alert" style="display:none; margin-bottom:16px;"></div>
-
+  <!-- ══ MODALE MODIFIER ══ -->
+  <div id="editModal" class="modal-overlay">
+    <div class="modal-box" style="max-width:480px;">
+      <h2>✏️ Modifier — <span id="editModalUsername"></span></h2>
+      <div id="editModalMessage" class="alert" style="display:none;margin-bottom:16px;"></div>
       <div class="form-group">
-        <label for="editModalNewUsername">Identifiant *</label>
+        <label>Identifiant *</label>
         <input type="text" id="editModalNewUsername" minlength="3" required>
       </div>
       <div class="form-group">
-        <label for="editModalDisplayName">Nom complet *</label>
+        <label>Nom complet *</label>
         <input type="text" id="editModalDisplayName" required>
       </div>
       <div class="form-group">
-        <label for="editModalEmail">Email *</label>
+        <label>Email *</label>
         <input type="email" id="editModalEmail" required>
       </div>
       <div class="form-group">
-        <label for="editModalPassword">Nouveau mot de passe <small style="color:var(--text-muted);">(laisser vide pour ne pas changer)</small></label>
+        <label>Poste</label>
+        <input type="text" id="editModalPoste">
+      </div>
+      <div class="form-group">
+        <label>Nouveau mot de passe <small style="color:var(--text-muted);">(laisser vide pour ne pas changer)</small></label>
         <input type="password" id="editModalPassword" minlength="3">
       </div>
-
-      <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
+      <div class="modal-actions">
         <button class="btn btn-secondary" onclick="closeEditModal()">Annuler</button>
         <button class="btn btn-primary" onclick="saveEditModal()">💾 Enregistrer</button>
       </div>
@@ -276,195 +161,234 @@
   </div>
 
   <script>
-    const ALL_PAGES_GROUPS = [
-      {
-        group: '🏭 Production',
-        pages: [
-          { key: 'production_indicateurs_generaux',  label: '📈 Indicateurs Généraux' },
-          { key: 'production_indicateurs_maconnerie', label: '📊 Indicateurs Maçonnerie' },
-          { key: 'production_indicateurs_usine',      label: '🏭 Indicateurs Usine CBCO' },
-          { key: 'production_saisie_maconnerie',      label: '✏️ Saisie Indicateurs Maçonnerie' },
-          { key: 'production_saisie_productivite',    label: '✏️ Saisie Productivité Usine' },
-        ]
-      },
-      {
-        group: '💼 Commerce',
-        pages: [
-          { key: 'commerce_indicateurs', label: '💼 Page Commerce' },
-        ]
-      },
-      {
-        group: '📒 Comptabilité',
-        pages: [
-          { key: 'compta_indicateurs',          label: '📊 Indicateurs Comptabilité — Balance Âgée' },
-          { key: 'compta_saisie',               label: '✏️ Saisie Factures' },
-          { key: 'compta_paiements_charpente',  label: '💳 Paiements en Attente — Charpente' },
-          { key: 'compta_paiements_maconnerie', label: '💳 Paiements en Attente — Maçonnerie' },
-          { key: 'compta_paiements_cbco',       label: '💳 Paiements en Attente — CBCO' },
-        ]
-      },
-      {
-        group: '🛒 Achat',
-        pages: [
-          { key: 'achat_indicateurs', label: '📊 Indicateurs Achat' },
-          { key: 'achat_saisie',      label: '✏️ Saisie Indicateurs Achats' },
-          { key: 'achat_controle',    label: '🔍 Contrôle Imports Achats' },
-        ]
-      },
-      {
-        group: '🚧 Chantiers',
-        pages: [
-          { key: 'chantiers', label: '🏗️ Indicateurs Chantiers' },
-        ]
-      },
-      {
-        group: '👷 RH',
-        pages: [
-          { key: 'rh_indicateurs',    label: '🦺 Indicateurs RH' },
-          { key: 'rh_saisie',         label: '📝 Déclaration Accident' },
-          { key: 'rh_security_admin', label: '⚙️ Config Admin RH' },
-        ]
-      },
-      {
-        group: '⚙️ Administration',
-        pages: [
-          { key: 'users_admin', label: '👥 Gestion Utilisateurs' },
-        ]
-      },
-    ]
+    let _pageGroups = []; // chargé depuis /api/pages
 
-    const ALL_PAGES = ALL_PAGES_GROUPS.flatMap(g => g.pages);
+    // ── Utilitaires ──
+    function escapeHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    function showMessage(msg, type) {
+      const d = document.getElementById('message');
+      d.textContent = msg; d.className = `alert alert-${type}`; d.style.display = 'block';
+      window.scrollTo(0,0);
+      setTimeout(() => d.style.display = 'none', 5000);
+    }
+
+    // ── Chargement de la liste des pages depuis le serveur ──
+    async function loadPageGroups() {
+      try {
+        const res = await fetch(SERVER_URL + '/pages');
+        _pageGroups = await res.json();
+      } catch {
+        // Fallback : liste vide, pas bloquant
+        _pageGroups = [];
+      }
+      renderAccessCheckboxes('createAccessCheckboxes', []);
+    }
 
     function renderAccessCheckboxes(containerId, currentPerms) {
       const container = document.getElementById(containerId);
-      container.innerHTML = ALL_PAGES_GROUPS.map(group => `
-        <div style="grid-column: 1 / -1; margin-top: 12px; margin-bottom: 4px;">
-          <strong style="font-size:0.95em; color:#555; border-bottom:2px solid #e0e0e0; display:block; padding-bottom:4px;">${group.group}</strong>
-        </div>
+      if (!container) return;
+      container.innerHTML = _pageGroups.map(group => `
+        <div class="perm-group-title">${group.group}</div>
         ${group.pages.map(p => `
-          <label style="display:flex; align-items:center; gap:8px; cursor:pointer; padding:8px; border:1px solid #e0e0e0; border-radius:6px;">
-            <input type="checkbox" value="${p.key}" ${currentPerms.includes(p.key) ? 'checked' : ''}>
+          <label class="perm-label">
+            <input type="checkbox" value="${p.perm}" ${currentPerms.includes(p.perm) ? 'checked' : ''}>
             ${p.label}
           </label>
         `).join('')}
       `).join('');
     }
 
+    // ── Étiquette d'accès d'un utilisateur ──
+    function getRoleLabel(u) {
+      if (u.role === 'direction') return '<span class="badge badge-primary">🗝️ Direction</span>';
+      const perms = Array.isArray(u.customPermissions) ? u.customPermissions : [];
+      if (!perms.length) return '<span style="color:#aaa;font-size:12px;">Aucun accès</span>';
+      // Grouper par section
+      const sections = new Set();
+      for (const g of _pageGroups) {
+        if (g.pages.some(p => perms.includes(p.perm))) sections.add(g.group);
+      }
+      return [...sections].map(s => `<span class="badge-perm">${s}</span>`).join('') || '<span style="color:#aaa;font-size:12px;">Aucun accès</span>';
+    }
+
+    // ── Charger et afficher les utilisateurs ──
+    async function loadUsers() {
+      let users;
+      try {
+        const res = await fetch(SERVER_URL + '/users');
+        users = await res.json();
+        document.getElementById('users-source').textContent = '(source : Excel)';
+      } catch {
+        users = Auth.getAllUsers();
+        document.getElementById('users-source').textContent = '(source : local — Excel inaccessible)';
+      }
+
+      const list = Object.values(users).sort((a,b) => (a.entreprise||'').localeCompare(b.entreprise||'') || (a.displayName||'').localeCompare(b.displayName||''));
+      const tbody = document.querySelector('#usersTable tbody');
+      if (!list.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;">Aucun utilisateur</td></tr>'; return; }
+
+      tbody.innerHTML = list.map(u => {
+        const id = escapeHtml(u.username);
+        const isDirec = u.role === 'direction';
+        return `<tr class="user-row">
+          <td><strong>${id}</strong></td>
+          <td>${escapeHtml(u.displayName)||'—'}</td>
+          <td><span class="company-badge">${escapeHtml(u.entreprise||'—')}</span></td>
+          <td style="font-size:12px;color:#666;">${escapeHtml(u.poste||'—')}</td>
+          <td><span class="badge ${u.isActive!==false?'badge-success':'badge-danger'}">${u.isActive!==false?'✅ Actif':'❌ Inactif'}</span></td>
+          <td>${getRoleLabel(u)}</td>
+          <td style="white-space:nowrap;">
+            ${!isDirec ? `<button class="btn btn-small btn-accent" onclick="openEditModal('${id}')">✏️</button>
+              <button class="btn btn-small btn-secondary" onclick="openAccessModal('${id}')">🔐 Accès</button>
+              <button class="btn btn-small" style="background:${u.isActive!==false?'#fee2e2':'#d1fae5'};border:none;cursor:pointer;" onclick="toggleActive('${id}',${!(u.isActive!==false)})">${u.isActive!==false?'⏸ Désactiver':'▶ Activer'}</button>` : ''}
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    // ── Activer / désactiver ──
+    async function toggleActive(username, newState) {
+      const users = Auth.getAllUsers();
+      if (!users[username]) return;
+      users[username].isActive = newState;
+      localStorage.setItem(Auth.STORAGE_KEY_USERS, JSON.stringify(users));
+      showMessage(`✅ Compte ${username} ${newState ? 'activé' : 'désactivé'}.`, 'success');
+      loadUsers();
+    }
+
+    // ── Création ──
+    async function handleCreateUser(event) {
+      event.preventDefault();
+      const prenom    = document.getElementById('c-prenom').value.trim();
+      const nom       = document.getElementById('c-nom').value.trim();
+      const societe   = document.getElementById('c-societe').value;
+      const email     = document.getElementById('c-email').value.trim();
+      const username  = document.getElementById('c-username').value.trim();
+      const password  = document.getElementById('c-password').value;
+      const poste     = document.getElementById('c-poste').value.trim();
+      const displayName = `${prenom} ${nom}`;
+
+      const customPermissions = Array.from(document.querySelectorAll('#createAccessCheckboxes input:checked')).map(cb => cb.value);
+
+      const result = Auth.registerUser(username, password, displayName, email, 'lecture', null, customPermissions);
+      if (!result.success) { showMessage(result.message, 'error'); return; }
+
+      // Compléter avec les champs supplémentaires avant la synchro Excel
+      const users = Auth.getAllUsers();
+      if (users[username]) {
+        users[username].prenom     = prenom;
+        users[username].nom        = nom;
+        users[username].poste      = poste;
+        users[username].entreprise = societe;
+        users[username].createdBy  = 'SITE';
+        localStorage.setItem(Auth.STORAGE_KEY_USERS, JSON.stringify(users));
+      }
+
+      showMessage(`✅ ${displayName} créé et envoyé vers l'Excel (société : ${societe}).`, 'success');
+      ['c-prenom','c-nom','c-email','c-username','c-password','c-poste'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('c-societe').value = '';
+      renderAccessCheckboxes('createAccessCheckboxes', []);
+      loadUsers();
+    }
+
+    // ── Modale Accès ──
     let _accessUsername = null;
 
     function openAccessModal(username) {
       _accessUsername = username;
       document.getElementById('accessModalUsername').textContent = username;
-
       const users = Auth.getAllUsers();
-      const user = users[username];
-      if (!user) return;
-
-      let currentPerms;
-      if (Array.isArray(user.customPermissions)) {
-        currentPerms = user.customPermissions;
-      } else {
-        currentPerms = Auth.PERMISSIONS[user.role] || [];
-      }
-
-      renderAccessCheckboxes('accessCheckboxes', currentPerms);
+      const u = users[username];
+      if (!u) return;
+      const perms = Array.isArray(u.customPermissions) ? u.customPermissions : (Auth.PERMISSIONS[u.role] || []);
+      renderAccessCheckboxes('accessCheckboxes', perms);
       document.getElementById('accessModal').style.display = 'block';
     }
 
-    function closeAccessModal() {
-      document.getElementById('accessModal').style.display = 'none';
-      _accessUsername = null;
-    }
-
-    function resetAccessToEmpty() {
-      document.querySelectorAll('#accessCheckboxes input[type=checkbox]').forEach(cb => {
-        cb.checked = false;
-      });
-    }
-
-    function selectAllAccess() {
-      document.querySelectorAll('#accessCheckboxes input[type=checkbox]').forEach(cb => {
-        cb.checked = true;
-      });
-    }
+    function closeAccessModal() { document.getElementById('accessModal').style.display = 'none'; _accessUsername = null; }
+    function resetAccessToEmpty() { document.querySelectorAll('#accessCheckboxes input').forEach(cb => cb.checked = false); }
+    function selectAllAccess()    { document.querySelectorAll('#accessCheckboxes input').forEach(cb => cb.checked = true); }
 
     function saveAccessModal() {
-      const selected = Array.from(document.querySelectorAll('#accessCheckboxes input[type=checkbox]:checked'))
-        .map(cb => cb.value);
+      const selected = Array.from(document.querySelectorAll('#accessCheckboxes input:checked')).map(cb => cb.value);
       const result = Auth.updateUserPermissions(_accessUsername, selected);
-      if (result.success) {
-        closeAccessModal();
-        showMessage(`✅ Accès de ${_accessUsername} mis à jour.`, 'success');
-        loadUsers();
-      } else {
-        alert(result.message);
-      }
+      if (!result.success) { alert(result.message); return; }
+      closeAccessModal();
+      showMessage(`✅ Accès de ${_accessUsername} mis à jour et synchronisé vers l'Excel.`, 'success');
+      loadUsers();
     }
 
-    // Fermer la modale en cliquant à l'extérieur
-    document.getElementById('accessModal').addEventListener('click', function(e) {
-      if (e.target === this) closeAccessModal();
-    });
+    document.getElementById('accessModal').addEventListener('click', e => { if (e.target === document.getElementById('accessModal')) closeAccessModal(); });
 
-    // ===== MODALE MODIFIER UTILISATEUR =====
+    // ── Modale Modifier ──
     let _editUsername = null;
 
     function openEditModal(username) {
       _editUsername = username;
       document.getElementById('editModalUsername').textContent = username;
       document.getElementById('editModalMessage').style.display = 'none';
-
       const users = Auth.getAllUsers();
-      const user = users[username];
-      if (!user) return;
-
+      const u = users[username];
+      if (!u) return;
       document.getElementById('editModalNewUsername').value = username;
-      document.getElementById('editModalDisplayName').value = user.displayName || '';
-      document.getElementById('editModalEmail').value = user.email || '';
+      document.getElementById('editModalDisplayName').value = u.displayName || '';
+      document.getElementById('editModalEmail').value = u.email || '';
+      document.getElementById('editModalPoste').value = u.poste || '';
       document.getElementById('editModalPassword').value = '';
       document.getElementById('editModal').style.display = 'block';
     }
 
-    function closeEditModal() {
-      document.getElementById('editModal').style.display = 'none';
-      _editUsername = null;
-    }
+    function closeEditModal() { document.getElementById('editModal').style.display = 'none'; _editUsername = null; }
 
     function saveEditModal() {
-      const newUsername = document.getElementById('editModalNewUsername').value.trim();
-      const newName = document.getElementById('editModalDisplayName').value.trim();
-      const newEmail = document.getElementById('editModalEmail').value.trim();
-      const newPassword = document.getElementById('editModalPassword').value;
+      const newUsername   = document.getElementById('editModalNewUsername').value.trim();
+      const newName       = document.getElementById('editModalDisplayName').value.trim();
+      const newEmail      = document.getElementById('editModalEmail').value.trim();
+      const newPoste      = document.getElementById('editModalPoste').value.trim();
+      const newPassword   = document.getElementById('editModalPassword').value;
 
       const result = Auth.updateUserProfile(_editUsername, newName, newEmail, newUsername);
       if (!result.success) {
         const msg = document.getElementById('editModalMessage');
-        msg.textContent = result.message;
-        msg.className = 'alert alert-error';
-        msg.style.display = 'block';
+        msg.textContent = result.message; msg.className = 'alert alert-error'; msg.style.display = 'block';
         return;
       }
 
+      // Mise à jour du poste
+      const effectiveId = (newUsername && newUsername !== _editUsername) ? newUsername : _editUsername;
+      const users = Auth.getAllUsers();
+      if (users[effectiveId]) {
+        users[effectiveId].poste = newPoste;
+        localStorage.setItem(Auth.STORAGE_KEY_USERS, JSON.stringify(users));
+      }
+
       if (newPassword.length > 0) {
-        const effectiveUser = (newUsername && newUsername !== _editUsername) ? newUsername : _editUsername;
-        const pwResult = Auth.changePassword(effectiveUser, newPassword);
+        const pwResult = Auth.changePassword(effectiveId, newPassword);
         if (!pwResult.success) {
           const msg = document.getElementById('editModalMessage');
-          msg.textContent = pwResult.message;
-          msg.className = 'alert alert-error';
-          msg.style.display = 'block';
+          msg.textContent = pwResult.message; msg.className = 'alert alert-error'; msg.style.display = 'block';
           return;
         }
       }
 
       closeEditModal();
-      showMessage(`✅ Informations de ${_editUsername} mises à jour.`, 'success');
+      showMessage(`✅ ${_editUsername} mis à jour.`, 'success');
       loadUsers();
     }
 
-    document.getElementById('editModal').addEventListener('click', function(e) {
-      if (e.target === this) closeEditModal();
-    });
+    document.getElementById('editModal').addEventListener('click', e => { if (e.target === document.getElementById('editModal')) closeEditModal(); });
+
+    // ── Init ──
+    async function init() {
+      document.getElementById('sidebar').innerHTML = getSidebar();
+      injectUsersSecondaryBar();
+      await loadPageGroups();
+      await loadUsers();
+    }
+
+    window.addEventListener('load', async () => { await window.serverReady; init(); });
+    window.addEventListener('serverDataRefreshed', () => loadUsers());
   </script>
 
   <footer class="site-footer"></footer>

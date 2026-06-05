@@ -409,7 +409,10 @@
 
   const session = Auth.getSession();
   const isDirection = session?.role === 'direction';
-  const canEdit = isDirection || Auth.hasAccess('conducteur_charpente');
+  const isArnaud = session?.displayName === 'Arnaud Masset';
+  // Tout le monde voit uniquement ses chantiers, sauf direction et Arnaud Masset
+  const isConducteurOnly = !isDirection && !isArnaud;
+  const canEdit = isDirection || Auth.hasAccess('gc_dossiers') || Auth.hasAccess('conducteur_charpente');
 
   const FILE_ICONS = { folder:'📁', pdf:'📄', image:'🖼️', word:'📝', excel:'📊', powerpoint:'📊', cad:'📐', video:'🎬', archive:'🗜️', email:'📧', file:'📎' };
 
@@ -444,10 +447,6 @@
   // ══════════════════════════════════════════════════════════════
   //  LISTE DES CHANTIERS
   // ══════════════════════════════════════════════════════════════
-  const isArnaud = session?.displayName === 'Arnaud Masset';
-  // Conducteur simple (pas Arnaud, pas gc_dossiers, pas direction) : ne voit que ses chantiers
-  const isConducteurOnly = Auth.hasAccess('conducteur_charpente') && !Auth.hasAccess('gc_dossiers') && !isDirection && !isArnaud;
-
   async function loadChantiersList() {
     try {
       const params = isConducteurOnly && session?.displayName

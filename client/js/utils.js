@@ -648,7 +648,7 @@ function injectChantiersSecondaryBar() {
     secondaryItems += `
     <a href="${base}pages/chantiers-maconnerie.html" class="sidebar-item${maconnerieActive}">🧱 Carte maçonnerie</a>`;
   }
-  if (Auth.hasAccess('gc_dossiers') || Auth.hasAccess('conducteur_charpente')) {
+  if (Auth.hasAccess('gc_dossiers') || Auth.hasAccess('conducteur_charpente') || Auth.hasAccess('chantiers_charpente')) {
     secondaryItems += `
     <a href="${base}pages/chantiers-suivi.html" class="sidebar-item${suiviActive}">🚧 Suivi chantier</a>`;
   }
@@ -675,14 +675,12 @@ function injectChantiersSecondaryBar() {
     chantiersSidebar.classList.add('open');
   }
 
-  // Ajout dynamique du lien conducteur selon le nom de l'utilisateur connecté
+  // Ajout immédiat du lien conducteur basé sur la permission (pas d'appel API)
   const displayName = session.displayName || '';
   if (displayName === 'Arnaud Masset') {
-    // Arnaud voit toujours la vue conducteurs (sans vérification de données)
     _appendConducteurNavLink(base, conducteurActive, '👷 Vue conducteurs');
-  } else if (displayName) {
-    // Autres utilisateurs : vérifier s'ils sont conducteurs dans les données
-    _checkAndAppendConducteurLink(displayName, base, conducteurActive);
+  } else if (Auth.hasAccess('conducteur_charpente')) {
+    _appendConducteurNavLink(base, conducteurActive, '👷 Mes chantiers');
   }
 }
 
@@ -694,17 +692,6 @@ function _appendConducteurNavLink(base, activeClass, label) {
   );
 }
 
-async function _checkAndAppendConducteurLink(displayName, base, activeClass) {
-  try {
-    const data = await fetch(window.location.origin + '/api/dossiers/carte').then(r => r.json());
-    const chantiers = data?.chantiers || [];
-    const normStr = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
-    const isConducteur = chantiers.some(c => normStr(c.conducteur) === normStr(displayName));
-    if (isConducteur) {
-      _appendConducteurNavLink(base, activeClass, '👷 Mes chantiers');
-    }
-  } catch {}
-}
 
 /**
  * Génère et injecte la barre de navigation secondaire Achats
