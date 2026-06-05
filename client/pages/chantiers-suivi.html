@@ -206,7 +206,12 @@
   <script src="../js/api.js"></script>
   <script src="../js/auth.js"></script>
   <script src="../js/utils.js"></script>
-  <script>Auth.requireAuth();</script>
+  <script>
+    if (!Auth.isConnected()) { window.location.href = '../connexion.html'; }
+    else if (!Auth.hasAccess('chantiers') && !Auth.hasAccess('chantiers_conducteur') && !Auth.isDirection()) {
+      window.location.href = './erreur-acces.html';
+    }
+  </script>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
       try {
@@ -410,10 +415,10 @@
 
   const session = Auth.getSession();
   const isDirection = session?.role === 'direction';
-  const isArnaud = session?.displayName === 'Arnaud Masset';
-  // Tout le monde voit uniquement ses chantiers, sauf direction et Arnaud Masset
-  const isConducteurOnly = !isDirection && !isArnaud;
-  const canEdit = isDirection || Auth.hasAccess('gc_dossiers') || Auth.hasAccess('conducteur_charpente');
+  const isResponsable = Auth.hasAccess('chantiers_responsable');
+  // Conducteur (sans chantiers global ni responsable) → voit uniquement ses chantiers
+  const isConducteurOnly = Auth.hasAccess('chantiers_conducteur') && !Auth.hasAccess('chantiers') && !isResponsable && !isDirection;
+  const canEdit = isDirection || Auth.hasAccess('chantiers') || Auth.hasAccess('chantiers_conducteur');
 
   const FILE_ICONS = { folder:'📁', pdf:'📄', image:'🖼️', word:'📝', excel:'📊', powerpoint:'📊', cad:'📐', video:'🎬', archive:'🗜️', email:'📧', file:'📎' };
 
@@ -460,7 +465,7 @@
       filteredChantiers = [...allChantiers];
       document.getElementById('initial-loading').style.display = 'none';
       document.getElementById('suivi-layout').style.display = 'grid';
-      if (isArnaud) initConducteurFilterSuivi();
+      if (isResponsable) initConducteurFilterSuivi();
       renderBadges(); renderChantiersList();
       const nom = new URLSearchParams(window.location.search).get('chantier');
       if (nom) { const f = allChantiers.find(c => c.nom === nom); if(f) selectChantier(f); }

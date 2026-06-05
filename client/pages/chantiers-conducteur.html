@@ -25,7 +25,12 @@
   <script src="../js/api.js"></script>
   <script src="../js/auth.js"></script>
   <script src="../js/utils.js"></script>
-  <script>Auth.requirePermission('conducteur_charpente');</script>
+  <script>
+    if (!Auth.isConnected()) { window.location.href = '../connexion.html'; }
+    else if (!Auth.hasAccess('chantiers_conducteur') && !Auth.hasAccess('chantiers_responsable') && !Auth.isDirection()) {
+      window.location.href = './erreur-acces.html';
+    }
+  </script>
 
   <div class="app-container">
     <div id="sidebar"></div>
@@ -62,10 +67,9 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    const ARNAUD = 'Arnaud Masset';
     const session = Auth.getSession();
     const myName = session?.displayName || '';
-    const isArnaud = myName === ARNAUD;
+    const isResponsable = Auth.hasAccess('chantiers_responsable');
 
     let map, markers = {};
     let allChantiers = [];
@@ -113,7 +117,7 @@
     }
 
     function getFiltered() {
-      if (isArnaud && selectedConducteur) {
+      if (isResponsable && selectedConducteur) {
         return allChantiers.filter(c => normName(c.conducteur) === normName(selectedConducteur));
       }
       return allChantiers;
@@ -126,7 +130,7 @@
       displayed = getFiltered();
       displayed.forEach(c => {
         if (!c.lat || !c.lng) return;
-        const color = isArnaud ? colorFor(c.conducteur || '') : '#5a4a3a';
+        const color = isResponsable ? colorFor(c.conducteur || '') : '#5a4a3a';
         markers[c.id] = L.marker([c.lat, c.lng], { icon: pinIcon(color) })
           .addTo(map)
           .bindPopup(buildPopupHTML(c), { maxWidth: 290 });
@@ -139,7 +143,7 @@
       const withPos = displayed.filter(c => c.lat && c.lng).length;
       let html = `<div class="kpi-stat"><div class="kpi-stat-value">${displayed.length}</div><div class="kpi-stat-label">Chantiers</div></div>
         <div class="kpi-stat"><div class="kpi-stat-value">${withPos}</div><div class="kpi-stat-label">Sur la carte</div></div>`;
-      if (isArnaud) {
+      if (isResponsable) {
         const cds = new Set(allChantiers.map(c => c.conducteur).filter(Boolean)).size;
         html += `<div class="kpi-stat"><div class="kpi-stat-value">${cds}</div><div class="kpi-stat-label">Conducteurs</div></div>`;
       }
@@ -153,11 +157,11 @@
         return;
       }
       container.innerHTML = displayed.map(c => {
-        const color = isArnaud ? colorFor(c.conducteur || '') : '#5a4a3a';
+        const color = isResponsable ? colorFor(c.conducteur || '') : '#5a4a3a';
         return `<div class="chantier-card" style="border-left-color:${color};" onclick="centerOn(${JSON.stringify(c.id)});" style="cursor:pointer;">
           <div class="chantier-card-nom">${escapeHtml(c.nom)}</div>
           ${c.adresse ? `<div class="chantier-card-sub">📍 ${escapeHtml(c.adresse)}</div>` : ''}
-          ${isArnaud && c.conducteur ? `<div class="chantier-card-sub">👷 ${escapeHtml(c.conducteur)}</div>` : ''}
+          ${isResponsable && c.conducteur ? `<div class="chantier-card-sub">👷 ${escapeHtml(c.conducteur)}</div>` : ''}
           ${c.montantHT ? `<div class="chantier-card-sub">💶 ${escapeHtml(c.montantHT)} € HT</div>` : ''}
           ${c.dateOS || c.dateFin ? `<div class="chantier-card-sub">📅 ${escapeHtml(c.dateOS||'—')} → ${escapeHtml(c.dateFin||'—')}</div>` : ''}
         </div>`;
@@ -171,7 +175,7 @@
       renderList();
       const note = displayed.filter(c => c.lat && c.lng).length;
       document.getElementById('map-note').textContent = `${note} chantier(s) affiché(s) sur la carte.`;
-      if (isArnaud) {
+      if (isResponsable) {
         const sel = document.getElementById('conducteur-select');
         document.getElementById('filter-count').textContent = `${displayed.length} chantier(s)`;
       }
@@ -221,7 +225,7 @@
         maxZoom: 19,
       }).addTo(map);
 
-      if (isArnaud) {
+      if (isResponsable) {
         document.getElementById('page-title').textContent = '👷 Vue conducteurs';
         document.getElementById('page-subtitle').textContent = 'Chantiers charpente par conducteur de travaux.';
         document.getElementById('conducteur-filter-bar').style.display = 'flex';
@@ -233,7 +237,7 @@
         const data = await fetch(SERVER_URL + '/dossiers/carte').then(r => r.json());
         const tous = data?.chantiers || [];
 
-        if (isArnaud) {
+        if (isResponsable) {
           allChantiers = tous;
           populateConducteurSelect(tous);
         } else {

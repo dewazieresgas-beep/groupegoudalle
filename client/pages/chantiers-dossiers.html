@@ -416,7 +416,7 @@
     // ── Helpers ──
     const session = Auth.getSession();
     const isDirection = session?.role === 'direction';
-    const canEdit = isDirection || Auth.hasAccess('gc_dossiers');
+    const canEdit = isDirection || Auth.hasAccess('chantiers') || Auth.hasAccess('chantiers_conducteur');
 
     function normName(s) {
       return String(s || '').toLowerCase()

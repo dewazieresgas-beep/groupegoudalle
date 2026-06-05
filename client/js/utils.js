@@ -317,14 +317,10 @@ function getSidebar() {
   `;
 
   // ===== CHANTIERS =====
-  const _hasChantier = Auth.hasAccess('chantiers_vue_globale') || Auth.hasAccess('chantiers_charpente') || Auth.hasAccess('chantiers_maconnerie') || Auth.hasAccess('gc_dossiers') || Auth.hasAccess('conducteur_charpente');
+  const _hasChantier = Auth.hasAccess('chantiers') || Auth.hasAccess('chantiers_responsable') || Auth.hasAccess('chantiers_conducteur');
   if (_hasChantier) {
     const chantiersActive = isChantierPage() ? ' active' : '';
-    const firstPage = Auth.hasAccess('chantiers_vue_globale') ? 'chantiers-vue-globale.html'
-      : Auth.hasAccess('chantiers_charpente') ? 'chantiers-charpente.html'
-      : Auth.hasAccess('chantiers_maconnerie') ? 'chantiers-maconnerie.html'
-      : Auth.hasAccess('gc_dossiers') ? 'chantiers-dossiers.html'
-      : 'chantiers-conducteur.html';
+    const firstPage = Auth.hasAccess('chantiers') ? 'chantiers-vue-globale.html' : 'chantiers-conducteur.html';
     items += `<a href="${base}pages/${firstPage}" class="sidebar-item${chantiersActive}">🚧 Chantiers</a>`;
   }
 
@@ -638,21 +634,23 @@ function injectChantiersSecondaryBar() {
   const maconnerieActive = currentPage === 'chantiers-maconnerie.html' ? ' active' : '';
 
   let secondaryItems = '';
-  if (Auth.hasAccess('chantiers_vue_globale')) {
+  if (Auth.hasAccess('chantiers')) {
     secondaryItems += `
     <a href="${base}pages/chantiers-vue-globale.html" class="sidebar-item${globaleActive}">🌍 Vue globale</a>`;
   }
-  if (Auth.hasAccess('chantiers_charpente')) {
+  // Vue conducteurs avant Suivi
+  if (Auth.hasAccess('chantiers_responsable')) {
     secondaryItems += `
-    <a href="${base}pages/chantiers-charpente.html" class="sidebar-item${charpenteActive}">🪵 Carte charpente</a>`;
+    <a href="${base}pages/chantiers-conducteur.html" class="sidebar-item${conducteurActive}">👷 Vue conducteurs</a>`;
   }
-  if (Auth.hasAccess('chantiers_maconnerie')) {
-    secondaryItems += `
-    <a href="${base}pages/chantiers-maconnerie.html" class="sidebar-item${maconnerieActive}">🧱 Carte maçonnerie</a>`;
-  }
-  if (Auth.hasAccess('gc_dossiers') || Auth.hasAccess('conducteur_charpente') || Auth.hasAccess('chantiers_charpente')) {
+  if (Auth.hasAccess('chantiers')) {
     secondaryItems += `
     <a href="${base}pages/chantiers-suivi.html" class="sidebar-item${suiviActive}">🚧 Suivi chantier</a>`;
+  } else if (Auth.hasAccess('chantiers_conducteur') && !Auth.hasAccess('chantiers_responsable')) {
+    // Conducteur simple : Suivi filtré + Mes chantiers
+    secondaryItems += `
+    <a href="${base}pages/chantiers-suivi.html" class="sidebar-item${suiviActive}">🚧 Suivi chantier</a>
+    <a href="${base}pages/chantiers-conducteur.html" class="sidebar-item${conducteurActive}">🗂️ Mes chantiers</a>`;
   }
 
   const barHTML = `
@@ -677,21 +675,6 @@ function injectChantiersSecondaryBar() {
     chantiersSidebar.classList.add('open');
   }
 
-  // Ajout immédiat du lien conducteur basé sur la permission (pas d'appel API)
-  const displayName = session.displayName || '';
-  if (displayName === 'Arnaud Masset') {
-    _appendConducteurNavLink(base, conducteurActive, '👷 Vue conducteurs');
-  } else if (Auth.hasAccess('conducteur_charpente')) {
-    _appendConducteurNavLink(base, conducteurActive, '👷 Mes chantiers');
-  }
-}
-
-function _appendConducteurNavLink(base, activeClass, label) {
-  const nav = document.getElementById('chantiersSidebarNav');
-  if (!nav) return;
-  nav.insertAdjacentHTML('beforeend',
-    `<a href="${base}pages/chantiers-conducteur.html" class="sidebar-item${activeClass}">${label}</a>`
-  );
 }
 
 

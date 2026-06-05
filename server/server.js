@@ -76,11 +76,19 @@ const COMPANY_SHEETS = ['SYLVE', 'CHARPENTE', 'CBCO', 'SNGM'];
 // Ajouter une entrée ici suffit pour qu'elle apparaisse dans la gestion des utilisateurs
 // ET qu'une colonne soit créée automatiquement dans l'Excel.
 const PAGES_CONFIG = [
-  { file:'chantiers-vue-globale.html',                perm:'chantiers_vue_globale',            label:'🌍 Vue globale',                   group:'🚧 Chantiers' },
-  { file:'chantiers-charpente.html',                  perm:'chantiers_charpente',              label:'🪵 Carte charpente',               group:'🚧 Chantiers' },
-  { file:'chantiers-maconnerie.html',                 perm:'chantiers_maconnerie',             label:'🧱 Carte maçonnerie',              group:'🚧 Chantiers' },
-  { file:'chantiers-conducteurne.html',               perm:'conducteur_charpente',             label:'👷 Page conducteur',               group:'🚧 Chantiers' },
-  { file:'chantiers-suivi.html',                      perm:'gc_dossiers',                      label:'📁 Suivi chantier / dossiers',     group:'🚧 Chantiers' },
+  // ── Chantiers : 3 niveaux simples ──────────────────────────────────────────
+  // p_chantiers         → accès global (Vue globale, Cartes, Suivi sans filtre)
+  // p_chantiers-responsable → + Vue conducteurs avec filtre par conducteur
+  // p_chantiers-conducteur  → Suivi filtré sur son nom + Mes chantiers
+  { file:'chantiers.html',                            perm:'chantiers',                        label:'🌍 Accès chantiers (global)',       group:'🚧 Chantiers' },
+  { file:'chantiers-responsable.html',                perm:'chantiers_responsable',            label:'👷 Vue conducteurs (responsable)',  group:'🚧 Chantiers' },
+  { file:'chantiers-conducteur.html',                 perm:'chantiers_conducteur',             label:'🗂️ Mes chantiers (conducteur)',    group:'🚧 Chantiers' },
+  // Anciennes entrées conservées pour rétrocompatibilité Excel (colonnes ignorées dans l'UI)
+  { file:'chantiers-vue-globale.html',                perm:'chantiers_vue_globale',            label:'',  group:'🚧 Chantiers', hidden:true },
+  { file:'chantiers-charpente.html',                  perm:'chantiers_charpente',              label:'',  group:'🚧 Chantiers', hidden:true },
+  { file:'chantiers-maconnerie.html',                 perm:'chantiers_maconnerie',             label:'',  group:'🚧 Chantiers', hidden:true },
+  { file:'chantiers-conducteurne.html',               perm:'conducteur_charpente',             label:'',  group:'🚧 Chantiers', hidden:true },
+  { file:'chantiers-suivi.html',                      perm:'gc_dossiers',                      label:'',  group:'🚧 Chantiers', hidden:true },
   { file:'commerce-indicateurs.html',                 perm:'commerce_indicateurs',             label:'💼 Indicateurs commerce',          group:'💼 Commerce' },
   { file:'commerce-liaison.html',                     perm:'commerce_liaison',                 label:'🔗 Liaison commerce',              group:'💼 Commerce' },
   { file:'compta-indicateurs.html',                   perm:'compta_indicateurs',               label:'📊 Indicateurs comptabilité',      group:'📒 Comptabilité' },
@@ -219,6 +227,17 @@ function readAccountsExcel() {
             if (p) permsSet.add(p);
           }
         });
+
+        // Rétrocompatibilité : si quelqu'un a encore les anciennes colonnes chantier
+        // (avant la migration Excel), leur accorder automatiquement la nouvelle permission.
+        if (!permsSet.has('chantiers') &&
+            ['chantiers_vue_globale','chantiers_charpente','chantiers_maconnerie','gc_dossiers'].some(p => permsSet.has(p)) &&
+            !permsSet.has('conducteur_charpente')) {
+          permsSet.add('chantiers');
+        }
+        if (!permsSet.has('chantiers_conducteur') && permsSet.has('conducteur_charpente')) {
+          permsSet.add('chantiers_conducteur');
+        }
 
         users[id] = {
           username: id,
@@ -914,6 +933,16 @@ function requireWriteRateLimit(req, res, next) {
 app.use(express.static(path.join(__dirname, '../client')));
 
 // ─── ROUTES : UTILISATEURS (source de vérité = Excel W:\BCHDF\...) ─────────────
+
+// ─── ROUTES : CHANTIERS MAÇONNERIE (stockés en DB) ──────────────────────────────
+app.get('/api/chantiers', (req, res) => {
+  res.json(dbGet('chantiers', []));
+});
+
+app.put('/api/chantiers', requireToken, requireWriteRateLimit, (req, res) => {
+  dbSet('chantiers', req.body);
+  res.json({ success: true });
+});
 
 app.get('/api/users', (req, res) => {
   res.json(readAccountsExcel());
