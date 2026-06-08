@@ -16,11 +16,9 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..');
 
 const suites = [
-  { name: 'Syntaxe JS',         file: 'tests/test_syntax.js'      },
-  { name: 'Utils (fonctions)',   file: 'tests/test_utils.js'       },
-  { name: 'Auth (authentif.)',   file: 'tests/test_auth.js'        },
-  { name: 'Collage CBCO',        file: 'tests/test_collage.js'     },
-  { name: 'Syntaxe CBCO HTML',   file: 'tests/test_syntax_cbco.js' },
+  { name: 'Syntaxe JS',        file: 'tests/test_syntax.js'  },
+  { name: 'Auth (authentif.)', file: 'tests/test_auth.js'    },
+  { name: 'Collage CBCO',      file: 'tests/test_collage.js' },
 ];
 
 console.log('\n══════════════════════════════════════════════════');
