@@ -1560,9 +1560,19 @@ function formatSylveEuros(value) {
 }
 
 // ============ INITIALISATION ============
-/**
- * Restaure l'état des sous-menus de navigation après chargement du DOM
- */
 document.addEventListener('DOMContentLoaded', function() {
   setTimeout(restoreSubMenuStates, 100);
 });
+
+// Re-rend la sidebar avec les permissions fraîches du serveur une fois serverReady résolu.
+// Cela garantit que les onglets affichés correspondent exactement à ce que l'Excel autorise,
+// même si la sidebar a été rendue une première fois avec des données en cache obsolètes.
+if (window.serverReady) {
+  window.serverReady.then(function() {
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar && Auth.isConnected()) {
+      sidebar.innerHTML = getSidebar();
+      setTimeout(restoreSubMenuStates, 50);
+    }
+  });
+}
