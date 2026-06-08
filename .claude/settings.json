@@ -81,7 +81,8 @@
       "PowerShell(Get-ChildItem \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\" -Depth 1 -File | Where-Object { $_.Extension -in @\\(\".js\",\".ps1\",\".bat\",\".cmd\",\".vbs\"\\) } | Select-Object Name, LastWriteTime)",
       "Bash(powershell -Command \"if \\(Test-Path 'W:\\\\\\\\BCHDF\\\\\\\\Site Intranet Groupe Goudalle\\\\\\\\Compte site intranet.xlsx'\\) { Write-Output 'File exists' } else { Write-Output 'File not found' }\")",
       "Bash(grep -n \"Y:\\\\\\\\\\\\|W:\\\\\\\\\\\\|X:\\\\\\\\\\\\|Z:\\\\\\\\\\\\|readdir\\\\|statSync\" \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\\\\server\\\\server.js\")",
-      "WebSearch"
+      "WebSearch",
+      "PowerShell(Get-ChildItem -Path \"Y:\\\\03-Affaires\\\\02-Affaires en cours\" -Recurse -File | Where-Object { $_.Name -match '\\\\bOS\\\\b' -or $_.Name -match \"Ordre.de.Service\" -or $_.Name -match \"OS \" -or $_.Name -match \" OS\" } | Select-Object FullName, Name, LastWriteTime | Format-Table -AutoSize -Wrap)"
     ],
     "additionalDirectories": [
       "\\tmp",

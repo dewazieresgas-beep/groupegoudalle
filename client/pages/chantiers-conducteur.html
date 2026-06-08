@@ -27,7 +27,7 @@
   <script src="../js/utils.js"></script>
   <script>
     if (!Auth.isConnected()) { window.location.href = '../connexion.html'; }
-    else if (!Auth.hasAccess('chantiers_conducteur') && !Auth.hasAccess('chantiers_responsable') && !Auth.isDirection()) {
+    else if (!Auth.hasAccess('chantiers_vue_conducteurs') && !Auth.isDirection()) {
       window.location.href = './erreur-acces.html';
     }
   </script>
@@ -69,7 +69,7 @@
   <script>
     const session = Auth.getSession();
     const myName = session?.displayName || '';
-    const isResponsable = Auth.hasAccess('chantiers_responsable');
+    const isResponsable = Auth.hasAccess('chantiers_vue_conducteurs');
 
     let map, markers = {};
     let allChantiers = [];

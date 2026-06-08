@@ -76,19 +76,20 @@ const COMPANY_SHEETS = ['SYLVE', 'CHARPENTE', 'CBCO', 'SNGM'];
 // Ajouter une entrée ici suffit pour qu'elle apparaisse dans la gestion des utilisateurs
 // ET qu'une colonne soit créée automatiquement dans l'Excel.
 const PAGES_CONFIG = [
-  // ── Chantiers : 3 niveaux simples ──────────────────────────────────────────
-  // p_chantiers         → accès global (Vue globale, Cartes, Suivi sans filtre)
-  // p_chantiers-responsable → + Vue conducteurs avec filtre par conducteur
-  // p_chantiers-conducteur  → Suivi filtré sur son nom + Mes chantiers
-  { file:'chantiers.html',                            perm:'chantiers',                        label:'🌍 Accès chantiers (global)',       group:'🚧 Chantiers' },
-  { file:'chantiers-responsable.html',                perm:'chantiers_responsable',            label:'👷 Vue conducteurs (responsable)',  group:'🚧 Chantiers' },
-  { file:'chantiers-conducteur.html',                 perm:'chantiers_conducteur',             label:'🗂️ Mes chantiers (conducteur)',    group:'🚧 Chantiers' },
-  // Anciennes entrées conservées pour rétrocompatibilité Excel (colonnes ignorées dans l'UI)
-  { file:'chantiers-vue-globale.html',                perm:'chantiers_vue_globale',            label:'',  group:'🚧 Chantiers', hidden:true },
-  { file:'chantiers-charpente.html',                  perm:'chantiers_charpente',              label:'',  group:'🚧 Chantiers', hidden:true },
-  { file:'chantiers-maconnerie.html',                 perm:'chantiers_maconnerie',             label:'',  group:'🚧 Chantiers', hidden:true },
-  { file:'chantiers-conducteurne.html',               perm:'conducteur_charpente',             label:'',  group:'🚧 Chantiers', hidden:true },
-  { file:'chantiers-suivi.html',                      perm:'gc_dossiers',                      label:'',  group:'🚧 Chantiers', hidden:true },
+  // ── Chantiers : 1 colonne Excel = 1 page (correspondance exacte) ────────────
+  // p_chantiers-vue-globale    → page Vue globale (carte tous chantiers)
+  // p_chantiers-vue-conducteurs → page Vue conducteurs (filtre par conducteur)
+  // p_chantiers-suivi          → page Suivi chantier (filtré si pas vue-globale)
+  { file:'chantiers-vue-globale.html',     perm:'chantiers_vue_globale',     label:'🌍 Vue globale',      group:'🚧 Chantiers' },
+  { file:'chantiers-vue-conducteurs.html', perm:'chantiers_vue_conducteurs', label:'👷 Vue conducteurs',  group:'🚧 Chantiers' },
+  { file:'chantiers-suivi.html',           perm:'chantiers_suivi',           label:'📁 Suivi chantier',   group:'🚧 Chantiers' },
+  // Anciennes colonnes ignorées (données = non dans Excel, conservées pour compatibilité)
+  { file:'chantiers.html',                 perm:'chantiers',                 label:'', group:'🚧 Chantiers', hidden:true },
+  { file:'chantiers-responsable.html',     perm:'chantiers_responsable',     label:'', group:'🚧 Chantiers', hidden:true },
+  { file:'chantiers-conducteur.html',      perm:'chantiers_conducteur',      label:'', group:'🚧 Chantiers', hidden:true },
+  { file:'chantiers-charpente.html',       perm:'chantiers_charpente',       label:'', group:'🚧 Chantiers', hidden:true },
+  { file:'chantiers-maconnerie.html',      perm:'chantiers_maconnerie',      label:'', group:'🚧 Chantiers', hidden:true },
+  { file:'chantiers-conducteurne.html',    perm:'conducteur_charpente',      label:'', group:'🚧 Chantiers', hidden:true },
   { file:'commerce-indicateurs.html',                 perm:'commerce_indicateurs',             label:'💼 Indicateurs commerce',          group:'💼 Commerce' },
   { file:'commerce-liaison.html',                     perm:'commerce_liaison',                 label:'🔗 Liaison commerce',              group:'💼 Commerce' },
   { file:'compta-indicateurs.html',                   perm:'compta_indicateurs',               label:'📊 Indicateurs comptabilité',      group:'📒 Comptabilité' },
@@ -228,16 +229,6 @@ function readAccountsExcel() {
           }
         });
 
-        // Rétrocompatibilité : si quelqu'un a encore les anciennes colonnes chantier
-        // (avant la migration Excel), leur accorder automatiquement la nouvelle permission.
-        if (!permsSet.has('chantiers') &&
-            ['chantiers_vue_globale','chantiers_charpente','chantiers_maconnerie','gc_dossiers'].some(p => permsSet.has(p)) &&
-            !permsSet.has('conducteur_charpente')) {
-          permsSet.add('chantiers');
-        }
-        if (!permsSet.has('chantiers_conducteur') && permsSet.has('conducteur_charpente')) {
-          permsSet.add('chantiers_conducteur');
-        }
 
         users[id] = {
           username: id,
@@ -379,7 +370,7 @@ async function writeAccountsExcel(users) {
     return true;
   } catch (e) {
     console.error('[Comptes] Erreur écriture Excel:', e.message);
-    return false;
+    return { ok: false, error: e.message };
   }
 }
 
@@ -964,9 +955,12 @@ app.get('/api/pages', (_req, res) => {
 });
 
 app.put('/api/users', requireToken, requireWriteRateLimit, async (req, res) => {
-  const ok = await writeAccountsExcel(req.body);
-  if (ok) res.json({ success: true });
-  else res.status(500).json({ success: false, error: 'Impossible d\'écrire dans le fichier Excel des comptes.' });
+  const result = await writeAccountsExcel(req.body);
+  if (result === true) res.json({ success: true });
+  else {
+    const errMsg = (result && result.error) ? result.error : 'Impossible d\'écrire dans le fichier Excel des comptes.';
+    res.status(500).json({ success: false, error: errMsg });
+  }
 });
 
 // ─── ROUTE : CONNEXION (validation serveur via Excel) ────────────────────────────
@@ -4359,7 +4353,7 @@ app.get('/api/dossiers/contenu', async (req, res) => {
     const entries = await fs.promises.readdir(target, { withFileTypes: true });
     const items = await Promise.all(
       entries
-        .filter(e => !e.name.startsWith('~$') && e.name !== 'Thumbs.db' && e.name !== 'desktop.ini')
+        .filter(e => !e.name.startsWith('~$') && e.name !== 'Thumbs.db' && e.name !== 'desktop.ini' && e.name !== '.DS_Store')
         .map(async e => {
           const fullPath = path.join(target, e.name);
           const isDir = e.isDirectory();
@@ -4382,6 +4376,44 @@ app.get('/api/dossiers/contenu', async (req, res) => {
     res.json({ success: true, items });
   } catch (e) {
     if (e.code === 'ENOENT') return res.status(404).json({ success: false, error: 'Dossier introuvable' });
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// GET /api/dossiers/search?rel=ZUYDCOOTE&q=OS — recherche récursive dans un dossier chantier
+app.get('/api/dossiers/search', async (req, res) => {
+  const rel = req.query.rel || '';
+  const q = String(req.query.q || '').trim().toLowerCase();
+  if (!q || q.length < 2) return res.json({ success: true, results: [] });
+
+  const base = safeResolveDossier(rel);
+  if (!base) return res.status(400).json({ success: false, error: 'Chemin invalide' });
+
+  const results = [];
+  const IGNORE = new Set(['~$', 'Thumbs.db', 'desktop.ini', '.DS_Store']);
+  const MAX = 100;
+
+  async function walk(dir, relDir) {
+    if (results.length >= MAX) return;
+    let entries;
+    try { entries = await fs.promises.readdir(dir, { withFileTypes: true }); } catch { return; }
+    for (const e of entries) {
+      if (results.length >= MAX) return;
+      if (IGNORE.has(e.name) || e.name.startsWith('~$')) continue;
+      const fullPath = path.join(dir, e.name);
+      const relPath = relDir ? relDir + '/' + e.name : e.name;
+      if (e.name.toLowerCase().includes(q)) {
+        const ext = e.isDirectory() ? '' : path.extname(e.name);
+        results.push({ name: e.name, isDir: e.isDirectory(), relPath, ext, type: e.isDirectory() ? 'folder' : getExtIcon(ext) });
+      }
+      if (e.isDirectory()) await walk(fullPath, relPath);
+    }
+  }
+
+  try {
+    await walk(base, '');
+    res.json({ success: true, results });
+  } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
 });
@@ -4566,6 +4598,43 @@ async function findSuiviFolder(chantierDir, prefix, subPrefix) {
 }
 
 // GET /api/dossiers/suivi?rel=BOURBOURG
+// POST /api/dossiers/acte-engagement — upload de l'acte d'engagement, renommé automatiquement
+app.post('/api/dossiers/acte-engagement', requireToken, _dossiersUpload.single('fichier'), async (req, res) => {
+  const rel  = (req.query.rel  || '').split('/')[0];
+  const date = String(req.query.date || '').replace(/\//g, '-').trim(); // JJ-MM-AAAA
+  if (!rel || !date || !req.file) return res.status(400).json({ success: false, error: 'Paramètres manquants' });
+
+  const chantierDir = path.join(DOSSIERS_BASE, rel);
+  // Chercher 00_DCE.../1 - Marché, sinon 01_Commercial, sinon racine
+  let destDir = chantierDir;
+  try {
+    const entries = await fs.promises.readdir(chantierDir);
+    const dce = entries.find(e => /^00_dce/i.test(e) || /^00_.*march/i.test(e));
+    if (dce) {
+      const dceDir = path.join(chantierDir, dce);
+      const dceEntries = await fs.promises.readdir(dceDir).catch(() => []);
+      const marche = dceEntries.find(e => /1\s*[-–]\s*march/i.test(e) || /^1\s*-\s*march/i.test(e) || /^march/i.test(e));
+      if (marche) destDir = path.join(dceDir, marche);
+      else destDir = dceDir;
+    } else {
+      const commercial = entries.find(e => /^01_/i.test(e));
+      if (commercial) destDir = path.join(chantierDir, commercial);
+    }
+  } catch {}
+
+  const ext = path.extname(req.file.originalname) || '.pdf';
+  const safeName = `Acte d'engagement_${rel}_${date}${ext}`;
+
+  try {
+    await fs.promises.writeFile(path.join(destDir, safeName), req.file.buffer);
+    _folderContentCache.delete(destDir);
+    res.json({ success: true, filename: safeName, folder: path.relative(chantierDir, destDir) || '.' });
+  } catch (e) {
+    if (e.code === 'EPERM' || e.code === 'EACCES') return res.status(403).json({ success: false, error: 'Dossier réseau en lecture seule.' });
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 app.get('/api/dossiers/suivi', (req, res) => {
   const rel = (req.query.rel || '').split('/')[0];
   if (!rel) return res.status(400).json({ success: false, error: 'Nom manquant' });
@@ -4583,39 +4652,6 @@ app.put('/api/dossiers/suivi', requireToken, (req, res) => {
   res.json({ success: true });
 });
 
-// POST /api/dossiers/suivi/upload — import document + renommage + rangement
-app.post('/api/dossiers/suivi/upload', requireToken, _dossiersUpload.single('fichier'), async (req, res) => {
-  const rel       = (req.query.rel || '').split('/')[0];
-  const folderKey = req.query.folderKey || null;   // null = destination inconnue
-  const docLabel  = String(req.query.label || 'Document').replace(/[<>:"/\\|?*]/g, '').trim();
-  const dateStr   = String(req.query.date  || '').replace(/\//g, '-');
-
-  if (!rel || !req.file) return res.status(400).json({ success: false, error: 'Paramètres manquants' });
-
-  const chantierDir = path.join(DOSSIERS_BASE, rel);
-  const ext = path.extname(req.file.originalname);
-  const safeName = `${docLabel}_${rel}_${dateStr}${ext}`;
-
-  let destDir = chantierDir;
-  let unknown = false;
-
-  if (folderKey && SUIVI_FOLDER_RESOLVERS[folderKey]) {
-    const resolved = await SUIVI_FOLDER_RESOLVERS[folderKey](chantierDir);
-    if (resolved) destDir = resolved;
-    else { destDir = chantierDir; unknown = true; }
-  } else if (!folderKey) {
-    unknown = true;
-  }
-
-  try {
-    await fs.promises.writeFile(path.join(destDir, safeName), req.file.buffer);
-    const relDest = path.relative(chantierDir, destDir) || '.';
-    res.json({ success: true, filename: safeName, folder: relDest, unknown });
-  } catch (e) {
-    if (e.code === 'EPERM') return res.status(403).json({ success: false, error: 'Partage réseau en lecture seule' });
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
 
 // /api/health expose le token de sécurité uniquement aux clients du réseau local.
 // Ce token doit être inclus dans toutes les requêtes d'écriture.

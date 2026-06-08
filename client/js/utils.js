@@ -317,10 +317,12 @@ function getSidebar() {
   `;
 
   // ===== CHANTIERS =====
-  const _hasChantier = Auth.hasAccess('chantiers') || Auth.hasAccess('chantiers_responsable') || Auth.hasAccess('chantiers_conducteur');
+  const _hasChantier = Auth.hasAccess('chantiers_vue_globale') || Auth.hasAccess('chantiers_vue_conducteurs') || Auth.hasAccess('chantiers_suivi');
   if (_hasChantier) {
     const chantiersActive = isChantierPage() ? ' active' : '';
-    const firstPage = Auth.hasAccess('chantiers') ? 'chantiers-vue-globale.html' : 'chantiers-conducteur.html';
+    const firstPage = Auth.hasAccess('chantiers_vue_globale') ? 'chantiers-vue-globale.html'
+      : Auth.hasAccess('chantiers_vue_conducteurs') ? 'chantiers-conducteur.html'
+      : 'chantiers-suivi.html';
     items += `<a href="${base}pages/${firstPage}" class="sidebar-item${chantiersActive}">🚧 Chantiers</a>`;
   }
 
@@ -634,23 +636,17 @@ function injectChantiersSecondaryBar() {
   const maconnerieActive = currentPage === 'chantiers-maconnerie.html' ? ' active' : '';
 
   let secondaryItems = '';
-  if (Auth.hasAccess('chantiers')) {
+  if (Auth.hasAccess('chantiers_vue_globale')) {
     secondaryItems += `
     <a href="${base}pages/chantiers-vue-globale.html" class="sidebar-item${globaleActive}">🌍 Vue globale</a>`;
   }
-  // Vue conducteurs avant Suivi
-  if (Auth.hasAccess('chantiers_responsable')) {
+  if (Auth.hasAccess('chantiers_vue_conducteurs')) {
     secondaryItems += `
     <a href="${base}pages/chantiers-conducteur.html" class="sidebar-item${conducteurActive}">👷 Vue conducteurs</a>`;
   }
-  if (Auth.hasAccess('chantiers')) {
+  if (Auth.hasAccess('chantiers_suivi')) {
     secondaryItems += `
-    <a href="${base}pages/chantiers-suivi.html" class="sidebar-item${suiviActive}">🚧 Suivi chantier</a>`;
-  } else if (Auth.hasAccess('chantiers_conducteur') && !Auth.hasAccess('chantiers_responsable')) {
-    // Conducteur simple : Suivi filtré + Mes chantiers
-    secondaryItems += `
-    <a href="${base}pages/chantiers-suivi.html" class="sidebar-item${suiviActive}">🚧 Suivi chantier</a>
-    <a href="${base}pages/chantiers-conducteur.html" class="sidebar-item${conducteurActive}">🗂️ Mes chantiers</a>`;
+    <a href="${base}pages/chantiers-suivi.html" class="sidebar-item${suiviActive}">📁 Suivi chantier</a>`;
   }
 
   const barHTML = `

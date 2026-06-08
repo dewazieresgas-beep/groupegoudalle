@@ -247,11 +247,39 @@
       }).join('');
     }
 
+    // ── Sauvegarde directe vers le serveur (vérifie que l'Excel est bien écrit) ──
+    async function saveUsersToServer(users) {
+      const token = window._serverToken;
+      if (!token) { showMessage('❌ Token serveur manquant, rechargez la page.', 'error'); return false; }
+      try {
+        const res = await fetch(`${window.location.origin}/api/users`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'x-goudalle-token': token },
+          body: JSON.stringify(users),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          if (body.error && /busy|locked|EBUSY/i.test(body.error)) {
+            showMessage('❌ Le fichier Excel des comptes est ouvert par quelqu\'un. Fermez-le et réessayez.', 'error');
+          } else {
+            showMessage(`❌ Erreur serveur : ${body.error || res.status}`, 'error');
+          }
+          return false;
+        }
+        return true;
+      } catch (e) {
+        showMessage('❌ Impossible de contacter le serveur.', 'error');
+        return false;
+      }
+    }
+
     // ── Activer / désactiver ──
     async function toggleActive(username, newState) {
       const users = Auth.getAllUsers();
       if (!users[username]) return;
       users[username].isActive = newState;
+      const ok = await saveUsersToServer(users);
+      if (!ok) return;
       localStorage.setItem(Auth.STORAGE_KEY_USERS, JSON.stringify(users));
       showMessage(`✅ Compte ${username} ${newState ? 'activé' : 'désactivé'}.`, 'success');
       loadUsers();
@@ -310,10 +338,16 @@
     function resetAccessToEmpty() { document.querySelectorAll('#accessCheckboxes input').forEach(cb => cb.checked = false); }
     function selectAllAccess()    { document.querySelectorAll('#accessCheckboxes input').forEach(cb => cb.checked = true); }
 
-    function saveAccessModal() {
+    async function saveAccessModal() {
       const selected = Array.from(document.querySelectorAll('#accessCheckboxes input:checked')).map(cb => cb.value);
-      const result = Auth.updateUserPermissions(_accessUsername, selected);
-      if (!result.success) { alert(result.message); return; }
+      // Préparer les données sans toucher au cache local d'abord
+      const users = Auth.getAllUsers();
+      if (!users[_accessUsername]) { alert('Utilisateur introuvable.'); return; }
+      const updatedUsers = { ...users, [_accessUsername]: { ...users[_accessUsername], customPermissions: selected } };
+      // Vérifier que le serveur écrit bien dans l'Excel avant de mettre à jour en local
+      const ok = await saveUsersToServer(updatedUsers);
+      if (!ok) return;
+      Auth.updateUserPermissions(_accessUsername, selected);
       closeAccessModal();
       showMessage(`✅ Accès de ${_accessUsername} mis à jour et synchronisé vers l'Excel.`, 'success');
       loadUsers();

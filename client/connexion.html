@@ -318,6 +318,7 @@
             name="password"
             placeholder="Votre mot de passe"
             autocomplete="current-password"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();const btn=document.getElementById('submitBtn');if(!btn.disabled)btn.click();}"
           >
         </div>
 

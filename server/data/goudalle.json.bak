@@ -15187,8 +15187,15 @@
       "Code postal": "59630"
     },
     "ZUYDCOOTE - Ferme du Nord": {
+      "Chantier": "ZUYDCOOTE - Ferme du Nord",
+      "Numéro et rue": "",
+      "Ville": "",
+      "Code postal": "",
       "Conducteur de travaux": "Maxence Loones",
-      "Chantier": "ZUYDCOOTE - Ferme du Nord"
+      "Dessinateur BE": "",
+      "Date OS": "",
+      "Date fin contractuelle": "",
+      "Montant marché HT": "985101,06"
     },
     "SAINT SAULVE - Salle Polyvalente": {
       "Conducteur de travaux": "Tony Morant",
@@ -15289,8 +15296,15 @@
       "Chantier": "BULCO - SMAC"
     },
     "TOURCOING VILLE Renouvelée Siège social": {
+      "Chantier": "TOURCOING VILLE Renouvelée Siège social",
+      "Numéro et rue": "",
+      "Ville": "",
+      "Code postal": "",
       "Conducteur de travaux": "Maxence Loones",
-      "Chantier": "TOURCOING VILLE Renouvelée Siège social"
+      "Dessinateur BE": "",
+      "Date OS": "",
+      "Date fin contractuelle": "2025-04-24",
+      "Montant marché HT": ""
     },
     "CLAIRMARAIS Moulin": {
       "Conducteur de travaux": "Maxence Loones",
@@ -15578,7 +15592,17 @@
       "Chantier": "SEVIGNE Demi-pension Collège"
     },
     "SEVIGNE Demi-pension SMAC": {
-      "Chantier": "SEVIGNE Demi-pension SMAC"
+      "Chantier": "SEVIGNE Demi-pension SMAC",
+      "Numéro et rue": "20 Rue Jules Deregnaucourt",
+      "Ville": "Roubaix",
+      "Code postal": "59100",
+      "Conducteur de travaux": "Arnaud Masset",
+      "Dessinateur BE": "",
+      "Date OS": "2024-09-09",
+      "Date fin contractuelle": "2025-08-25",
+      "Montant marché HT": "316 514.52",
+      "Latitude": "50.6931963",
+      "Longitude": "3.1651443"
     },
     "SICAE - Eiffage Bureax Menhir": {
       "Chantier": "SICAE - Eiffage Bureax Menhir"
@@ -15609,16 +15633,16 @@
     },
     "WIMEREUX Extension Mairie": {
       "Chantier": "WIMEREUX Extension Mairie",
-      "Conducteur de travaux": "Arnaud Masset",
-      "Dessinateur BE": "",
-      "Date OS": "11/02/2025",
-      "Date fin contractuelle": "20/01/2026",
-      "Montant marché HT": "",
-      "Latitude": "50.7696203",
-      "Longitude": "1.6111495",
       "Numéro et rue": "1er Place du Roi Albert",
       "Ville": "Wimereux",
-      "Code postal": ""
+      "Code postal": "62930",
+      "Conducteur de travaux": "Arnaud Masset",
+      "Dessinateur BE": "",
+      "Date OS": "2025-02-11",
+      "Date fin contractuelle": "2026-01-20",
+      "Montant marché HT": "",
+      "Latitude": "50.7696203",
+      "Longitude": "1.6111495"
     }
   },
   "dossiers_suivi": {
