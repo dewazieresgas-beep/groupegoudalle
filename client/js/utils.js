@@ -593,10 +593,14 @@ function injectCommerceSecondaryBar() {
   const indicateursActive = currentPage === 'commerce-indicateurs.html' ? ' active' : '';
   const liaisonActive = currentPage === 'commerce-liaison.html' ? ' active' : '';
 
-  const secondaryItems = `
-    <a href="${base}pages/commerce-indicateurs.html" class="sidebar-item${indicateursActive}">📈 Indicateur commercial</a>
-    <a href="${base}pages/commerce-liaison.html" class="sidebar-item${liaisonActive}">🔗 Liaison Excel</a>
-  `;
+  let secondaryItems = '';
+  if (Auth.hasAccess('commerce_indicateurs')) {
+    secondaryItems += `<a href="${base}pages/commerce-indicateurs.html" class="sidebar-item${indicateursActive}">📈 Indicateur commercial</a>`;
+  }
+  if (Auth.hasAccess('commerce_liaison')) {
+    secondaryItems += `<a href="${base}pages/commerce-liaison.html" class="sidebar-item${liaisonActive}">🔗 Liaison Excel</a>`;
+  }
+  if (!secondaryItems) return;
 
   const barHTML = `
     <aside class="sidebar-secondary" id="commerceSidebar">
@@ -690,11 +694,17 @@ function injectAchatSecondaryBar() {
   const saisieActive = currentPage === 'achat-saisie.html' ? ' active' : '';
   const controleActive = currentPage === 'achat-controle.html' ? ' active' : '';
 
-  const secondaryItems = `
-    <a href="${base}pages/achat-indicateurs.html" class="sidebar-item${indicateursActive}">🛒 Indicateurs achat</a>
-    <a href="${base}pages/achat-saisie.html" class="sidebar-item${saisieActive}">✏️ Saisie indicateurs achats</a>
-    <a href="${base}pages/achat-controle.html" class="sidebar-item${controleActive}">🧪 Contrôle imports</a>
-  `;
+  let secondaryItems = '';
+  if (Auth.hasAccess('achat_indicateurs')) {
+    secondaryItems += `<a href="${base}pages/achat-indicateurs.html" class="sidebar-item${indicateursActive}">🛒 Indicateurs achat</a>`;
+  }
+  if (Auth.hasAccess('achat_saisie')) {
+    secondaryItems += `<a href="${base}pages/achat-saisie.html" class="sidebar-item${saisieActive}">✏️ Saisie indicateurs achats</a>`;
+  }
+  if (Auth.hasAccess('achat_controle')) {
+    secondaryItems += `<a href="${base}pages/achat-controle.html" class="sidebar-item${controleActive}">🧪 Contrôle imports</a>`;
+  }
+  if (!secondaryItems) return;
 
   const barHTML = `
     <aside class="sidebar-secondary" id="achatSidebar">
