@@ -162,6 +162,7 @@
 
   <script>
     let _pageGroups = []; // chargé depuis /api/pages
+    let _serverUsers = {}; // utilisateurs chargés depuis le serveur (source de vérité)
 
     // ── Utilitaires ──
     function escapeHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -224,6 +225,7 @@
         document.getElementById('users-source').textContent = '(source : local — Excel inaccessible)';
       }
 
+      _serverUsers = users; // mettre en cache pour openAccessModal
       const list = Object.values(users).sort((a,b) => (a.entreprise||'').localeCompare(b.entreprise||'') || (a.displayName||'').localeCompare(b.displayName||''));
       const tbody = document.querySelector('#usersTable tbody');
       if (!list.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;">Aucun utilisateur</td></tr>'; return; }
@@ -326,8 +328,7 @@
     function openAccessModal(username) {
       _accessUsername = username;
       document.getElementById('accessModalUsername').textContent = username;
-      const users = Auth.getAllUsers();
-      const u = users[username];
+      const u = _serverUsers[username] || Auth.getAllUsers()[username];
       if (!u) return;
       const perms = Array.isArray(u.customPermissions) ? u.customPermissions : (Auth.PERMISSIONS[u.role] || []);
       renderAccessCheckboxes('accessCheckboxes', perms);
@@ -340,13 +341,12 @@
 
     async function saveAccessModal() {
       const selected = Array.from(document.querySelectorAll('#accessCheckboxes input:checked')).map(cb => cb.value);
-      // Préparer les données sans toucher au cache local d'abord
-      const users = Auth.getAllUsers();
+      const users = Object.keys(_serverUsers).length ? _serverUsers : Auth.getAllUsers();
       if (!users[_accessUsername]) { alert('Utilisateur introuvable.'); return; }
       const updatedUsers = { ...users, [_accessUsername]: { ...users[_accessUsername], customPermissions: selected } };
-      // Vérifier que le serveur écrit bien dans l'Excel avant de mettre à jour en local
       const ok = await saveUsersToServer(updatedUsers);
       if (!ok) return;
+      if (_serverUsers[_accessUsername]) _serverUsers[_accessUsername].customPermissions = selected;
       Auth.updateUserPermissions(_accessUsername, selected);
       closeAccessModal();
       showMessage(`✅ Accès de ${_accessUsername} mis à jour et synchronisé vers l'Excel.`, 'success');

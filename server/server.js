@@ -299,19 +299,6 @@ async function writeAccountsExcel(users) {
       const actifCol = headers['Actif'];
       if (!idCol || !mdpCol) continue;
 
-      // ── Ajouter les colonnes p_xxx manquantes (nouvelles pages) ──
-      for (const p of PAGES_CONFIG) {
-        const colName = 'p_' + p.file.replace('.html', '');
-        if (headers[colName]) continue;
-        lastCol++;
-        headers[colName] = lastCol;
-        const hCell = ws.cell(1, lastCol);
-        hCell.value(colName);
-        try { hCell.style({ bold: true, fill: { type: 'solid', color: 'DEEBF7' }, wrapText: true }); } catch {}
-        for (let r = 2; r <= lastRow; r++) ws.cell(r, lastCol).value('non');
-        console.log(`[Comptes] ➕ Nouvelle colonne "${colName}" dans ${company}`);
-      }
-
       // ── Mettre à jour les lignes existantes ──
       const seenIds = new Set();
       for (let row = 2; row <= lastRow; row++) {
@@ -919,7 +906,15 @@ function requireWriteRateLimit(req, res, next) {
 }
 
 // Sert les fichiers statiques du site (HTML, CSS, JS, images)
-app.use(express.static(path.join(__dirname, '../client')));
+// JS et HTML ne sont jamais mis en cache navigateur (évite les bugs de version périmée)
+app.use(express.static(path.join(__dirname, '../client'), {
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('.js') || filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+    }
+  }
+}));
 
 // ─── ROUTES : UTILISATEURS (source de vérité = Excel W:\BCHDF\...) ─────────────
 

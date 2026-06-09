@@ -40,6 +40,9 @@
               <div class="form-group">
                 <label for="inputWeek">📅 Semaine</label>
                 <input type="number" id="inputWeek" min="1" max="53" required>
+                <div id="weekExistsWarning" style="display:none; margin-top:6px; padding:7px 10px; background:#fff3cd; border:1px solid #ffc107; border-radius:6px; font-size:12px; color:#856404;">
+                  ⚠️ Des données existent déjà pour cette semaine — elles seront <strong>remplacées</strong> si vous validez.
+                </div>
               </div>
               <!-- Résultat en temps réel -->
               <div class="form-group" style="display:flex; flex-direction:column; justify-content:flex-end;">
@@ -218,6 +221,19 @@
     let currentEditMode = null; // { year, week } si en mode édition, null sinon
     let loadedKpis = [];        // KPIs actuellement affichés (chargés depuis Excel via serveur)
 
+    // ═══ VÉRIFICATION SEMAINE EXISTANTE ═══
+    function weekAlreadyExists(year, week) {
+      return loadedKpis.some(k => String(k.year) === String(year) && String(k.week) === String(week));
+    }
+
+    function checkWeekExists() {
+      if (currentEditMode) { document.getElementById('weekExistsWarning').style.display = 'none'; return; }
+      const year = document.getElementById('inputYear').value;
+      const week = document.getElementById('inputWeek').value;
+      const exists = year && week && weekAlreadyExists(year, week);
+      document.getElementById('weekExistsWarning').style.display = exists ? 'block' : 'none';
+    }
+
     // ═══ HELPER: RÉCUPÉRER LE TOKEN DE SÉCURITÉ ═══
     function getSecurityToken() {
       // Le token est stocké dans api.js dans la variable _serverToken
@@ -338,6 +354,10 @@
       document.getElementById('inputM3').addEventListener('input', updateRealtimeRatio);
       document.getElementById('inputHours').addEventListener('input', updateRealtimeRatio);
       document.getElementById('inputObjectif').addEventListener('input', updateRealtimeRatio);
+
+      // Avertissement semaine existante
+      document.getElementById('inputWeek').addEventListener('input', checkWeekExists);
+      document.getElementById('inputYear').addEventListener('input', checkWeekExists);
     }
 
     // ═══ SOUMISSION DU FORMULAIRE ═══
@@ -345,6 +365,14 @@
       event.preventDefault();
       
       const btn = document.getElementById('btnSubmitKpi');
+
+      const year = document.getElementById('inputYear').value;
+      const week = document.getElementById('inputWeek').value;
+      if (!currentEditMode && weekAlreadyExists(year, week)) {
+        const ok = confirm(`⚠️ Des données existent déjà pour la semaine S${String(week).padStart(2,'0')}/${year}.\n\nVoulez-vous vraiment les remplacer par les nouvelles valeurs ?`);
+        if (!ok) return;
+      }
+
       const originalText = btn.textContent;
       btn.textContent = '⏳ En cours...';
       btn.disabled = true;
@@ -406,6 +434,7 @@
     // ═══ MODE ÉDITION ═══
     function enterEditMode(year, week) {
       currentEditMode = { year, week };
+      document.getElementById('weekExistsWarning').style.display = 'none';
       
       // Récupérer les données du KPI depuis les données chargées (Excel via serveur)
       const kpi = loadedKpis.find(k => k.year === year && k.week === week);
@@ -440,6 +469,7 @@
 
     function cancelEditMode() {
       currentEditMode = null;
+      document.getElementById('weekExistsWarning').style.display = 'none';
       document.getElementById('kpiForm').reset();
       document.getElementById('formTitle').textContent = '📝 Saisie nouvel indicateur';
       document.getElementById('btnSubmitKpi').textContent = '✅ Valider';
