@@ -6,129 +6,103 @@
   <title>Contrôle imports achats - Intranet Goudalle</title>
   <link rel="stylesheet" href="../css/style.css">
   <style>
-    .achat-table-wrap { overflow-x: auto; }
-    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-    @media (max-width: 980px) { .grid-2 { grid-template-columns:1fr; } }
-    .muted { color:#666; font-size:13px; }
+    /* ── Liste des imports ── */
+    .imports-list { display: flex; flex-direction: column; gap: 8px; }
+    .import-row {
+      display: grid; grid-template-columns: 1fr auto;
+      gap: 12px; align-items: center;
+      border: 1px solid var(--border-light); border-radius: 10px;
+      background: #fff; padding: 12px 14px;
+      box-shadow: 0 2px 6px rgba(0,0,0,.03);
+      transition: border-color .15s;
+    }
+    .import-row.active { border-color: #8fbe95; background: #f2fbf2; }
+    .import-meta strong {
+      display: block; font-size: 15px; color: #1f2a1f;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .import-meta .import-sub { font-size: 12px; color: #667; margin-top: 3px; }
+    .import-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
     .chip {
-      display:inline-block; padding:2px 8px; border-radius:999px;
-      border:1px solid #cfd8cf; background:#f4f7f4; font-size:12px;
+      display: inline-flex; align-items: center; gap: 3px;
+      padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600;
+      background: #f3f6f3; border: 1px solid #dde5dd; color: #3a4b3a;
     }
-    #renderPreview { overflow-x:auto; }
+    .import-actions { display: flex; gap: 6px; justify-content: flex-end; }
+    /* ── Filtres période ── */
+    .period-filters { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 14px; }
+    .period-filters label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+    .period-filters select { min-width: 160px; }
+    /* ── Liste factures ── */
+    .invoice-list-wrap { overflow-x: auto; }
     .invoice-list {
-      border:1px solid #d9d9d9;
-      border-radius:12px;
-      overflow:hidden;
-      background:#fff;
-      box-shadow: 0 6px 18px rgba(0,0,0,0.05);
-      min-width: 980px;
+      border: 1px solid #d9d9d9; border-radius: 10px;
+      overflow: hidden; background: #fff;
+      box-shadow: 0 4px 12px rgba(0,0,0,.04);
+      min-width: 820px;
     }
-    .invoice-item { border-bottom:1px solid #e6e6e6; background:#fff; }
-    .invoice-item:last-child { border-bottom:none; }
-    .invoice-row {
-      width:100%; border:none; background:#fff; padding:0; cursor:pointer;
-      text-align:left; font:inherit;
+    .invoice-grid {
+      display: grid;
+      grid-template-columns: 34px 105px 220px 160px 1fr 140px;
+      gap: 8px; padding: 10px 14px; align-items: center;
     }
-    .invoice-row:hover { background:#f8fbf8; }
-    .invoice-row-grid {
-      display:grid;
-      grid-template-columns: 46px 108px 200px 140px 1fr 150px;
-      gap:8px;
-      padding:12px 14px;
-      align-items:center;
-      color:#1f2a1f;
+    .invoice-grid.head {
+      background: linear-gradient(180deg, #f6f6ef 0%, #efefe7 100%);
+      font-weight: 700; font-size: 12px; color: #2a2a2a;
     }
-    .invoice-row-grid.head {
-      background:linear-gradient(180deg, #f6f6ef 0%, #efefe7 100%);
-      font-weight:700;
-      cursor:default;
+    .invoice-item { border-top: 1px solid #ebebeb; }
+    .invoice-row-btn {
+      width: 100%; border: none; background: #fff; padding: 0;
+      cursor: pointer; text-align: left; font: inherit;
+      transition: background .1s;
     }
-    .invoice-item.open .invoice-row-grid { background:#f3faf3; }
-    .invoice-item.open .invoice-summary { font-weight:700; }
-    .invoice-row-grid > div { min-width:0; }
-    .invoice-montant {
-      white-space:nowrap;
-      overflow:visible;
-      text-overflow:clip;
-      font-weight:700;
-      color:#102710;
-    }
+    .invoice-row-btn:hover { background: #f8fbf8; }
+    .invoice-item.open .invoice-row-btn { background: #f2fbf2; }
     .invoice-toggle {
-      display:inline-flex; align-items:center; justify-content:center;
-      width:24px; height:24px; border-radius:999px; border:1px solid #d7ded7; background:#fff;
-      color:#3d5540; font-size:12px; transition: transform .2s ease, background-color .2s ease;
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 22px; height: 22px; border-radius: 50%;
+      border: 1px solid #d0d8d0; background: #fff;
+      font-size: 11px; color: #3d5540;
+      transition: transform .2s, background .2s;
     }
-    .invoice-item.open .invoice-toggle { transform: rotate(90deg); background:#e9f3e9; }
-    .line-count {
-      display:inline-flex; align-items:center; justify-content:center;
-      min-width:24px; height:22px; padding:0 8px; border-radius:999px;
-      border:1px solid #d0d7d0; background:#f4f8f4; color:#38503b; font-size:12px;
+    .invoice-item.open .invoice-toggle { transform: rotate(90deg); background: #dff0df; }
+    .invoice-summary { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .invoice-montant { font-weight: 700; white-space: nowrap; text-align: right; }
+    .excluded-badge {
+      display: inline-block; padding: 1px 6px; border-radius: 999px;
+      background: #fff3cd; border: 1px solid #ffc107; color: #856404;
+      font-size: 10px; font-weight: 600;
     }
-    .invoice-detail {
-      max-height: 0;
-      overflow: hidden;
-      transition: max-height 0.25s ease;
-      background:#fcfcfc;
+    /* ── Détail lignes ── */
+    .invoice-detail { max-height: 0; overflow: hidden; transition: max-height .25s ease; background: #fafafa; }
+    .invoice-detail.open { border-top: 1px solid #e5e5e5; }
+    .invoice-detail-inner { padding: 10px 14px 14px; overflow-x: auto; }
+    .lines-table { width: 100%; min-width: 1050px; border-collapse: collapse; font-size: 12px; }
+    .lines-table th {
+      text-align: left; padding: 6px 10px; border-bottom: 1px solid #d9d9d9;
+      background: #f2f4f2; color: #2a2a2a; white-space: nowrap;
     }
-    .invoice-detail.open { border-top:1px solid #e5e5e5; }
-    .invoice-detail-inner { padding:12px 14px 14px; }
-    .invoice-detail table { width:100%; border-collapse:collapse; table-layout:fixed; background:#fff; }
-    .invoice-detail th {
-      text-align:left; padding:8px 6px; border-bottom:1px solid #d9d9d9; background:#f2f4f2; color:#2a2a2a;
-    }
-    .invoice-detail td {
-      padding:8px 6px; border-bottom:1px solid #ececec; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#222;
-    }
-    .invoice-detail th, .invoice-detail td { box-sizing:border-box; }
-    .invoice-detail .montant-col { white-space:nowrap; overflow:visible; text-overflow:clip; font-weight:700; }
-    .invoice-detail tr:last-child td { border-bottom:none; }
-    .hidden { display:none !important; }
-    .num { text-align:center; font-variant-numeric: tabular-nums; }
-    .mono { font-family: Consolas, monospace; }
-    .invoice-summary { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .imports-list { display:flex; flex-direction:column; gap:10px; }
-    .imports-header {
-      display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;
-      background: linear-gradient(180deg, #f7f9f7 0%, #eef4ef 100%);
-      border:1px solid #dce6dc; border-radius:10px; padding:10px 12px;
-    }
-    .imports-title { margin:0; font-weight:700; color:#2f4632; }
-    .imports-subtitle { margin:2px 0 0 0; color:#687468; font-size:13px; }
-    .imports-count {
-      display:inline-flex; align-items:center; justify-content:center;
-      min-width:30px; height:24px; padding:0 10px; border-radius:999px;
-      border:1px solid #c6d8c8; background:#eaf4eb; color:#2f5434; font-weight:700; font-size:12px;
-    }
-    .imports-row {
-      display:grid; grid-template-columns: 1fr auto; gap:12px; align-items:center;
-      border:1px solid #e0e8e0; border-radius:12px; background:#fff; padding:12px 14px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
-    }
-    .imports-row.active { border-color:#8fbe95; background:#f2fbf2; box-shadow: 0 4px 12px rgba(79,123,87,0.12); }
-    .imports-meta { min-width:0; }
-    .imports-meta strong {
-      display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-      color:#233325; font-size:18px; line-height:1.2;
-    }
-    .imports-meta span { color:#5f6c5f; font-size:12px; display:block; margin-top:4px; }
-    .imports-stats { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
-    .imports-stat {
-      display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:999px;
-      background:#f3f6f3; border:1px solid #e0e5e0; color:#3f4b3f; font-size:12px;
-    }
-    .detail-placeholder { padding:8px; }
-    .period-filters {
-      display:grid; grid-template-columns: 220px 220px; gap:12px;
-      margin-bottom:12px; align-items:end;
-    }
-    .period-filters label { display:block; margin-bottom:6px; font-weight:600; color:#3a3a3a; }
-    .period-filters select { width:100%; }
-    @media (max-width: 980px) {
-      .invoice-list { min-width: 900px; }
-      .invoice-row-grid { grid-template-columns: 42px 98px 160px 130px 1fr 130px; font-size:12px; }
-      .invoice-detail table { font-size:12px; }
-      .imports-row { grid-template-columns: 1fr; }
-      .period-filters { grid-template-columns: 1fr 1fr; }
+    .lines-table td { padding: 6px 10px; border-bottom: 1px solid #ededed; color: #222; white-space: nowrap; }
+    .lines-table tr:last-child td { border-bottom: none; }
+    .lines-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .lines-table .mono { font-family: Consolas, monospace; }
+    .lines-table .excluded-line td { color: #aaa; background: #fafafa; }
+    .lines-table .col-libelle { white-space: normal; min-width: 200px; word-break: break-word; }
+    /* ── Scrollbars toujours visibles ── */
+    .invoice-list-wrap::-webkit-scrollbar,
+    .invoice-detail-inner::-webkit-scrollbar { height: 8px; }
+    .invoice-list-wrap::-webkit-scrollbar-track,
+    .invoice-detail-inner::-webkit-scrollbar-track { background: #f0f0f0; border-radius: 4px; }
+    .invoice-list-wrap::-webkit-scrollbar-thumb,
+    .invoice-detail-inner::-webkit-scrollbar-thumb { background: #b0b8b0; border-radius: 4px; }
+    .invoice-list-wrap::-webkit-scrollbar-thumb:hover,
+    .invoice-detail-inner::-webkit-scrollbar-thumb:hover { background: #7a8f7a; }
+    /* ── États vides ── */
+    .empty-state { text-align: center; padding: 28px; color: var(--text-light); }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    @media (max-width: 900px) {
+      .invoice-grid { grid-template-columns: 34px 90px 1fr 110px; }
+      .invoice-grid .col-chantier, .invoice-grid .col-fournisseur { display: none; }
     }
   </style>
 </head>
@@ -140,24 +114,26 @@
 
   <div class="app-container">
     <div id="sidebar"></div>
-    <main class="main-content">
-      <div class="d-flex justify-between items-center mb-3" style="gap:12px; flex-wrap:wrap;">
-        <h1 class="mb-0">Contrôle imports achats</h1>
-      </div>
 
+    <main class="main-content">
+      <h1 class="mb-3">Contrôle des imports</h1>
       <div id="pageMessage" class="alert" style="display:none;"></div>
 
+      <!-- ── Imports ── -->
       <div class="card">
-        <div class="card-title"><h2>Historique des imports</h2></div>
+        <div class="card-title"><h2>Imports enregistrés</h2></div>
         <div class="card-body">
-          <p class="imports-subtitle" style="margin:0 0 10px 0;">Sélectionne un import pour afficher ses factures, ou supprime-le définitivement.</p>
-          <div id="importsList" class="imports-list"></div>
-          <p class="muted" id="batchInfo"></p>
+          <div id="importsList" class="imports-list">
+            <p class="empty-state">Chargement...</p>
+          </div>
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-title"><h2>Reconstruction visuelle PDF</h2></div>
+      <!-- ── Factures d'un import ── -->
+      <div class="card" id="invoicesCard" style="display:none;">
+        <div class="card-title">
+          <h2 id="invoicesCardTitle">Factures</h2>
+        </div>
         <div class="card-body">
           <div class="period-filters">
             <div>
@@ -169,465 +145,362 @@
               <select id="filterMonth"></select>
             </div>
           </div>
-          <div id="renderPreview"></div>
+          <div class="invoice-list-wrap"><div id="invoicesList"></div></div>
         </div>
       </div>
+
     </main>
   </div>
 
   <script>
     const API = window.location.origin + '/api';
-    const MONTHS_FR = ['01 - Janvier', '02 - Février', '03 - Mars', '04 - Avril', '05 - Mai', '06 - Juin', '07 - Juillet', '08 - Août', '09 - Septembre', '10 - Octobre', '11 - Novembre', '12 - Décembre'];
-    const controlState = {
+
+    const state = {
+      imports: [],
+      activeBatchId: null,
       periods: [],
-      factures: [],
-      activeBatchId: '',
       selectedYear: '',
       selectedMonth: '',
-      invoiceDetailsById: new Map()
+      loadedLinesByInvId: new Map()
     };
 
-    function showMessage(msg, type='info') {
-      const el = document.getElementById('pageMessage');
-      el.innerHTML = msg;
-      el.className = `alert alert-${type}`;
-      el.style.display = 'block';
-    }
+    const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 
-    function clearMessage() {
-      const el = document.getElementById('pageMessage');
-      el.style.display = 'none';
-      el.innerHTML = '';
-    }
+    function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-    function fmt(v) {
+    function fmt(v, d = 2) {
       if (v == null || v === '') return '—';
-      return Number(v).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return Number(v).toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d });
     }
 
-    function esc(s) {
-      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    function showMessage(msg, type = 'danger') {
+      const el = document.getElementById('pageMessage');
+      el.innerHTML = msg; el.className = `alert alert-${type}`; el.style.display = 'block';
     }
+
+    function clearMessage() { document.getElementById('pageMessage').style.display = 'none'; }
 
     async function apiGet(path) {
-      const res = await fetch(API + path, { method: 'GET' });
-      const raw = await res.text();
-      let payload = null;
-      try {
-        payload = raw ? JSON.parse(raw) : null;
-      } catch {
-        throw new Error(`Réponse non JSON sur ${path}.`);
-      }
-      if (!res.ok) throw new Error(payload.error || `Erreur API ${path}`);
-      return payload;
+      const res = await fetch(API + path);
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || `Erreur API ${path}`);
+      return data;
     }
 
     async function apiDelete(path) {
-      const res = await fetch(API + path, { method: 'DELETE' });
-      const raw = await res.text();
-      let payload = null;
-      try {
-        payload = raw ? JSON.parse(raw) : null;
-      } catch {
-        throw new Error(`Réponse non JSON sur ${path}.`);
+      const token = await getToken();
+      const res = await fetch(API + path, { method: 'DELETE', headers: token ? { 'x-goudalle-token': token } : {} });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || `Erreur suppression`);
+      return data;
+    }
+
+    async function apiPost(path, body) {
+      const token = await getToken();
+      const res = await fetch(API + path, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { 'x-goudalle-token': token } : {}) }, body: JSON.stringify(body || {}) });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || `Erreur`);
+      return data;
+    }
+
+    async function getToken() {
+      try { const d = await (await fetch(API + '/health')).json(); return d.token || null; }
+      catch { return null; }
+    }
+
+    // ── Rendu de la liste des imports ──────────────────────────────────────────
+    function renderImports() {
+      const root = document.getElementById('importsList');
+      if (!state.imports.length) {
+        root.innerHTML = `<p class="empty-state">Aucun import. <a href="./achat-saisie.html">Importer un fichier ONAYA →</a></p>`;
+        return;
       }
-      if (!res.ok) throw new Error(payload?.error || `Erreur API ${path}`);
-      return payload;
+      root.innerHTML = state.imports.map((imp) => {
+        const active = imp.id === state.activeBatchId ? ' active' : '';
+        const date = imp.date_import ? new Date(imp.date_import).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—';
+        return `
+          <div class="import-row${active}" data-id="${esc(imp.id)}">
+            <div class="import-meta">
+              <strong title="${esc(imp.nom_fichier)}">${esc(imp.nom_fichier)}</strong>
+              <div class="import-sub">${imp.company ? `<strong>${esc(imp.company)}</strong> · ` : ''}Importé le ${date}</div>
+              <div class="import-chips">
+                <span class="chip">📄 ${imp.total_factures ?? 0} factures</span>
+                <span class="chip">📑 ${imp.total_lignes ?? 0} lignes</span>
+                ${imp.total_stock_exclu ? `<span class="chip">🚫 ${imp.total_stock_exclu} stock exclu</span>` : ''}
+              </div>
+            </div>
+            <div class="import-actions">
+              <button class="btn btn-secondary btn-sm btn-show" data-id="${esc(imp.id)}">Afficher</button>
+              <button class="btn btn-secondary btn-sm btn-reparse" data-id="${esc(imp.id)}" title="Re-parser le PDF avec les règles actuelles">🔄 Re-parser</button>
+              <button class="btn btn-danger btn-sm btn-delete" data-id="${esc(imp.id)}">Supprimer</button>
+            </div>
+          </div>
+        `;
+      }).join('');
     }
 
-    function toLocalControlPayload() {
-      const invoicesSrc = JSON.parse(localStorage.getItem('goudalle_achats_factures') || '[]');
-      const linesSrc = JSON.parse(localStorage.getItem('goudalle_achats_lignes') || '[]');
-      const invById = new Map(invoicesSrc.map((i) => [i.idFacture, i]));
-      const invoices = invoicesSrc.map((i) => ({
-        id: i.idFacture,
-        date: i.dateFacture,
-        numero_facture: i.numeroFacture,
-        fournisseur: i.fournisseurCode,
-        chantier: i.chantierOuAffaire,
-        libelle_facture: i.libelleFacture,
-        montant_ht: i.montantTotalFacture,
-        excluded_from_indicators: i.drapeauStock ? 1 : 0
-      }));
-      const lines = linesSrc.map((l) => ({
-        raw_invoice_id: l.idFactureParente,
-        line_order: l.ordreLigne,
-        ressource: l.ressource,
-        bl_numero: l.bl,
-        arc: l.arc,
-        chantier_ligne: l.chantierOuAffaireLigne || (invById.get(l.idFactureParente)?.chantierOuAffaire || ''),
-        libelle_ligne: l.designation,
-        unite: l.unite,
-        qte_fact: l.quantite,
-        pu: l.prixUnitaire,
-        montant: l.montantLigne,
-        excluded_from_indicators: l.drapeauStock ? 1 : 0
-      }));
-      return {
-        success: true,
-        batch: {
-          id: 'local-fallback',
-          nom_fichier: 'Historique local',
-          total_factures_detectees: invoices.length,
-          total_lignes_extraites: lines.length,
-          total_lignes_exclues_stock: lines.filter((x) => Number(x.excluded_from_indicators || 0)).length
-        },
-        invoices,
-        lines,
-        normalized: [],
-        allocated: [],
-        versions: [],
-        anomalies: [],
-        _local: true,
-        _invById: invById
-      };
-    }
-
-    function extractYearMonth(rawDate) {
-      const txt = String(rawDate || '').trim();
-      let m = txt.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-      if (m) return { year: m[3], month: m[2] };
-      m = txt.match(/^(\d{4})-(\d{2})-(\d{2})/);
-      if (m) return { year: m[1], month: m[2] };
-      return null;
-    }
-
-    function renderPeriodFilters(periods) {
+    // ── Filtres de période ─────────────────────────────────────────────────────
+    function buildPeriodFilters() {
       const yearSel = document.getElementById('filterYear');
       const monthSel = document.getElementById('filterMonth');
-      const idx = new Map();
-      for (const period of (periods || [])) {
-        if (!idx.has(period.year)) idx.set(period.year, []);
-        idx.get(period.year).push(period);
+
+      const byYear = new Map();
+      for (const p of state.periods) {
+        if (!byYear.has(p.year)) byYear.set(p.year, []);
+        byYear.get(p.year).push(p);
       }
-      const years = [...idx.keys()].sort((a, b) => Number(b) - Number(a));
+      const years = [...byYear.keys()].sort((a, b) => Number(b) - Number(a));
 
       if (!years.length) {
         yearSel.innerHTML = '<option value="">Aucune année</option>';
         monthSel.innerHTML = '<option value="">Aucun mois</option>';
-        controlState.selectedYear = '';
-        controlState.selectedMonth = '';
-        yearSel.disabled = true;
-        monthSel.disabled = true;
+        state.selectedYear = ''; state.selectedMonth = '';
         return;
       }
-      yearSel.disabled = false;
-      monthSel.disabled = false;
 
-      if (!years.includes(controlState.selectedYear)) controlState.selectedYear = years[0];
-      yearSel.innerHTML = years.map((y) => `<option value="${esc(y)}"${y === controlState.selectedYear ? ' selected' : ''}>${esc(y)}</option>`).join('');
+      if (!years.includes(state.selectedYear)) state.selectedYear = years[0];
+      yearSel.innerHTML = years.map((y) => `<option value="${y}"${y === state.selectedYear ? ' selected' : ''}>${y}</option>`).join('');
 
-      const months = [...(idx.get(controlState.selectedYear) || [])].sort((a, b) => Number(a.month) - Number(b.month));
-      const monthValues = months.map((entry) => entry.month);
-      if (!monthValues.includes(controlState.selectedMonth)) controlState.selectedMonth = monthValues[0] || '';
-      monthSel.innerHTML = months.map((entry) => {
-        const label = MONTHS_FR[Number(entry.month) - 1] || entry.month;
-        return `<option value="${esc(entry.month)}"${entry.month === controlState.selectedMonth ? ' selected' : ''}>${esc(label)} (${Number(entry.invoice_count || 0)})</option>`;
+      const months = (byYear.get(state.selectedYear) || []).sort((a, b) => Number(a.month) - Number(b.month));
+      const monthVals = months.map((m) => m.month);
+      if (!monthVals.includes(state.selectedMonth)) state.selectedMonth = monthVals[0] || '';
+      monthSel.innerHTML = months.map((p) => {
+        const label = MONTHS_FR[Number(p.month) - 1] || p.month;
+        return `<option value="${p.month}"${p.month === state.selectedMonth ? ' selected' : ''}>${label} (${p.invoice_count ?? 0})</option>`;
       }).join('');
     }
 
-    function normalizeInvoiceSummary(inv) {
-      return {
-        id: inv.id,
-        date: inv.date || '',
-        fournisseur: inv.fournisseur || '',
-        chantier: inv.chantier || '',
-        montant: inv.montant_ht,
-        libelle: inv.libelle_facture || '',
-        lineCount: Number(inv.line_count || 0)
-      };
+    // ── Affichage de la liste des factures ─────────────────────────────────────
+    function renderInvoices(invoices) {
+      const root = document.getElementById('invoicesList');
+      if (!invoices.length) {
+        root.innerHTML = '<p class="empty-state">Aucune facture pour cette période.</p>';
+        return;
+      }
+      root.innerHTML = `
+        <div class="invoice-list">
+          <div class="invoice-grid head">
+            <div></div>
+            <div>Date</div>
+            <div>Fournisseur</div>
+            <div class="col-chantier">Chantier</div>
+            <div>Libellé</div>
+            <div class="num">Montant H.T</div>
+          </div>
+          ${invoices.map((inv) => `
+            <div class="invoice-item" data-inv-id="${esc(inv.id)}">
+              <button class="invoice-row-btn" data-inv-id="${esc(inv.id)}">
+                <div class="invoice-grid">
+                  <div><span class="invoice-toggle">▶</span></div>
+                  <div>${esc(inv.date || '—')}</div>
+                  <div class="col-fournisseur invoice-summary">${esc(inv.fournisseur || '—')}</div>
+                  <div class="col-chantier invoice-summary">${esc(inv.chantier || '—')}</div>
+                  <div class="invoice-summary">
+                    ${esc(inv.libelle_facture || '—')}
+                    ${inv.excluded ? ' <span class="excluded-badge">stock exclu</span>' : ''}
+                    <span style="font-size:11px; color:#999; margin-left:4px;">${inv.line_count ?? 0} ligne${(inv.line_count??0)>1?'s':''}</span>
+                  </div>
+                  <div class="invoice-montant">${fmt(inv.montant_ht)}</div>
+                </div>
+              </button>
+              <div class="invoice-detail" data-inv-id="${esc(inv.id)}" data-loaded="0">
+                <div class="invoice-detail-inner">
+                  <p class="empty-state" style="padding:8px;">Cliquez pour charger le détail.</p>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+      bindInvoiceAccordion(root);
     }
 
-    function renderInvoiceDetailTable(lines, invoice) {
+    // ── Accordéon factures + chargement lazy des lignes ────────────────────────
+    function bindInvoiceAccordion(root) {
+      root.querySelectorAll('.invoice-row-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const invId = btn.getAttribute('data-inv-id');
+          const item = root.querySelector(`.invoice-item[data-inv-id="${invId}"]`);
+          const detail = root.querySelector(`.invoice-detail[data-inv-id="${invId}"]`);
+          if (!item || !detail) return;
+
+          const willOpen = !detail.classList.contains('open');
+
+          // Fermer les autres
+          root.querySelectorAll('.invoice-detail.open').forEach((d) => {
+            if (d !== detail) { d.classList.remove('open'); d.style.maxHeight = '0px'; }
+          });
+          root.querySelectorAll('.invoice-item.open').forEach((i) => {
+            if (i !== item) i.classList.remove('open');
+          });
+
+          if (willOpen && detail.dataset.loaded !== '1') {
+            detail.querySelector('.invoice-detail-inner').innerHTML = '<p class="empty-state" style="padding:8px;">Chargement...</p>';
+            try {
+              const data = await apiGet(`/achats/imports/${encodeURIComponent(state.activeBatchId)}/invoices/${encodeURIComponent(invId)}/lines`);
+              state.loadedLinesByInvId.set(invId, data.lines || []);
+              detail.querySelector('.invoice-detail-inner').innerHTML = renderLinesTable(data.lines || [], data.invoice);
+              detail.dataset.loaded = '1';
+            } catch (err) {
+              detail.querySelector('.invoice-detail-inner').innerHTML = `<p class="empty-state" style="padding:8px; color:var(--danger);">Erreur : ${esc(err.message)}</p>`;
+            }
+          }
+
+          detail.classList.toggle('open', willOpen);
+          item.classList.toggle('open', willOpen);
+          detail.style.maxHeight = willOpen ? `${detail.scrollHeight + 200}px` : '0px';
+        });
+      });
+    }
+
+    // ── Tableau des lignes d'une facture ────────────────────────────────────────
+    function renderLinesTable(lines, invoice) {
+      if (!lines.length) return '<p class="empty-state" style="padding:8px;">Aucune ligne.</p>';
       return `
-        <table>
-          <colgroup>
-            <col style="width:12%;">
-            <col style="width:11%;">
-            <col style="width:8%;">
-            <col style="width:11%;">
-            <col style="width:28%;">
-            <col style="width:6%;">
-            <col style="width:10%;">
-            <col style="width:7%;">
-            <col style="width:7%;">
-          </colgroup>
+        <table class="lines-table">
           <thead>
             <tr>
               <th>Ressource</th>
-              <th>BL N°</th>
+              <th>BON N°</th>
               <th>A.R.C</th>
               <th>Chantier</th>
-              <th>Libellé</th>
-              <th class="num">Unité</th>
+              <th class="col-libelle">Libellé</th>
+              <th>Unité</th>
               <th class="num">Qté Fact.</th>
               <th class="num">P.U</th>
               <th class="num">Montant</th>
             </tr>
           </thead>
           <tbody>
-            ${(lines || []).map((l) => `
-              <tr>
-                <td>${esc(l.ressource)}</td>
-                <td class="mono">${esc(l.bl_numero)}</td>
+            ${lines.map((l) => `
+              <tr${l.excluded ? ' class="excluded-line"' : ''}>
+                <td class="mono">${esc(l.ressource)}</td>
+                <td class="mono">${esc(l.bl_numero || invoice?.numero_facture || '')}</td>
                 <td class="mono">${esc(l.arc)}</td>
                 <td class="mono">${esc(l.chantier_ligne || invoice?.chantier || '')}</td>
-                <td>${esc(l.libelle_ligne)}</td>
-                <td class="num">${esc(l.unite)}</td>
-                <td class="num">${l.qte_fact != null ? fmt(l.qte_fact) : '—'}</td>
+                <td class="col-libelle">${esc(l.libelle_ligne)}${l.excluded ? ' <span class="excluded-badge">stock</span>' : ''}</td>
+                <td>${esc(l.unite)}</td>
+                <td class="num">${l.qte_fact != null ? fmt(l.qte_fact, 3) : '—'}</td>
                 <td class="num">${l.pu != null ? fmt(l.pu) : '—'}</td>
-                <td class="num montant-col">${l.montant != null ? fmt(l.montant) : '—'}</td>
+                <td class="num">${l.montant != null ? fmt(l.montant) : '—'}</td>
               </tr>
-            `).join('') || '<tr><td colspan="9" class="muted">Aucune ligne</td></tr>'}
+            `).join('')}
           </tbody>
         </table>
       `;
     }
 
-    function bindInvoiceAccordion(root) {
-      const rows = root.querySelectorAll('.invoice-row[data-invoice-id]');
-      rows.forEach((row) => {
-        row.addEventListener('click', async () => {
-          const invoiceId = row.getAttribute('data-invoice-id');
-          const item = root.querySelector(`.invoice-item[data-invoice-id="${invoiceId}"]`);
-          const detail = root.querySelector(`.invoice-detail[data-invoice-id="${invoiceId}"]`);
-          if (!item || !detail) return;
-          const willOpen = !detail.classList.contains('open');
-          if (willOpen) {
-            root.querySelectorAll('.invoice-detail.open').forEach((d) => {
-              if (d !== detail) {
-                d.classList.remove('open');
-                d.style.maxHeight = '0px';
-              }
-            });
-            root.querySelectorAll('.invoice-item.open').forEach((i) => {
-              if (i !== item) i.classList.remove('open');
-            });
-            if (detail.dataset.loaded !== '1') {
-              const detailInner = detail.querySelector('.invoice-detail-inner');
-              detailInner.innerHTML = '<div class="detail-placeholder muted">Chargement du détail...</div>';
-              try {
-                const payload = await apiGet(`/achats-v2/control/${encodeURIComponent(controlState.activeBatchId)}/invoices/${encodeURIComponent(invoiceId)}/lines`);
-                const invoice = controlState.factures.find((f) => String(f.id) === String(invoiceId)) || normalizeInvoiceSummary(payload.invoice || {});
-                controlState.invoiceDetailsById.set(String(invoiceId), payload.lines || []);
-                detailInner.innerHTML = renderInvoiceDetailTable(payload.lines || [], invoice);
-                detail.dataset.loaded = '1';
-              } catch (err) {
-                detailInner.innerHTML = `<div class="detail-placeholder muted">${esc(err.message || 'Erreur de chargement du détail.')}</div>`;
-              }
-            }
-          }
-          detail.classList.toggle('open');
-          item.classList.toggle('open');
-          if (willOpen) {
-            detail.style.maxHeight = `${detail.scrollHeight}px`;
-          } else {
-            detail.style.maxHeight = '0px';
-          }
-        });
-      });
-    }
-
-    function renderReconstructionList(factures) {
-      const root = document.getElementById('renderPreview');
-      if (!factures.length) {
-        root.innerHTML = '<p class="muted">Aucune facture disponible pour la période sélectionnée.</p>';
+    // ── Charger les factures d'une période ─────────────────────────────────────
+    async function loadInvoices() {
+      const invRoot = document.getElementById('invoicesList');
+      invRoot.innerHTML = '<p class="empty-state">Chargement...</p>';
+      if (!state.activeBatchId || !state.selectedYear || !state.selectedMonth) {
+        invRoot.innerHTML = '<p class="empty-state">Sélectionnez une période.</p>';
         return;
       }
-      root.innerHTML = `
-        <div class="invoice-list">
-          <div class="invoice-row-grid head">
-            <div></div>
-            <div>Date</div>
-            <div>Fournisseur</div>
-            <div>Chantier</div>
-            <div>Libellé</div>
-            <div class="num">Montant H.T</div>
-          </div>
-          ${factures.map((inv) => {
-            return `
-              <section class="invoice-item" data-invoice-id="${esc(inv.id)}">
-                <button type="button" class="invoice-row" data-invoice-id="${esc(inv.id)}">
-                  <div class="invoice-row-grid">
-                    <div><span class="invoice-toggle">▶</span></div>
-                    <div>${esc(inv.date)}</div>
-                    <div>${esc(inv.fournisseur)}</div>
-                    <div class="mono">${esc(inv.chantier)}</div>
-                    <div class="invoice-summary">${esc(inv.libelle)} <span class="line-count">${inv.lineCount}</span></div>
-                    <div class="num invoice-montant">${fmt(inv.montant)}</div>
-                  </div>
-                </button>
-                <div class="invoice-detail" data-invoice-id="${esc(inv.id)}" data-loaded="0">
-                  <div class="invoice-detail-inner">
-                    <div class="detail-placeholder muted">Clique pour charger le détail de cette facture.</div>
-                  </div>
-                </div>
-              </section>
-            `;
-          }).join('')}
-        </div>
-      `;
-      bindInvoiceAccordion(root);
-    }
-
-    async function loadPeriodInvoices() {
-      if (!controlState.activeBatchId || !controlState.selectedYear || !controlState.selectedMonth) {
-        controlState.factures = [];
-        renderReconstructionList([]);
-        return;
+      try {
+        const data = await apiGet(`/achats/imports/${encodeURIComponent(state.activeBatchId)}/invoices?year=${encodeURIComponent(state.selectedYear)}&month=${encodeURIComponent(state.selectedMonth)}`);
+        state.loadedLinesByInvId = new Map();
+        renderInvoices(data.invoices || []);
+      } catch (e) {
+        invRoot.innerHTML = `<p class="empty-state" style="color:var(--danger);">Erreur : ${esc(e.message)}</p>`;
       }
-      const payload = await apiGet(`/achats-v2/control/${encodeURIComponent(controlState.activeBatchId)}/invoices?year=${encodeURIComponent(controlState.selectedYear)}&month=${encodeURIComponent(controlState.selectedMonth)}`);
-      controlState.factures = (payload.invoices || []).map(normalizeInvoiceSummary);
-      controlState.invoiceDetailsById = new Map();
-      renderReconstructionList(controlState.factures);
     }
 
-    async function loadControl(batchId) {
+    // ── Ouvrir un import ───────────────────────────────────────────────────────
+    async function openImport(batchId) {
       clearMessage();
-      controlState.activeBatchId = batchId;
-      controlState.invoiceDetailsById = new Map();
-      const payload = await apiGet(`/achats-v2/control/${encodeURIComponent(batchId)}/periods`);
-      controlState.periods = payload.periods || [];
-      renderPeriodFilters(controlState.periods);
-      await loadPeriodInvoices();
+      state.activeBatchId = batchId;
+      state.loadedLinesByInvId = new Map();
+      renderImports();
 
-      const b = payload.batch || {};
-      document.getElementById('batchInfo').textContent =
-        `Fichier: ${b.nom_fichier || '—'} | Factures: ${b.total_factures_detectees || 0} | Lignes: ${b.total_lignes_extraites || 0} | Exclues stock: ${b.total_lignes_exclues_stock || 0}`;
-    }
+      const imp = state.imports.find((i) => i.id === batchId);
+      const card = document.getElementById('invoicesCard');
+      card.style.display = '';
+      document.getElementById('invoicesCardTitle').textContent = imp ? `Factures — ${imp.nom_fichier}` : 'Factures';
+      document.getElementById('invoicesList').innerHTML = '<p class="empty-state">Chargement...</p>';
 
-    function renderImportsList(batches, activeBatchId) {
-      const root = document.getElementById('importsList');
-      if (!Array.isArray(batches) || !batches.length) {
-        root.innerHTML = '<p class="muted">Aucun import disponible.</p>';
-        return;
+      try {
+        const data = await apiGet(`/achats/imports/${encodeURIComponent(batchId)}/invoices`);
+        state.periods = data.periods || [];
+        buildPeriodFilters();
+
+        const yearSel = document.getElementById('filterYear');
+        const monthSel = document.getElementById('filterMonth');
+        yearSel.onchange = async () => { state.selectedYear = yearSel.value; buildPeriodFilters(); await loadInvoices(); };
+        monthSel.onchange = async () => { state.selectedMonth = monthSel.value; await loadInvoices(); };
+
+        await loadInvoices();
+      } catch (e) {
+        document.getElementById('invoicesList').innerHTML = `<p class="empty-state" style="color:var(--danger);">Erreur : ${esc(e.message)}</p>`;
       }
-      root.innerHTML = `
-        <div class="d-flex justify-between items-center" style="margin:2px 0 4px 0;">
-          <span class="muted">Liste des imports disponibles</span>
-          <span class="imports-count">${batches.length}</span>
-        </div>
-        ${batches.map((b) => `
-        <div class="imports-row ${String(b.id) === String(activeBatchId) ? 'active' : ''}" data-batch-id="${esc(b.id)}">
-          <div class="imports-meta">
-            <strong>${esc(b.nom_fichier || b.id)}</strong>
-            <span>ID: ${esc(b.id)} • ${esc(String(b.date_import || '').replace('T', ' ').slice(0, 19))}</span>
-            <div class="imports-stats">
-              <span class="imports-stat">📄 Factures: ${Number(b.total_factures_detectees || 0)}</span>
-              <span class="imports-stat">📑 Lignes: ${Number(b.total_lignes_extraites || 0)}</span>
-              <span class="imports-stat">🚫 Stock exclu: ${Number(b.total_lignes_exclues_stock || 0)}</span>
-            </div>
-          </div>
-          <div class="d-flex" style="gap:8px; justify-content:flex-end;">
-            <button class="btn btn-secondary btn-open-batch" data-batch-id="${esc(b.id)}">Afficher</button>
-            <button class="btn btn-danger btn-delete-batch" data-batch-id="${esc(b.id)}">Supprimer</button>
-          </div>
-        </div>
-      `).join('')}
-      `;
+
+      card.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
-    async function initPage() {
+    // ── Supprimer un import ────────────────────────────────────────────────────
+    async function deleteImport(batchId) {
+      const imp = state.imports.find((i) => i.id === batchId);
+      const name = imp?.nom_fichier || batchId;
+      if (!confirm(`Supprimer définitivement cet import ?\n\n${name}\n\nLe fichier PDF sera également supprimé.`)) return;
+      try {
+        await apiDelete(`/achats/imports/${encodeURIComponent(batchId)}`);
+        state.imports = state.imports.filter((i) => i.id !== batchId);
+        if (state.activeBatchId === batchId) {
+          state.activeBatchId = null;
+          document.getElementById('invoicesCard').style.display = 'none';
+        }
+        renderImports();
+        showMessage('Import supprimé.', 'success');
+      } catch (e) {
+        showMessage(`❌ ${e.message}`, 'danger');
+      }
+    }
+
+    // ── Re-parser un import ────────────────────────────────────────────────────
+    async function reparseImport(batchId) {
+      const btn = document.querySelector(`.btn-reparse[data-id="${batchId}"]`);
+      if (btn) { btn.disabled = true; btn.textContent = '⏳ En cours…'; }
+      try {
+        const result = await apiPost(`/achats/imports/${encodeURIComponent(batchId)}/reparse`);
+        const imp = state.imports.find((i) => i.id === batchId);
+        if (imp) { imp.total_factures = result.total_factures; imp.total_lignes = result.total_lignes; imp.total_stock_exclu = result.total_stock_exclu; }
+        renderImports();
+        if (state.activeBatchId === batchId) await openImport(batchId);
+        showMessage(`✅ Re-parsé : ${result.total_factures} factures, ${result.total_lignes} lignes.`, 'success');
+      } catch (e) {
+        showMessage(`❌ Re-parse échoué : ${e.message}`, 'danger');
+        if (btn) { btn.disabled = false; btn.innerHTML = '🔄 Re-parser'; }
+      }
+    }
+
+    // ── Init ────────────────────────────────────────────────────────────────────
+    async function init() {
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectAchatSecondaryBar();
 
-      let batches = [];
-      let localMode = false;
-      try {
-        batches = await apiGet('/achats-v2/import-batches');
-      } catch {
-        localMode = true;
-      }
-      let activeBatchId = null;
-      if (!Array.isArray(batches) || !batches.length) {
-        // Si l'API répond mais qu'il n'y a plus d'imports, on n'affiche pas le fallback local
-        // pour éviter de montrer d'anciennes données après suppression serveur.
-        if (!localMode) {
-          controlState.periods = [];
-          controlState.factures = [];
-          controlState.invoiceDetailsById = new Map();
-          renderPeriodFilters(controlState.periods);
-          document.getElementById('importsList').innerHTML = '<p class="muted">Aucun import.</p>';
-          document.getElementById('batchInfo').textContent = 'Aucun import disponible.';
-          document.getElementById('renderPreview').innerHTML = '<p class="muted">Aucune reconstruction disponible.</p>';
-          return;
-        }
-        const localInvoices = JSON.parse(localStorage.getItem('goudalle_achats_factures') || '[]');
-        const localLines = JSON.parse(localStorage.getItem('goudalle_achats_lignes') || '[]');
-        if (localInvoices.length || localLines.length) {
-          localMode = true;
-          document.getElementById('importsList').innerHTML = '<p class="muted">Mode fallback local (sans gestion de suppression ciblée).</p>';
-          const payload = toLocalControlPayload();
-          const invoices = payload.invoices || [];
-          controlState.periods = [];
-          controlState.factures = invoices.map((inv) => {
-            const count = (payload.lines || []).filter((line) => line.raw_invoice_id === inv.id).length;
-            return normalizeInvoiceSummary({ ...inv, line_count: count });
-          });
-          renderPeriodFilters(controlState.periods);
-          renderReconstructionList(controlState.factures);
-          document.getElementById('batchInfo').textContent =
-            `Mode fallback local | Factures: ${invoices.length} | Lignes: ${(payload.lines || []).length}`;
-          showMessage('⚠️ API imports indisponible. Affichage fallback des données validées locales.', 'warning');
-          return;
-        }
-        document.getElementById('importsList').innerHTML = '<p class="muted">Aucun import.</p>';
-        document.getElementById('renderPreview').innerHTML = '<p class="muted">Aucune reconstruction disponible.</p>';
-        if (localMode) showMessage('⚠️ API imports indisponible et aucun historique local trouvé.', 'warning');
-        return;
-      }
-
-      const ordered = [...batches].sort((a,b) => String(b.date_import || '').localeCompare(String(a.date_import || '')));
-      activeBatchId = ordered[0]?.id || null;
-      renderImportsList(ordered, activeBatchId);
-      if (activeBatchId) await loadControl(activeBatchId);
-
-      const yearSel = document.getElementById('filterYear');
-      const monthSel = document.getElementById('filterMonth');
-      yearSel.onchange = async () => {
-        controlState.selectedYear = yearSel.value;
-        renderPeriodFilters(controlState.periods);
-        await loadPeriodInvoices().catch((err) => showMessage(`❌ ${err.message}`, 'danger'));
-      };
-      monthSel.onchange = async () => {
-        controlState.selectedMonth = monthSel.value;
-        await loadPeriodInvoices().catch((err) => showMessage(`❌ ${err.message}`, 'danger'));
-      };
-
-      const root = document.getElementById('importsList');
-      root.addEventListener('click', async (e) => {
-        const openBtn = e.target.closest('.btn-open-batch');
-        const delBtn = e.target.closest('.btn-delete-batch');
-        if (openBtn) {
-          const batchId = openBtn.getAttribute('data-batch-id');
-          if (!batchId) return;
-          activeBatchId = batchId;
-          renderImportsList(ordered, activeBatchId);
-          await loadControl(activeBatchId).catch((err) => showMessage(`❌ ${err.message}`, 'danger'));
-          return;
-        }
-        if (delBtn) {
-          const batchId = delBtn.getAttribute('data-batch-id');
-          if (!batchId) return;
-          const ok = window.confirm('Confirmer la suppression de cet import ?');
-          if (!ok) return;
-          await apiDelete(`/achats-v2/import-batches/${encodeURIComponent(batchId)}`).catch((err) => {
-            showMessage(`❌ ${err.message}`, 'danger');
-            throw err;
-          });
-          showMessage('✅ Import supprimé.', 'success');
-          await initPage();
-        }
+      document.getElementById('importsList').addEventListener('click', async (e) => {
+        const showBtn = e.target.closest('.btn-show');
+        const reparseBtn = e.target.closest('.btn-reparse');
+        const delBtn = e.target.closest('.btn-delete');
+        if (showBtn) await openImport(showBtn.getAttribute('data-id'));
+        if (reparseBtn) await reparseImport(reparseBtn.getAttribute('data-id'));
+        if (delBtn) await deleteImport(delBtn.getAttribute('data-id'));
       });
+
+      try {
+        const data = await apiGet('/achats/imports');
+        state.imports = data.imports || [];
+        renderImports();
+        if (state.imports.length) await openImport(state.imports[0].id);
+      } catch (e) {
+        document.getElementById('importsList').innerHTML = `<p class="empty-state" style="color:var(--danger);">Erreur : ${esc(e.message)}</p>`;
+      }
     }
 
-    let _initDone = false;
-    async function init() {
-      if (_initDone) return;
-      _initDone = true;
-      await initPage();
-    }
     window.onServerReady(init);
   </script>
+
+  <footer class="site-footer"></footer>
 </body>
 </html>

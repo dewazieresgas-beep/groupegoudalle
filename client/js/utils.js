@@ -693,6 +693,7 @@ function injectAchatSecondaryBar() {
   const indicateursActive = currentPage === 'achat-indicateurs.html' ? ' active' : '';
   const saisieActive = currentPage === 'achat-saisie.html' ? ' active' : '';
   const controleActive = currentPage === 'achat-controle.html' ? ' active' : '';
+  const arcActive = currentPage === 'achat-arc.html' ? ' active' : '';
 
   let secondaryItems = '';
   if (Auth.hasAccess('achat_indicateurs')) {
@@ -703,6 +704,9 @@ function injectAchatSecondaryBar() {
   }
   if (Auth.hasAccess('achat_controle')) {
     secondaryItems += `<a href="${base}pages/achat-controle.html" class="sidebar-item${controleActive}">🧪 Contrôle imports</a>`;
+  }
+  if (Auth.hasAccess('achat_arc')) {
+    secondaryItems += `<a href="${base}pages/achat-arc.html" class="sidebar-item${arcActive}">📋 Codes ARC</a>`;
   }
   if (!secondaryItems) return;
 

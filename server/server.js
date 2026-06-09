@@ -105,6 +105,7 @@ const PAGES_CONFIG = [
   { file:'achat-indicateurs.html',                    perm:'achat_indicateurs',                label:'📊 Indicateurs achat',             group:'🛒 Achat' },
   { file:'achat-saisie.html',                         perm:'achat_saisie',                     label:'✏️ Saisie achats',                 group:'🛒 Achat' },
   { file:'achat-controle.html',                       perm:'achat_controle',                   label:'🔍 Contrôle imports',              group:'🛒 Achat' },
+  { file:'achat-arc.html',                            perm:'achat_arc',                        label:'📋 Codes ARC',                     group:'🛒 Achat' },
   { file:'rh-indicateurs.html',                       perm:'rh_indicateurs',                   label:'🦺 Indicateurs RH',                group:'👷 RH' },
   { file:'rh-saisie.html',                            perm:'rh_saisie',                        label:'📝 Déclaration accident',          group:'👷 RH' },
   { file:'utilisateurs.html',                         perm:'users_admin',                      label:'👥 Gestion utilisateurs',          group:'⚙️ Administration' },
@@ -486,58 +487,35 @@ function dedupeRepeatedLine(line) {
 function parsePdfHeaderLine(line) {
   const clean = dedupeRepeatedLine(line);
   const compact = String(clean || '').replace(/\s+/g, ' ').trim();
-  const m = compact.match(/^(\d{2}\/\d{2}\/\d{4})\s+(FR[\w-]+)\s+(.*?)\s+(-?\d[\d ]*,\d{2})$/i);
+
+  // Format ONAYA export: DD/MM/YYYY  BC[num]  [chantier]  0[fournisseur_code]  [raison_sociale...]  [auteur]  [statut]
+  // Le montant n'est PAS sur la ligne d'en-tête — il vient du "Total Bon"
+  const m = compact.match(/^(\d{2}\/\d{2}\/\d{4})\s+(BC[\w-]+)\s+(\S+)\s+(\S+)\s+(.+)$/i);
   if (!m) return null;
 
-  const [, dateFacture, numeroFacture, middleRaw, montantRaw] = m;
-  const tokens = String(middleRaw || '').trim().split(' ').filter(Boolean);
-  if (!tokens.length) return null;
-
-  const idxSupplier = tokens.findIndex((t) => /^0\S+$/i.test(t));
-  let journal = null;
-  let fournisseur = null;
-  let chantier = null;
-  let libelleFacture = null;
-  let avoir = null;
-
-  if (idxSupplier >= 0) {
-    fournisseur = tokens[idxSupplier];
-    const beforeSupplier = tokens.slice(0, idxSupplier);
-    const rest = tokens.slice(idxSupplier + 1);
-    if (beforeSupplier.some((t) => /^(avoir|av)$/i.test(t))) avoir = 'AVOIR';
-    for (let i = beforeSupplier.length - 1; i >= 0; i--) {
-      const t = beforeSupplier[i];
-      if (/^(avoir|av)$/i.test(t)) continue;
-      if (/^[A-Z]{1,3}$/.test(t)) {
-        journal = t;
-        break;
-      }
-    }
-    const idxFact = rest.findIndex((t) => /^fact$/i.test(t) || /^avoir$/i.test(t));
-    chantier = idxFact > 0 ? rest.slice(0, idxFact).join(' ').trim() : null;
-    libelleFacture = idxFact >= 0 ? rest.slice(idxFact).join(' ').trim() : rest.join(' ').trim();
-  } else {
-    return null;
-  }
-
-  if (!libelleFacture || !/(^fact\b|^avoir\b)/i.test(libelleFacture)) return null;
+  const [, dateFacture, numeroBon, chantierCode, fournisseurCode, rest] = m;
+  // rest = "Raison Sociale  Auteur  Statut" — on prend juste auteur (avant-dernier) et statut (dernier)
+  const restTokens = String(rest || '').trim().split(/\s+/).filter(Boolean);
+  const auteur = restTokens.length >= 2 ? restTokens[restTokens.length - 2] : null;
+  const raisonSociale = restTokens.length >= 3 ? restTokens.slice(0, -2).join(' ') : (restTokens[0] || null);
 
   return {
     date_facture: dateFacture,
-    numero_facture: numeroFacture,
-    avoir,
-    journal,
-    fournisseur,
-    chantier,
-    libelle_facture: libelleFacture,
-    montant_ht: toNumberFr(montantRaw),
+    numero_facture: numeroBon,
+    avoir: null,
+    journal: null,
+    fournisseur: raisonSociale || fournisseurCode,
+    auteur: auteur || null,
+    chantier: chantierCode || null,
+    libelle_facture: numeroBon,
+    montant_ht: null,
     header_raw: clean
   };
 }
 
 function parsePdfArticleLine(line) {
   const clean = dedupeRepeatedLine(line);
-  const m = clean.match(/^(.*?)(?:\s+(U|ML|M2|M3|ENS|KG))?\s+(-?\d[\d ]*,\d{3})\s+(-?\d[\d ]*,\d{2})\s+(-?\d[\d ]*,\d{2})$/i);
+  const m = clean.match(/^(.*?)(?:\s+(U|ML|M2|M3|ENS|KG))?\s+(-?\d{1,3}(?:\s\d{3})*,\d{3})\s+(-?\d{1,3}(?:\s\d{3})*,\d{2})\s+(-?\d{1,3}(?:\s\d{3})*,\d{2})$/i);
   if (!m) return null;
 
   const prefix = String(m[1] || '').trim();
@@ -556,35 +534,55 @@ function parsePdfArticleLine(line) {
   const idxBl = tokens.findIndex((t) => /^(BL|BC)[A-Z0-9-]+$/i.test(t));
 
   let bl = null;
-  let resourceTokens = [];
-  let tail = [];
-  if (idxBl >= 0) {
-    bl = tokens[idxBl];
-    resourceTokens = tokens.slice(0, idxBl);
-    tail = tokens.slice(idxBl + 1);
-  } else {
-    const splitIdx = tokens.findIndex((t, i) => i > 0 && (isArcToken(t) || isChantierToken(t)));
-    if (splitIdx > 0) {
-      resourceTokens = tokens.slice(0, splitIdx);
-      tail = tokens.slice(splitIdx);
-    } else {
-      resourceTokens = [tokens[0]];
-      tail = tokens.slice(1);
-    }
-  }
-
   let arc = null;
   let chantierLigne = null;
-  if (tail.length && isArcToken(tail[0])) arc = tail.shift();
-  if (tail.length && isChantierToken(tail[0])) chantierLigne = tail.shift();
-  const libelle = tail.join(' ').trim() || prefix || null;
+  let ressourceName = null;
+  let libelleFinal = null;
+
+  if (idxBl >= 0) {
+    // Format avec BL/BC explicite dans la ligne article
+    bl = tokens[idxBl];
+    const beforeBl = tokens.slice(0, idxBl);
+    const tailBl = tokens.slice(idxBl + 1);
+    ressourceName = beforeBl[0] || tokens[0] || null;
+    const libelleBeforeBl = beforeBl.slice(1).join(' ').trim() || null;
+    if (tailBl.length && isArcToken(tailBl[0])) arc = tailBl.shift();
+    if (tailBl.length && isChantierToken(tailBl[0])) chantierLigne = tailBl.shift();
+    const libelleAfterBl = tailBl.join(' ').trim() || null;
+    libelleFinal = [libelleBeforeBl, libelleAfterBl].filter(Boolean).join(' ') || prefix || null;
+  } else {
+    // Format ONAYA : RESSOURCE  LIBELLÉ...  [CHANTIER]  ARC
+    // Cas 1 normal  : ...LIBELLÉ  ARC                (dernier token = ARC)
+    // Cas 2 CBCO    : ...LIBELLÉ  ARC  CHANTIER_TEXT  (avant-dernier = ARC, dernier = chantier textuel)
+    ressourceName = tokens[0] || null;
+    let endIdx = tokens.length;
+    const lastTok = tokens[tokens.length - 1];
+    const prevTok = tokens.length > 2 ? tokens[tokens.length - 2] : null;
+
+    if (tokens.length > 1 && /^\d+$/.test(lastTok)) {
+      // Cas 1 : dernier token = ARC numérique
+      arc = lastTok;
+      endIdx--;
+      if (endIdx > 1 && isChantierToken(tokens[endIdx - 1])) {
+        chantierLigne = tokens[endIdx - 1];
+        endIdx--;
+      }
+    } else if (tokens.length > 2 && /^\d+$/.test(prevTok)) {
+      // Cas 2 : avant-dernier = ARC, dernier = texte chantier (ex : MACHINESATELIER)
+      chantierLigne = lastTok;
+      endIdx--;
+      arc = prevTok;
+      endIdx--;
+    }
+    libelleFinal = tokens.slice(1, endIdx).join(' ').trim() || prefix || null;
+  }
 
   return {
-    ressource: resourceTokens.join(' ').trim() || null,
+    ressource: ressourceName,
     bl_numero: bl,
     arc,
     chantier_ligne: chantierLigne,
-    libelle_ligne: libelle,
+    libelle_ligne: libelleFinal,
     unite,
     qte_fact: qte,
     pu,
@@ -1963,6 +1961,505 @@ app.get('/api/achats-v2/indicators-monthly', (req, res) => {
     }));
   
   res.json({ success: true, rows });
+});
+
+// ─── ACHATS : NOUVEAU SYSTÈME (PDF sur disque + JSON cache) ──────────────────────
+
+const ACHATS_NETWORK_PDF_DIR = process.env.ACHATS_PDF_DIR || 'W:\\BCHDF\\Site Intranet Groupe Goudalle\\Indicateurs achats';
+const ACHATS_DATA_DIR = path.join(__dirname, 'achats', 'data');
+if (!fs.existsSync(ACHATS_DATA_DIR)) fs.mkdirSync(ACHATS_DATA_DIR, { recursive: true });
+
+const ACHATS_ARC_DIR = process.env.ACHATS_ARC_DIR || 'W:\\BCHDF\\Site Intranet Groupe Goudalle\\Indicateurs achats\\Codes ARC des Entreprises';
+const ACHATS_ARC_LOCAL_DIR = path.join(__dirname, 'achats', 'arc-codes');
+if (!fs.existsSync(ACHATS_ARC_LOCAL_DIR)) fs.mkdirSync(ACHATS_ARC_LOCAL_DIR, { recursive: true });
+
+const ACHATS_ARC_FILES = {
+  'Goudalle Charpente': 'Codes_ARC_Goudalle_Charpente.xlsx',
+  'Nouvelle Goudalle Maçonnerie': 'Codes_ARC_Goudalle_Maconnerie.xlsx',
+  'CBCO': 'Codes_ARC_CBCO.xlsx',
+};
+
+function getArcExcelPath(company) {
+  const filename = ACHATS_ARC_FILES[company];
+  if (!filename) return null;
+  const networkPath = path.join(ACHATS_ARC_DIR, filename);
+  if (fs.existsSync(networkPath)) return networkPath;
+  return path.join(ACHATS_ARC_LOCAL_DIR, filename);
+}
+
+function readArcCodes(company) {
+  const filePath = getArcExcelPath(company);
+  if (!filePath || !fs.existsSync(filePath)) return [];
+  const wb = XLSX.readFile(filePath);
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+  return rows.slice(1)
+    .filter((r) => r[0] !== '' && r[0] != null)
+    .map((r) => ({ code: String(r[0]).trim(), designation: String(r[1] || '').trim() }))
+    .filter((r) => r.code);
+}
+
+app.get('/api/achats/arc-codes', requireToken, (req, res) => {
+  const company = String(req.query.company || '').trim();
+  if (company) {
+    if (!ACHATS_ARC_FILES[company]) return res.status(400).json({ success: false, error: `Société inconnue : ${company}` });
+    try { return res.json({ success: true, company, codes: readArcCodes(company) }); }
+    catch (e) { return res.status(500).json({ success: false, error: e.message }); }
+  }
+  const result = {};
+  for (const c of Object.keys(ACHATS_ARC_FILES)) {
+    try { result[c] = readArcCodes(c); } catch { result[c] = []; }
+  }
+  res.json({ success: true, companies: result });
+});
+
+app.post('/api/achats/arc-codes', requireToken, async (req, res) => {
+  const company = String(req.body?.company || '').trim();
+  const code = String(req.body?.code || '').trim();
+  const designation = String(req.body?.designation || '').trim();
+  if (!ACHATS_ARC_FILES[company]) return res.status(400).json({ success: false, error: 'Société inconnue.' });
+  if (!code) return res.status(400).json({ success: false, error: 'Code requis.' });
+  const filePath = getArcExcelPath(company);
+  if (!filePath || !fs.existsSync(filePath)) return res.status(404).json({ success: false, error: 'Fichier Excel introuvable.' });
+  if (readArcCodes(company).find((e) => e.code === code)) return res.status(409).json({ success: false, error: `Code ${code} existe déjà.` });
+  try {
+    const wb = await XlsxPopulate.fromFileAsync(filePath);
+    const sheet = wb.sheet(0);
+    const lastRow = sheet.usedRange().endCell().rowNumber();
+    sheet.cell(lastRow + 1, 1).value(isNaN(code) ? code : Number(code));
+    sheet.cell(lastRow + 1, 2).value(designation);
+    await wb.toFileAsync(filePath);
+    res.json({ success: true, code, designation });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.put('/api/achats/arc-codes/:code', requireToken, async (req, res) => {
+  const code = String(req.params.code || '').trim();
+  const company = String(req.body?.company || '').trim();
+  const designation = String(req.body?.designation || '').trim();
+  if (!ACHATS_ARC_FILES[company]) return res.status(400).json({ success: false, error: 'Société inconnue.' });
+  const filePath = getArcExcelPath(company);
+  if (!filePath || !fs.existsSync(filePath)) return res.status(404).json({ success: false, error: 'Fichier Excel introuvable.' });
+  try {
+    const wb = await XlsxPopulate.fromFileAsync(filePath);
+    const sheet = wb.sheet(0);
+    const endRow = sheet.usedRange().endCell().rowNumber();
+    let found = false;
+    for (let r = 2; r <= endRow; r++) {
+      if (String(sheet.cell(r, 1).value() ?? '').trim() === code) {
+        sheet.cell(r, 2).value(designation); found = true; break;
+      }
+    }
+    if (!found) return res.status(404).json({ success: false, error: `Code ${code} introuvable.` });
+    await wb.toFileAsync(filePath);
+    res.json({ success: true, code, designation });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+app.delete('/api/achats/arc-codes/:code', requireToken, async (req, res) => {
+  const code = String(req.params.code || '').trim();
+  const company = String(req.query.company || '').trim();
+  if (!ACHATS_ARC_FILES[company]) return res.status(400).json({ success: false, error: 'Société inconnue.' });
+  const filePath = getArcExcelPath(company);
+  if (!filePath || !fs.existsSync(filePath)) return res.status(404).json({ success: false, error: 'Fichier Excel introuvable.' });
+  try {
+    const wb = await XlsxPopulate.fromFileAsync(filePath);
+    const sheet = wb.sheet(0);
+    const endRow = sheet.usedRange().endCell().rowNumber();
+    let deleteRow = -1;
+    for (let r = 2; r <= endRow; r++) {
+      if (String(sheet.cell(r, 1).value() ?? '').trim() === code) { deleteRow = r; break; }
+    }
+    if (deleteRow === -1) return res.status(404).json({ success: false, error: `Code ${code} introuvable.` });
+    for (let r = deleteRow; r < endRow; r++) {
+      sheet.cell(r, 1).value(sheet.cell(r + 1, 1).value());
+      sheet.cell(r, 2).value(sheet.cell(r + 1, 2).value());
+    }
+    sheet.cell(endRow, 1).value(undefined);
+    sheet.cell(endRow, 2).value(undefined);
+    await wb.toFileAsync(filePath);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+const ACHATS_COMPANIES = [
+  'Goudalle Charpente',
+  'Nouvelle Goudalle Maçonnerie',
+  'CBCO',
+  'Sylve Data'
+];
+
+function achatBuildPdfName(company, invoices) {
+  const dates = (invoices || []).map((inv) => inv.date_facture || inv.date).filter(Boolean).map((d) => {
+    const m = String(d).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    return m ? new Date(`${m[3]}-${m[2]}-${m[1]}`) : null;
+  }).filter(Boolean);
+  if (!dates.length) return `Commandes ${company} - import.pdf`;
+  const minDate = new Date(Math.min(...dates.map((d) => d.getTime())));
+  const maxDate = new Date(Math.max(...dates.map((d) => d.getTime())));
+  const fmt = (d) => `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
+  return `Commandes ${company} du ${fmt(minDate)} au ${fmt(maxDate)}.pdf`;
+}
+
+const _achatUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/pdf' || file.originalname.toLowerCase().endsWith('.pdf')) cb(null, true);
+    else cb(new Error('Seuls les fichiers PDF sont acceptés.'));
+  }
+});
+
+function readAchatImportMeta(batchId) {
+  const dataFile = path.join(ACHATS_DATA_DIR, `${batchId}.json`);
+  if (!fs.existsSync(dataFile)) return null;
+  try {
+    const raw = JSON.parse(fs.readFileSync(dataFile, 'utf8'));
+    return { id: raw.id, date_import: raw.date_import, company: raw.company || null, nom_fichier: raw.nom_fichier, total_factures: raw.total_factures, total_lignes: raw.total_lignes, total_stock_exclu: raw.total_stock_exclu };
+  } catch { return null; }
+}
+
+function readAchatImportData(batchId) {
+  const dataFile = path.join(ACHATS_DATA_DIR, `${batchId}.json`);
+  if (!fs.existsSync(dataFile)) return null;
+  try { return JSON.parse(fs.readFileSync(dataFile, 'utf8')); }
+  catch { return null; }
+}
+
+function achatToIsoMonth(frDate) {
+  const m = String(frDate || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return null;
+  return `${m[3]}-${m[2]}`;
+}
+
+app.post('/api/achats/upload', requireToken, _achatUpload.single('pdf'), async (req, res) => {
+  try {
+    const file = req.file;
+    if (!file) return res.status(400).json({ success: false, error: 'Aucun fichier PDF reçu.' });
+    const company = String(req.body?.company || '').trim();
+    if (!company) return res.status(400).json({ success: false, error: 'Société non renseignée.' });
+    if (!ACHATS_COMPANIES.includes(company)) return res.status(400).json({ success: false, error: `Société inconnue : ${company}` });
+
+    const now = new Date().toISOString();
+    const batchId = `batch_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+    // Parse le PDF
+    const parser = new PDFParse({ data: file.buffer });
+    await parser.load();
+    const parsed = await parser.getText();
+    const text = String(parsed?.text || '').replace(/\r/g, '');
+    await parser.destroy();
+
+    const { invoices: rawInvoices, warnings } = parsePdfInvoiceBlocks(text);
+
+    // Construire le nom de fichier depuis mois/année explicites ou dates parsées
+    const reqMonth = String(req.body?.month || '').trim();
+    const reqYear = String(req.body?.year || '').trim();
+    let pdfName;
+    if (reqMonth && reqYear) {
+      const last = new Date(Number(reqYear), Number(reqMonth), 0).getDate();
+      pdfName = `Commandes ${company} du 01.${reqMonth}.${reqYear} au ${last}.${reqMonth}.${reqYear}.pdf`;
+    } else {
+      pdfName = achatBuildPdfName(company, rawInvoices);
+    }
+    const pdfFullPath = path.join(ACHATS_NETWORK_PDF_DIR, pdfName);
+
+    // Vérifier accès au dossier réseau, sinon fallback local
+    let savedPdfPath = pdfName;
+    let savedLocal = false;
+    try {
+      if (!fs.existsSync(ACHATS_NETWORK_PDF_DIR)) fs.mkdirSync(ACHATS_NETWORK_PDF_DIR, { recursive: true });
+      fs.writeFileSync(pdfFullPath, file.buffer);
+    } catch (e) {
+      const localFallback = path.join(__dirname, 'achats', 'pdfs');
+      if (!fs.existsSync(localFallback)) fs.mkdirSync(localFallback, { recursive: true });
+      fs.writeFileSync(path.join(localFallback, pdfName), file.buffer);
+      savedPdfPath = path.join('local', pdfName);
+      savedLocal = true;
+    }
+
+    let totalLignes = 0;
+    let totalStockExclu = 0;
+
+    const invoices = rawInvoices.map((inv, invIdx) => {
+      const invId = `inv_${batchId}_${invIdx + 1}`;
+      const isStockInv = isStockRelatedText([inv.fournisseur, inv.libelle_facture, inv.chantier].filter(Boolean).join(' '));
+      const lines = (inv.lines || []).map((l, lIdx) => {
+        const isStockLine = isStockInv || isStockRelatedText([inv.fournisseur, inv.libelle_facture, l.libelle_ligne, l.ressource, l.raw_text].filter(Boolean).join(' '));
+        if (isStockLine) totalStockExclu++;
+        totalLignes++;
+        return {
+          id: `line_${invId}_${lIdx + 1}`,
+          line_order: l.line_order,
+          ressource: l.ressource || null,
+          bl_numero: l.bl_numero || null,
+          arc: l.arc || null,
+          chantier_ligne: l.chantier_ligne || null,
+          libelle_ligne: l.libelle_ligne || null,
+          unite: l.unite || null,
+          qte_fact: l.qte_fact != null ? Number(l.qte_fact) : null,
+          pu: l.pu != null ? Number(l.pu) : null,
+          montant: l.montant != null ? Number(l.montant) : null,
+          excluded: isStockLine
+        };
+      });
+      return {
+        id: invId,
+        date: inv.date_facture || null,
+        numero_facture: inv.numero_facture || null,
+        avoir: inv.avoir || null,
+        journal: inv.journal || null,
+        fournisseur: inv.fournisseur || null,
+        chantier: inv.chantier || null,
+        libelle_facture: inv.libelle_facture || null,
+        montant_ht: inv.montant_ht != null ? Number(inv.montant_ht) : null,
+        excluded: isStockInv,
+        lines
+      };
+    });
+
+    const importData = {
+      id: batchId, date_import: now, company, nom_fichier: pdfName, pdf_path: savedPdfPath,
+      total_factures: invoices.length, total_lignes: totalLignes, total_stock_exclu: totalStockExclu,
+      warnings: warnings || [], invoices
+    };
+    fs.writeFileSync(path.join(ACHATS_DATA_DIR, `${batchId}.json`), JSON.stringify(importData));
+
+    res.json({
+      success: true, id: batchId, company, nom_fichier: pdfName,
+      total_factures: invoices.length, total_lignes: totalLignes, total_stock_exclu: totalStockExclu,
+      warnings, saved_local: savedLocal
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, error: `Erreur import: ${e.message}` });
+  }
+});
+
+app.get('/api/achats/companies', (req, res) => {
+  res.json({ success: true, companies: ACHATS_COMPANIES });
+});
+
+// Route de diagnostic : retourne le texte brut extrait + nb lignes parsées
+app.post('/api/achats/debug-parse', requireToken, _achatUpload.single('pdf'), async (req, res) => {
+  try {
+    const file = req.file;
+    if (!file) return res.status(400).json({ success: false, error: 'Aucun fichier PDF reçu.' });
+    const parser = new PDFParse({ data: file.buffer });
+    await parser.load();
+    const parsed = await parser.getText();
+    const text = String(parsed?.text || '').replace(/\r/g, '');
+    await parser.destroy();
+
+    const rawLines = text.split(/\n/).filter((l) => l.trim());
+    const headerMatches = rawLines.filter((l) => parsePdfHeaderLine(l) !== null);
+    const articleMatches = rawLines.filter((l) => parsePdfArticleLine(l) !== null);
+    const totalMatches = rawLines.filter((l) => parsePdfTotalLine(l) !== null);
+
+    const { invoices, warnings } = parsePdfInvoiceBlocks(text);
+
+    res.json({
+      success: true,
+      pages: parsed?.numpages || null,
+      total_chars: text.length,
+      total_lines: rawLines.length,
+      header_lines_found: headerMatches.length,
+      article_lines_found: articleMatches.length,
+      total_bon_lines_found: totalMatches.length,
+      invoices_parsed: invoices.length,
+      warnings,
+      sample_lines: rawLines.slice(0, 30),
+      header_samples: headerMatches.slice(0, 3),
+      article_samples: articleMatches.slice(0, 3)
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.get('/api/achats/imports', (req, res) => {
+  try {
+    const files = fs.readdirSync(ACHATS_DATA_DIR).filter((f) => f.endsWith('.json'));
+    const imports = files.map((f) => readAchatImportMeta(f.replace('.json', ''))).filter(Boolean)
+      .sort((a, b) => String(b.date_import || '').localeCompare(String(a.date_import || '')));
+    res.json({ success: true, imports });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.get('/api/achats/indicators-monthly', (req, res) => {
+  try {
+    const files = fs.readdirSync(ACHATS_DATA_DIR).filter((f) => f.endsWith('.json'));
+    const byMonth = new Map();
+    for (const f of files) {
+      const data = readAchatImportData(f.replace('.json', ''));
+      if (!data || !data.invoices) continue;
+      for (const inv of data.invoices) {
+        if (inv.excluded || isCbcoSupplier(inv.fournisseur)) continue;
+        const month = achatToIsoMonth(inv.date);
+        if (!month) continue;
+        for (const line of (inv.lines || [])) {
+          if (line.excluded) continue;
+          const txt = normalizeText([line.ressource, line.libelle_ligne].filter(Boolean).join(' '));
+          const isClt = /\b(clt|klh)\b/.test(txt);
+          const isLc = !isClt && /\b(lc|lamelle colle|lamelle-colle|lamelle)\b/.test(txt);
+          if (!isClt && !isLc) continue;
+          const vol = computeVolumeM3FromNorm({ ressource: line.ressource, libelle_ligne: line.libelle_ligne, unite: line.unite, qte_fact: line.qte_fact });
+          if (!Number.isFinite(vol) || vol <= 0) continue;
+          if (!byMonth.has(month)) byMonth.set(month, { month, v_clt_m3: 0, v_lc_m3: 0, lc_amount: 0 });
+          const row = byMonth.get(month);
+          if (isClt) row.v_clt_m3 += vol;
+          if (isLc) { row.v_lc_m3 += vol; row.lc_amount += Number(line.montant || 0); }
+        }
+      }
+    }
+    const rows = [...byMonth.values()].sort((a, b) => a.month.localeCompare(b.month))
+      .map((r) => ({ month: r.month, v_clt_m3: r.v_clt_m3, v_lc_m3: r.v_lc_m3, prix_moyen_lc_eur_m3: r.v_lc_m3 > 0 ? r.lc_amount / r.v_lc_m3 : null }));
+    res.json({ success: true, rows });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.get('/api/achats/imports/:batchId/invoices', (req, res) => {
+  const { batchId } = req.params;
+  const { year, month } = req.query;
+  const data = readAchatImportData(batchId);
+  if (!data) return res.status(404).json({ success: false, error: 'Import introuvable.' });
+
+  let invoices = (data.invoices || []).map((inv) => ({
+    id: inv.id, date: inv.date, numero_facture: inv.numero_facture, fournisseur: inv.fournisseur,
+    chantier: inv.chantier, libelle_facture: inv.libelle_facture, montant_ht: inv.montant_ht,
+    excluded: inv.excluded, line_count: (inv.lines || []).length
+  }));
+
+  if (year || month) {
+    invoices = invoices.filter((inv) => {
+      const m = achatToIsoMonth(inv.date);
+      if (!m) return false;
+      const [y, mo] = m.split('-');
+      if (year && y !== String(year)) return false;
+      if (month && mo !== String(month).padStart(2, '0')) return false;
+      return true;
+    });
+  }
+
+  const periodMap = new Map();
+  for (const inv of (data.invoices || [])) {
+    const m = achatToIsoMonth(inv.date);
+    if (!m) continue;
+    const [y, mo] = m.split('-');
+    if (!periodMap.has(m)) periodMap.set(m, { year: y, month: mo, invoice_count: 0 });
+    periodMap.get(m).invoice_count++;
+  }
+  const periods = [...periodMap.values()].sort((a, b) => `${a.year}-${a.month}`.localeCompare(`${b.year}-${b.month}`));
+
+  res.json({ success: true, invoices, periods, batch: { id: data.id, nom_fichier: data.nom_fichier, total_factures: data.total_factures, total_lignes: data.total_lignes, total_stock_exclu: data.total_stock_exclu } });
+});
+
+app.get('/api/achats/imports/:batchId/invoices/:invId/lines', (req, res) => {
+  const { batchId, invId } = req.params;
+  const data = readAchatImportData(batchId);
+  if (!data) return res.status(404).json({ success: false, error: 'Import introuvable.' });
+  const inv = (data.invoices || []).find((i) => i.id === invId);
+  if (!inv) return res.status(404).json({ success: false, error: 'Facture introuvable.' });
+  res.json({ success: true, invoice: { id: inv.id, date: inv.date, numero_facture: inv.numero_facture, fournisseur: inv.fournisseur, chantier: inv.chantier, libelle_facture: inv.libelle_facture, montant_ht: inv.montant_ht, excluded: inv.excluded }, lines: inv.lines || [] });
+});
+
+app.post('/api/achats/imports/:batchId/reparse', requireToken, async (req, res) => {
+  const { batchId } = req.params;
+  const data = readAchatImportData(batchId);
+  if (!data) return res.status(404).json({ success: false, error: 'Import introuvable.' });
+
+  try {
+    let pdfBuffer;
+    if (data.pdf_path) {
+      let pdfFile;
+      if (String(data.pdf_path).startsWith('local' + path.sep) || String(data.pdf_path).startsWith('local/')) {
+        pdfFile = path.join(__dirname, 'achats', 'pdfs', path.basename(data.pdf_path));
+      } else {
+        pdfFile = path.join(ACHATS_NETWORK_PDF_DIR, data.pdf_path);
+      }
+      if (!fs.existsSync(pdfFile)) return res.status(404).json({ success: false, error: 'Fichier PDF introuvable sur le serveur.' });
+      pdfBuffer = fs.readFileSync(pdfFile);
+    } else {
+      return res.status(400).json({ success: false, error: 'Aucun chemin PDF enregistré pour cet import.' });
+    }
+
+    const parser = new PDFParse({ data: pdfBuffer });
+    await parser.load();
+    const parsed = await parser.getText();
+    const text = String(parsed?.text || '').replace(/\r/g, '');
+    await parser.destroy();
+
+    const { invoices: rawInvoices, warnings } = parsePdfInvoiceBlocks(text);
+    let totalLignes = 0;
+    let totalStockExclu = 0;
+
+    const invoices = rawInvoices.map((inv, invIdx) => {
+      const invId = `inv_${batchId}_${invIdx + 1}`;
+      const isStockInv = isStockRelatedText([inv.fournisseur, inv.libelle_facture, inv.chantier].filter(Boolean).join(' '));
+      const lines = (inv.lines || []).map((l, lIdx) => {
+        const isStockLine = isStockInv || isStockRelatedText([inv.fournisseur, inv.libelle_facture, l.libelle_ligne, l.ressource, l.raw_text].filter(Boolean).join(' '));
+        if (isStockLine) totalStockExclu++;
+        totalLignes++;
+        return {
+          id: `line_${invId}_${lIdx + 1}`,
+          line_order: l.line_order,
+          ressource: l.ressource || null,
+          bl_numero: l.bl_numero || null,
+          arc: l.arc || null,
+          chantier_ligne: l.chantier_ligne || null,
+          libelle_ligne: l.libelle_ligne || null,
+          unite: l.unite || null,
+          qte_fact: l.qte_fact != null ? Number(l.qte_fact) : null,
+          pu: l.pu != null ? Number(l.pu) : null,
+          montant: l.montant != null ? Number(l.montant) : null,
+          excluded: isStockLine
+        };
+      });
+      return {
+        id: invId, date: inv.date_facture || null, numero_facture: inv.numero_facture || null,
+        avoir: inv.avoir || null, journal: inv.journal || null,
+        fournisseur: inv.fournisseur || null, chantier: inv.chantier || null,
+        libelle_facture: inv.libelle_facture || null,
+        montant_ht: inv.montant_ht != null ? Number(inv.montant_ht) : null,
+        excluded: isStockInv, lines
+      };
+    });
+
+    const updated = {
+      ...data,
+      total_factures: invoices.length, total_lignes: totalLignes,
+      total_stock_exclu: totalStockExclu, warnings: warnings || [], invoices
+    };
+    fs.writeFileSync(path.join(ACHATS_DATA_DIR, `${batchId}.json`), JSON.stringify(updated));
+    res.json({ success: true, total_factures: invoices.length, total_lignes: totalLignes, total_stock_exclu: totalStockExclu, warnings });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.delete('/api/achats/imports/:batchId', requireToken, (req, res) => {
+  const { batchId } = req.params;
+  const data = readAchatImportData(batchId);
+  if (!data) return res.status(404).json({ success: false, error: 'Import introuvable.' });
+  try {
+    const dataFile = path.join(ACHATS_DATA_DIR, `${batchId}.json`);
+    let pdfFile = null;
+    if (data.pdf_path) {
+      if (String(data.pdf_path).startsWith('local' + path.sep) || String(data.pdf_path).startsWith('local/')) {
+        pdfFile = path.join(__dirname, 'achats', 'pdfs', path.basename(data.pdf_path));
+      } else {
+        pdfFile = path.join(ACHATS_NETWORK_PDF_DIR, data.pdf_path);
+      }
+    }
+    if (fs.existsSync(dataFile)) fs.unlinkSync(dataFile);
+    if (pdfFile && fs.existsSync(pdfFile)) fs.unlinkSync(pdfFile);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 // ─── EXCEL GOUDALLE MAÇONNERIE : CONFIG + WATCHER + AUTO-IMPORT ─────────────────

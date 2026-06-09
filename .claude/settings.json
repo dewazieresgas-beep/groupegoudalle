@@ -83,7 +83,12 @@
       "Bash(grep -n \"Y:\\\\\\\\\\\\|W:\\\\\\\\\\\\|X:\\\\\\\\\\\\|Z:\\\\\\\\\\\\|readdir\\\\|statSync\" \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\\\\server\\\\server.js\")",
       "WebSearch",
       "PowerShell(Get-ChildItem -Path \"Y:\\\\03-Affaires\\\\02-Affaires en cours\" -Recurse -File | Where-Object { $_.Name -match '\\\\bOS\\\\b' -or $_.Name -match \"Ordre.de.Service\" -or $_.Name -match \"OS \" -or $_.Name -match \" OS\" } | Select-Object FullName, Name, LastWriteTime | Format-Table -AutoSize -Wrap)",
-      "Bash(node \"c:/Users/gdewazieres/Desktop/groupegoudalle/tests/run_tests.js\")"
+      "Bash(node \"c:/Users/gdewazieres/Desktop/groupegoudalle/tests/run_tests.js\")",
+      "Bash(node -e \"require\\('./server.js'\\)\")",
+      "Bash(node --check c:/Users/gdewazieres/Desktop/groupegoudalle/server/server.js)",
+      "Bash(node -e \"const m = require\\('c:/Users/gdewazieres/Desktop/groupegoudalle/server/node_modules/multer'\\); console.log\\(require\\('c:/Users/gdewazieres/Desktop/groupegoudalle/server/node_modules/multer/package.json'\\).version\\)\")",
+      "Bash(grep -n \"W:\\\\\\\\\\\\\\\\\\\\|Y:\\\\\\\\\\\\\\\\\\\\|Z:\\\\\\\\\\\\\\\\\\\\|X:\\\\\\\\\\\\\\\\\" \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\\\\server\\\\server.js\")",
+      "Read(//w/BCHDF/Site Intranet Groupe Goudalle/Indicateurs achats/Codes ARC des Entreprises/**)"
     ],
     "additionalDirectories": [
       "\\tmp",

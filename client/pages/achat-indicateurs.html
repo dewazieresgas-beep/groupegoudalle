@@ -6,66 +6,59 @@
   <title>Indicateurs Achat - Intranet Goudalle</title>
   <link rel="stylesheet" href="../css/style.css">
   <style>
-    .achat-table-wrap {
-      overflow-x: auto;
-    }
-    .note-muted {
-      margin-top: 10px;
-      color: #666;
-      font-size: 13px;
-    }
+    .table-wrap { overflow-x: auto; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .note-muted { margin-top: 10px; color: #666; font-size: 13px; }
+    table thead th { background: linear-gradient(180deg, #f6f6ef 0%, #efefe7 100%); }
+    table tbody tr:last-child td { border-bottom: none; }
+    .empty-state { text-align: center; padding: 32px; color: var(--text-light); }
+    .empty-state a { color: var(--primary); font-weight: 600; }
   </style>
 </head>
 <body>
   <script src="../js/api.js"></script>
   <script src="../js/auth.js"></script>
   <script src="../js/utils.js"></script>
-
-  <script>
-    Auth.requirePermission('achat_indicateurs');
-  </script>
+  <script>Auth.requirePermission('achat_indicateurs');</script>
 
   <div class="app-container">
     <div id="sidebar"></div>
 
     <main class="main-content">
-      <div class="d-flex justify-between items-center mb-3" style="gap: 12px; flex-wrap: wrap;">
-        <h1 class="mb-0">Indicateurs Achat</h1>
-      </div>
+      <h1 class="mb-3">Indicateurs Achat</h1>
+
+      <div id="pageMessage" class="alert" style="display:none;"></div>
 
       <div class="card">
         <div class="card-title">
           <h2>Indicateurs mensuels CLT / LC</h2>
         </div>
         <div class="card-body">
-          <div class="achat-table-wrap">
-            <table id="tableIndicateursMensuels">
+          <div class="table-wrap">
+            <table id="tableIndicateurs">
               <thead>
                 <tr>
                   <th>Mois</th>
-                  <th>V CLT (m³)</th>
-                  <th>V LC (m³)</th>
-                  <th>Prix moyen LC (€/m³)</th>
+                  <th class="num">V CLT (m³)</th>
+                  <th class="num">V LC (m³)</th>
+                  <th class="num">Prix moyen LC (€/m³)</th>
                 </tr>
               </thead>
               <tbody>
-                <tr><td colspan="4" style="text-align:center;">Chargement...</td></tr>
+                <tr><td colspan="4" class="empty-state">Chargement...</td></tr>
               </tbody>
             </table>
           </div>
-
           <p class="note-muted" id="indicateursNote"></p>
         </div>
       </div>
 
       <div class="card">
-        <div class="card-title">
-          <h2>Accès rapides Achats</h2>
-        </div>
+        <div class="card-title"><h2>Accès rapides</h2></div>
         <div class="card-body">
-          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px;">
-            <a class="btn btn-primary" href="./achat-saisie.html">🧾 Saisie indicateurs achats</a>
-            <a class="btn btn-secondary" href="./achat-controle.html">🧪 Contrôle imports</a>
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px;">
+            <a class="btn btn-primary" href="./achat-saisie.html">📤 Importer un fichier ONAYA</a>
+            <a class="btn btn-secondary" href="./achat-controle.html">🔍 Contrôle des imports</a>
           </div>
         </div>
       </div>
@@ -73,220 +66,62 @@
   </div>
 
   <script>
-    function normalizeText(str) {
-      return String(str || '')
-        .replace(/œ/g, 'oe')
-        .replace(/æ/g, 'ae')
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .toLowerCase();
-    }
+    const API = window.location.origin + '/api';
 
-    function toIsoMonth(frDate) {
-      const m = String(frDate || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-      if (!m) return null;
-      return `${m[3]}-${m[2]}`;
+    function esc(s) {
+      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
 
     function formatMonthFr(isoMonth) {
       const m = String(isoMonth || '').match(/^(\d{4})-(\d{2})$/);
       if (!m) return isoMonth || '—';
-      const year = Number(m[1]);
-      const month = Number(m[2]) - 1;
-      const d = new Date(Date.UTC(year, month, 1));
-      const label = d.toLocaleString('fr-FR', { month: 'short', timeZone: 'UTC' }).replace('.', '');
-      return `${label}-${String(year).slice(-2)}`;
+      const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, 1));
+      const label = d.toLocaleString('fr-FR', { month: 'long', timeZone: 'UTC' });
+      return `${label.charAt(0).toUpperCase() + label.slice(1)} ${m[1]}`;
     }
 
-    function extractThicknessMeters(text) {
-      const norm = normalizeText(text);
-      const mmMatch = norm.match(/(\d{2,3}(?:[.,]\d+)?)\s*mm\b/);
-      if (mmMatch) {
-        const mm = parseFloat(mmMatch[1].replace(',', '.'));
-        if (Number.isFinite(mm) && mm > 0) return mm / 1000;
-      }
-      return null;
+    function fmt(v, digits = 0) {
+      if (v == null) return '—';
+      return Number(v).toLocaleString('fr-FR', { minimumFractionDigits: digits, maximumFractionDigits: digits });
     }
 
-    function extractSectionLengthForUnitPieces(text) {
-      const norm = normalizeText(text);
-      const toN = (v) => parseFloat(String(v).replace(',', '.'));
-      const ok = (v) => Number.isFinite(v) && v > 0;
-      const matches = [];
-
-      const reCmM = /(\d+(?:[.,]\d+)?)\s*[x*]\s*(\d+(?:[.,]\d+)?)\s*cm\b.*?(\d+(?:[.,]\d+)?)\s*m\b/g;
-      for (const m of norm.matchAll(reCmM)) {
-        const a = toN(m[1]) / 100;
-        const b = toN(m[2]) / 100;
-        const l = toN(m[3]);
-        if (ok(a) && ok(b) && ok(l)) matches.push({ sectionM2: a * b, lengthM: l, score: 120 });
-      }
-
-      const reTripMm = /(\d{2,4}(?:[.,]\d+)?)\s*(?:mm)?\s*[x*]\s*(\d{2,4}(?:[.,]\d+)?)\s*(?:mm)?\s*[x*]\s*(\d{3,6}(?:[.,]\d+)?)\s*(?:mm)?\b/g;
-      for (const m of norm.matchAll(reTripMm)) {
-        const a = toN(m[1]) / 1000;
-        const b = toN(m[2]) / 1000;
-        const l = toN(m[3]) / 1000;
-        if (ok(a) && ok(b) && ok(l)) matches.push({ sectionM2: a * b, lengthM: l, score: 110 });
-      }
-
-      const reTrip = /(\d+(?:[.,]\d+)?)\s*[x*]\s*(\d+(?:[.,]\d+)?)\s*[x*]\s*(\d+(?:[.,]\d+)?)/g;
-      for (const m of norm.matchAll(reTrip)) {
-        const v1 = toN(m[1]);
-        const v2 = toN(m[2]);
-        const v3 = toN(m[3]);
-        if (!ok(v1) || !ok(v2) || !ok(v3)) continue;
-        if (v1 > 40 && v2 > 40 && v3 > 200) {
-          matches.push({ sectionM2: (v1 / 1000) * (v2 / 1000), lengthM: v3 / 1000, score: 90 });
-        } else {
-          matches.push({ sectionM2: (v1 / 100) * (v2 / 100), lengthM: v3, score: 80 });
-        }
-      }
-
-      if (!matches.length) return null;
-      matches.sort((a, b) => b.score - a.score);
-      return { sectionM2: matches[0].sectionM2, lengthM: matches[0].lengthM };
-    }
-
-    function computeLineVolumeM3(line) {
-      const unite = String(line.unite || '').toUpperCase();
-      const qte = Number(line.quantite);
-      if (!Number.isFinite(qte) || qte <= 0) return null;
-      const txtRaw = [line.designation, line.ressource].filter(Boolean).join(' ');
-      if (unite === 'M3') return qte;
-      if (unite === 'M2') {
-        const txt = normalizeText(txtRaw);
-        const isService = /(prestation|reparation|implantation|reprofilage|coupe|intervention|controle periodique|controle périodique)/.test(txt);
-        if (isService) return null;
-        const ep = extractThicknessMeters(txtRaw);
-        if (!ep) return null;
-        return qte * ep;
-      }
-      if ((unite === 'U' || unite === 'ENS') && (isCltLine(line) || isLcLine(line))) {
-        const dims = extractSectionLengthForUnitPieces(txtRaw);
-        if (!dims) return null;
-        return qte * dims.sectionM2 * dims.lengthM;
-      }
-      return null;
-    }
-
-    function isCltLine(line) {
-      const txt = normalizeText([line.ressource, line.designation].filter(Boolean).join(' '));
-      return /\b(clt|klh)\b/.test(txt);
-    }
-
-    function isLcLine(line) {
-      const txt = normalizeText([line.ressource, line.designation].filter(Boolean).join(' '));
-      if (/\b(clt|klh)\b/.test(txt)) return false;
-      return /\b(lc|lamelle colle|lamelle-colle|lamelle colle|lamelle|lamelle-colle|lamelle-colle|lamelle-colle|lamelle)\b/.test(txt);
-    }
-
-    function isCbcoSupplier(raw) {
-      return normalizeText(raw).includes('cbco');
-    }
-
-    function formatNumber(v, digits = 0) {
-      return Number(v || 0).toLocaleString('fr-FR', { minimumFractionDigits: digits, maximumFractionDigits: digits });
-    }
-
-    function buildMonthlyIndicatorsFromLocal(lignes) {
-      const byMonth = new Map();
-      const byId = new Map((lignes || []).map((l) => [l.idLigne, l]));
-
-      for (const line of (lignes || [])) {
-        if (line.drapeauStock) continue;
-        if (isCbcoSupplier(line.fournisseur)) continue;
-        const month = toIsoMonth(line.dateFacture);
-        if (!month) continue;
-
-        const isAnnexe = Boolean(line.drapeauTransport || line.drapeauEcoContribution || line.drapeauTaxe);
-        const base = isAnnexe ? byId.get(line.idProduitRattache) : line;
-        if (!base || base.drapeauStock) continue;
-
-        const clt = isCltLine(base);
-        const lc = isLcLine(base);
-        if (!clt && !lc) continue;
-
-        if (!byMonth.has(month)) byMonth.set(month, { month, v_clt_m3: 0, v_lc_m3: 0, lc_amount: 0 });
-        const row = byMonth.get(month);
-        const vol = computeLineVolumeM3(base);
-
-        if (clt && vol != null && !isAnnexe) row.v_clt_m3 += vol;
-        if (lc && vol != null) {
-          if (!isAnnexe) row.v_lc_m3 += vol;
-          row.lc_amount += Number(line.montantLigne) || 0;
-        }
-      }
-
-      return [...byMonth.values()]
-        .sort((a, b) => a.month.localeCompare(b.month))
-        .map((r) => ({
-          month: r.month,
-          v_clt_m3: r.v_clt_m3,
-          v_lc_m3: r.v_lc_m3,
-          prix_moyen_lc_eur_m3: r.v_lc_m3 > 0 ? (r.lc_amount / r.v_lc_m3) : null
-        }));
-    }
-
-    async function fetchMonthlyIndicatorsV2() {
-      const res = await fetch(window.location.origin + '/api/achats-v2/indicators-monthly', { method: 'GET' });
-      const payload = await res.json();
-      if (!res.ok || !payload.success) throw new Error(payload.error || 'Indicateurs imports indisponibles');
-      return payload.rows || [];
-    }
-
-    async function renderIndicators() {
-      const tbody = document.querySelector('#tableIndicateursMensuels tbody');
+    async function loadIndicators() {
+      const tbody = document.querySelector('#tableIndicateurs tbody');
       const note = document.getElementById('indicateursNote');
-      let rows = [];
-      let mode = 'server';
       try {
-        rows = await fetchMonthlyIndicatorsV2();
-      } catch (e) {
-        mode = 'local';
-        rows = buildMonthlyIndicatorsFromLocal(JSON.parse(localStorage.getItem('goudalle_achats_lignes') || '[]'));
-        note.textContent = `Indicateurs imports indisponibles (${e.message}). Affichage fallback local.`;
-      }
-      if (!rows.length) {
-        const localRows = buildMonthlyIndicatorsFromLocal(JSON.parse(localStorage.getItem('goudalle_achats_lignes') || '[]'));
-        if (localRows.length) {
-          rows = localRows;
-          mode = 'local';
+        const res = await fetch(API + '/achats/indicators-monthly');
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.error || 'Erreur serveur');
+
+        const rows = data.rows || [];
+        if (!rows.length) {
+          tbody.innerHTML = `<tr><td colspan="4" class="empty-state">
+            Aucune donnée disponible.<br>
+            <a href="./achat-saisie.html">Importer un premier fichier ONAYA →</a>
+          </td></tr>`;
+          note.textContent = '';
+          return;
         }
-      }
 
-      if (!rows.length) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Aucune donnée CLT/LC disponible</td></tr>';
-        note.textContent = "Ajoute d'abord des imports depuis la page de saisie pour alimenter ce tableau.";
-        return;
+        tbody.innerHTML = rows.map((r) => `
+          <tr>
+            <td>${esc(formatMonthFr(r.month))}</td>
+            <td class="num">${fmt(r.v_clt_m3)}</td>
+            <td class="num">${fmt(r.v_lc_m3)}</td>
+            <td class="num">${r.prix_moyen_lc_eur_m3 != null ? fmt(r.prix_moyen_lc_eur_m3) : '—'}</td>
+          </tr>
+        `).join('');
+        note.textContent = `${rows.length} mois · Calcul serveur depuis les imports enregistrés (stock exclu).`;
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="4" class="empty-state">Erreur : ${esc(e.message)}</td></tr>`;
+        note.textContent = '';
       }
-
-      tbody.innerHTML = rows.map((r) => `
-        <tr>
-          <td>${formatMonthFr(r.month)}</td>
-          <td>${formatNumber(r.v_clt_m3, 0)}</td>
-          <td>${formatNumber(r.v_lc_m3, 0)}</td>
-          <td>${r.prix_moyen_lc_eur_m3 != null ? formatNumber(r.prix_moyen_lc_eur_m3, 0) : '—'}</td>
-        </tr>
-      `).join('');
-      note.textContent = mode === 'server'
-        ? 'Calcul serveur par lignes retraitées actives (stock exclu, ventilation BL appliquée).'
-        : 'Mode fallback local: calcul basé sur les lignes validées de la page de saisie.';
     }
 
-    let _achatsPageInitDone = false;
     async function init() {
-      if (_achatsPageInitDone) return;
-      _achatsPageInitDone = true;
-
-      if (typeof window.loadServerKeys === 'function') {
-        await window.loadServerKeys(['goudalle_achats_imports']);
-      }
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectAchatSecondaryBar();
-      await renderIndicators();
+      await loadIndicators();
     }
 
     window.onServerReady(init);

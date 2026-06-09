@@ -3,396 +3,432 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Saisie indicateurs achats - Intranet Goudalle</title>
+  <title>Import achats - Intranet Goudalle</title>
   <link rel="stylesheet" href="../css/style.css">
   <style>
-    .achat-dropzone {
-      border: 2px dashed var(--accent-dark);
-      border-radius: 8px;
-      background: var(--lighter);
-      padding: 24px;
-      text-align: center;
-      transition: 0.2s ease;
-      cursor: pointer;
+    .import-card {
+      max-width: 640px;
+      margin: 0 auto;
     }
-    .achat-dropzone.dragover {
+    .dropzone {
+      border: 2px dashed var(--accent-dark);
+      border-radius: 10px;
+      background: var(--lighter);
+      padding: 36px 24px;
+      text-align: center;
+      transition: border-color .2s, background .2s;
+      cursor: pointer;
+      user-select: none;
+    }
+    .dropzone.dragover {
       border-color: var(--success);
       background: #eef7ee;
     }
-    .achat-kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 12px;
-      margin-top: 12px;
+    .dropzone.has-file {
+      border-color: var(--primary);
+      background: #f0f5f0;
     }
-    .achat-kpi-card {
-      border: 1px solid var(--border-light);
-      border-radius: 8px;
-      background: #fff;
-      padding: 12px;
+    .dropzone-icon { font-size: 36px; margin-bottom: 8px; }
+    .dropzone-label { font-weight: 600; font-size: 15px; color: var(--text); }
+    .dropzone-sub { font-size: 13px; color: var(--text-light); margin-top: 4px; }
+    .file-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: #fff; border: 1px solid var(--border-light);
+      border-radius: 8px; padding: 8px 12px; margin-top: 12px;
+      font-size: 13px; max-width: 100%; overflow: hidden;
     }
-    .achat-kpi-card .label {
-      font-size: 12px;
-      color: var(--text-light);
-      margin-bottom: 4px;
+    .file-badge-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+    .file-badge-size { color: var(--text-light); white-space: nowrap; }
+    .file-badge-remove {
+      margin-left: 4px; background: none; border: none; cursor: pointer;
+      color: var(--danger); font-size: 14px; padding: 0 2px; line-height: 1;
     }
-    .achat-kpi-card .value {
-      font-size: 20px;
-      font-weight: 700;
+    .progress-bar-wrap {
+      height: 8px; border-radius: 999px; background: #e4ece4; overflow: hidden; margin-top: 12px;
     }
-    .achat-table-wrap {
-      overflow-x: auto;
+    .progress-bar-fill {
+      height: 100%; width: 0%; background: linear-gradient(90deg, #3e6b46, #7cb682);
+      border-radius: 999px; transition: width .2s ease;
     }
-    .achat-chip {
-      display: inline-block;
-      padding: 3px 8px;
-      border-radius: 999px;
-      font-size: 11px;
-      font-weight: 600;
-      background: var(--light);
-      border: 1px solid var(--border-light);
-      color: var(--primary);
+    .progress-label { font-size: 13px; color: var(--text-light); margin-top: 6px; }
+    .result-box {
+      border-radius: 10px; padding: 16px 18px; margin-top: 8px;
+      border: 1px solid #c3e6cb; background: #d4edda;
     }
-    .achat-chip-ok { background: #d4edda; border-color: #c3e6cb; color: #155724; }
-    .achat-chip-ko { background: #f8d7da; border-color: #f5c6cb; color: #721c24; }
-    .achat-flex {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items: center;
+    .result-box.error { border-color: #f5c6cb; background: #f8d7da; }
+    .result-title { font-weight: 700; font-size: 15px; margin-bottom: 8px; }
+    .result-stats { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+    .stat-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600;
+      background: rgba(255,255,255,.6); border: 1px solid rgba(0,0,0,.08);
     }
-    .achat-file-list {
-      margin-top: 14px;
-      display: grid;
-      gap: 8px;
+    .warn-list { margin: 8px 0 0 0; padding-left: 18px; font-size: 12px; color: #664d00; }
+    .warn-list li { margin-bottom: 3px; }
+    .filename-preview {
+      margin-top: 10px; padding: 8px 12px; border-radius: 8px;
+      background: #fff; border: 1px solid var(--border-light);
+      font-size: 13px; color: var(--text-light);
     }
-    .achat-file-item {
-      display: grid;
-      grid-template-columns: 1fr auto auto;
-      gap: 8px;
-      border: 1px solid var(--border-light);
-      border-radius: 8px;
-      background: white;
-      padding: 10px;
-      align-items: center;
-    }
-    .achat-actions {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-top: 14px;
-    }
-    .achat-anomalies {
-      margin: 0;
-      padding-left: 18px;
-    }
-    .achat-anomalies li {
-      margin-bottom: 6px;
-    }
-    #renderPreviewSaisie { overflow-x:auto; }
-    .invoice-list {
-      border:1px solid #d9d9d9;
-      border-radius:12px;
-      overflow:hidden;
-      background:#fff;
-      box-shadow: 0 6px 18px rgba(0,0,0,0.05);
-      min-width: 980px;
-    }
-    .invoice-item { border-bottom:1px solid #e6e6e6; background:#fff; }
-    .invoice-item:last-child { border-bottom:none; }
-    .invoice-row {
-      width:100%; border:none; background:#fff; padding:0; cursor:pointer;
-      text-align:left; font:inherit;
-    }
-    .invoice-row:hover { background:#f8fbf8; }
-    .invoice-row-grid {
-      display:grid;
-      grid-template-columns: 46px 108px 200px 140px 1fr 150px;
-      gap:8px;
-      padding:12px 14px;
-      align-items:center;
-      color:#1f2a1f;
-    }
-    .invoice-row-grid.head {
-      background:linear-gradient(180deg, #f6f6ef 0%, #efefe7 100%);
-      font-weight:700;
-      cursor:default;
-    }
-    .invoice-item.open .invoice-row-grid { background:#f3faf3; }
-    .invoice-item.open .invoice-summary { font-weight:700; }
-    .invoice-row-grid > div { min-width:0; }
-    .invoice-montant {
-      white-space:nowrap;
-      overflow:visible;
-      text-overflow:clip;
-      font-weight:700;
-      color:#102710;
-    }
-    .invoice-toggle {
-      display:inline-flex; align-items:center; justify-content:center;
-      width:24px; height:24px; border-radius:999px; border:1px solid #d7ded7; background:#fff;
-      color:#3d5540; font-size:12px; transition: transform .2s ease, background-color .2s ease;
-    }
-    .invoice-item.open .invoice-toggle { transform: rotate(90deg); background:#e9f3e9; }
-    .line-count {
-      display:inline-flex; align-items:center; justify-content:center;
-      min-width:24px; height:22px; padding:0 8px; border-radius:999px;
-      border:1px solid #d0d7d0; background:#f4f8f4; color:#38503b; font-size:12px;
-    }
-    .invoice-detail {
-      max-height: 0;
-      overflow: hidden;
-      transition: max-height 0.25s ease;
-      background:#fcfcfc;
-    }
-    .invoice-detail.open { border-top:1px solid #e5e5e5; }
-    .invoice-detail-inner { padding:12px 14px 14px; }
-    .invoice-detail table { width:100%; border-collapse:collapse; table-layout:fixed; background:#fff; }
-    .invoice-detail th {
-      text-align:left; padding:8px 6px; border-bottom:1px solid #d9d9d9; background:#f2f4f2; color:#2a2a2a;
-    }
-    .invoice-detail td {
-      padding:8px 6px; border-bottom:1px solid #ececec; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#222;
-    }
-    .invoice-detail th, .invoice-detail td { box-sizing:border-box; }
-    .invoice-detail .montant-col { white-space:nowrap; overflow:visible; text-overflow:clip; font-weight:700; }
-    .invoice-detail tr:last-child td { border-bottom:none; }
-    .num { text-align:center; font-variant-numeric: tabular-nums; }
-    .mono { font-family: Consolas, monospace; }
-    .invoice-summary { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .detail-placeholder { padding:8px; }
-    .period-filters {
-      display:grid; grid-template-columns: 220px 220px 1fr; gap:12px;
-      margin-bottom:12px; align-items:end;
-    }
-    .period-filters label { display:block; margin-bottom:6px; font-weight:600; color:#3a3a3a; }
-    .period-filters select, .period-filters input { width:100%; }
-    .analyse-progress {
-      display: none;
-      margin-bottom: 16px;
-      border: 1px solid var(--border-light);
-      border-radius: 10px;
-      background: #fff;
-      padding: 12px;
-    }
-    .analyse-progress-top {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      align-items: center;
-      margin-bottom: 8px;
-      font-size: 14px;
-    }
-    .analyse-progress-bar {
-      width: 100%;
-      height: 12px;
-      border-radius: 999px;
-      background: #edf1ed;
-      overflow: hidden;
-    }
-    .analyse-progress-fill {
-      height: 100%;
-      width: 0%;
-      background: linear-gradient(90deg, #3e6b46 0%, #7cb682 100%);
-      transition: width 0.18s ease;
-    }
-    @media (max-width: 980px) {
-      .period-filters { grid-template-columns: 1fr; }
-    }
+    .filename-preview strong { color: var(--primary); }
   </style>
 </head>
 <body>
   <script src="../js/api.js"></script>
   <script src="../js/auth.js"></script>
   <script src="../js/utils.js"></script>
-  <script>
-    Auth.requirePermission('achat_saisie');
-  </script>
+  <script>Auth.requirePermission('achat_saisie');</script>
 
   <div class="app-container">
     <div id="sidebar"></div>
 
     <main class="main-content">
-      <div class="d-flex justify-between items-center mb-3" style="gap:12px; flex-wrap:wrap;">
-        <h1 class="mb-0">Saisie indicateurs achats</h1>
-      </div>
+      <h1 class="mb-3">Import achats</h1>
 
       <div id="pageMessage" class="alert" style="display:none;"></div>
-      <div id="analyseProgress" class="analyse-progress">
-        <div class="analyse-progress-top">
-          <strong id="analyseProgressLabel">Préparation...</strong>
-          <span id="analyseProgressValue">0%</span>
-        </div>
-        <div class="analyse-progress-bar">
-          <div id="analyseProgressFill" class="analyse-progress-fill"></div>
-        </div>
-      </div>
 
-      <div class="card">
-        <div class="card-title"><h2>Bloc 1 - Import du fichier</h2></div>
-        <div class="card-body">
-          <input id="inputFichiersAchat" type="file" accept=".pdf,application/pdf" multiple style="display:none;">
-          <div id="dropzoneAchat" class="achat-dropzone">
-            <div><strong>Déposez vos fichiers ONAYA (.pdf) ici</strong></div>
-            <div style="margin-top:8px; color:#666;">ou cliquez pour sélectionner un ou plusieurs fichiers</div>
-          </div>
+      <div class="card import-card">
+        <div class="card-title"><h2>Importer un fichier ONAYA</h2></div>
+        <div class="card-body" style="display:flex; flex-direction:column; gap:16px;">
 
-          <div id="listeFichiers" class="achat-file-list"></div>
-
-          <div class="achat-actions">
-            <button class="btn btn-primary" id="btnAnalyser">🔎 Analyser le fichier</button>
-            <button class="btn btn-success" id="btnValider" disabled>✅ Valider l'import</button>
-            <button class="btn btn-danger" id="btnAnnuler">❌ Annuler</button>
-            <button class="btn btn-secondary" id="btnExporterControle" disabled>📤 Exporter le contrôle CSV</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-title"><h2>Bloc 2 - Pré-analyse</h2></div>
-        <div class="card-body">
-          <div class="achat-kpi-grid" id="kpiPreAnalyse"></div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-title"><h2>Bloc 3 - Aperçu des lignes</h2></div>
-        <div class="card-body">
-          <div class="period-filters">
+          <!-- Société + Période -->
+          <div style="display:grid; grid-template-columns: 1fr 140px 140px; gap:12px; align-items:end;">
             <div>
-              <label for="filterPreviewYear">Année</label>
-              <select id="filterPreviewYear"></select>
+              <label for="selectCompany" style="display:block; font-weight:600; margin-bottom:6px;">Société</label>
+              <select id="selectCompany" style="width:100%;">
+                <option value="">— Sélectionner —</option>
+              </select>
             </div>
             <div>
-              <label for="filterPreviewMonth">Mois</label>
-              <select id="filterPreviewMonth"></select>
+              <label for="selectMonth" style="display:block; font-weight:600; margin-bottom:6px;">Mois</label>
+              <select id="selectMonth" style="width:100%;">
+                <option value="">— Mois —</option>
+                <option value="01">Janvier</option>
+                <option value="02">Février</option>
+                <option value="03">Mars</option>
+                <option value="04">Avril</option>
+                <option value="05">Mai</option>
+                <option value="06">Juin</option>
+                <option value="07">Juillet</option>
+                <option value="08">Août</option>
+                <option value="09">Septembre</option>
+                <option value="10">Octobre</option>
+                <option value="11">Novembre</option>
+                <option value="12">Décembre</option>
+              </select>
             </div>
             <div>
-              <label for="filtreTexte">Recherche</label>
-              <input id="filtreTexte" type="text" placeholder="Filtrer (facture, fournisseur, chantier, libellé...)">
+              <label for="selectYear" style="display:block; font-weight:600; margin-bottom:6px;">Année</label>
+              <select id="selectYear" style="width:100%;"></select>
             </div>
           </div>
-          <div id="renderPreviewSaisie"></div>
+
+          <!-- Dropzone -->
+          <div>
+            <label style="display:block; font-weight:600; margin-bottom:6px;">Fichier PDF</label>
+            <input id="inputFile" type="file" accept=".pdf,application/pdf" style="display:none;">
+            <div id="dropzone" class="dropzone">
+              <div class="dropzone-icon">📄</div>
+              <div class="dropzone-label">Déposez le fichier ONAYA ici</div>
+              <div class="dropzone-sub">ou cliquez pour sélectionner un fichier PDF</div>
+            </div>
+            <div id="fileBadge" style="display:none;" class="file-badge">
+              <span>📄</span>
+              <span id="fileBadgeName" class="file-badge-name"></span>
+              <span id="fileBadgeSize" class="file-badge-size"></span>
+              <button class="file-badge-remove" id="btnRemoveFile" title="Retirer le fichier">✕</button>
+            </div>
+            <div id="filenamePreview" class="filename-preview" style="display:none;">
+              Le fichier sera enregistré sous&nbsp;: <strong id="filenamePreviewText"></strong>
+            </div>
+          </div>
+
+          <!-- Barre de progression -->
+          <div id="progressWrap" style="display:none;">
+            <div class="progress-bar-wrap"><div id="progressFill" class="progress-bar-fill"></div></div>
+            <div id="progressLabel" class="progress-label">Envoi en cours...</div>
+          </div>
+
+          <!-- Résultat -->
+          <div id="resultBox" style="display:none;"></div>
+
+          <!-- Actions -->
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn btn-primary" id="btnImport" disabled>📤 Importer</button>
+            <button class="btn btn-secondary" id="btnDiag" style="display:none;">🔍 Diagnostic parsing</button>
+            <button class="btn btn-secondary" id="btnReset" style="display:none;">↩ Nouvel import</button>
+          </div>
+
+          <!-- Résultat diagnostic -->
+          <div id="diagBox" style="display:none; background:#f4f4f0; border:1px solid #d0d0c0; border-radius:8px; padding:14px; font-size:12px; font-family:Consolas,monospace; white-space:pre-wrap; max-height:400px; overflow-y:auto;"></div>
+
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-title"><h2>Bloc 4 - Dictionnaire A.R.C</h2></div>
-        <div class="card-body">
-          <p class="muted" style="margin:0 0 10px 0;">Les lignes achats sont pilotées par les codes A.R.C.</p>
-          <div class="achat-table-wrap">
-            <table id="tableArcRules">
-              <thead>
-                <tr>
-                  <th>Code A.R.C</th>
-                  <th>Libellé</th>
-                  <th>Poids</th>
-                  <th>Priorité</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr><td colspan="4" style="text-align:center;">Chargement...</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px; margin-top:10px;">
-            <input type="text" id="newArcCode" placeholder="Code A.R.C (ex: 204)">
-            <input type="text" id="newArcDesignation" placeholder="Libellé">
-            <input type="number" id="newArcPoids" placeholder="Poids" value="8" min="1" max="20">
-            <input type="number" id="newArcPriority" placeholder="Priorité" value="20" min="1" max="99">
-          </div>
-          <div class="achat-actions">
-            <button class="btn btn-primary" id="btnAjouterArcRegle">➕ Ajouter règle A.R.C</button>
-            <button class="btn btn-secondary" id="btnResetArcRegles">↩️ Réinitialiser A.R.C par défaut</button>
-          </div>
-        </div>
-      </div>
     </main>
   </div>
 
   <script>
-  document.getElementById('sidebar').innerHTML = getSidebar();
-  injectAchatSecondaryBar();
+    const API = window.location.origin + '/api';
+    let selectedFile = null;
+    let companies = [];
 
-  const progressRoot = document.getElementById('analyseProgress');
-  const progressFill = document.getElementById('analyseProgressFill');
-  const progressLabel = document.getElementById('analyseProgressLabel');
-  const progressValue = document.getElementById('analyseProgressValue');
-  const dropzone = document.getElementById('dropzoneAchat');
-  const analyseButton = document.getElementById('btnAnalyser');
-
-  window.__setAnalyseProgress = function(percent, label) {
-    const safePercent = Math.max(0, Math.min(100, Number(percent || 0)));
-    progressRoot.style.display = 'block';
-    progressFill.style.width = `${safePercent}%`;
-    progressValue.textContent = `${Math.round(safePercent)}%`;
-    if (label) progressLabel.textContent = label;
-  };
-
-  window.__hideAnalyseProgress = function() {
-    progressRoot.style.display = 'none';
-  };
-
-  let achatsLogicPromise = null;
-  async function ensureAchatsLogic() {
-    if (window.initAchatsSaisie) {
-      await window.initAchatsSaisie();
-      return;
+    async function getToken() {
+      const res = await fetch(API + '/health');
+      const data = await res.json();
+      return data?.token || null;
     }
-    if (!achatsLogicPromise) {
-      window.__setAnalyseProgress(4, 'Chargement du module d\'analyse...');
-      achatsLogicPromise = new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = '../js/achat-saisie.js';
-        script.onload = async () => {
-          try {
-            window.__setAnalyseProgress(12, 'Initialisation du module...');
-            await window.initAchatsSaisie();
-            window.__hideAnalyseProgress();
-            resolve();
-          } catch (error) {
-            reject(error);
-          }
-        };
-        script.onerror = () => reject(new Error('Chargement du module d\'analyse impossible.'));
-        document.body.appendChild(script);
-      });
+
+    function fmtSize(bytes) {
+      if (bytes < 1024) return `${bytes} o`;
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} Ko`;
+      return `${(bytes / 1024 / 1024).toFixed(1)} Mo`;
     }
-    return achatsLogicPromise;
-  }
 
-  dropzone.addEventListener('pointerdown', () => {
-    ensureAchatsLogic().catch(() => {});
-  }, { once: true });
-  dropzone.addEventListener('click', async () => {
-    if (window.initAchatsSaisie) return;
-    try {
-      await ensureAchatsLogic();
-      document.getElementById('inputFichiersAchat').click();
-    } catch (_) {}
-  });
-  dropzone.addEventListener('dragenter', () => {
-    ensureAchatsLogic().catch(() => {});
-  }, { once: true });
-  analyseButton.addEventListener('pointerdown', () => {
-    ensureAchatsLogic().catch(() => {});
-  }, { once: true });
+    function esc(s) {
+      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
 
-  analyseButton.addEventListener('click', async () => {
-    try {
-      await ensureAchatsLogic();
-      await window.startAchatsSaisieAnalysis();
-    } catch (error) {
-      window.__hideAnalyseProgress();
+    function setProgress(pct, label) {
+      document.getElementById('progressFill').style.width = `${Math.max(0, Math.min(100, pct))}%`;
+      if (label) document.getElementById('progressLabel').textContent = label;
+    }
+
+    function showResult(data) {
+      const box = document.getElementById('resultBox');
+      if (!data.success) {
+        box.innerHTML = `<div class="result-box error"><div class="result-title">❌ Erreur</div><div>${esc(data.error || 'Erreur inconnue')}</div></div>`;
+      } else {
+        const warns = (data.warnings || []).length
+          ? `<ul class="warn-list">${data.warnings.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>` : '';
+        box.innerHTML = `
+          <div class="result-box">
+            <div class="result-title">✅ Import réussi</div>
+            <div style="font-size:14px;">Fichier enregistré : <strong>${esc(data.nom_fichier)}</strong></div>
+            ${data.saved_local ? '<div style="font-size:12px; color:#856404; margin-top:4px;">⚠️ Dossier réseau inaccessible — fichier sauvegardé localement sur le serveur.</div>' : ''}
+            <div class="result-stats">
+              <span class="stat-chip">📄 ${data.total_factures} factures</span>
+              <span class="stat-chip">📑 ${data.total_lignes} lignes</span>
+              <span class="stat-chip">🚫 ${data.total_stock_exclu} stock exclu</span>
+            </div>
+            ${warns ? `<div style="margin-top:8px; font-size:12px; color:#664d00; font-weight:600;">Avertissements :</div>${warns}` : ''}
+          </div>`;
+      }
+      box.style.display = 'block';
+    }
+
+    function lastDayOfMonth(year, month) {
+      return new Date(Number(year), Number(month), 0).getDate();
+    }
+
+    function buildFilenamePreview() {
+      const company = document.getElementById('selectCompany').value;
+      const month = document.getElementById('selectMonth').value;
+      const year = document.getElementById('selectYear').value;
+      const preview = document.getElementById('filenamePreview');
+      const previewText = document.getElementById('filenamePreviewText');
+      if (!company || !month || !year || !selectedFile) { preview.style.display = 'none'; return; }
+      const last = lastDayOfMonth(year, month);
+      previewText.textContent = `Commandes ${company} du 01.${month}.${year} au ${last}.${month}.${year}.pdf`;
+      preview.style.display = 'block';
+    }
+
+    async function doDiag() {
+      if (!selectedFile) return;
+      const diagBox = document.getElementById('diagBox');
+      diagBox.style.display = 'block';
+      diagBox.textContent = '⏳ Analyse en cours...';
+      try {
+        const token = await getToken();
+        const fd = new FormData();
+        fd.append('pdf', selectedFile, selectedFile.name);
+        const res = await fetch(API + '/achats/debug-parse', {
+          method: 'POST',
+          headers: token ? { 'x-goudalle-token': token } : {},
+          body: fd
+        });
+        const d = await res.json();
+        if (!d.success) { diagBox.textContent = '❌ ' + (d.error || 'Erreur'); return; }
+
+        let out = '';
+        out += `📄 Fichier        : ${selectedFile.name}\n`;
+        out += `📃 Pages          : ${d.pages ?? '?'}\n`;
+        out += `🔤 Caractères     : ${d.total_chars}\n`;
+        out += `📋 Lignes totales : ${d.total_lines}\n`;
+        out += `──────────────────────────────────────\n`;
+        out += `✅ Entêtes facture trouvées  : ${d.header_lines_found}\n`;
+        out += `✅ Lignes articles trouvées  : ${d.article_lines_found}\n`;
+        out += `✅ Lignes Total Bon trouvées : ${d.total_bon_lines_found}\n`;
+        out += `🧾 FACTURES PARSÉES          : ${d.invoices_parsed}\n`;
+        if (d.warnings?.length) {
+          out += `\n⚠️ Avertissements :\n`;
+          d.warnings.forEach((w) => { out += `   - ${w}\n`; });
+        }
+        out += `\n──── 30 premières lignes du PDF ────\n`;
+        (d.sample_lines || []).forEach((l, i) => { out += `${String(i+1).padStart(2,'0')} │ ${l}\n`; });
+        if (d.header_samples?.length) {
+          out += `\n──── Exemples entêtes reconnues ────\n`;
+          d.header_samples.forEach((l) => { out += `  → ${l}\n`; });
+        }
+        diagBox.textContent = out;
+      } catch (e) {
+        diagBox.textContent = '❌ ' + e.message;
+      }
+    }
+
+    function setFile(file) {
+      if (!file || file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+        showPageMessage('Seuls les fichiers PDF sont acceptés.', 'danger');
+        return;
+      }
+      selectedFile = file;
+      document.getElementById('dropzone').classList.add('has-file');
+      document.getElementById('fileBadgeName').textContent = file.name;
+      document.getElementById('fileBadgeSize').textContent = fmtSize(file.size);
+      document.getElementById('fileBadge').style.display = 'flex';
+      document.getElementById('resultBox').style.display = 'none';
+      document.getElementById('diagBox').style.display = 'none';
+      document.getElementById('btnDiag').style.display = '';
+      updateImportBtn();
+      buildFilenamePreview();
+    }
+
+    function clearFile() {
+      selectedFile = null;
+      document.getElementById('dropzone').classList.remove('has-file');
+      document.getElementById('fileBadge').style.display = 'none';
+      document.getElementById('filenamePreview').style.display = 'none';
+      document.getElementById('btnDiag').style.display = 'none';
+      document.getElementById('diagBox').style.display = 'none';
+      document.getElementById('inputFile').value = '';
+      updateImportBtn();
+    }
+
+    function updateImportBtn() {
+      const btn = document.getElementById('btnImport');
+      const company = document.getElementById('selectCompany').value;
+      const month = document.getElementById('selectMonth').value;
+      const year = document.getElementById('selectYear').value;
+      btn.disabled = !(selectedFile && company && month && year);
+    }
+
+    function showPageMessage(msg, type = 'danger') {
       const el = document.getElementById('pageMessage');
-      el.innerHTML = `❌ Erreur analyse: ${error.message}`;
-      el.className = 'alert alert-danger';
+      el.textContent = msg;
+      el.className = `alert alert-${type}`;
       el.style.display = 'block';
     }
-  });
-</script>
+
+    function resetForm() {
+      clearFile();
+      document.getElementById('progressWrap').style.display = 'none';
+      document.getElementById('resultBox').style.display = 'none';
+      document.getElementById('btnReset').style.display = 'none';
+      document.getElementById('btnImport').style.display = '';
+      document.getElementById('pageMessage').style.display = 'none';
+    }
+
+    async function doImport() {
+      const company = document.getElementById('selectCompany').value;
+      const month = document.getElementById('selectMonth').value;
+      const year = document.getElementById('selectYear').value;
+      if (!selectedFile || !company || !month || !year) return;
+
+      const btn = document.getElementById('btnImport');
+      btn.disabled = true;
+      document.getElementById('progressWrap').style.display = 'block';
+      document.getElementById('resultBox').style.display = 'none';
+      setProgress(10, 'Envoi du fichier...');
+
+      try {
+        const token = await getToken();
+        const formData = new FormData();
+        formData.append('pdf', selectedFile, selectedFile.name);
+        formData.append('company', company);
+        formData.append('month', month);
+        formData.append('year', year);
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', API + '/achats/upload', true);
+        if (token) xhr.setRequestHeader('x-goudalle-token', token);
+
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) setProgress(10 + (e.loaded / e.total) * 60, 'Envoi du fichier...');
+        };
+
+        const result = await new Promise((resolve, reject) => {
+          xhr.onload = () => {
+            setProgress(85, 'Analyse en cours...');
+            try { resolve(JSON.parse(xhr.responseText)); }
+            catch { reject(new Error('Réponse serveur invalide.')); }
+          };
+          xhr.onerror = () => reject(new Error('Erreur réseau.'));
+          xhr.send(formData);
+        });
+
+        setProgress(100, 'Terminé.');
+        showResult(result);
+        if (result.success) {
+          document.getElementById('btnImport').style.display = 'none';
+          document.getElementById('btnReset').style.display = '';
+        } else {
+          btn.disabled = false;
+        }
+      } catch (err) {
+        setProgress(0, '');
+        document.getElementById('progressWrap').style.display = 'none';
+        showResult({ success: false, error: err.message });
+        btn.disabled = false;
+      }
+    }
+
+    async function init() {
+      document.getElementById('sidebar').innerHTML = getSidebar();
+      injectAchatSecondaryBar();
+
+      // Charger la liste des sociétés
+      try {
+        const res = await fetch(API + '/achats/companies');
+        const data = await res.json();
+        companies = data.companies || [];
+      } catch { companies = ['Goudalle Charpente', 'Nouvelle Goudalle Maçonnerie', 'CBCO', 'Sylve Data']; }
+      const sel = document.getElementById('selectCompany');
+      sel.innerHTML = `<option value="">— Sélectionner une société —</option>` +
+        companies.map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+      sel.onchange = () => { updateImportBtn(); buildFilenamePreview(); };
+
+      // Populate year dropdown
+      const currentYear = new Date().getFullYear();
+      const selYear = document.getElementById('selectYear');
+      selYear.innerHTML = `<option value="">— Année —</option>` +
+        [currentYear + 1, currentYear, currentYear - 1, currentYear - 2]
+          .map((y) => `<option value="${y}"${y === currentYear ? ' selected' : ''}>${y}</option>`)
+          .join('');
+      selYear.onchange = () => { updateImportBtn(); buildFilenamePreview(); };
+      document.getElementById('selectMonth').onchange = () => { updateImportBtn(); buildFilenamePreview(); };
+
+      // Dropzone
+      const dz = document.getElementById('dropzone');
+      const input = document.getElementById('inputFile');
+      dz.addEventListener('click', () => input.click());
+      dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('dragover'); });
+      dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+      dz.addEventListener('drop', (e) => {
+        e.preventDefault(); dz.classList.remove('dragover');
+        const f = e.dataTransfer.files[0];
+        if (f) setFile(f);
+      });
+      input.addEventListener('change', () => { if (input.files[0]) setFile(input.files[0]); });
+
+      document.getElementById('btnRemoveFile').addEventListener('click', (e) => { e.stopPropagation(); clearFile(); });
+      document.getElementById('btnImport').addEventListener('click', doImport);
+      document.getElementById('btnDiag').addEventListener('click', doDiag);
+      document.getElementById('btnReset').addEventListener('click', resetForm);
+    }
+
+    window.onServerReady(init);
+  </script>
 
   <footer class="site-footer"></footer>
 </body>
 </html>
-

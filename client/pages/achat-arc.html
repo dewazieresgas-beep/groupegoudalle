@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Codes ARC - Intranet Goudalle</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .company-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
+    .company-tab {
+      padding: 7px 18px; border-radius: 999px; font-size: 13px; font-weight: 600;
+      border: 2px solid var(--border-light); background: #fff; cursor: pointer;
+      transition: border-color .15s, background .15s; color: #3a4b3a;
+    }
+    .company-tab.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .company-tab:hover:not(.active) { border-color: var(--primary); }
+
+    .arc-table-wrap { overflow-x: auto; }
+    .arc-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .arc-table th {
+      text-align: left; padding: 8px 12px; border-bottom: 2px solid #d9d9d9;
+      background: linear-gradient(180deg,#f6f6ef 0%,#efefe7 100%);
+      font-weight: 700; color: #2a2a2a; white-space: nowrap;
+    }
+    .arc-table td { padding: 7px 12px; border-bottom: 1px solid #ededed; color: #222; }
+    .arc-table tr:last-child td { border-bottom: none; }
+    .arc-table tr:hover td { background: #f8fbf8; }
+    .arc-table .col-code { width: 110px; font-family: Consolas, monospace; font-weight: 600; font-size: 14px; }
+    .arc-table .col-actions { width: 130px; text-align: right; white-space: nowrap; }
+
+    .arc-table tr.editing td { background: #f0fbf0; }
+    .arc-table input.edit-input {
+      width: 100%; padding: 4px 8px; border: 1px solid var(--primary);
+      border-radius: 6px; font-size: 13px; outline: none;
+    }
+
+    .add-form {
+      display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;
+      margin-top: 16px; padding: 14px 16px;
+      background: #f2fbf2; border: 1px solid #c5dcc5; border-radius: 10px;
+    }
+    .add-form label { font-size: 12px; font-weight: 600; color: #3a4b3a; display: block; margin-bottom: 4px; }
+    .add-form input {
+      padding: 7px 10px; border: 1px solid var(--border-light); border-radius: 6px;
+      font-size: 13px; outline: none; transition: border-color .15s;
+    }
+    .add-form input:focus { border-color: var(--primary); }
+    .add-form .f-code { width: 100px; }
+    .add-form .f-designation { width: 280px; }
+
+    .source-info {
+      font-size: 12px; color: #888; margin-top: 10px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .source-info code { background: #f0f0f0; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
+    .empty-state { text-align: center; padding: 32px; color: var(--text-light); }
+  </style>
+</head>
+<body>
+  <script src="../js/api.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/utils.js"></script>
+  <script>Auth.requirePermission('achat_arc');</script>
+
+  <div class="app-container">
+    <div id="sidebar"></div>
+
+    <main class="main-content">
+      <h1 class="mb-3">Codes ARC</h1>
+      <div id="pageMessage" class="alert" style="display:none;"></div>
+
+      <div class="card">
+        <div class="card-title">
+          <h2 id="cardTitle">Codes ARC</h2>
+        </div>
+        <div class="card-body">
+
+          <div class="company-tabs" id="companyTabs"></div>
+
+          <div id="tableZone">
+            <p class="empty-state">Chargement...</p>
+          </div>
+
+          <div class="add-form" id="addForm" style="display:none;">
+            <div>
+              <label>Code ARC</label>
+              <input type="text" id="newCode" class="f-code" placeholder="ex: 1010" maxlength="10">
+            </div>
+            <div>
+              <label>Désignation</label>
+              <input type="text" id="newDesignation" class="f-designation" placeholder="ex: Traitement de surface">
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="submitAdd()">Ajouter</button>
+            <button class="btn btn-secondary btn-sm" onclick="toggleAddForm(false)">Annuler</button>
+          </div>
+
+          <div style="margin-top:14px; display:flex; justify-content:space-between; align-items:center;">
+            <button class="btn btn-secondary btn-sm" id="btnAdd" onclick="toggleAddForm(true)">+ Nouveau code</button>
+            <div class="source-info" id="sourceInfo"></div>
+          </div>
+
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const API = window.location.origin + '/api';
+
+    const COMPANIES = ['Goudalle Charpente', 'CBCO', 'Nouvelle Goudalle Maçonnerie'];
+    const ARC_FILES = {
+      'Goudalle Charpente': 'Codes_ARC_Goudalle_Charpente.xlsx',
+      'CBCO': 'Codes_ARC_CBCO.xlsx',
+      'Nouvelle Goudalle Maçonnerie': 'Codes_ARC_Goudalle_Maconnerie.xlsx',
+    };
+
+    const state = { company: COMPANIES[0], codes: [], editingCode: null };
+
+    function esc(s) {
+      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function showMessage(msg, type = 'danger') {
+      const el = document.getElementById('pageMessage');
+      el.className = `alert alert-${type}`;
+      el.textContent = msg;
+      el.style.display = 'block';
+      setTimeout(() => { el.style.display = 'none'; }, 4000);
+    }
+
+    async function getToken() {
+      try { return (await (await fetch(API + '/health')).json()).token || null; } catch { return null; }
+    }
+
+    async function apiGet(path) {
+      const token = await getToken();
+      const res = await fetch(API + path, { headers: token ? { 'x-goudalle-token': token } : {} });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Erreur');
+      return data;
+    }
+
+    async function apiPost(path, body) {
+      const token = await getToken();
+      const res = await fetch(API + path, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { 'x-goudalle-token': token } : {}) }, body: JSON.stringify(body) });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Erreur');
+      return data;
+    }
+
+    async function apiPut(path, body) {
+      const token = await getToken();
+      const res = await fetch(API + path, { method: 'PUT', headers: { 'Content-Type': 'application/json', ...(token ? { 'x-goudalle-token': token } : {}) }, body: JSON.stringify(body) });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Erreur');
+      return data;
+    }
+
+    async function apiDelete(path) {
+      const token = await getToken();
+      const res = await fetch(API + path, { method: 'DELETE', headers: token ? { 'x-goudalle-token': token } : {} });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Erreur');
+      return data;
+    }
+
+    // ── Rendu tabs ──────────────────────────────────────────────────────────────
+    function renderTabs() {
+      document.getElementById('companyTabs').innerHTML = COMPANIES.map((c) =>
+        `<button class="company-tab${c === state.company ? ' active' : ''}" onclick="selectCompany(${JSON.stringify(c)})">${esc(c)}</button>`
+      ).join('');
+    }
+
+    // ── Rendu table ─────────────────────────────────────────────────────────────
+    function renderTable() {
+      const zone = document.getElementById('tableZone');
+      document.getElementById('cardTitle').textContent = `Codes ARC — ${state.company}`;
+      document.getElementById('sourceInfo').innerHTML = `Fichier : <code>${esc(ARC_FILES[state.company] || '')}</code>`;
+
+      if (!state.codes.length) {
+        zone.innerHTML = '<p class="empty-state">Aucun code ARC pour cette société.</p>';
+        return;
+      }
+
+      zone.innerHTML = `
+        <div class="arc-table-wrap">
+          <table class="arc-table">
+            <thead>
+              <tr>
+                <th class="col-code">Code</th>
+                <th>Désignation</th>
+                <th class="col-actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${state.codes.map((c) => renderRow(c)).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderRow(c) {
+      const isEditing = state.editingCode === c.code;
+      if (isEditing) {
+        return `
+          <tr class="editing" data-code="${esc(c.code)}">
+            <td class="col-code">${esc(c.code)}</td>
+            <td><input class="edit-input" id="editInput_${esc(c.code)}" value="${esc(c.designation)}" onkeydown="onEditKey(event, '${esc(c.code)}')"></td>
+            <td class="col-actions">
+              <button class="btn btn-primary btn-sm" onclick="saveEdit('${esc(c.code)}')">Sauver</button>
+              <button class="btn btn-secondary btn-sm" onclick="cancelEdit()">✕</button>
+            </td>
+          </tr>`;
+      }
+      return `
+        <tr data-code="${esc(c.code)}">
+          <td class="col-code">${esc(c.code)}</td>
+          <td>${esc(c.designation)}</td>
+          <td class="col-actions">
+            <button class="btn btn-secondary btn-sm" onclick="startEdit('${esc(c.code)}')">Modifier</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteCode('${esc(c.code)}')">Suppr.</button>
+          </td>
+        </tr>`;
+    }
+
+    // ── Sélection société ───────────────────────────────────────────────────────
+    async function selectCompany(company) {
+      state.company = company;
+      state.editingCode = null;
+      toggleAddForm(false);
+      renderTabs();
+      await loadCodes();
+    }
+
+    // ── Chargement ──────────────────────────────────────────────────────────────
+    async function loadCodes() {
+      document.getElementById('tableZone').innerHTML = '<p class="empty-state">Chargement...</p>';
+      try {
+        const data = await apiGet(`/achats/arc-codes?company=${encodeURIComponent(state.company)}`);
+        state.codes = (data.codes || []).sort((a, b) => {
+          const na = parseFloat(a.code), nb = parseFloat(b.code);
+          if (!isNaN(na) && !isNaN(nb)) return na - nb;
+          return a.code.localeCompare(b.code);
+        });
+        renderTable();
+      } catch (e) {
+        document.getElementById('tableZone').innerHTML = `<p class="empty-state" style="color:var(--danger);">Erreur : ${esc(e.message)}</p>`;
+      }
+    }
+
+    // ── Édition inline ──────────────────────────────────────────────────────────
+    function startEdit(code) {
+      state.editingCode = code;
+      renderTable();
+      const input = document.getElementById(`editInput_${code}`);
+      if (input) { input.focus(); input.select(); }
+    }
+
+    function cancelEdit() {
+      state.editingCode = null;
+      renderTable();
+    }
+
+    function onEditKey(e, code) {
+      if (e.key === 'Enter') saveEdit(code);
+      if (e.key === 'Escape') cancelEdit();
+    }
+
+    async function saveEdit(code) {
+      const input = document.getElementById(`editInput_${code}`);
+      if (!input) return;
+      const designation = input.value.trim();
+      try {
+        await apiPut(`/achats/arc-codes/${encodeURIComponent(code)}`, { company: state.company, designation });
+        const entry = state.codes.find((c) => c.code === code);
+        if (entry) entry.designation = designation;
+        state.editingCode = null;
+        renderTable();
+        showMessage(`Code ${code} mis à jour.`, 'success');
+      } catch (e) {
+        showMessage(`❌ ${e.message}`, 'danger');
+      }
+    }
+
+    // ── Suppression ─────────────────────────────────────────────────────────────
+    async function deleteCode(code) {
+      const entry = state.codes.find((c) => c.code === code);
+      if (!confirm(`Supprimer le code ${code} (${entry?.designation || ''}) ?\n\nCette action modifie l'Excel.`)) return;
+      try {
+        await apiDelete(`/achats/arc-codes/${encodeURIComponent(code)}?company=${encodeURIComponent(state.company)}`);
+        state.codes = state.codes.filter((c) => c.code !== code);
+        renderTable();
+        showMessage(`Code ${code} supprimé.`, 'success');
+      } catch (e) {
+        showMessage(`❌ ${e.message}`, 'danger');
+      }
+    }
+
+    // ── Ajout ───────────────────────────────────────────────────────────────────
+    function toggleAddForm(show) {
+      document.getElementById('addForm').style.display = show ? 'flex' : 'none';
+      document.getElementById('btnAdd').style.display = show ? 'none' : '';
+      if (show) {
+        document.getElementById('newCode').value = '';
+        document.getElementById('newDesignation').value = '';
+        document.getElementById('newCode').focus();
+      }
+    }
+
+    async function submitAdd() {
+      const code = document.getElementById('newCode').value.trim();
+      const designation = document.getElementById('newDesignation').value.trim();
+      if (!code) { showMessage('Le code est requis.', 'danger'); return; }
+      try {
+        await apiPost('/achats/arc-codes', { company: state.company, code, designation });
+        state.codes.push({ code, designation });
+        state.codes.sort((a, b) => {
+          const na = parseFloat(a.code), nb = parseFloat(b.code);
+          if (!isNaN(na) && !isNaN(nb)) return na - nb;
+          return a.code.localeCompare(b.code);
+        });
+        toggleAddForm(false);
+        renderTable();
+        showMessage(`Code ${code} ajouté.`, 'success');
+      } catch (e) {
+        showMessage(`❌ ${e.message}`, 'danger');
+      }
+    }
+
+    // ── Init ────────────────────────────────────────────────────────────────────
+    async function init() {
+      document.getElementById('sidebar').innerHTML = getSidebar();
+      injectAchatSecondaryBar();
+      renderTabs();
+      await loadCodes();
+    }
+
+    window.onServerReady(init);
+  </script>
+
+  <footer class="site-footer"></footer>
+</body>
+</html>
