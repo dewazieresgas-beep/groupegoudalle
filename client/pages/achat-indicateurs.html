@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Indicateurs Achat - Intranet Goudalle</title>
   <link rel="stylesheet" href="../css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     .table-wrap { overflow-x: auto; }
     .num { text-align: right; font-variant-numeric: tabular-nums; }
@@ -13,6 +14,13 @@
     table tbody tr:last-child td { border-bottom: none; }
     .empty-state { text-align: center; padding: 32px; color: var(--text-light); }
     .empty-state a { color: var(--primary); font-weight: 600; }
+    .achat-chart-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 16px;
+    }
+    .achat-chart-grid .gm-chart-section { min-height: 320px; }
+    .achat-chart-grid .gm-chart-container { min-height: 260px; }
   </style>
 </head>
 <body>
@@ -54,6 +62,32 @@
       </div>
 
       <div class="card">
+        <div class="card-title">
+          <h2>Graphiques achats bois (CLT / LC)</h2>
+        </div>
+        <div class="card-body">
+          <div class="achat-chart-grid">
+            <div class="gm-chart-section">
+              <div class="gm-chart-header">
+                <h2>Volumes mensuels CLT / LC (m³)</h2>
+              </div>
+              <div class="gm-chart-container">
+                <canvas id="achatVolumeChart"></canvas>
+              </div>
+            </div>
+            <div class="gm-chart-section">
+              <div class="gm-chart-header">
+                <h2>Prix moyen LC (€/m³)</h2>
+              </div>
+              <div class="gm-chart-container">
+                <canvas id="achatPrixChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
         <div class="card-title"><h2>Accès rapides</h2></div>
         <div class="card-body">
           <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px;">
@@ -85,6 +119,120 @@
       return Number(v).toLocaleString('fr-FR', { minimumFractionDigits: digits, maximumFractionDigits: digits });
     }
 
+    function formatMonthShort(isoMonth) {
+      const m = String(isoMonth || '').match(/^(\d{4})-(\d{2})$/);
+      if (!m) return isoMonth || '—';
+      const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, 1));
+      const label = d.toLocaleString('fr-FR', { month: 'short', timeZone: 'UTC' }).replace('.', '');
+      return `${label}-${m[1].slice(-2)}`;
+    }
+
+    const achatCharts = {};
+
+    function destroyAchatChart(id) {
+      if (achatCharts[id]) {
+        achatCharts[id].destroy();
+        delete achatCharts[id];
+      }
+    }
+
+    function renderCharts(rows) {
+      const labels = rows.map((r) => formatMonthShort(r.month));
+
+      destroyAchatChart('volume');
+      const ctxVolume = document.getElementById('achatVolumeChart')?.getContext('2d');
+      if (ctxVolume) {
+        achatCharts.volume = new Chart(ctxVolume, {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [
+              {
+                label: 'V CLT (m³)',
+                data: rows.map((r) => r.v_clt_m3),
+                backgroundColor: '#8B5E3C',
+                borderColor: '#8B5E3C',
+                borderRadius: 4
+              },
+              {
+                label: 'V LC (m³)',
+                data: rows.map((r) => r.v_lc_m3),
+                backgroundColor: '#0F766E',
+                borderColor: '#0F766E',
+                borderRadius: 4
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+              legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 12 } } },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => `${ctx.dataset.label}: ${fmt(ctx.parsed.y)} m³`
+                }
+              }
+            },
+            scales: {
+              x: { grid: { display: false }, ticks: { color: '#7a7a7a', font: { size: 10 } } },
+              y: {
+                beginAtZero: true,
+                grid: { color: '#ece7e1' },
+                title: { display: true, text: 'm³' },
+                ticks: { color: '#6b6b6b', callback: (v) => fmt(v) }
+              }
+            }
+          }
+        });
+      }
+
+      destroyAchatChart('prix');
+      const ctxPrix = document.getElementById('achatPrixChart')?.getContext('2d');
+      if (ctxPrix) {
+        achatCharts.prix = new Chart(ctxPrix, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [{
+              label: 'Prix moyen LC (€/m³)',
+              data: rows.map((r) => r.prix_moyen_lc_eur_m3),
+              borderColor: '#D97706',
+              backgroundColor: 'rgba(217,119,6,0.1)',
+              borderWidth: 2.5,
+              pointRadius: 3,
+              pointHoverRadius: 5,
+              tension: 0,
+              fill: true,
+              spanGaps: true
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+              legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 12 } } },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => `${ctx.dataset.label}: ${fmt(ctx.parsed.y)} €/m³`
+                }
+              }
+            },
+            scales: {
+              x: { grid: { display: false }, ticks: { color: '#7a7a7a', font: { size: 10 } } },
+              y: {
+                grid: { color: '#ece7e1' },
+                title: { display: true, text: '€/m³' },
+                ticks: { color: '#6b6b6b', callback: (v) => fmt(v) }
+              }
+            }
+          }
+        });
+      }
+    }
+
     async function loadIndicators() {
       const tbody = document.querySelector('#tableIndicateurs tbody');
       const note = document.getElementById('indicateursNote');
@@ -100,6 +248,8 @@
             <a href="./achat-saisie.html">Importer un premier fichier ONAYA →</a>
           </td></tr>`;
           note.textContent = '';
+          destroyAchatChart('volume');
+          destroyAchatChart('prix');
           return;
         }
 
@@ -112,6 +262,7 @@
           </tr>
         `).join('');
         note.textContent = `${rows.length} mois · Calcul serveur depuis les imports enregistrés (stock exclu).`;
+        renderCharts(rows);
       } catch (e) {
         tbody.innerHTML = `<tr><td colspan="4" class="empty-state">Erreur : ${esc(e.message)}</td></tr>`;
         note.textContent = '';

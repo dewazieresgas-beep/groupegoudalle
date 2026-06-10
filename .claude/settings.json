@@ -88,7 +88,11 @@
       "Bash(node --check c:/Users/gdewazieres/Desktop/groupegoudalle/server/server.js)",
       "Bash(node -e \"const m = require\\('c:/Users/gdewazieres/Desktop/groupegoudalle/server/node_modules/multer'\\); console.log\\(require\\('c:/Users/gdewazieres/Desktop/groupegoudalle/server/node_modules/multer/package.json'\\).version\\)\")",
       "Bash(grep -n \"W:\\\\\\\\\\\\\\\\\\\\|Y:\\\\\\\\\\\\\\\\\\\\|Z:\\\\\\\\\\\\\\\\\\\\|X:\\\\\\\\\\\\\\\\\" \"c:\\\\Users\\\\gdewazieres\\\\Desktop\\\\groupegoudalle\\\\server\\\\server.js\")",
-      "Read(//w/BCHDF/Site Intranet Groupe Goudalle/Indicateurs achats/Codes ARC des Entreprises/**)"
+      "Read(//w/BCHDF/Site Intranet Groupe Goudalle/Indicateurs achats/Codes ARC des Entreprises/**)",
+      "Bash(git log *)",
+      "Bash(grep -inB2 -iA2 \"bois\")",
+      "Bash(curl -s http://localhost:3000/api/login -X POST -H \"Content-Type: application/json\" -d '{}')",
+      "Bash(npx --yes playwright --version)"
     ],
     "additionalDirectories": [
       "\\tmp",
