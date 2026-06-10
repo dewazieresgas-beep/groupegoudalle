@@ -104,7 +104,20 @@
       "Bash(curl -s \"http://localhost:3000/pages/achat-indicateurs.html\" -o /tmp/page.html -w \"HTTP %{http_code}\\\\n\")",
       "Bash(python3 -)",
       "Bash(node --check script.js)",
-      "Bash(rm -f /tmp/page.html /tmp/script.js /tmp/server.log)"
+      "Bash(rm -f /tmp/page.html /tmp/script.js /tmp/server.log)",
+      "Bash(awk '{print $5, $9}')",
+      "PowerShell(Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue)",
+      "PowerShell(Stop-Process -Id 13220 -Force)",
+      "Bash(curl -s \"http://localhost:3000/api/achats/imports\")",
+      "Bash(curl -s \"http://localhost:3000/api/achats/periods?company=Goudalle%20Charpente\")",
+      "Bash(curl -s \"http://localhost:3000/api/achats/invoices?company=Goudalle%20Charpente&year=2026&month=01\")",
+      "Bash(curl -s \"http://localhost:3000/api/achats/periods\")",
+      "Bash(curl -s \"http://localhost:3000/api/achats/invoices?company=CBCO\")",
+      "Bash(curl -s \"http://localhost:3000/pages/achat-controle.html\" -o /tmp/controle.html -w \"HTTP %{http_code}\\\\n\")",
+      "Bash(node --check /tmp/controle.js)",
+      "Bash(curl -s \"http://localhost:3000/pages/achat-controle.html\" -o controle.html)",
+      "Bash(node --check controle.js)",
+      "Bash(rm -f controle.html controle.js)"
     ],
     "additionalDirectories": [
       "\\tmp",

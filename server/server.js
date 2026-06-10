@@ -2309,6 +2309,71 @@ app.get('/api/achats/imports', (req, res) => {
   }
 });
 
+app.get('/api/achats/periods', (req, res) => {
+  try {
+    const company = String(req.query?.company || '').trim();
+    if (!company) return res.status(400).json({ success: false, error: 'company requis' });
+
+    const files = fs.readdirSync(ACHATS_DATA_DIR).filter((f) => f.endsWith('.json'));
+    const periodMap = new Map();
+    for (const f of files) {
+      const data = readAchatImportData(f.replace('.json', ''));
+      if (!data || !data.invoices || data.company !== company) continue;
+      for (const inv of data.invoices) {
+        const m = achatToIsoMonth(inv.date);
+        if (!m) continue;
+        const [y, mo] = m.split('-');
+        if (!periodMap.has(m)) periodMap.set(m, { year: y, month: mo, invoice_count: 0 });
+        periodMap.get(m).invoice_count++;
+      }
+    }
+    const periods = [...periodMap.values()].sort((a, b) => `${a.year}-${a.month}`.localeCompare(`${b.year}-${b.month}`));
+    res.json({ success: true, periods });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.get('/api/achats/invoices', (req, res) => {
+  try {
+    const company = String(req.query?.company || '').trim();
+    const year = String(req.query?.year || '').trim();
+    const month = String(req.query?.month || '').trim().padStart(2, '0');
+    if (!company || !year || !month) return res.status(400).json({ success: false, error: 'company, year et month requis' });
+
+    const files = fs.readdirSync(ACHATS_DATA_DIR).filter((f) => f.endsWith('.json'));
+    const invoices = [];
+    const batches = [];
+    for (const f of files) {
+      const batchId = f.replace('.json', '');
+      const data = readAchatImportData(batchId);
+      if (!data || !data.invoices || data.company !== company) continue;
+      let matched = false;
+      for (const inv of data.invoices) {
+        const m = achatToIsoMonth(inv.date);
+        if (!m) continue;
+        const [y, mo] = m.split('-');
+        if (y !== year || mo !== month) continue;
+        matched = true;
+        invoices.push({
+          id: inv.id, batchId, date: inv.date, numero_facture: inv.numero_facture,
+          fournisseur: inv.fournisseur, chantier: inv.chantier, libelle_facture: inv.libelle_facture,
+          montant_ht: inv.montant_ht, excluded: inv.excluded, line_count: (inv.lines || []).length
+        });
+      }
+      if (matched) batches.push({ id: data.id, nom_fichier: data.nom_fichier, total_factures: data.total_factures, total_lignes: data.total_lignes, total_stock_exclu: data.total_stock_exclu });
+    }
+    invoices.sort((a, b) => {
+      const da = a.date ? a.date.split('/').reverse().join('') : '';
+      const db = b.date ? b.date.split('/').reverse().join('') : '';
+      return da.localeCompare(db);
+    });
+    res.json({ success: true, invoices, batches });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 app.get('/api/achats/indicators-monthly', (req, res) => {
   try {
     const company = String(req.query?.company || '').trim();

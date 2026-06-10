@@ -6,22 +6,19 @@
   <title>Contrôle imports achats - Intranet Goudalle</title>
   <link rel="stylesheet" href="../css/style.css">
   <style>
-    /* ── Liste des imports ── */
-    .imports-list { display: flex; flex-direction: column; gap: 8px; }
+    /* ── Bandeau import (re-parser / supprimer) ── */
+    .imports-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
     .import-row {
       display: grid; grid-template-columns: 1fr auto;
       gap: 12px; align-items: center;
       border: 1px solid var(--border-light); border-radius: 10px;
       background: #fff; padding: 12px 14px;
       box-shadow: 0 2px 6px rgba(0,0,0,.03);
-      transition: border-color .15s;
     }
-    .import-row.active { border-color: #8fbe95; background: #f2fbf2; }
     .import-meta strong {
       display: block; font-size: 15px; color: #1f2a1f;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .import-meta .import-sub { font-size: 12px; color: #667; margin-top: 3px; }
     .import-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
     .chip {
       display: inline-flex; align-items: center; gap: 3px;
@@ -119,23 +116,17 @@
       <h1 class="mb-3">Contrôle des imports</h1>
       <div id="pageMessage" class="alert" style="display:none;"></div>
 
-      <!-- ── Imports ── -->
-      <div class="card">
-        <div class="card-title"><h2>Imports enregistrés</h2></div>
-        <div class="card-body">
-          <div id="importsList" class="imports-list">
-            <p class="empty-state">Chargement...</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── Factures d'un import ── -->
-      <div class="card" id="invoicesCard" style="display:none;">
+      <!-- ── Factures ── -->
+      <div class="card" id="invoicesCard">
         <div class="card-title">
-          <h2 id="invoicesCardTitle">Factures</h2>
+          <h2>Factures</h2>
         </div>
         <div class="card-body">
           <div class="period-filters">
+            <div>
+              <label for="filterCompany">Entreprise</label>
+              <select id="filterCompany"></select>
+            </div>
             <div>
               <label for="filterYear">Année</label>
               <select id="filterYear"></select>
@@ -145,7 +136,8 @@
               <select id="filterMonth"></select>
             </div>
           </div>
-          <div class="invoice-list-wrap"><div id="invoicesList"></div></div>
+          <div id="batchActions"></div>
+          <div class="invoice-list-wrap"><div id="invoicesList"><p class="empty-state">Chargement...</p></div></div>
         </div>
       </div>
 
@@ -154,17 +146,18 @@
 
   <script>
     const API = window.location.origin + '/api';
+    const COMPANY_ORDER = ['Goudalle Charpente', 'Nouvelle Goudalle Maçonnerie', 'CBCO', 'Sylve Data'];
+    const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 
     const state = {
-      imports: [],
-      activeBatchId: null,
+      companies: [],
+      selectedCompany: '',
       periods: [],
       selectedYear: '',
       selectedMonth: '',
+      batches: [],
       loadedLinesByInvId: new Map()
     };
-
-    const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 
     function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
@@ -208,35 +201,22 @@
       catch { return null; }
     }
 
-    // ── Rendu de la liste des imports ──────────────────────────────────────────
-    function renderImports() {
-      const root = document.getElementById('importsList');
-      if (!state.imports.length) {
-        root.innerHTML = `<p class="empty-state">Aucun import. <a href="./achat-saisie.html">Importer un fichier ONAYA →</a></p>`;
+    // ── Sélecteur entreprise ────────────────────────────────────────────────────
+    function populateCompanySelect() {
+      const sel = document.getElementById('filterCompany');
+      if (!state.companies.length) {
+        sel.innerHTML = '<option value="">Aucune donnée</option>';
         return;
       }
-      root.innerHTML = state.imports.map((imp) => {
-        const active = imp.id === state.activeBatchId ? ' active' : '';
-        const date = imp.date_import ? new Date(imp.date_import).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—';
-        return `
-          <div class="import-row${active}" data-id="${esc(imp.id)}">
-            <div class="import-meta">
-              <strong title="${esc(imp.nom_fichier)}">${esc(imp.nom_fichier)}</strong>
-              <div class="import-sub">${imp.company ? `<strong>${esc(imp.company)}</strong> · ` : ''}Importé le ${date}</div>
-              <div class="import-chips">
-                <span class="chip">📄 ${imp.total_factures ?? 0} factures</span>
-                <span class="chip">📑 ${imp.total_lignes ?? 0} lignes</span>
-                ${imp.total_stock_exclu ? `<span class="chip">🚫 ${imp.total_stock_exclu} stock exclu</span>` : ''}
-              </div>
-            </div>
-            <div class="import-actions">
-              <button class="btn btn-secondary btn-sm btn-show" data-id="${esc(imp.id)}">Afficher</button>
-              <button class="btn btn-secondary btn-sm btn-reparse" data-id="${esc(imp.id)}" title="Re-parser le PDF avec les règles actuelles">🔄 Re-parser</button>
-              <button class="btn btn-danger btn-sm btn-delete" data-id="${esc(imp.id)}">Supprimer</button>
-            </div>
-          </div>
-        `;
-      }).join('');
+      if (!state.companies.includes(state.selectedCompany)) state.selectedCompany = state.companies[0];
+      sel.innerHTML = state.companies.map((c) => `<option value="${esc(c)}"${c === state.selectedCompany ? ' selected' : ''}>${esc(c)}</option>`).join('');
+    }
+
+    async function refreshCompanies() {
+      const data = await apiGet('/achats/imports');
+      const present = new Set((data.imports || []).map((i) => i.company).filter(Boolean));
+      state.companies = COMPANY_ORDER.filter((c) => present.has(c));
+      populateCompanySelect();
     }
 
     // ── Filtres de période ─────────────────────────────────────────────────────
@@ -270,6 +250,28 @@
       }).join('');
     }
 
+    // ── Bandeau import (re-parser / supprimer) ─────────────────────────────────
+    function renderBatchActions() {
+      const root = document.getElementById('batchActions');
+      if (!state.batches.length) { root.innerHTML = ''; return; }
+      root.innerHTML = `<div class="imports-list">${state.batches.map((b) => `
+        <div class="import-row">
+          <div class="import-meta">
+            <strong title="${esc(b.nom_fichier)}">${esc(b.nom_fichier)}</strong>
+            <div class="import-chips">
+              <span class="chip">📄 ${b.total_factures ?? 0} factures</span>
+              <span class="chip">📑 ${b.total_lignes ?? 0} lignes</span>
+              ${b.total_stock_exclu ? `<span class="chip">🚫 ${b.total_stock_exclu} stock exclu</span>` : ''}
+            </div>
+          </div>
+          <div class="import-actions">
+            <button class="btn btn-secondary btn-sm btn-reparse" data-id="${esc(b.id)}" title="Re-parser le PDF avec les règles actuelles">🔄 Re-parser</button>
+            <button class="btn btn-danger btn-sm btn-delete" data-id="${esc(b.id)}">Supprimer</button>
+          </div>
+        </div>
+      `).join('')}</div>`;
+    }
+
     // ── Affichage de la liste des factures ─────────────────────────────────────
     function renderInvoices(invoices) {
       const root = document.getElementById('invoicesList');
@@ -288,7 +290,7 @@
             <div class="num">Montant H.T</div>
           </div>
           ${invoices.map((inv) => `
-            <div class="invoice-item" data-inv-id="${esc(inv.id)}">
+            <div class="invoice-item" data-inv-id="${esc(inv.id)}" data-batch-id="${esc(inv.batchId)}">
               <button class="invoice-row-btn" data-inv-id="${esc(inv.id)}">
                 <div class="invoice-grid">
                   <div><span class="invoice-toggle">▶</span></div>
@@ -337,7 +339,8 @@
           if (willOpen && detail.dataset.loaded !== '1') {
             detail.querySelector('.invoice-detail-inner').innerHTML = '<p class="empty-state" style="padding:8px;">Chargement...</p>';
             try {
-              const data = await apiGet(`/achats/imports/${encodeURIComponent(state.activeBatchId)}/invoices/${encodeURIComponent(invId)}/lines`);
+              const batchId = item.getAttribute('data-batch-id');
+              const data = await apiGet(`/achats/imports/${encodeURIComponent(batchId)}/invoices/${encodeURIComponent(invId)}/lines`);
               state.loadedLinesByInvId.set(invId, data.lines || []);
               detail.querySelector('.invoice-detail-inner').innerHTML = renderLinesTable(data.lines || [], data.invoice);
               detail.dataset.loaded = '1';
@@ -390,87 +393,78 @@
       `;
     }
 
+    // ── Charger les périodes (années/mois) d'une entreprise ────────────────────
+    async function loadPeriods() {
+      populateCompanySelect();
+      const yearSel = document.getElementById('filterYear');
+      const monthSel = document.getElementById('filterMonth');
+
+      if (!state.selectedCompany) {
+        state.periods = [];
+        yearSel.innerHTML = '<option value="">—</option>';
+        monthSel.innerHTML = '<option value="">—</option>';
+        document.getElementById('batchActions').innerHTML = '';
+        document.getElementById('invoicesList').innerHTML = `<p class="empty-state">Aucun import. <a href="./achat-saisie.html">Importer un fichier ONAYA →</a></p>`;
+        return;
+      }
+
+      try {
+        const data = await apiGet(`/achats/periods?company=${encodeURIComponent(state.selectedCompany)}`);
+        state.periods = data.periods || [];
+      } catch (e) {
+        state.periods = [];
+        showMessage(`❌ ${e.message}`, 'danger');
+      }
+      buildPeriodFilters();
+      await loadInvoices();
+    }
+
     // ── Charger les factures d'une période ─────────────────────────────────────
     async function loadInvoices() {
       const invRoot = document.getElementById('invoicesList');
-      invRoot.innerHTML = '<p class="empty-state">Chargement...</p>';
-      if (!state.activeBatchId || !state.selectedYear || !state.selectedMonth) {
+      document.getElementById('batchActions').innerHTML = '';
+      if (!state.selectedCompany || !state.selectedYear || !state.selectedMonth) {
         invRoot.innerHTML = '<p class="empty-state">Sélectionnez une période.</p>';
         return;
       }
+      invRoot.innerHTML = '<p class="empty-state">Chargement...</p>';
       try {
-        const data = await apiGet(`/achats/imports/${encodeURIComponent(state.activeBatchId)}/invoices?year=${encodeURIComponent(state.selectedYear)}&month=${encodeURIComponent(state.selectedMonth)}`);
+        const data = await apiGet(`/achats/invoices?company=${encodeURIComponent(state.selectedCompany)}&year=${encodeURIComponent(state.selectedYear)}&month=${encodeURIComponent(state.selectedMonth)}`);
+        state.batches = data.batches || [];
         state.loadedLinesByInvId = new Map();
+        renderBatchActions();
         renderInvoices(data.invoices || []);
       } catch (e) {
         invRoot.innerHTML = `<p class="empty-state" style="color:var(--danger);">Erreur : ${esc(e.message)}</p>`;
       }
     }
 
-    // ── Ouvrir un import ───────────────────────────────────────────────────────
-    async function openImport(batchId) {
-      clearMessage();
-      state.activeBatchId = batchId;
-      state.loadedLinesByInvId = new Map();
-      renderImports();
-
-      const imp = state.imports.find((i) => i.id === batchId);
-      const card = document.getElementById('invoicesCard');
-      card.style.display = '';
-      document.getElementById('invoicesCardTitle').textContent = imp ? `Factures — ${imp.nom_fichier}` : 'Factures';
-      document.getElementById('invoicesList').innerHTML = '<p class="empty-state">Chargement...</p>';
-
-      try {
-        const data = await apiGet(`/achats/imports/${encodeURIComponent(batchId)}/invoices`);
-        state.periods = data.periods || [];
-        buildPeriodFilters();
-
-        const yearSel = document.getElementById('filterYear');
-        const monthSel = document.getElementById('filterMonth');
-        yearSel.onchange = async () => { state.selectedYear = yearSel.value; buildPeriodFilters(); await loadInvoices(); };
-        monthSel.onchange = async () => { state.selectedMonth = monthSel.value; await loadInvoices(); };
-
-        await loadInvoices();
-      } catch (e) {
-        document.getElementById('invoicesList').innerHTML = `<p class="empty-state" style="color:var(--danger);">Erreur : ${esc(e.message)}</p>`;
-      }
-
-      card.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-
-    // ── Supprimer un import ────────────────────────────────────────────────────
-    async function deleteImport(batchId) {
-      const imp = state.imports.find((i) => i.id === batchId);
-      const name = imp?.nom_fichier || batchId;
-      if (!confirm(`Supprimer définitivement cet import ?\n\n${name}\n\nLe fichier PDF sera également supprimé.`)) return;
-      try {
-        await apiDelete(`/achats/imports/${encodeURIComponent(batchId)}`);
-        state.imports = state.imports.filter((i) => i.id !== batchId);
-        if (state.activeBatchId === batchId) {
-          state.activeBatchId = null;
-          document.getElementById('invoicesCard').style.display = 'none';
-        }
-        renderImports();
-        showMessage('Import supprimé.', 'success');
-      } catch (e) {
-        showMessage(`❌ ${e.message}`, 'danger');
-      }
-    }
-
     // ── Re-parser un import ────────────────────────────────────────────────────
-    async function reparseImport(batchId) {
-      const btn = document.querySelector(`.btn-reparse[data-id="${batchId}"]`);
+    async function reparseBatch(batchId) {
+      const btn = document.querySelector(`#batchActions .btn-reparse[data-id="${batchId}"]`);
       if (btn) { btn.disabled = true; btn.textContent = '⏳ En cours…'; }
       try {
         const result = await apiPost(`/achats/imports/${encodeURIComponent(batchId)}/reparse`);
-        const imp = state.imports.find((i) => i.id === batchId);
-        if (imp) { imp.total_factures = result.total_factures; imp.total_lignes = result.total_lignes; imp.total_stock_exclu = result.total_stock_exclu; }
-        renderImports();
-        if (state.activeBatchId === batchId) await openImport(batchId);
         showMessage(`✅ Re-parsé : ${result.total_factures} factures, ${result.total_lignes} lignes.`, 'success');
+        await loadPeriods();
       } catch (e) {
         showMessage(`❌ Re-parse échoué : ${e.message}`, 'danger');
         if (btn) { btn.disabled = false; btn.innerHTML = '🔄 Re-parser'; }
+      }
+    }
+
+    // ── Supprimer un import ────────────────────────────────────────────────────
+    async function deleteBatch(batchId) {
+      const b = state.batches.find((x) => x.id === batchId);
+      const name = b?.nom_fichier || batchId;
+      if (!confirm(`Supprimer définitivement cet import ?\n\n${name}\n\nLe fichier PDF sera également supprimé.`)) return;
+      try {
+        await apiDelete(`/achats/imports/${encodeURIComponent(batchId)}`);
+        showMessage('Import supprimé.', 'success');
+        await refreshCompanies();
+        await loadPeriods();
+      } catch (e) {
+        showMessage(`❌ ${e.message}`, 'danger');
       }
     }
 
@@ -479,22 +473,34 @@
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectAchatSecondaryBar();
 
-      document.getElementById('importsList').addEventListener('click', async (e) => {
-        const showBtn = e.target.closest('.btn-show');
+      document.getElementById('filterCompany').onchange = async (e) => {
+        state.selectedCompany = e.target.value;
+        state.selectedYear = ''; state.selectedMonth = '';
+        await loadPeriods();
+      };
+      document.getElementById('filterYear').onchange = async (e) => {
+        state.selectedYear = e.target.value;
+        state.selectedMonth = '';
+        buildPeriodFilters();
+        await loadInvoices();
+      };
+      document.getElementById('filterMonth').onchange = async (e) => {
+        state.selectedMonth = e.target.value;
+        await loadInvoices();
+      };
+
+      document.getElementById('batchActions').addEventListener('click', async (e) => {
         const reparseBtn = e.target.closest('.btn-reparse');
         const delBtn = e.target.closest('.btn-delete');
-        if (showBtn) await openImport(showBtn.getAttribute('data-id'));
-        if (reparseBtn) await reparseImport(reparseBtn.getAttribute('data-id'));
-        if (delBtn) await deleteImport(delBtn.getAttribute('data-id'));
+        if (reparseBtn) await reparseBatch(reparseBtn.getAttribute('data-id'));
+        if (delBtn) await deleteBatch(delBtn.getAttribute('data-id'));
       });
 
       try {
-        const data = await apiGet('/achats/imports');
-        state.imports = data.imports || [];
-        renderImports();
-        if (state.imports.length) await openImport(state.imports[0].id);
+        await refreshCompanies();
+        await loadPeriods();
       } catch (e) {
-        document.getElementById('importsList').innerHTML = `<p class="empty-state" style="color:var(--danger);">Erreur : ${esc(e.message)}</p>`;
+        document.getElementById('invoicesList').innerHTML = `<p class="empty-state" style="color:var(--danger);">Erreur : ${esc(e.message)}</p>`;
       }
     }
 
