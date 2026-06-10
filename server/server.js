@@ -803,6 +803,33 @@ function computeVolumeM3FromNorm(line) {
   return null;
 }
 
+function isStockExitText(raw) {
+  return normalizeText(raw).includes('sortie de stock');
+}
+
+function isLcSpecialSpeciesText(raw) {
+  return /\b(douglas|meleze)\b/.test(normalizeText(raw));
+}
+
+// Volume "Autre" : tout bois (hors CLT/LC) avec un volume calculable
+function computeAutreVolumeM3(line) {
+  const qte = Number(line.qte_fact);
+  if (!Number.isFinite(qte) || qte <= 0) return null;
+  const unite = String(line.unite || '').toUpperCase();
+  const rawText = [line.ressource, line.libelle_ligne].filter(Boolean).join(' ');
+  if (!isWoodLikeText(rawText)) return null;
+  if (unite === 'M3') return qte;
+  if (unite === 'M2') {
+    const ep = extractThicknessMeters(rawText);
+    if (ep) return qte * ep;
+  }
+  if (unite === 'U' || unite === 'ENS') {
+    const dims = extractSectionLengthForUnitPieces(rawText);
+    if (dims) return qte * dims.sectionM2 * dims.lengthM;
+  }
+  return null;
+}
+
 function allocateInvoiceLinesByBL(normalizedInvoiceLines, batchId, invoiceId) {
   const lines = [...(normalizedInvoiceLines || [])];
   const products = lines.filter((l) => l.type_technique === 'product');
@@ -2284,32 +2311,64 @@ app.get('/api/achats/imports', (req, res) => {
 
 app.get('/api/achats/indicators-monthly', (req, res) => {
   try {
+    const company = String(req.query?.company || '').trim();
+    if (!company) return res.status(400).json({ success: false, error: 'company requis' });
+
     const files = fs.readdirSync(ACHATS_DATA_DIR).filter((f) => f.endsWith('.json'));
     const byMonth = new Map();
     for (const f of files) {
       const data = readAchatImportData(f.replace('.json', ''));
-      if (!data || !data.invoices) continue;
+      if (!data || !data.invoices || data.company !== company) continue;
       for (const inv of data.invoices) {
-        if (inv.excluded || isCbcoSupplier(inv.fournisseur)) continue;
         const month = achatToIsoMonth(inv.date);
         if (!month) continue;
+        if (!byMonth.has(month)) byMonth.set(month, { month, v_clt_m3: 0, v_lc_m3: 0, lc_amount: 0, lc_vol_price: 0, autre_com_m3: 0, sortie_stock_m3: 0 });
+        const row = byMonth.get(month);
         for (const line of (inv.lines || [])) {
-          if (line.excluded) continue;
-          const txt = normalizeText([line.ressource, line.libelle_ligne].filter(Boolean).join(' '));
-          const isClt = /\b(clt|klh)\b/.test(txt);
-          const isLc = !isClt && /\b(lc|lamelle colle|lamelle-colle|lamelle)\b/.test(txt);
-          if (!isClt && !isLc) continue;
-          const vol = computeVolumeM3FromNorm({ ressource: line.ressource, libelle_ligne: line.libelle_ligne, unite: line.unite, qte_fact: line.qte_fact });
-          if (!Number.isFinite(vol) || vol <= 0) continue;
-          if (!byMonth.has(month)) byMonth.set(month, { month, v_clt_m3: 0, v_lc_m3: 0, lc_amount: 0 });
-          const row = byMonth.get(month);
-          if (isClt) row.v_clt_m3 += vol;
-          if (isLc) { row.v_lc_m3 += vol; row.lc_amount += Number(line.montant || 0); }
+          const norm = { ressource: line.ressource, libelle_ligne: line.libelle_ligne, unite: line.unite, qte_fact: line.qte_fact };
+          const txt = [line.ressource, line.libelle_ligne].filter(Boolean).join(' ');
+          if (line.excluded) {
+            if (isStockExitText(txt)) {
+              const vol = computeAutreVolumeM3(norm);
+              if (Number.isFinite(vol) && vol > 0) row.sortie_stock_m3 += vol;
+            }
+            continue;
+          }
+          const isClt = isCltLineFromNorm(norm);
+          const isLc = !isClt && isLcLineFromNorm(norm);
+          if (isClt) {
+            const vol = computeVolumeM3FromNorm(norm);
+            if (Number.isFinite(vol) && vol > 0) row.v_clt_m3 += vol;
+          } else if (isLc) {
+            const vol = computeVolumeM3FromNorm(norm);
+            if (Number.isFinite(vol) && vol > 0) {
+              row.v_lc_m3 += vol;
+              if (!isLcSpecialSpeciesText(txt)) {
+                row.lc_amount += Number(line.montant || 0);
+                row.lc_vol_price += vol;
+              }
+            }
+          } else {
+            const vol = computeAutreVolumeM3(norm);
+            if (Number.isFinite(vol) && vol > 0) row.autre_com_m3 += vol;
+          }
         }
       }
     }
     const rows = [...byMonth.values()].sort((a, b) => a.month.localeCompare(b.month))
-      .map((r) => ({ month: r.month, v_clt_m3: r.v_clt_m3, v_lc_m3: r.v_lc_m3, prix_moyen_lc_eur_m3: r.v_lc_m3 > 0 ? r.lc_amount / r.v_lc_m3 : null }));
+      .map((r) => {
+        const autre_total_m3 = r.autre_com_m3 + r.sortie_stock_m3;
+        return {
+          month: r.month,
+          v_clt_m3: r.v_clt_m3,
+          v_lc_m3: r.v_lc_m3,
+          prix_moyen_lc_eur_m3: r.lc_vol_price > 0 ? r.lc_amount / r.lc_vol_price : null,
+          autre_com_m3: r.autre_com_m3,
+          sortie_stock_m3: r.sortie_stock_m3,
+          autre_total_m3,
+          total_m3: r.v_clt_m3 + r.v_lc_m3 + autre_total_m3
+        };
+      });
     res.json({ success: true, rows });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });

@@ -92,7 +92,19 @@
       "Bash(git log *)",
       "Bash(grep -inB2 -iA2 \"bois\")",
       "Bash(curl -s http://localhost:3000/api/login -X POST -H \"Content-Type: application/json\" -d '{}')",
-      "Bash(npx --yes playwright --version)"
+      "Bash(npx --yes playwright --version)",
+      "Bash(curl -s \"http://localhost:3000/api/achats/indicators-monthly?company=Goudalle%20Charpente\")",
+      "Bash(curl -s \"http://localhost:3000/api/achats/indicators-monthly?company=CBCO\")",
+      "Bash(node --check \"c:/Users/gdewazieres/Desktop/groupegoudalle/client/pages/achat-indicateurs.html\")",
+      "PowerShell(Get-CimInstance Win32_Process -Filter \"Name = 'node.exe'\")",
+      "PowerShell(Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue | Select-Object LocalAddress,LocalPort,State,OwningProcess; Get-Process -Id \\(Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue\\).OwningProcess -ErrorAction SilentlyContinue | Select-Object Id,ProcessName,Path)",
+      "Bash(curl -s -m 5 \"http://localhost:3000/api/health\" -o /dev/null -w \"HTTP %{http_code}\\\\n\")",
+      "Bash(python3 -m json.tool)",
+      "Bash(curl -s \"http://localhost:3000/api/achats/indicators-monthly\")",
+      "Bash(curl -s \"http://localhost:3000/pages/achat-indicateurs.html\" -o /tmp/page.html -w \"HTTP %{http_code}\\\\n\")",
+      "Bash(python3 -)",
+      "Bash(node --check script.js)",
+      "Bash(rm -f /tmp/page.html /tmp/script.js /tmp/server.log)"
     ],
     "additionalDirectories": [
       "\\tmp",
