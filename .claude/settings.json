@@ -126,7 +126,10 @@
       "PowerShell(\"stopped\")",
       "Bash(curl -s -o /dev/null -w \"indicators-monthly: %{http_code}\\\\n\" \"http://localhost:3000/api/achats/indicators-monthly?company=Goudalle%20Charpente\")",
       "Bash(curl -s -o /dev/null -w \"achat-indicateurs.html: %{http_code}\\\\n\" \"http://localhost:3000/pages/achat-indicateurs.html\")",
-      "Bash(curl -s \"http://localhost:3000/pages/achat-indicateurs.html\")"
+      "Bash(curl -s \"http://localhost:3000/pages/achat-indicateurs.html\")",
+      "Bash(curl -s http://localhost:3000/api/health)",
+      "Bash(curl -s -H 'x-goudalle-token: __TRACKED_VAR__' http://localhost:3000/api/achats/arc-codes -o arc-codes.json)",
+      "PowerShell(Stop-Process -Id 19452 -Force -ErrorAction SilentlyContinue)"
     ],
     "additionalDirectories": [
       "\\tmp",

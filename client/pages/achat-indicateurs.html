@@ -5,9 +5,56 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Indicateurs Achat - Intranet Goudalle</title>
   <link rel="stylesheet" href="../css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
+    .company-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
+    .company-tab {
+      padding: 7px 18px; border-radius: 999px; font-size: 13px; font-weight: 600;
+      border: 2px solid var(--border-light); background: #fff; cursor: pointer;
+      transition: border-color .15s, background .15s; color: #3a4b3a;
+    }
+    .company-tab.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .company-tab:hover:not(.active) { border-color: var(--primary); }
+
+    .kpi-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+    .kpi-stat { background:white; border-radius:8px; padding:14px 16px; border:1px solid var(--border-light); text-align:center; flex:1; min-width:160px; }
+    .kpi-stat-value { font-size:22px; font-weight:700; line-height:1; margin-bottom:4px; color:var(--primary); }
+    .kpi-stat-label { font-size:11px; color:var(--text-muted-dark); font-weight:600; text-transform:uppercase; letter-spacing:.4px; }
+    .kpi-stat-sub { font-size:11px; color:var(--text-light); margin-top:4px; }
+
+    .indicator-grid {
+      display: grid;
+      grid-template-columns: minmax(260px, 360px) minmax(320px, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+    @media (max-width: 900px) { .indicator-grid { grid-template-columns: 1fr; } }
+
+    .chart-section { min-height: 360px; }
+    .chart-container { position: relative; min-height: 320px; }
+    .chart-container.tall { min-height: 420px; }
+
+    .category-list {
+      max-height: 360px; overflow-y: auto; border: 1px solid var(--border-light);
+      border-radius: 8px; padding: 6px;
+    }
+    .category-item {
+      display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px;
+      font-size: 13px; cursor: pointer;
+    }
+    .category-item:hover { background: #f8fbf8; }
+    .category-item .cat-label { flex: 1; color: #2a2a2a; }
+    .category-item .cat-code { font-family: Consolas, monospace; font-weight: 700; color: var(--primary); margin-right: 4px; }
+    .category-item .cat-amount { font-variant-numeric: tabular-nums; color: var(--text-muted-dark); font-size: 12px; white-space: nowrap; }
+    .category-actions { display: flex; gap: 8px; margin-bottom: 8px; }
+
+    .table-wrap { overflow-x: auto; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    table thead th { background: linear-gradient(180deg, #f6f6ef 0%, #efefe7 100%); white-space: nowrap; }
+    table tbody tr:last-child td { border-bottom: none; }
     .empty-state { text-align: center; padding: 32px; color: var(--text-light); }
     .empty-state a { color: var(--primary); font-weight: 600; }
+    .note-muted { margin-top: 10px; color: #888; font-size: 12px; }
   </style>
 </head>
 <body>
@@ -24,16 +71,10 @@
 
       <div id="pageMessage" class="alert" style="display:none;"></div>
 
-      <div class="card">
-        <div class="card-title">
-          <h2>Indicateurs à construire</h2>
-        </div>
-        <div class="card-body">
-          <p class="empty-state">
-            Les indicateurs sont à reconstruire à partir des codes ARC.<br>
-            Voir la page <a href="./achat-arc.html">Codes ARC</a> pour la classification par société.
-          </p>
-        </div>
+      <div class="company-tabs" id="companyTabs"></div>
+
+      <div id="content">
+        <p class="empty-state">Chargement...</p>
       </div>
 
       <div class="card">
@@ -50,9 +91,313 @@
   </div>
 
   <script>
+    const API = window.location.origin + '/api';
+    const COMPANIES = ['Goudalle Charpente', 'CBCO', 'Nouvelle Goudalle Maçonnerie'];
+    const PALETTE = ['#2563EB','#16A34A','#DC2626','#D97706','#7C3AED','#0F766E','#DB2777','#4B5563','#0891B2','#65A30D','#9333EA','#EA580C','#0EA5E9','#CA8A04','#BE185D'];
+    const AUTRES_COLOR = '#9CA3AF';
+
+    const state = { company: COMPANIES[0], data: null, selectedCodes: new Set() };
+    const charts = {};
+
+    function esc(s) {
+      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function fmt(v, digits = 0) {
+      if (v == null) return '—';
+      return Number(v).toLocaleString('fr-FR', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+    }
+
+    function fmtEur(v, digits = 0) {
+      return fmt(v, digits) + ' €';
+    }
+
+    function formatMonthShort(isoMonth) {
+      const m = String(isoMonth || '').match(/^(\d{4})-(\d{2})$/);
+      if (!m) return isoMonth || '—';
+      const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, 1));
+      const label = d.toLocaleString('fr-FR', { month: 'short', timeZone: 'UTC' }).replace('.', '');
+      return `${label}-${m[1].slice(-2)}`;
+    }
+
+    function formatMonthFr(isoMonth) {
+      const m = String(isoMonth || '').match(/^(\d{4})-(\d{2})$/);
+      if (!m) return isoMonth || '—';
+      const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, 1));
+      const label = d.toLocaleString('fr-FR', { month: 'long', timeZone: 'UTC' });
+      return `${label.charAt(0).toUpperCase() + label.slice(1)} ${m[1]}`;
+    }
+
+    function destroyChart(id) {
+      if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+    }
+
+    function codeLabel(c) {
+      return c.designation ? `${c.code} — ${c.designation}` : (c.code === '(vide)' ? 'Sans code ARC' : `${c.code} — (non répertorié)`);
+    }
+
+    // ── Tabs ──────────────────────────────────────────────────────────────────
+    function renderTabs() {
+      document.getElementById('companyTabs').innerHTML = COMPANIES.map((c) =>
+        `<button class="company-tab${c === state.company ? ' active' : ''}" onclick='selectCompany(${JSON.stringify(c)})'>${esc(c)}</button>`
+      ).join('');
+    }
+
+    async function selectCompany(company) {
+      state.company = company;
+      renderTabs();
+      await loadCompany();
+    }
+
+    // ── Chargement ────────────────────────────────────────────────────────────
+    async function loadCompany() {
+      document.getElementById('content').innerHTML = '<p class="empty-state">Chargement...</p>';
+      try {
+        const res = await fetch(API + '/achats/arc-monthly?company=' + encodeURIComponent(state.company));
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.error || 'Erreur serveur');
+        state.data = data;
+        state.selectedCodes = new Set(data.codes.slice(0, 5).map((c) => c.code));
+        renderContent();
+      } catch (e) {
+        document.getElementById('content').innerHTML = `<p class="empty-state" style="color:var(--danger);">Erreur : ${esc(e.message)}</p>`;
+      }
+    }
+
+    // ── Layout principal ─────────────────────────────────────────────────────
+    function renderContent() {
+      const data = state.data;
+      const zone = document.getElementById('content');
+
+      if (!data.codes.length) {
+        zone.innerHTML = `<div class="card"><div class="card-body"><p class="empty-state">
+          Aucune donnée disponible pour ${esc(state.company)}.<br>
+          <a href="./achat-saisie.html">Importer un premier fichier ONAYA →</a>
+        </p></div></div>`;
+        return;
+      }
+
+      const grandTotal = data.codes.reduce((s, c) => s + c.total, 0);
+      const top = data.codes[0];
+
+      zone.innerHTML = `
+        <div class="kpi-row">
+          <div class="kpi-stat">
+            <div class="kpi-stat-value">${fmtEur(grandTotal)}</div>
+            <div class="kpi-stat-label">Total achats</div>
+            <div class="kpi-stat-sub">${esc(formatMonthFr(data.months[0]))} → ${esc(formatMonthFr(data.months[data.months.length - 1]))}</div>
+          </div>
+          <div class="kpi-stat">
+            <div class="kpi-stat-value">${data.months.length}</div>
+            <div class="kpi-stat-label">Mois couverts</div>
+          </div>
+          <div class="kpi-stat">
+            <div class="kpi-stat-value">${fmtEur(grandTotal / data.months.length)}</div>
+            <div class="kpi-stat-label">Moyenne mensuelle</div>
+          </div>
+          <div class="kpi-stat">
+            <div class="kpi-stat-value">${fmtEur(top.total)}</div>
+            <div class="kpi-stat-label">1ère catégorie</div>
+            <div class="kpi-stat-sub">${esc(codeLabel(top))}</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><h2>Répartition des achats par catégorie ARC</h2></div>
+          <div class="card-body">
+            <div class="chart-container tall"><canvas id="chartRepartition"></canvas></div>
+            <p class="note-muted">Total sur la période ${esc(formatMonthFr(data.months[0]))} → ${esc(formatMonthFr(data.months[data.months.length - 1]))}, hors lignes de stock (sorties internes). Les frais de transport déjà réimputés par le code ARC sont inclus dans la catégorie produit correspondante.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><h2>Évolution mensuelle des dépenses</h2></div>
+          <div class="card-body">
+            <div class="indicator-grid">
+              <div>
+                <div class="category-actions">
+                  <button class="btn btn-secondary btn-sm" onclick="selectTopCategories(5)">Top 5</button>
+                  <button class="btn btn-secondary btn-sm" onclick="selectAllCategories(true)">Tout</button>
+                  <button class="btn btn-secondary btn-sm" onclick="selectAllCategories(false)">Aucun</button>
+                </div>
+                <div class="category-list" id="categoryList"></div>
+              </div>
+              <div class="chart-section">
+                <div class="chart-container tall"><canvas id="chartEvolution"></canvas></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><h2>Détail mensuel par code ARC</h2></div>
+          <div class="card-body">
+            <div class="table-wrap">
+              <table id="tableDetail">
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Désignation</th>
+                    <th class="num">Total</th>
+                    <th class="num">%</th>
+                    ${data.months.map((m) => `<th class="num">${esc(formatMonthShort(m))}</th>`).join('')}
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      `;
+
+      renderRepartitionChart();
+      renderCategoryList();
+      renderEvolutionChart();
+      renderDetailTable();
+    }
+
+    // ── Graphique répartition (barres horizontales) ──────────────────────────
+    function renderRepartitionChart() {
+      const data = state.data;
+      const MAX_BARS = 12;
+      const sorted = [...data.codes].sort((a, b) => b.total - a.total);
+      const top = sorted.slice(0, MAX_BARS);
+      const rest = sorted.slice(MAX_BARS);
+      const restTotal = rest.reduce((s, c) => s + c.total, 0);
+
+      const labels = top.map((c) => codeLabel(c));
+      const values = top.map((c) => c.total);
+      const colors = top.map((_, i) => PALETTE[i % PALETTE.length]);
+      if (restTotal > 0) {
+        labels.push(`Autres (${rest.length} codes)`);
+        values.push(restTotal);
+        colors.push(AUTRES_COLOR);
+      }
+
+      destroyChart('repartition');
+      const ctx = document.getElementById('chartRepartition')?.getContext('2d');
+      if (!ctx) return;
+      const grandTotal = data.codes.reduce((s, c) => s + c.total, 0);
+      charts.repartition = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{ label: 'Montant (€)', data: values, backgroundColor: colors, borderRadius: 4 }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${fmtEur(ctx.parsed.x)} (${(100 * ctx.parsed.x / grandTotal).toFixed(1)}%)`
+              }
+            }
+          },
+          scales: {
+            x: { beginAtZero: true, grid: { color: '#ece7e1' }, ticks: { callback: (v) => fmt(v) } },
+            y: { grid: { display: false }, ticks: { font: { size: 11 } } }
+          }
+        }
+      });
+    }
+
+    // ── Liste de catégories (sélecteur) ──────────────────────────────────────
+    function renderCategoryList() {
+      const data = state.data;
+      const sorted = [...data.codes].sort((a, b) => b.total - a.total);
+      const list = document.getElementById('categoryList');
+      list.innerHTML = sorted.map((c) => `
+        <label class="category-item">
+          <input type="checkbox" data-code="${esc(c.code)}" ${state.selectedCodes.has(c.code) ? 'checked' : ''} onchange="toggleCategory('${esc(c.code)}', this.checked)">
+          <span class="cat-label"><span class="cat-code">${esc(c.code)}</span>${esc(c.designation || (c.code === '(vide)' ? 'Sans code ARC' : '(non répertorié)'))}</span>
+          <span class="cat-amount">${fmtEur(c.total)}</span>
+        </label>
+      `).join('');
+    }
+
+    function toggleCategory(code, checked) {
+      if (checked) state.selectedCodes.add(code); else state.selectedCodes.delete(code);
+      renderEvolutionChart();
+    }
+
+    function selectTopCategories(n) {
+      const sorted = [...state.data.codes].sort((a, b) => b.total - a.total);
+      state.selectedCodes = new Set(sorted.slice(0, n).map((c) => c.code));
+      renderCategoryList();
+      renderEvolutionChart();
+    }
+
+    function selectAllCategories(all) {
+      state.selectedCodes = all ? new Set(state.data.codes.map((c) => c.code)) : new Set();
+      renderCategoryList();
+      renderEvolutionChart();
+    }
+
+    // ── Graphique évolution mensuelle ────────────────────────────────────────
+    function renderEvolutionChart() {
+      const data = state.data;
+      const selected = data.codes.filter((c) => state.selectedCodes.has(c.code)).sort((a, b) => b.total - a.total);
+
+      destroyChart('evolution');
+      const ctx = document.getElementById('chartEvolution')?.getContext('2d');
+      if (!ctx) return;
+
+      charts.evolution = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: data.months.map((m) => formatMonthShort(m)),
+          datasets: selected.map((c, i) => ({
+            label: codeLabel(c),
+            data: data.months.map((m) => c.byMonth[m] || 0),
+            borderColor: PALETTE[i % PALETTE.length],
+            backgroundColor: PALETTE[i % PALETTE.length] + '1a',
+            borderWidth: 2,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            tension: 0.15
+          }))
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
+            tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${fmtEur(ctx.parsed.y)}` } }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: '#7a7a7a', font: { size: 10 } } },
+            y: { beginAtZero: true, grid: { color: '#ece7e1' }, title: { display: true, text: '€' }, ticks: { callback: (v) => fmt(v) } }
+          }
+        }
+      });
+    }
+
+    // ── Tableau détaillé ──────────────────────────────────────────────────────
+    function renderDetailTable() {
+      const data = state.data;
+      const grandTotal = data.codes.reduce((s, c) => s + c.total, 0);
+      const tbody = document.querySelector('#tableDetail tbody');
+      tbody.innerHTML = data.codes.map((c) => `
+        <tr>
+          <td><span class="cat-code" style="font-family:Consolas,monospace;font-weight:700;color:var(--primary);">${esc(c.code)}</span></td>
+          <td>${esc(c.designation || (c.code === '(vide)' ? 'Sans code ARC' : '(non répertorié)'))}</td>
+          <td class="num">${fmtEur(c.total)}</td>
+          <td class="num">${(100 * c.total / grandTotal).toFixed(1)}%</td>
+          ${data.months.map((m) => `<td class="num">${fmt(c.byMonth[m])}</td>`).join('')}
+        </tr>
+      `).join('');
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────────
     async function init() {
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectAchatSecondaryBar();
+      renderTabs();
+      await loadCompany();
     }
 
     window.onServerReady(init);

@@ -2347,6 +2347,57 @@ app.get('/api/achats/invoices', (req, res) => {
   }
 });
 
+app.get('/api/achats/arc-monthly', (req, res) => {
+  try {
+    const company = String(req.query?.company || '').trim();
+    if (!company) return res.status(400).json({ success: false, error: 'company requis' });
+    if (!ACHATS_ARC_FILES[company]) return res.status(400).json({ success: false, error: `Société inconnue : ${company}` });
+
+    const designations = new Map();
+    for (const { code, designation } of readArcCodes(company)) designations.set(code, designation);
+
+    const files = fs.readdirSync(ACHATS_DATA_DIR).filter((f) => f.endsWith('.json'));
+    const monthsSet = new Set();
+    const byArc = new Map(); // arc -> { total, byMonth: Map }
+
+    for (const f of files) {
+      const data = readAchatImportData(f.replace('.json', ''));
+      if (!data || !data.invoices || data.company !== company) continue;
+      for (const inv of data.invoices) {
+        const month = achatToIsoMonth(inv.date);
+        if (!month) continue;
+        for (const line of (inv.lines || [])) {
+          if (line.excluded) continue;
+          const arc = String(line.arc ?? '').trim() || '(vide)';
+          const montant = Number(line.montant) || 0;
+          monthsSet.add(month);
+          if (!byArc.has(arc)) byArc.set(arc, { total: 0, byMonth: new Map() });
+          const entry = byArc.get(arc);
+          entry.total += montant;
+          entry.byMonth.set(month, (entry.byMonth.get(month) || 0) + montant);
+        }
+      }
+    }
+
+    const months = [...monthsSet].sort();
+    const codes = [...byArc.entries()]
+      .map(([code, entry]) => ({
+        code,
+        designation: designations.get(code) || '',
+        total: entry.total,
+        byMonth: Object.fromEntries(months.map((m) => [m, entry.byMonth.get(m) || 0]))
+      }))
+      .sort((a, b) => b.total - a.total);
+
+    const totalsByMonth = {};
+    for (const m of months) totalsByMonth[m] = codes.reduce((s, c) => s + (c.byMonth[m] || 0), 0);
+
+    res.json({ success: true, company, months, codes, totalsByMonth });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 app.get('/api/achats/imports/:batchId/invoices', (req, res) => {
   const { batchId } = req.params;
   const { year, month } = req.query;
