@@ -5,26 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Indicateurs Achat - Intranet Goudalle</title>
   <link rel="stylesheet" href="../css/style.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    .table-wrap { overflow-x: auto; }
-    .num { text-align: right; font-variant-numeric: tabular-nums; }
-    .note-muted { margin-top: 10px; color: #666; font-size: 13px; }
-    table thead th { background: linear-gradient(180deg, #f6f6ef 0%, #efefe7 100%); }
-    table tbody tr:last-child td { border-bottom: none; }
     .empty-state { text-align: center; padding: 32px; color: var(--text-light); }
     .empty-state a { color: var(--primary); font-weight: 600; }
-    .achat-indicator-grid {
-      display: grid;
-      grid-template-columns: minmax(380px, 1.3fr) minmax(320px, 1fr);
-      gap: 16px;
-      align-items: start;
-    }
-    .achat-indicator-grid .gm-chart-section { min-height: 320px; }
-    .achat-indicator-grid .gm-chart-container { min-height: 280px; }
-    @media (max-width: 900px) {
-      .achat-indicator-grid { grid-template-columns: 1fr; }
-    }
   </style>
 </head>
 <body>
@@ -43,116 +26,13 @@
 
       <div class="card">
         <div class="card-title">
-          <h2>Chantiers GOUDALLE - Volumes Bois livré/consommé</h2>
+          <h2>Indicateurs à construire</h2>
         </div>
         <div class="card-body">
-          <div class="achat-indicator-grid">
-            <div>
-              <div class="table-wrap">
-                <table id="tableGc">
-                  <thead>
-                    <tr>
-                      <th>Mois</th>
-                      <th class="num">V CLT (m³)</th>
-                      <th class="num">V LC (m³)</th>
-                      <th class="num">Prix moyen LC (€/m³)</th>
-                      <th class="num">Autre Com (m³)</th>
-                      <th class="num">Sortie de Stock (m³)</th>
-                      <th class="num">Autre Com + Sortie (m³)</th>
-                      <th class="num">TOTAL (m³)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr><td colspan="8" class="empty-state">Chargement...</td></tr>
-                  </tbody>
-                </table>
-              </div>
-              <p class="note-muted" id="noteGc"></p>
-            </div>
-            <div class="gm-chart-section">
-              <div class="gm-chart-header">
-                <h2>Chantiers GC - Volumes BOIS consommé</h2>
-              </div>
-              <div class="gm-chart-container">
-                <canvas id="chartGc"></canvas>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">
-          <h2>Chantiers CBCO - Volumes Bois livré/consommé</h2>
-        </div>
-        <div class="card-body">
-          <div class="achat-indicator-grid">
-            <div>
-              <div class="table-wrap">
-                <table id="tableCbco">
-                  <thead>
-                    <tr>
-                      <th>Mois</th>
-                      <th class="num">V CLT (m³)</th>
-                      <th class="num">V LC (m³)</th>
-                      <th class="num">Autre Com (m³)</th>
-                      <th class="num">Sortie de Stock (m³)</th>
-                      <th class="num">Autre Com + Sortie (m³)</th>
-                      <th class="num">TOTAL (m³)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr><td colspan="7" class="empty-state">Chargement...</td></tr>
-                  </tbody>
-                </table>
-              </div>
-              <p class="note-muted" id="noteCbco"></p>
-            </div>
-            <div class="gm-chart-section">
-              <div class="gm-chart-header">
-                <h2>Chantiers CBCO - Volumes BOIS consommé</h2>
-              </div>
-              <div class="gm-chart-container">
-                <canvas id="chartCbco"></canvas>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">
-          <h2>GC et CBCO 2026</h2>
-        </div>
-        <div class="card-body">
-          <div class="achat-indicator-grid">
-            <div>
-              <div class="table-wrap">
-                <table id="tableCub">
-                  <thead>
-                    <tr>
-                      <th>Mois</th>
-                      <th class="num">TOTAL GC (m³)</th>
-                      <th class="num">TOTAL CLIENTS CBCO (m³)</th>
-                      <th class="num">TOTAL CUB (m³)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr><td colspan="4" class="empty-state">Chargement...</td></tr>
-                  </tbody>
-                </table>
-              </div>
-              <p class="note-muted" id="noteCub"></p>
-            </div>
-            <div class="gm-chart-section">
-              <div class="gm-chart-header">
-                <h2>GC + CBCO: Appro Bois 2026</h2>
-              </div>
-              <div class="gm-chart-container">
-                <canvas id="chartCub"></canvas>
-              </div>
-            </div>
-          </div>
+          <p class="empty-state">
+            Les indicateurs sont à reconstruire à partir des codes ARC.<br>
+            Voir la page <a href="./achat-arc.html">Codes ARC</a> pour la classification par société.
+          </p>
         </div>
       </div>
 
@@ -162,6 +42,7 @@
           <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px;">
             <a class="btn btn-primary" href="./achat-saisie.html">📤 Importer un fichier ONAYA</a>
             <a class="btn btn-secondary" href="./achat-controle.html">🔍 Contrôle des imports</a>
+            <a class="btn btn-secondary" href="./achat-arc.html">🏷️ Codes ARC</a>
           </div>
         </div>
       </div>
@@ -169,218 +50,9 @@
   </div>
 
   <script>
-    const API = window.location.origin + '/api';
-
-    function esc(s) {
-      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    }
-
-    function formatMonthFr(isoMonth) {
-      const m = String(isoMonth || '').match(/^(\d{4})-(\d{2})$/);
-      if (!m) return isoMonth || '—';
-      const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, 1));
-      const label = d.toLocaleString('fr-FR', { month: 'long', timeZone: 'UTC' });
-      return `${label.charAt(0).toUpperCase() + label.slice(1)} ${m[1]}`;
-    }
-
-    function fmt(v, digits = 0) {
-      if (v == null) return '—';
-      return Number(v).toLocaleString('fr-FR', { minimumFractionDigits: digits, maximumFractionDigits: digits });
-    }
-
-    function formatMonthShort(isoMonth) {
-      const m = String(isoMonth || '').match(/^(\d{4})-(\d{2})$/);
-      if (!m) return isoMonth || '—';
-      const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, 1));
-      const label = d.toLocaleString('fr-FR', { month: 'short', timeZone: 'UTC' }).replace('.', '');
-      return `${label}-${m[1].slice(-2)}`;
-    }
-
-    const achatCharts = {};
-
-    function destroyAchatChart(id) {
-      if (achatCharts[id]) {
-        achatCharts[id].destroy();
-        delete achatCharts[id];
-      }
-    }
-
-    function lineChartOptions(yTitle) {
-      return {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
-        plugins: {
-          legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
-          tooltip: {
-            callbacks: {
-              label: (ctx) => `${ctx.dataset.label}: ${fmt(ctx.parsed.y)} ${yTitle}`
-            }
-          }
-        },
-        scales: {
-          x: { grid: { display: false }, ticks: { color: '#7a7a7a', font: { size: 10 } } },
-          y: {
-            beginAtZero: true,
-            grid: { color: '#ece7e1' },
-            title: { display: true, text: yTitle },
-            ticks: { color: '#6b6b6b', callback: (v) => fmt(v) }
-          }
-        }
-      };
-    }
-
-    function renderVolumeChart(canvasId, chartKey, rows) {
-      destroyAchatChart(chartKey);
-      const ctx = document.getElementById(canvasId)?.getContext('2d');
-      if (!ctx) return;
-      achatCharts[chartKey] = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: rows.map((r) => formatMonthShort(r.month)),
-          datasets: [
-            { label: 'V CLT (m³)', data: rows.map((r) => r.v_clt_m3), borderColor: '#8B5E3C', backgroundColor: 'rgba(139,94,60,0.1)', borderWidth: 2, pointRadius: 3, pointHoverRadius: 5, tension: 0.15 },
-            { label: 'V LC (m³)', data: rows.map((r) => r.v_lc_m3), borderColor: '#0F766E', backgroundColor: 'rgba(15,118,110,0.1)', borderWidth: 2, pointRadius: 3, pointHoverRadius: 5, tension: 0.15 },
-            { label: 'Autre Com + Sortie (m³)', data: rows.map((r) => r.autre_total_m3), borderColor: '#16A34A', backgroundColor: 'rgba(22,163,74,0.1)', borderWidth: 2, pointRadius: 3, pointHoverRadius: 5, tension: 0.15 },
-            { label: 'TOTAL (m³)', data: rows.map((r) => r.total_m3), borderColor: '#4B5563', backgroundColor: 'rgba(75,85,99,0.1)', borderWidth: 2.5, pointRadius: 3, pointHoverRadius: 5, tension: 0.15 }
-          ]
-        },
-        options: lineChartOptions('m³')
-      });
-    }
-
-    function renderCubChart(rows) {
-      destroyAchatChart('cub');
-      const ctx = document.getElementById('chartCub')?.getContext('2d');
-      if (!ctx) return;
-      achatCharts.cub = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: rows.map((r) => formatMonthShort(r.month)),
-          datasets: [
-            { label: 'TOTAL GC (m³)', data: rows.map((r) => r.total_gc_m3), borderColor: '#2563EB', backgroundColor: 'rgba(37,99,235,0.1)', borderWidth: 2, pointRadius: 3, pointHoverRadius: 5, tension: 0.15 },
-            { label: 'TOTAL CLIENTS CBCO (m³)', data: rows.map((r) => r.total_cbco_m3), borderColor: '#16A34A', backgroundColor: 'rgba(22,163,74,0.1)', borderWidth: 2, pointRadius: 3, pointHoverRadius: 5, tension: 0.15 },
-            { label: 'TOTAL CUB (m³)', data: rows.map((r) => r.total_cub_m3), borderColor: '#7C3AED', backgroundColor: 'rgba(124,58,237,0.1)', borderWidth: 2.5, pointRadius: 3, pointHoverRadius: 5, tension: 0.15 }
-          ]
-        },
-        options: lineChartOptions('m³')
-      });
-    }
-
-    function renderGcTable(rows) {
-      const tbody = document.querySelector('#tableGc tbody');
-      const note = document.getElementById('noteGc');
-      if (!rows.length) {
-        tbody.innerHTML = `<tr><td colspan="8" class="empty-state">
-          Aucune donnée disponible.<br>
-          <a href="./achat-saisie.html">Importer un premier fichier ONAYA →</a>
-        </td></tr>`;
-        note.textContent = '';
-        return;
-      }
-      tbody.innerHTML = rows.map((r) => `
-        <tr>
-          <td>${esc(formatMonthFr(r.month))}</td>
-          <td class="num">${fmt(r.v_clt_m3)}</td>
-          <td class="num">${fmt(r.v_lc_m3)}</td>
-          <td class="num">${r.prix_moyen_lc_eur_m3 != null ? fmt(r.prix_moyen_lc_eur_m3) : '—'}</td>
-          <td class="num">${fmt(r.autre_com_m3)}</td>
-          <td class="num">${fmt(r.sortie_stock_m3)}</td>
-          <td class="num">${fmt(r.autre_total_m3)}</td>
-          <td class="num">${fmt(r.total_m3)}</td>
-        </tr>
-      `).join('');
-      note.textContent = `${rows.length} mois · Calcul serveur depuis les imports enregistrés (stock entrant exclu). `
-        + `Prix moyen LC calculé hors LC Douglas/Mélèze. Autre Com = bois hors CLT/LC commandé pour le chantier `
-        + `(hors stock GC). Sortie de Stock = bois sorti du stock GC vers un chantier.`;
-    }
-
-    function renderCbcoTable(rows) {
-      const tbody = document.querySelector('#tableCbco tbody');
-      const note = document.getElementById('noteCbco');
-      if (!rows.length) {
-        tbody.innerHTML = `<tr><td colspan="7" class="empty-state">
-          Aucune donnée disponible.<br>
-          <a href="./achat-saisie.html">Importer un premier fichier ONAYA →</a>
-        </td></tr>`;
-        note.textContent = '';
-        return;
-      }
-      tbody.innerHTML = rows.map((r) => `
-        <tr>
-          <td>${esc(formatMonthFr(r.month))}</td>
-          <td class="num">${fmt(r.v_clt_m3)}</td>
-          <td class="num">${fmt(r.v_lc_m3)}</td>
-          <td class="num">${fmt(r.autre_com_m3)}</td>
-          <td class="num">${fmt(r.sortie_stock_m3)}</td>
-          <td class="num">${fmt(r.autre_total_m3)}</td>
-          <td class="num">${fmt(r.total_m3)}</td>
-        </tr>
-      `).join('');
-      note.textContent = `${rows.length} mois · Calcul serveur depuis les imports enregistrés (stock entrant exclu).`;
-    }
-
-    function renderCubTable(rows) {
-      const tbody = document.querySelector('#tableCub tbody');
-      const note = document.getElementById('noteCub');
-      if (!rows.length) {
-        tbody.innerHTML = `<tr><td colspan="4" class="empty-state">Aucune donnée disponible.</td></tr>`;
-        note.textContent = '';
-        return;
-      }
-      tbody.innerHTML = rows.map((r) => `
-        <tr>
-          <td>${esc(formatMonthFr(r.month))}</td>
-          <td class="num">${fmt(r.total_gc_m3)}</td>
-          <td class="num">${fmt(r.total_cbco_m3)}</td>
-          <td class="num">${fmt(r.total_cub_m3)}</td>
-        </tr>
-      `).join('');
-      note.textContent = `${rows.length} mois · TOTAL CUB = TOTAL GC + TOTAL CLIENTS CBCO.`;
-    }
-
-    async function fetchCompanyRows(company) {
-      const res = await fetch(API + '/achats/indicators-monthly?company=' + encodeURIComponent(company));
-      const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error || 'Erreur serveur');
-      return data.rows || [];
-    }
-
-    async function loadIndicators() {
-      try {
-        const [gcRows, cbcoRows] = await Promise.all([
-          fetchCompanyRows('Goudalle Charpente'),
-          fetchCompanyRows('CBCO')
-        ]);
-
-        renderGcTable(gcRows);
-        renderCbcoTable(cbcoRows);
-
-        const months = [...new Set([...gcRows.map((r) => r.month), ...cbcoRows.map((r) => r.month)])].sort();
-        const gcByMonth = new Map(gcRows.map((r) => [r.month, r]));
-        const cbcoByMonth = new Map(cbcoRows.map((r) => [r.month, r]));
-        const cubRows = months.map((month) => {
-          const total_gc_m3 = gcByMonth.get(month)?.total_m3 || 0;
-          const total_cbco_m3 = cbcoByMonth.get(month)?.total_m3 || 0;
-          return { month, total_gc_m3, total_cbco_m3, total_cub_m3: total_gc_m3 + total_cbco_m3 };
-        });
-        renderCubTable(cubRows);
-
-        if (gcRows.length) renderVolumeChart('chartGc', 'gc', gcRows); else destroyAchatChart('gc');
-        if (cbcoRows.length) renderVolumeChart('chartCbco', 'cbco', cbcoRows); else destroyAchatChart('cbco');
-        if (cubRows.length) renderCubChart(cubRows); else destroyAchatChart('cub');
-      } catch (e) {
-        const msg = `<tr><td class="empty-state" colspan="8">Erreur : ${esc(e.message)}</td></tr>`;
-        document.querySelector('#tableGc tbody').innerHTML = msg;
-        document.querySelector('#tableCbco tbody').innerHTML = msg.replace('colspan="8"', 'colspan="7"');
-        document.querySelector('#tableCub tbody').innerHTML = msg.replace('colspan="8"', 'colspan="4"');
-      }
-    }
-
     async function init() {
       document.getElementById('sidebar').innerHTML = getSidebar();
       injectAchatSecondaryBar();
-      await loadIndicators();
     }
 
     window.onServerReady(init);

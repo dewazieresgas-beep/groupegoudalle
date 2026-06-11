@@ -167,7 +167,7 @@
     // ── Rendu tabs ──────────────────────────────────────────────────────────────
     function renderTabs() {
       document.getElementById('companyTabs').innerHTML = COMPANIES.map((c) =>
-        `<button class="company-tab${c === state.company ? ' active' : ''}" onclick="selectCompany(${JSON.stringify(c)})">${esc(c)}</button>`
+        `<button class="company-tab${c === state.company ? ' active' : ''}" onclick='selectCompany(${JSON.stringify(c)})'>${esc(c)}</button>`
       ).join('');
     }
 

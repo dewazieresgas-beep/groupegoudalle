@@ -117,7 +117,16 @@
       "Bash(node --check /tmp/controle.js)",
       "Bash(curl -s \"http://localhost:3000/pages/achat-controle.html\" -o controle.html)",
       "Bash(node --check controle.js)",
-      "Bash(rm -f controle.html controle.js)"
+      "Bash(rm -f controle.html controle.js)",
+      "Bash(curl -s \"http://localhost:3000/pages/achat-arc.html\" -o arc.html)",
+      "Bash(node --check arc.js)",
+      "Bash(rm -f arc.html arc.js)",
+      "PowerShell(Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue)",
+      "PowerShell(Stop-Process -Id 5944 -Force -ErrorAction SilentlyContinue)",
+      "PowerShell(\"stopped\")",
+      "Bash(curl -s -o /dev/null -w \"indicators-monthly: %{http_code}\\\\n\" \"http://localhost:3000/api/achats/indicators-monthly?company=Goudalle%20Charpente\")",
+      "Bash(curl -s -o /dev/null -w \"achat-indicateurs.html: %{http_code}\\\\n\" \"http://localhost:3000/pages/achat-indicateurs.html\")",
+      "Bash(curl -s \"http://localhost:3000/pages/achat-indicateurs.html\")"
     ],
     "additionalDirectories": [
       "\\tmp",
